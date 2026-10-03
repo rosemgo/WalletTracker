@@ -1,0 +1,15 @@
+# --- Segreti e dati personali: non devono MAI finire su Git ---
+.env
+secrets/*
+!secrets/README.md
+*.pem
+.data/
+
+# --- Build ---
+target/
+
+# --- IDE e sistema operativo ---
+.idea/
+*.iml
+.vscode/
+.DS_Store

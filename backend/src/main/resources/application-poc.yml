@@ -1,0 +1,10 @@
+# Impostazioni aggiuntive attive solo con il profilo "poc" (Fase 0).
+# Togliamo il banner e i log informativi di Spring, così la console resta leggibile.
+
+spring:
+  main:
+    banner-mode: off
+
+logging:
+  level:
+    root: warn

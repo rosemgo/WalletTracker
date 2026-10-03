@@ -1,0 +1,19 @@
+# Configurazione principale dell'applicazione.
+# La sintassi ${NOME:valore} significa: "usa la variabile NOME, se non esiste usa valore".
+
+spring:
+  application:
+    name: spese-tracker
+  config:
+    # Legge le variabili dal file .env (lo stesso file che userà Docker Compose più avanti).
+    # "optional:" = se il file non esiste non è un errore. Cerchiamo sia nella cartella
+    # corrente sia in quella superiore, così funziona avviando l'app da backend/ o dalla radice.
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+
+enable-banking:
+  base-url: https://api.enablebanking.com
+  application-id: ${ENABLE_BANKING_APP_ID:}
+  private-key-path: ${ENABLE_BANKING_PRIVATE_KEY_PATH:../secrets/enable-banking.pem}
+  redirect-url: ${ENABLE_BANKING_REDIRECT_URL:https://localhost:8443/callback}
