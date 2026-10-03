@@ -64,17 +64,22 @@ Se vedi "Hello from Docker!" è tutto a posto. Lo useremo dalla Fase 1.
 ## 2. Scaricare il progetto
 
 ```bash
-git clone https://github.com/rosemgo/test.git spese-tracker
-cd spese-tracker
+git clone https://github.com/rosemgo/WalletTracker.git
+cd WalletTracker
 git checkout claude/quirky-brahmagupta-c4kk7j
 ```
 
-> Il repository si chiama `test`: se vuoi, rinominalo su GitHub (Settings → General → Repository name),
-> per esempio in `spese-tracker`.
+> Se il repository è privato, Git ti chiederà di autenticarti: al posto della password GitHub
+> vuole un *Personal Access Token*. Più semplice: installa [GitHub CLI](https://cli.github.com)
+> ed esegui una volta `gh auth login`. In alternativa, da IntelliJ:
+> *File → New → Project from Version Control* e accedi a GitHub dalla finestra che si apre.
+>
+> Se avevi già clonato il repository con il vecchio nome `test`, aggiorna l'indirizzo remoto:
+> `git remote set-url origin https://github.com/rosemgo/WalletTracker.git`
 
 ## 3. Aprire il progetto in IntelliJ
 
-1. *File → Open* e scegli la cartella `spese-tracker` (la radice del repository).
+1. *File → Open* e scegli la cartella `WalletTracker` (la radice del repository).
 2. IntelliJ trova il file `backend/pom.xml`: quando compare l'avviso "Maven build scripts found"
    clicca **Load**. Scaricherà le dipendenze (la prima volta ci vuole qualche minuto).
 3. *File → Project Structure → Project → SDK*: seleziona il JDK 21.
