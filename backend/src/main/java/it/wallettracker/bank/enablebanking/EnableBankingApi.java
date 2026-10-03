@@ -1,4 +1,4 @@
-package it.spesetracker.bank.enablebanking;
+package it.wallettracker.bank.enablebanking;
 
 import java.math.BigDecimal;
 import java.time.Instant;

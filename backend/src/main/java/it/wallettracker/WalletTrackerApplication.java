@@ -1,4 +1,4 @@
-package it.spesetracker;
+package it.wallettracker;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -14,9 +14,9 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan
-public class SpeseTrackerApplication {
+public class WalletTrackerApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(SpeseTrackerApplication.class, args);
+        SpringApplication.run(WalletTrackerApplication.class, args);
     }
 }

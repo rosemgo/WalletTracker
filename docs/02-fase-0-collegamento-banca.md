@@ -58,7 +58,7 @@ Nel Control Panel apri la sezione delle applicazioni API e registrane una nuova:
 | Campo | Cosa mettere |
 |---|---|
 | Ambiente | **Production**: sono le banche vere. La modalità gratuita per uso personale funziona qui. *Sandbox* ha solo banche finte. |
-| Nome | `Spese Tracker` |
+| Nome | `WalletTracker` |
 | Redirect URL | `https://localhost:8443/callback`, uguale carattere per carattere a `ENABLE_BANKING_REDIRECT_URL` nel `.env` |
 | Descrizione, email, URL privacy/termini | per uso personale: la tua email e, come URL, ad esempio quello del tuo repository |
 | Chiave | scegli di **generarla nel browser** |
@@ -124,7 +124,7 @@ cd backend
 Esempio di sessione (con dati inventati):
 
 ```
-=== Spese Tracker - Fase 0: prova di collegamento a Enable Banking ===
+=== WalletTracker - Fase 0: prova di collegamento a Enable Banking ===
 Paese della banca (premi Invio per IT):
 Enable Banking supporta 120 banche in IT.
 Cerca la banca per nome (es. ING, Revolut): ing

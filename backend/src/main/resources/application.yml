@@ -3,7 +3,7 @@
 
 spring:
   application:
-    name: spese-tracker
+    name: wallettracker
   config:
     # Legge le variabili dal file .env (lo stesso file che userà Docker Compose più avanti).
     # "optional:" = se il file non esiste non è un errore. Cerchiamo sia nella cartella

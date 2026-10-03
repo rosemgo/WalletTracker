@@ -11,11 +11,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>it.spesetracker</groupId>
+    <groupId>it.wallettracker</groupId>
     <artifactId>backend</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>spese-tracker-backend</name>
-    <description>Backend di Spese Tracker: sincronizzazione movimenti bancari e API per la dashboard</description>
+    <name>wallettracker-backend</name>
+    <description>Backend di WalletTracker: sincronizzazione movimenti bancari e API per la dashboard</description>
 
     <properties>
         <java.version>21</java.version>

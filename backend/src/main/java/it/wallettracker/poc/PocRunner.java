@@ -1,4 +1,4 @@
-package it.spesetracker.poc;
+package it.wallettracker.poc;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,18 +9,18 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.UUID;
 
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Access;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Account;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Aspsp;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.AspspRef;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Balance;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Party;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Session;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Transaction;
-import it.spesetracker.bank.enablebanking.EnableBankingClient;
-import it.spesetracker.bank.enablebanking.EnableBankingProperties;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Access;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Account;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AspspRef;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Party;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Session;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
+import it.wallettracker.bank.enablebanking.EnableBankingClient;
+import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -62,7 +62,7 @@ public class PocRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        System.out.println("=== Spese Tracker - Fase 0: prova di collegamento a Enable Banking ===");
+        System.out.println("=== WalletTracker - Fase 0: prova di collegamento a Enable Banking ===");
         try {
             Aspsp bank = chooseBank();
             String code = authorize(bank);

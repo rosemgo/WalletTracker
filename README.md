@@ -1,4 +1,4 @@
-# Spese Tracker
+# WalletTracker
 
 Progetto personale (e didattico) per tracciare le spese in automatico: i movimenti vengono letti
 direttamente dalle banche (Revolut, ING, e altre in futuro) tramite l'open banking europeo (PSD2)

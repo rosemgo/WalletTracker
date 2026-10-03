@@ -123,8 +123,8 @@ backend/
 ├── mvnw, mvnw.cmd, .mvn/           ← Maven Wrapper: scarica la versione giusta di Maven
 └── src/
     ├── main/
-    │   ├── java/it/spesetracker/
-    │   │   ├── SpeseTrackerApplication.java     ← il main: avvia Spring
+    │   ├── java/it/wallettracker/
+    │   │   ├── WalletTrackerApplication.java    ← il main: avvia Spring
     │   │   ├── bank/enablebanking/              ← tutto ciò che parla con Enable Banking
     │   │   │   ├── EnableBankingProperties.java ← configurazione (letta da application.yml)
     │   │   │   ├── EnableBankingJwtFactory.java ← crea il token di autenticazione (JWT)
@@ -155,7 +155,7 @@ Convenzione Maven: il codice sta in `src/main/java`, le risorse (configurazione)
 
 1. `main()` chiama `SpringApplication.run(...)`.
 2. Spring legge la configurazione: `application.yml`, il file `.env`, le variabili d'ambiente.
-3. Spring cerca le classi annotate con `@Component` (e simili) nel package `it.spesetracker` e
+3. Spring cerca le classi annotate con `@Component` (e simili) nel package `it.wallettracker` e
    sotto-package, e crea un oggetto per ciascuna (un *bean*).
 4. Le collega tra loro: se un costruttore chiede un `EnableBankingClient`, Spring gli passa quello
    che ha creato. Questa è la **dependency injection**: nessuna classe fa `new` delle sue dipendenze.
@@ -190,7 +190,7 @@ Nel nostro caso i collegamenti sono questi:
   e che la firma sia verificabile con la chiave pubblica.
 - `EnableBankingClientTest`: usa `MockRestServiceServer`, che intercetta le richieste HTTP e
   risponde con JSON di esempio. Così si testa il client senza Internet.
-- `SpeseTrackerApplicationTests`: `@SpringBootTest` avvia l'intera applicazione per verificare
+- `WalletTrackerApplicationTests`: `@SpringBootTest` avvia l'intera applicazione per verificare
   che tutti i componenti si colleghino correttamente.
 
 ---
@@ -207,7 +207,7 @@ metti tra virgolette gli argomenti `-D...`, ad esempio `"-Dspring-boot.run.profi
 | `./mvnw package` | crea `target/backend-0.1.0-SNAPSHOT.jar` |
 | `java -jar target/backend-0.1.0-SNAPSHOT.jar --spring.profiles.active=poc` | avvia il jar |
 
-Per avviare l'app da IntelliJ: apri `SpeseTrackerApplication`, clicca la freccia verde accanto al
+Per avviare l'app da IntelliJ: apri `WalletTrackerApplication`, clicca la freccia verde accanto al
 `main`, poi *Run → Edit Configurations* e aggiungi `--spring.profiles.active=poc` in
 *Program arguments*. Controlla che la *Working directory* sia la cartella `backend`.
 

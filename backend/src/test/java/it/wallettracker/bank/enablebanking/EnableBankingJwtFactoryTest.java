@@ -1,4 +1,4 @@
-package it.spesetracker.bank.enablebanking;
+package it.wallettracker.bank.enablebanking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

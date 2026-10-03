@@ -1,4 +1,4 @@
-package it.spesetracker.bank.enablebanking;
+package it.wallettracker.bank.enablebanking;
 
 import java.io.IOException;
 import java.nio.file.Files;

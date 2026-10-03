@@ -1,4 +1,4 @@
-package it.spesetracker.bank.enablebanking;
+package it.wallettracker.bank.enablebanking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Aspsp;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Transaction;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

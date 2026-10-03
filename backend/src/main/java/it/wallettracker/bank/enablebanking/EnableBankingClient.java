@@ -1,19 +1,19 @@
-package it.spesetracker.bank.enablebanking;
+package it.wallettracker.bank.enablebanking;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Aspsp;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.AspspList;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Balance;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.BalanceList;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Session;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.SessionRequest;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.Transaction;
-import it.spesetracker.bank.enablebanking.EnableBankingApi.TransactionPage;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AspspList;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.BalanceList;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Session;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.SessionRequest;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.TransactionPage;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
