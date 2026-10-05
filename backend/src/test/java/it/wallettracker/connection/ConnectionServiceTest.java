@@ -75,6 +75,23 @@ class ConnectionServiceTest {
     }
 
     @Test
+    void acceptsVeryLongIdentifiersFromTheBank() {
+        // Caso reale con ING: l'impronta del conto (identification_hash) superava i 200 caratteri.
+        String longHash = "h".repeat(500);
+        String longUid = "u".repeat(300);
+        Session session = new Session("s".repeat(300),
+                List.of(new EnableBankingApi.Account(longUid, new AccountId("IT60X001"), "n".repeat(300), "EUR", longHash)),
+                new AspspRef("ING", "IT"),
+                new Access(IN_90_DAYS));
+
+        BankConnection connection = connectionService.saveSession(session, IN_90_DAYS);
+
+        assertThat(connectionService.accountsOf(connection))
+                .extracting(Account::getExternalKey)
+                .containsExactly(longHash);
+    }
+
+    @Test
     void externalKeyDistinguishesCurrenciesWithTheSameIban() {
         // Revolut: due conti (EUR e USD) con lo stesso IBAN.
         var eur = new EnableBankingApi.Account("uid-1", new AccountId("LT001"), "Revolut", "EUR", null);
