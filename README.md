@@ -59,24 +59,32 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 2. [Fase 0: collegamento alla banca](docs/02-fase-0-collegamento-banca.md)
 3. [Modello e regole: le decisioni prese](docs/03-modello-e-regole.md)
 4. [Fase 1, passo 1: PostgreSQL con Docker](docs/04-fase-1-passo-1-postgres-docker.md)
+5. [Fase 1, passo 2: Spring Boot + PostgreSQL + Flyway](docs/05-fase-1-passo-2-spring-jpa-flyway.md)
 
 ## Piano di lavoro
 
 - [x] **Fase 0**: prova di collegamento con ING, Revolut, Fineco e Trade Republic (programma a riga di comando)
 - [ ] **Fase 1**: modello dati, PostgreSQL in Docker, sincronizzazione automatica
-  - [ ] passo 1: PostgreSQL con Docker Compose
-  - [ ] passo 2: Spring Boot + Flyway + prime entità
+  - [x] passo 1: PostgreSQL con Docker Compose
+  - [x] passo 2: Spring Boot + Flyway + collegamenti e conti salvati nel database
+  - [ ] passo 3: movimenti e importazione senza doppioni
 - [ ] **Fase 2**: API REST e frontend React con l'elenco dei movimenti, categorie a regole, giroconti
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV
 - [ ] **Fase 4**: tutto in Docker Compose, installazione su un server, accesso via Tailscale
 
 ## Comandi utili
 
+Dalla radice del progetto:
+
+```bash
+docker compose up -d      # avvia il database (serve anche ai test: Docker Desktop deve essere avviato)
+```
+
 Dalla cartella `backend/` (su Windows usa `mvnw.cmd` al posto di `./mvnw`):
 
 ```bash
 ./mvnw test                                           # esegue i test
-./mvnw spring-boot:run -Dspring-boot.run.profiles=poc # avvia la prova della Fase 0
+./mvnw spring-boot:run -Dspring-boot.run.profiles=poc # collega una banca o riusa un collegamento salvato
 ```
 
 ## Sicurezza

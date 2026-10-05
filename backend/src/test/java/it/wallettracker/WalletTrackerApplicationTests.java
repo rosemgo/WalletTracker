@@ -1,25 +1,16 @@
 package it.wallettracker;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-import it.wallettracker.bank.enablebanking.TestKeys;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.context.annotation.Import;
 
-/** Verifica che l'applicazione Spring parta: tutti i componenti vengono creati e collegati correttamente. */
+/**
+ * Verifica che l'applicazione parta: tutti i componenti vengono creati e collegati, Flyway crea
+ * le tabelle e Hibernate controlla che corrispondano alle entità (ddl-auto: validate).
+ */
 @SpringBootTest
+@Import(IntegrationTestConfiguration.class)
 class WalletTrackerApplicationTests {
-
-    /** Per il test usiamo un application id finto e una chiave generata al volo. */
-    @DynamicPropertySource
-    static void enableBankingProperties(DynamicPropertyRegistry registry) throws Exception {
-        Path privateKey = TestKeys.writePrivateKey(TestKeys.generateKeyPair(), Files.createTempDirectory("wallettracker-test"));
-        registry.add("enable-banking.application-id", () -> TestKeys.APPLICATION_ID);
-        registry.add("enable-banking.private-key-path", privateKey::toString);
-    }
 
     @Test
     void contextLoads() {

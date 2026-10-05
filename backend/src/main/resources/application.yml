@@ -12,6 +12,18 @@ spring:
       - optional:file:.env[.properties]
       - optional:file:../.env[.properties]
 
+  # Connessione al database PostgreSQL avviato con Docker Compose (stessi valori del .env).
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:wallettracker}
+    username: ${POSTGRES_USER:wallettracker}
+    password: ${POSTGRES_PASSWORD:}
+
+  jpa:
+    hibernate:
+      # Le tabelle le crea Flyway, non Hibernate. "validate" fa solo un controllo all'avvio:
+      # se le classi @Entity non corrispondono alle tabelle, l'applicazione non parte.
+      ddl-auto: validate
+
 enable-banking:
   base-url: https://api.enablebanking.com
   application-id: ${ENABLE_BANKING_APP_ID:}

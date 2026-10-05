@@ -11,6 +11,9 @@ aggiorna prima qui.
 Ogni conto ha un **ruolo**. Il ruolo decide come trattare i suoi movimenti quando nessuna regola
 più specifica si applica.
 
+Nel codice i ruoli sono l'enum `AccountRole`: `MAIN` (principale), `SPENDING` (spese),
+`INVESTMENT` (investimenti), `EXCLUDED` (escluso), più `UNASSIGNED` per i conti appena collegati.
+
 | Ruolo | Conti | Uscite, di default | Entrate, di default |
 |---|---|---|---|
 | **PRINCIPALE** | ING conto corrente (dove arriva lo stipendio) | spesa | entrata |

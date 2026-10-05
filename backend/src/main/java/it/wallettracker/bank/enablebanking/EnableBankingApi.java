@@ -78,9 +78,17 @@ public final class EnableBankingApi {
 
     // ---------- Conti, saldi, movimenti ----------
 
-    /** Un conto. {@code uid} è l'identificativo da usare nelle chiamate successive (non è l'IBAN). */
+    /**
+     * Un conto.
+     * <ul>
+     *   <li>{@code uid}: l'identificativo da usare nelle chiamate successive. Vale per la sessione
+     *       corrente: con un nuovo consenso lo stesso conto riceve un uid diverso;</li>
+     *   <li>{@code identificationHash}: un'impronta del conto che resta uguale tra una sessione e
+     *       l'altra. Serve a riconoscere un conto che abbiamo già salvato.</li>
+     * </ul>
+     */
     @JsonNaming(SnakeCaseStrategy.class)
-    public record Account(String uid, AccountId accountId, String name, String currency) {
+    public record Account(String uid, AccountId accountId, String name, String currency, String identificationHash) {
     }
 
     public record AccountId(String iban) {
