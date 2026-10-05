@@ -51,17 +51,21 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 .env        configurazione personale (ignorato da Git; parti da .env.example)
 ```
 
-Le cartelle `frontend/` e `docker-compose.yml` arriveranno nelle fasi successive.
+`docker-compose.yml` (nella radice) avvia il database PostgreSQL. La cartella `frontend/` arriverà nelle fasi successive.
 
 ## Guide
 
 1. [Installazione e setup dell'ambiente](docs/01-installazione-e-setup.md)
 2. [Fase 0: collegamento alla banca](docs/02-fase-0-collegamento-banca.md)
+3. [Modello e regole: le decisioni prese](docs/03-modello-e-regole.md)
+4. [Fase 1, passo 1: PostgreSQL con Docker](docs/04-fase-1-passo-1-postgres-docker.md)
 
 ## Piano di lavoro
 
-- [ ] **Fase 0**: prova di collegamento con Revolut e ING (programma a riga di comando)
+- [x] **Fase 0**: prova di collegamento con ING, Revolut, Fineco e Trade Republic (programma a riga di comando)
 - [ ] **Fase 1**: modello dati, PostgreSQL in Docker, sincronizzazione automatica
+  - [ ] passo 1: PostgreSQL con Docker Compose
+  - [ ] passo 2: Spring Boot + Flyway + prime entità
 - [ ] **Fase 2**: API REST e frontend React con l'elenco dei movimenti, categorie a regole, giroconti
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV
 - [ ] **Fase 4**: tutto in Docker Compose, installazione su un server, accesso via Tailscale
