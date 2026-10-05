@@ -3,6 +3,7 @@ package it.wallettracker.bank.enablebanking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -53,13 +54,15 @@ class EnableBankingClientTest {
                 .andRespond(withSuccess("""
                         {"aspsps": [
                           {"name": "ING", "country": "IT", "psu_types": ["personal"],
-                           "maximum_consent_validity": 15552000, "logo": "https://example.com/ing.png"}
+                           "maximum_consent_validity": 15552000, "required_psu_headers": ["Psu-Ip-Address"],
+                           "logo": "https://example.com/ing.png"}
                         ]}
                         """, MediaType.APPLICATION_JSON));
 
         List<Aspsp> banks = client.listAspsps("IT");
 
-        assertThat(banks).containsExactly(new Aspsp("ING", "IT", List.of("personal"), 15552000L));
+        assertThat(banks).containsExactly(new Aspsp("ING", "IT", List.of("personal"), 15552000L,
+                List.of("Psu-Ip-Address")));
         server.verify();
     }
 
@@ -93,6 +96,27 @@ class EnableBankingClientTest {
         assertThat(transactions.get(0).signedAmount()).isEqualByComparingTo(new BigDecimal("-12.50"));
         assertThat(transactions.get(0).creditor().name()).isEqualTo("ESSELUNGA");
         assertThat(transactions.get(1).signedAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+        server.verify();
+    }
+
+    @Test
+    void sendsPsuHeadersOnlyWhenTheUserIsPresent() {
+        String balancesJson = """
+                {"balances": [{"balance_amount": {"amount": "10.00", "currency": "EUR"}, "balance_type": "ITAV"}]}
+                """;
+        // Utente presente: gli header PSU devono esserci.
+        server.expect(requestTo("https://api.enablebanking.test/accounts/acc-1/balances"))
+                .andExpect(header("Psu-Ip-Address", "203.0.113.7"))
+                .andExpect(header("Psu-User-Agent", "WalletTracker-test"))
+                .andRespond(withSuccess(balancesJson, MediaType.APPLICATION_JSON));
+        // Lettura in background: niente header PSU.
+        server.expect(requestTo("https://api.enablebanking.test/accounts/acc-1/balances"))
+                .andExpect(headerDoesNotExist("Psu-Ip-Address"))
+                .andRespond(withSuccess(balancesJson, MediaType.APPLICATION_JSON));
+
+        client.getBalances("acc-1", new PsuHeaders("203.0.113.7", "WalletTracker-test"));
+        client.getBalances("acc-1");
+
         server.verify();
     }
 }

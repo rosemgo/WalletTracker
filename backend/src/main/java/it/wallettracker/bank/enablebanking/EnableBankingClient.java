@@ -77,13 +77,32 @@ public class EnableBankingClient {
                 .body(Session.class);
     }
 
-    /** GET /accounts/{uid}/balances: i saldi di un conto. */
+    /** GET /accounts/{uid}/balances: i saldi di un conto, letti in background (senza l'utente). */
     public List<Balance> getBalances(String accountUid) {
+        return getBalances(accountUid, null);
+    }
+
+    /**
+     * GET /accounts/{uid}/balances: i saldi di un conto.
+     *
+     * @param psu gli header dell'utente presente, oppure {@code null} per una lettura in background
+     */
+    public List<Balance> getBalances(String accountUid, PsuHeaders psu) {
         BalanceList response = restClient.get()
                 .uri("/accounts/{uid}/balances", accountUid)
+                .headers(headers -> {
+                    if (psu != null) {
+                        psu.addTo(headers);
+                    }
+                })
                 .retrieve()
                 .body(BalanceList.class);
         return response.balances();
+    }
+
+    /** GET /accounts/{uid}/transactions: i movimenti tra due date, letti in background (senza l'utente). */
+    public List<Transaction> getTransactions(String accountUid, LocalDate from, LocalDate to) {
+        return getTransactions(accountUid, from, to, null);
     }
 
     /**
@@ -92,8 +111,10 @@ public class EnableBankingClient {
      * <p>L'API restituisce i movimenti "a pagine". Se la risposta contiene una
      * {@code continuation_key}, la rimandiamo nella richiesta successiva per avere la pagina dopo,
      * e così via finché non arriva vuota.
+     *
+     * @param psu gli header dell'utente presente, oppure {@code null} per una lettura in background
      */
-    public List<Transaction> getTransactions(String accountUid, LocalDate from, LocalDate to) {
+    public List<Transaction> getTransactions(String accountUid, LocalDate from, LocalDate to, PsuHeaders psu) {
         List<Transaction> allTransactions = new ArrayList<>();
         String continuationKey = null;
 
@@ -105,11 +126,21 @@ public class EnableBankingClient {
 
             TransactionPage page = restClient.get()
                     .uri(url, accountUid, from, to, continuationKey)
+                    .headers(headers -> {
+                        if (psu != null) {
+                            psu.addTo(headers);
+                        }
+                    })
                     .retrieve()
                     .body(TransactionPage.class);
 
             if (page.transactions() != null) {
                 allTransactions.addAll(page.transactions());
+            }
+
+            // Protezione: alcune banche restituiscono di nuovo la stessa chiave, e il ciclo non finirebbe mai.
+            if (page.continuationKey() != null && page.continuationKey().equals(continuationKey)) {
+                break;
             }
             continuationKey = page.continuationKey();
         } while (continuationKey != null && !continuationKey.isEmpty());
