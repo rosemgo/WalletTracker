@@ -3,14 +3,15 @@ package it.wallettracker.poc;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.UUID;
 
+import it.wallettracker.account.Account;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Access;
-import it.wallettracker.bank.enablebanking.EnableBankingApi.Account;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.AspspRef;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
@@ -22,6 +23,8 @@ import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
+import it.wallettracker.connection.BankConnection;
+import it.wallettracker.connection.ConnectionService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -39,7 +42,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  *   <li>ti fa autorizzare l'accesso ai conti (login + SCA sul sito della banca);</li>
  *   <li>stampa saldi e movimenti degli ultimi 30 giorni.</li>
  * </ol>
- * Non salva nulla: serve solo a verificare che il collegamento funzioni con le tue banche.
+ * Dalla Fase 1 il collegamento e i conti vengono salvati nel database: la volta successiva puoi
+ * riusare il collegamento salvato senza rifare il login, finché il consenso è valido.
  *
  * <p>Un {@link CommandLineRunner} viene eseguito da Spring Boot subito dopo l'avvio.
  * {@code @Profile("poc")} fa sì che questa classe esista solo se avvii l'app con il profilo "poc".
@@ -55,29 +59,35 @@ public class PocRunner implements CommandLineRunner {
 
     private final EnableBankingClient client;
     private final EnableBankingProperties properties;
+    private final ConnectionService connectionService;
     private final Scanner keyboard = new Scanner(System.in);
 
+    /** Il risultato del login sulla banca: il codice da scambiare e la scadenza del consenso richiesta. */
+    private record AuthorizationResult(String code, Instant validUntil) {
+    }
+
     // Spring passa al costruttore i componenti di cui abbiamo bisogno (dependency injection).
-    public PocRunner(EnableBankingClient client, EnableBankingProperties properties) {
+    public PocRunner(EnableBankingClient client, EnableBankingProperties properties,
+            ConnectionService connectionService) {
         this.client = client;
         this.properties = properties;
+        this.connectionService = connectionService;
     }
 
     @Override
     public void run(String... args) {
-        System.out.println("=== WalletTracker - Fase 0: prova di collegamento a Enable Banking ===");
+        System.out.println("=== WalletTracker - prova di collegamento a Enable Banking ===");
         try {
-            Aspsp bank = chooseBank();
-            String code = authorize(bank);
-
-            Session session = client.createSession(code);
-            System.out.println("Collegamento riuscito! Conti autorizzati: " + session.accounts().size());
+            BankConnection connection = chooseOrCreateConnection();
+            List<Account> accounts = connectionService.accountsOf(connection);
+            System.out.println(connection.getAspspName() + ": " + accounts.size() + " conti, consenso valido fino al "
+                    + LocalDate.ofInstant(connection.getValidUntil(), ZoneId.systemDefault()));
 
             // Sei davanti al programma: lo diciamo alla banca, così le letture non consumano
             // il limite giornaliero degli accessi in background (vedi PsuHeaders).
             PsuHeaders psu = new PsuHeaders(findPublicIpAddress(), "WalletTracker/0.1 (Java)");
 
-            for (Account account : session.accounts()) {
+            for (Account account : accounts) {
                 printAccount(account, psu);
             }
         } catch (RestClientResponseException e) {
@@ -87,6 +97,42 @@ public class PocRunner implements CommandLineRunner {
         } catch (IllegalStateException e) {
             System.out.println("Errore: " + e.getMessage());
         }
+    }
+
+    /**
+     * Mostra i collegamenti salvati nel database con il consenso ancora valido: puoi riusarne uno
+     * (niente login) oppure collegare una nuova banca, che verrà salvata.
+     */
+    private BankConnection chooseOrCreateConnection() {
+        List<BankConnection> saved = connectionService.validConnections();
+        if (!saved.isEmpty()) {
+            System.out.println("Collegamenti salvati:");
+            for (int i = 0; i < saved.size(); i++) {
+                BankConnection connection = saved.get(i);
+                System.out.println("  " + (i + 1) + ") " + connection.getAspspName() + " (" + connection.getAspspCountry()
+                        + "), valido fino al " + LocalDate.ofInstant(connection.getValidUntil(), ZoneId.systemDefault()));
+            }
+            System.out.println("  0) Collega una nuova banca");
+
+            String choice = ask("Scelta");
+            try {
+                int number = Integer.parseInt(choice);
+                if (number >= 1 && number <= saved.size()) {
+                    return saved.get(number - 1);
+                }
+            } catch (NumberFormatException e) {
+                // Qualsiasi altra risposta: colleghiamo una nuova banca.
+            }
+        }
+
+        Aspsp bank = chooseBank();
+        AuthorizationResult authorization = authorize(bank);
+        Session session = client.createSession(authorization.code());
+        System.out.println("Collegamento riuscito! Conti autorizzati: " + session.accounts().size());
+
+        BankConnection connection = connectionService.saveSession(session, authorization.validUntil());
+        System.out.println("Collegamento e conti salvati nel database.");
+        return connection;
     }
 
     /** Passo 1: l'utente sceglie la banca dall'elenco di Enable Banking. */
@@ -126,7 +172,7 @@ public class PocRunner implements CommandLineRunner {
     }
 
     /** Passo 2: l'utente accede alla banca e ci restituisce il codice di autorizzazione. */
-    private String authorize(Aspsp bank) {
+    private AuthorizationResult authorize(Aspsp bank) {
         // Chiediamo il consenso per la durata massima ammessa dalla banca, senza superare i 180 giorni.
         Duration validity = MAX_CONSENT;
         if (bank.maximumConsentValidity() != null && bank.maximumConsentValidity() < MAX_CONSENT.toSeconds()) {
@@ -170,23 +216,24 @@ public class PocRunner implements CommandLineRunner {
         if (params.get("code") == null) {
             throw new IllegalStateException("nell'indirizzo incollato non c'è il parametro 'code'");
         }
-        return params.get("code");
+        return new AuthorizationResult(params.get("code"), validUntil);
     }
 
     /** Passo 3: stampiamo saldi e movimenti di un conto. */
     private void printAccount(Account account, PsuHeaders psu) {
-        String iban = account.accountId() != null ? account.accountId().iban() : "-";
+        String iban = account.getIban() != null ? account.getIban() : "-";
         System.out.println();
-        System.out.println("=== Conto: " + account.name() + " | IBAN: " + iban + " | " + account.currency() + " ===");
+        System.out.println("=== Conto: " + account.getName() + " | IBAN: " + iban + " | " + account.getCurrency()
+                + " | ruolo: " + account.getRole() + " ===");
 
-        for (Balance balance : client.getBalances(account.uid(), psu)) {
+        for (Balance balance : client.getBalances(account.getProviderUid(), psu)) {
             System.out.println("Saldo " + balance.balanceType() + ": "
                     + balance.balanceAmount().amount() + " " + balance.balanceAmount().currency());
         }
 
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusDays(DAYS_OF_HISTORY);
-        List<Transaction> transactions = client.getTransactions(account.uid(), from, to, psu);
+        List<Transaction> transactions = client.getTransactions(account.getProviderUid(), from, to, psu);
         System.out.println(transactions.size() + " movimenti dal " + from + " al " + to + ":");
 
         for (Transaction transaction : transactions) {
