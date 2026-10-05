@@ -101,6 +101,15 @@ Due tabelle:
 Il file è commentato riga per riga. Il nome conta: `V1` è la versione, `__` (due trattini bassi)
 la separa dalla descrizione.
 
+**`V2__identificativi_senza_limite.sql`** è arrivato subito dopo, ed è un buon esempio di come si
+lavora con Flyway. Con i dati veri di ING l'impronta del conto superava i 200 caratteri previsti in
+V1 e l'inserimento falliva. V1 era già stato eseguito sul tuo database, quindi non si modifica: si
+aggiunge V2, che cambia il tipo delle colonne in `TEXT` (stringa senza limite). Al prossimo avvio
+Flyway vede che V1 è già fatto ed esegue solo V2.
+
+Nota anche che l'errore non ha lasciato dati a metà: `saveSession` è `@Transactional`, quindi
+anche il collegamento inserito prima del conto è stato annullato (*rollback*).
+
 ### 4. Le entità: `BankConnection` e `Account`
 
 Sono classi annotate con `@Entity`. Le annotazioni principali:
@@ -282,6 +291,7 @@ vengono presi dal container, non da `application.yml`.
 | avvio: `Connection to localhost:5432 refused` | il container del database non è avviato | `docker compose up -d` |
 | avvio: `password authentication failed for user "wallettracker"` | la password nel `.env` è diversa da quella con cui è stato creato il database | rimetti quella originale, oppure `docker compose down -v` + `up -d` (⚠️ cancella i dati) |
 | avvio: `Validate failed: Migrations have failed validation` / `checksum mismatch` | è stato modificato un file di migrazione già eseguito | ripristinalo con `git restore`; le modifiche vanno in un nuovo file `V2__...` |
+| `value too long for type character varying(200)` | un identificativo della banca era più lungo del previsto (è successo con ING) | risolto dalla migrazione `V2__identificativi_senza_limite.sql`: fai `git pull` e rilancia |
 | avvio: `Schema validation: missing table [...]` | le tabelle non esistono e Flyway non è partito | controlla che il file sia in `src/main/resources/db/migration` e si chiami `V1__qualcosa.sql` |
 
 ---
