@@ -37,7 +37,7 @@ public final class EnableBankingApi {
     public record Aspsp(String name, String country, List<String> psuTypes, Long maximumConsentValidity) {
     }
 
-    /** Risposta di GET /aspsps. */
+    /** Risposta di GET /aspsps. Ottengo la lista delle banche che ho linkato in EnableBanking*/
     public record AspspList(List<Aspsp> aspsps) {
     }
 
@@ -47,7 +47,9 @@ public final class EnableBankingApi {
 
     // ---------- Autorizzazione (consenso PSD2) ----------
 
-    /** Richiesta di POST /auth: "voglio leggere i conti di questa banca fino alla data validUntil". */
+    /** Richiesta di POST /auth: "voglio leggere i conti di questa banca fino alla data validUntil".
+     * crea una nuova autorizzazione, con il suo authorization_id, e restituisce il link per il login
+     * */
     @JsonNaming(SnakeCaseStrategy.class)
     public record AuthorizationRequest(Access access, AspspRef aspsp, String state, String redirectUrl,
             String psuType) {
@@ -62,7 +64,9 @@ public final class EnableBankingApi {
     public record AuthorizationResponse(String url, String authorizationId) {
     }
 
-    /** Richiesta di POST /sessions: il codice ricevuto al termine del login sulla banca. */
+    /** Richiesta di POST /sessions: il codice ricevuto al termine del login sulla banca.
+     * Crea una nuova sessione, con il suo session_id, a partire dal "code"
+     * */
     public record SessionRequest(String code) {
     }
 
@@ -101,6 +105,12 @@ public final class EnableBankingApi {
 
     /**
      * Un movimento.
+     * Il problema da risolvere: Enable Banking manda l'importo sempre positivo e indica la direzione in un campo separato:
+     *
+     * "transaction_amount": { "amount": "23.40", "currency": "EUR" },
+     * "credit_debit_indicator": "DBIT"
+     *
+     * DBIT (debit) vuol dire uscita, CRDT (credit) vuol dire entrata. Per fare somme e grafici è molto più comodo un solo numero con il segno: −23,40 per un'uscita, +23,40 per un'entrata.
      * <ul>
      *   <li>{@code creditDebitIndicator}: DBIT = uscita, CRDT = entrata (l'importo è sempre positivo);</li>
      *   <li>{@code status}: BOOK = contabilizzato, PDNG = in attesa (può ancora cambiare);</li>
@@ -112,7 +122,7 @@ public final class EnableBankingApi {
     public record Transaction(
             String entryReference,
             Amount transactionAmount,
-            String creditDebitIndicator,
+            String creditDebitIndicator, //
             String status,
             LocalDate bookingDate,
             LocalDate valueDate,

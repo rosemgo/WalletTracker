@@ -87,7 +87,7 @@ public class EnableBankingClient {
     }
 
     /**
-     * GET /accounts/{uid}/transactions: tutti i movimenti di un conto tra due date.
+     * GET /accounts/{uid}/transactions: legge tutti i movimenti di un conto tra due date.
      *
      * <p>L'API restituisce i movimenti "a pagine". Se la risposta contiene una
      * {@code continuation_key}, la rimandiamo nella richiesta successiva per avere la pagina dopo,
