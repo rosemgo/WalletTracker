@@ -21,9 +21,12 @@ import it.wallettracker.bank.enablebanking.EnableBankingApi.Session;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
+import it.wallettracker.bank.enablebanking.PsuHeaders;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -70,8 +73,12 @@ public class PocRunner implements CommandLineRunner {
             Session session = client.createSession(code);
             System.out.println("Collegamento riuscito! Conti autorizzati: " + session.accounts().size());
 
+            // Sei davanti al programma: lo diciamo alla banca, così le letture non consumano
+            // il limite giornaliero degli accessi in background (vedi PsuHeaders).
+            PsuHeaders psu = new PsuHeaders(findPublicIpAddress(), "WalletTracker/0.1 (Java)");
+
             for (Account account : session.accounts()) {
-                printAccount(account);
+                printAccount(account, psu);
             }
         } catch (RestClientResponseException e) {
             System.out.println("Enable Banking ha risposto con un errore HTTP " + e.getStatusCode().value() + ":");
@@ -105,7 +112,8 @@ public class PocRunner implements CommandLineRunner {
 
             for (int i = 0; i < matches.size(); i++) {
                 Aspsp bank = matches.get(i);
-                System.out.println("  " + (i + 1) + ") " + bank.name() + "  " + bank.psuTypes());
+                System.out.println("  " + (i + 1) + ") " + bank.name() + "  " + bank.psuTypes()
+                        + "  header PSU richiesti: " + bank.requiredPsuHeaders());
             }
 
             String choice = ask("Numero della banca");
@@ -166,19 +174,19 @@ public class PocRunner implements CommandLineRunner {
     }
 
     /** Passo 3: stampiamo saldi e movimenti di un conto. */
-    private void printAccount(Account account) {
+    private void printAccount(Account account, PsuHeaders psu) {
         String iban = account.accountId() != null ? account.accountId().iban() : "-";
         System.out.println();
         System.out.println("=== Conto: " + account.name() + " | IBAN: " + iban + " | " + account.currency() + " ===");
 
-        for (Balance balance : client.getBalances(account.uid())) {
+        for (Balance balance : client.getBalances(account.uid(), psu)) {
             System.out.println("Saldo " + balance.balanceType() + ": "
                     + balance.balanceAmount().amount() + " " + balance.balanceAmount().currency());
         }
 
         LocalDate to = LocalDate.now();
         LocalDate from = to.minusDays(DAYS_OF_HISTORY);
-        List<Transaction> transactions = client.getTransactions(account.uid(), from, to);
+        List<Transaction> transactions = client.getTransactions(account.uid(), from, to, psu);
         System.out.println(transactions.size() + " movimenti dal " + from + " al " + to + ":");
 
         for (Transaction transaction : transactions) {
@@ -188,6 +196,23 @@ public class PocRunner implements CommandLineRunner {
                     transaction.transactionAmount().currency(),
                     transaction.status(),
                     descriptionOf(transaction));
+        }
+    }
+
+    /**
+     * Il tuo indirizzo IP pubblico, da inviare alla banca come "utente presente".
+     * Lo chiediamo a un servizio esterno (ipify); se non risponde, lo chiediamo a te.
+     */
+    private String findPublicIpAddress() {
+        try {
+            String ip = RestClient.create().get()
+                    .uri("https://api.ipify.org")
+                    .retrieve()
+                    .body(String.class);
+            System.out.println("Il tuo indirizzo IP pubblico: " + ip);
+            return ip.trim();
+        } catch (RestClientException e) {
+            return ask("Non riesco a trovare il tuo IP pubblico: scrivilo tu (lo vedi su https://api.ipify.org)");
         }
     }
 

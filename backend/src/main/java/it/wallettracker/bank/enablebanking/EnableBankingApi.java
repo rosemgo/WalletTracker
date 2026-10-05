@@ -31,10 +31,15 @@ public final class EnableBankingApi {
 
     /**
      * Una banca. Nella terminologia PSD2 si chiama ASPSP (Account Servicing Payment Service Provider).
-     * {@code maximumConsentValidity} è la durata massima del consenso, in secondi.
+     * <ul>
+     *   <li>{@code maximumConsentValidity}: durata massima del consenso, in secondi;</li>
+     *   <li>{@code requiredPsuHeaders}: gli header da inviare per dire alla banca che l'utente è
+     *       presente (vedi {@link PsuHeaders}).</li>
+     * </ul>
      */
     @JsonNaming(SnakeCaseStrategy.class)
-    public record Aspsp(String name, String country, List<String> psuTypes, Long maximumConsentValidity) {
+    public record Aspsp(String name, String country, List<String> psuTypes, Long maximumConsentValidity,
+            List<String> requiredPsuHeaders) {
     }
 
     /** Risposta di GET /aspsps. Ottengo la lista delle banche che ho linkato in EnableBanking*/

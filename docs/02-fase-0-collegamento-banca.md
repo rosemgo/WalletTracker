@@ -173,6 +173,7 @@ Ripeti con l'altra banca.
 | Errore che dice che l'applicazione non è attiva | conti non collegati | rifai il Passo 3 |
 | `il parametro 'state' non corrisponde` | hai incollato l'indirizzo di un tentativo precedente | rilancia il programma e usa il link nuovo |
 | Il browser dice che `localhost` non è raggiungibile | è normale | copia comunque l'indirizzo dalla barra |
+| HTTP 429 `ASPSP_RATE_LIMIT_EXCEEDED` | la banca limita le letture in background (Trade Republic in modo molto stretto) | il programma invia gli header PSU con il tuo IP pubblico, che segnalano che sei presente; se l'errore resta, controlla quali header richiede la banca (stampati accanto al nome) |
 
 Quando Enable Banking risponde con un errore, il programma stampa il corpo della risposta:
 di solito il messaggio spiega già il problema.
