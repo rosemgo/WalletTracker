@@ -1,0 +1,41 @@
+# Docker Compose: descrive i "servizi" (container) dell'applicazione e come avviarli insieme.
+# Per ora c'è solo il database; nelle fasi successive aggiungeremo backend e frontend.
+#
+# Comandi principali (dalla cartella del progetto):
+#   docker compose up -d     avvia in background
+#   docker compose ps        mostra lo stato
+#   docker compose logs -f   segue i log
+#   docker compose down      ferma e rimuove i container (i dati restano nel volume)
+#
+# I valori ${...} vengono letti dal file .env nella stessa cartella.
+
+# Nome del progetto: Docker lo usa come prefisso per volumi e reti (es. wallettracker_db-data).
+name: wallettracker
+
+services:
+  db:
+    # Immagine ufficiale di PostgreSQL, versione 18 (variante "alpine": più leggera).
+    image: postgres:18-alpine
+    container_name: wallettracker-db
+    restart: unless-stopped
+    environment:
+      # Al primo avvio PostgreSQL crea questo database e questo utente.
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # "porta-sul-tuo-pc:porta-nel-container". 127.0.0.1 = raggiungibile solo dal tuo PC, non dalla rete.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # I dati del database vivono in un volume, fuori dal container:
+      # se il container viene cancellato e ricreato, i dati restano.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      # Docker controlla periodicamente che il database risponda.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
