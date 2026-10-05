@@ -24,8 +24,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      # "porta-sul-tuo-pc:porta-nel-container". 127.0.0.1 = raggiungibile solo dal tuo PC, non dalla rete.
-      - "127.0.0.1:5432:5432"
+      # "indirizzo:porta-sul-tuo-pc:porta-nel-container". 127.0.0.1 = raggiungibile solo dal tuo PC.
+      # La porta sul PC si sceglie nel .env (POSTGRES_PORT, se manca vale 5432);
+      # quella nel container resta 5432, perché è la porta su cui ascolta PostgreSQL.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       # I dati del database vivono in un volume, fuori dal container:
       # se il container viene cancellato e ricreato, i dati restano.

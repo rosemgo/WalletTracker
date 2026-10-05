@@ -179,9 +179,11 @@ se è nella stessa cartella: così la password non finisce su Git.
 
 ```yaml
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
 ```
-Corrisponde a `-p`.
+Corrisponde a `-p`. La porta sul PC viene dal `.env`; la sintassi `${POSTGRES_PORT:-5432}` vuol
+dire "usa `POSTGRES_PORT`, se non c'è usa 5432". La porta nel container resta **sempre 5432**: è
+quella su cui ascolta PostgreSQL, e non dipende da come la pubblichi.
 
 ```yaml
     volumes:
@@ -217,7 +219,11 @@ perché contiene già i dati di Enable Banking:
 POSTGRES_DB=wallettracker
 POSTGRES_USER=wallettracker
 POSTGRES_PASSWORD=una-password-scelta-da-te
+POSTGRES_PORT=5432
 ```
+
+`POSTGRES_PORT` è la porta **sul tuo PC**. Se la 5432 non è disponibile (vedi "Problemi comuni"),
+metti `5433`.
 
 ⚠️ **La password viene usata solo al primo avvio**, quando il volume è vuoto. Se la cambi dopo, il
 database tiene quella vecchia. Per ricominciare da zero vedi `docker compose down -v` più sotto.
@@ -304,10 +310,37 @@ le tabelle le creerà Spring Boot nel passo 2.
 | Sintomo | Causa | Soluzione |
 |---|---|---|
 | `error during connect ... dockerDesktopLinuxEngine` | Docker Desktop non è avviato | avvialo e aspetta "Engine running" |
-| `port is already allocated` / `bind: address already in use` | la porta 5432 è già usata: dal container `pg-prova` della Parte B o da un PostgreSQL installato su Windows | `docker rm -f pg-prova`; se hai PostgreSQL installato, fermalo oppure cambia la porta in `"127.0.0.1:5433:5432"` |
+| `port is already allocated` / `bind: address already in use` | la porta 5432 è già usata: dal container `pg-prova` della Parte B o da un PostgreSQL installato su Windows | `docker rm -f pg-prova`; se hai PostgreSQL installato, fermalo oppure usa un'altra porta (vedi sotto) |
+| `Ports are not available ... bind: An attempt was made to access a socket in a way forbidden by its access permissions` | Windows ha **riservato** la porta (succede con Hyper-V/WSL, che bloccano intervalli di porte) oppure un altro programma la usa | usa un'altra porta: in `docker run` scrivi `-p 127.0.0.1:5433:5432`, con Compose metti `POSTGRES_PORT=5433` nel `.env`. Vedi la sezione qui sotto |
+| `Conflict. The container name "/pg-prova" is already in use` | un `docker run` fallito ha comunque **creato** il container, che ora occupa il nome | `docker rm -f pg-prova` e riprova |
 | `password authentication failed` | hai cambiato la password nel `.env` dopo il primo avvio | `docker compose down -v` e poi `up -d` (⚠️ cancella i dati) |
 | lo stato resta `starting` o diventa `unhealthy` | il database non parte | `docker compose logs db` e leggi l'errore |
 | `variable is not set. Defaulting to a blank string` | mancano le variabili nel `.env` | aggiungi le tre variabili `POSTGRES_*` |
+
+### Porta 5432 bloccata su Windows: come capire il perché
+
+In PowerShell:
+
+```powershell
+netstat -ano | findstr :5432
+netsh interface ipv4 show excludedportrange protocol=tcp
+```
+
+- **Il primo comando** mostra chi usa la porta. Se compare una riga `LISTENING`, l'ultimo numero è
+  il PID del programma: `tasklist /fi "PID eq <numero>"` ti dice qual è. Se è `postgres.exe`, hai
+  un PostgreSQL installato su Windows.
+- **Il secondo comando** mostra gli intervalli di porte **riservati** da Windows. Se 5432 cade in uno
+  di questi intervalli (es. `5357 – 5456`), nessun programma la può usare.
+
+In entrambi i casi la soluzione più semplice è usare la **5433** sul PC. La porta nel container
+resta 5432:
+
+```
+-p 127.0.0.1:5433:5432
+            └─PC─┘ └─container─┘
+```
+
+Nella finestra Database di IntelliJ usa la stessa porta che hai scelto (5433).
 
 ---
 

@@ -14,7 +14,7 @@ più specifica si applica.
 | Ruolo | Conti | Uscite, di default | Entrate, di default |
 |---|---|---|---|
 | **PRINCIPALE** | ING conto corrente (dove arriva lo stipendio) | spesa | entrata |
-| **SPESE** | Revolut, ING carta di credito | spesa | rimborso |
+| **SPESE** | Revolut, ING carta di credito, BBVA (poco usato) | spesa | rimborso |
 | **INVESTIMENTI** | Fineco conto corrente, Fineco conto trading, Trade Republic | costo/tassa | rendita |
 | **ESCLUSO** | conti collegati solo per prova, conti vuoti (es. Revolut USD) | ignorata | ignorata |
 
@@ -31,7 +31,6 @@ più specifica si applica.
 | `ACQUISTO_TITOLI` / `VENDITA_TITOLI` | `Compravendita Titoli` | no: il capitale cambia forma |
 | `RENDITA` | cedole, dividendi, interessi | no (sezione investimenti) |
 | `TASSA_INVESTIMENTI` | ritenute, imposta di bollo, capital gain, Tobin tax | no (sezione investimenti) |
-| `PRESTITO` | prestito ricevuto e relative restituzioni | no (si compensano) |
 | `IGNORATO` | movimenti da 0,00 € (verifiche della carta) | no |
 
 ## 3. Trasferimenti tra i propri conti
@@ -83,6 +82,7 @@ solo la liquidità. Si potrà aggiungere in futuro con un'altra fonte (es. impor
 | **Revolut** | 180 giorni | un conto per valuta con lo **stesso IBAN**; movimenti da 0,00 €; controparte e causale spesso identiche (da non ripetere) |
 | **Fineco c/c** | 180 giorni | storico dalla data di apertura (marzo 2026); causali molto strutturate |
 | **Fineco trading** | 180 giorni | include acquisti/vendite di titoli; il saldo può essere leggermente negativo |
+| **BBVA** | 180 giorni | conto poco usato; descrizioni nello stile spagnolo (`TRANSFERENCIAS // TRANSFERENCIA RECIBIDA // …`); nessun header PSU richiesto |
 | **Trade Republic** | **90 giorni** | letture in background quasi assenti: servono gli header PSU; **pagine ripetute** (ogni movimento arriva due volte); **nessuna descrizione**; ignora `date_from`; importi con 6 decimali |
 
 Conseguenze per il modello:
@@ -114,8 +114,13 @@ include anche un **numero progressivo** tra i movimenti uguali della stessa sinc
 - Ogni sincronizzazione scarica solo dall'ultima data letta, meno qualche giorno di margine.
 - Scadenza del consenso: avviso qualche giorno prima (Trade Republic ogni 90 giorni, le altre ogni 180).
 
-## 8. Domande aperte
+## 8. Classificazione manuale
 
-- **BBVA:** sul conto trading arrivano bonifici da BBVA. È un tuo conto? Va collegato?
-- **Bonifici verso persone su Revolut:** quali sono restituzioni del prestito e quali spese?
+Le operazioni rare (per esempio un prestito ricevuto da un familiare e le sue restituzioni) non
+meritano regole automatiche. Dalla dashboard si potrà cambiare a mano il tipo di un singolo
+movimento, ad esempio in `TRASFERIMENTO_INTERNO` o `IGNORATO`, così non pesa su entrate e spese.
+La scelta manuale ha sempre la precedenza sulle regole.
+
+## 9. Domande aperte
+
 - **Trade Republic:** cosa contiene il JSON originale (lo vedremo quando lo salveremo nel database).
