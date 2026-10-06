@@ -242,7 +242,15 @@ public class PocRunner implements CommandLineRunner {
         }
 
         // Importiamo i movimenti nel database (senza doppioni) e mostriamo un riepilogo.
-        ImportResult result = importService.importAccount(account, psu);
+        // Se l'importazione di questo conto fallisce, lo segnaliamo e passiamo al conto successivo.
+        ImportResult result;
+        try {
+            result = importService.importAccount(account, psu);
+        } catch (RestClientResponseException e) {
+            System.out.println("Importazione non riuscita: HTTP " + e.getStatusCode().value() + " "
+                    + e.getResponseBodyAsString());
+            return;
+        }
         System.out.println("Importazione dal " + result.from() + ": ricevuti " + result.received()
                 + ", copie ripetute " + result.repeatedCopies()
                 + ", nuovi " + result.inserted()

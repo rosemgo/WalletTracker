@@ -117,7 +117,7 @@ private String rawJson;
 
 Il metodo `importAccount(account, psu)` esegue questi passi:
 
-1. **Calcola da quale data scaricare:** dall'ultimo movimento contabilizzato salvato, meno 10
+1. **Calcola da quale data scaricare** (se la banca rifiuta il periodo con `WRONG_TRANSACTIONS_PERIOD`, riprova una volta con gli ultimi 89 giorni): dall'ultimo movimento contabilizzato salvato, meno 10
    giorni di margine (`OVERLAP_DAYS`). Alla prima importazione, un anno fa (`FIRST_IMPORT_DAYS`);
    la banca può darne meno.
 2. **Scarica** i movimenti dal client.
@@ -188,7 +188,7 @@ C'è un test per ogni regola:
    git pull
    docker compose up -d
    cd backend
-   .\mvnw.cmd test        # devono passare 18 test
+   .\mvnw.cmd test        # devono passare 19 test
    ```
 2. **Lancia il programma** e scegli i collegamenti salvati uno alla volta:
    ```powershell
@@ -246,6 +246,7 @@ serve per capire quali campi usa Trade Republic per descrivere i movimenti.
 | Sintomo | Causa | Soluzione |
 |---|---|---|
 | `HTTP 429` durante l'importazione | limite di richieste della banca (vedi Fase 0) | il programma invia già gli header PSU; se succede comunque, riprova più tardi |
+| `HTTP 422 WRONG_TRANSACTIONS_PERIOD` (es. Fineco) | senza un login recente la banca concede solo gli ultimi 90 giorni (regola PSD2) | il programma ora riprova da solo con 89 giorni. Per avere lo storico completo, ricollega la banca (`0`): l'importazione subito dopo il login può andare più indietro |
 | la prima importazione di un conto riceve pochi movimenti | la banca concede meno di un anno di storico | normale: dipende dalla banca |
 | `duplicate key value violates unique constraint "uq_bank_transaction_account_dedup"` | due movimenti con la stessa impronta: non dovrebbe succedere | mandami il messaggio completo: è proprio il caso che il vincolo deve far emergere |
 

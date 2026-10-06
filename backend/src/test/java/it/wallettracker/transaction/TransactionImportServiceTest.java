@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -26,7 +27,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -152,12 +156,35 @@ class TransactionImportServiceTest {
         assertThat(second.from()).isEqualTo(LocalDate.of(2026, 9, 10).minusDays(TransactionImportService.OVERLAP_DAYS));
     }
 
+    @Test
+    void retriesWithNinetyDaysWhenTheBankRejectsThePeriod() {
+        // Prima chiamata: la banca rifiuta un anno di storico. Seconda: risponde normalmente.
+        var wrongPeriod = HttpClientErrorException.create(HttpStatusCode.valueOf(422), "Unprocessable",
+                HttpHeaders.EMPTY,
+                "{\"error\":\"WRONG_TRANSACTIONS_PERIOD\"}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8);
+        RawTransaction transaction = raw(json("t1", "BOOK", "2026-09-10", "12.50", "DBIT", "ESSELUNGA"));
+        when(client.getTransactions(eq("uid-1"), any(), any(), any()))
+                .thenThrow(wrongPeriod)
+                .thenReturn(List.of(transaction));
+
+        var result = importService.importAccount(account, null);
+
+        assertThat(result.from())
+                .isEqualTo(LocalDate.now().minusDays(TransactionImportService.DAYS_WITHOUT_RECENT_SCA));
+        assertThat(result.inserted()).isEqualTo(1);
+    }
+
     /** Dice al client finto di restituire questi movimenti, qualunque siano conto e date richiesti. */
     private void bankReturns(String... jsons) {
         List<RawTransaction> transactions = Arrays.stream(jsons)
-                .map(json -> new RawTransaction(JSON.readValue(json, Transaction.class), json))
+                .map(TransactionImportServiceTest::raw)
                 .toList();
         when(client.getTransactions(eq("uid-1"), any(), any(), any())).thenReturn(transactions);
+    }
+
+    private static RawTransaction raw(String json) {
+        return new RawTransaction(JSON.readValue(json, Transaction.class), json);
     }
 
     /** Un movimento in formato JSON, come lo manda Enable Banking. */

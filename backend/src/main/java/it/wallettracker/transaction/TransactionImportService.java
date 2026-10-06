@@ -20,6 +20,7 @@ import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Importa i movimenti di un conto da Enable Banking e li salva nel database <b>senza doppioni</b>.
@@ -50,6 +51,13 @@ public class TransactionImportService {
     /** Le importazioni successive ripartono dall'ultimo movimento salvato, meno qualche giorno di margine. */
     static final int OVERLAP_DAYS = 10;
 
+    /**
+     * Regola PSD2: senza un'autenticazione forte (SCA) recente, la banca può concedere solo gli ultimi
+     * 90 giorni. Lo storico più lungo è disponibile di solito solo subito dopo il login sulla banca.
+     * Usiamo 89 giorni per stare sicuri dentro il limite.
+     */
+    static final int DAYS_WITHOUT_RECENT_SCA = 89;
+
     private final EnableBankingClient client;
     private final BankTransactionRepository repository;
 
@@ -76,7 +84,19 @@ public class TransactionImportService {
                 .map(last -> last.getBookingDate().minusDays(OVERLAP_DAYS))
                 .orElse(to.minusDays(FIRST_IMPORT_DAYS));
 
-        List<RawTransaction> received = client.getTransactions(account.getProviderUid(), from, to, psu);
+        List<RawTransaction> received;
+        try {
+            received = client.getTransactions(account.getProviderUid(), from, to, psu);
+        } catch (RestClientResponseException e) {
+            // La banca rifiuta il periodo (succede con Fineco quando il login non è recente):
+            // riproviamo una volta con gli ultimi 89 giorni. Qualsiasi altro errore lo rilanciamo.
+            LocalDate shorterFrom = to.minusDays(DAYS_WITHOUT_RECENT_SCA);
+            if (!isWrongPeriod(e) || !from.isBefore(shorterFrom)) {
+                throw e;
+            }
+            from = shorterFrom;
+            received = client.getTransactions(account.getProviderUid(), from, to, psu);
+        }
 
         // Regola 4: i movimenti in attesa vengono sostituiti ogni volta.
         repository.deleteByAccountAndStatus(account, TransactionStatus.PENDING);
@@ -115,6 +135,11 @@ public class TransactionImportService {
 
         return new ImportResult(from, received.size(), received.size() - unique.size(), inserted, alreadyPresent,
                 pending);
+    }
+
+    /** Enable Banking risponde 422 con l'errore WRONG_TRANSACTIONS_PERIOD quando la banca rifiuta le date. */
+    static boolean isWrongPeriod(RestClientResponseException e) {
+        return e.getStatusCode().value() == 422 && e.getResponseBodyAsString().contains("WRONG_TRANSACTIONS_PERIOD");
     }
 
     /** Gli ultimi movimenti salvati di un conto, dal più recente. */
