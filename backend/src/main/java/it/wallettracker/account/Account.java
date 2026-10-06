@@ -66,6 +66,14 @@ public class Account {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /** Quando è stata tentata l'ultima importazione (riuscita o no); null se mai. */
+    @Column(name = "last_sync_at")
+    private Instant lastSyncAt;
+
+    /** Il motivo dell'ultimo errore di importazione; null se l'ultima è andata bene. */
+    @Column(name = "last_sync_error")
+    private String lastSyncError;
+
     protected Account() {
     }
 
@@ -126,5 +134,13 @@ public class Account {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getLastSyncAt() {
+        return lastSyncAt;
+    }
+
+    public String getLastSyncError() {
+        return lastSyncError;
     }
 }

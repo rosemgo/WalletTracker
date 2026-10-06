@@ -25,6 +25,8 @@ import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.ConnectionService;
+import it.wallettracker.sync.SyncService;
+import it.wallettracker.sync.SyncService.AccountSync;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.TransactionImportService;
 import it.wallettracker.transaction.TransactionImportService.ImportResult;
@@ -66,6 +68,7 @@ public class PocRunner implements CommandLineRunner {
     private final ConnectionService connectionService;
     private final TransactionImportService importService;
     private final ClassificationService classificationService;
+    private final SyncService syncService;
     private final Scanner keyboard = new Scanner(System.in);
 
     /** Il risultato del login sulla banca: il codice da scambiare e la scadenza del consenso richiesta. */
@@ -75,12 +78,13 @@ public class PocRunner implements CommandLineRunner {
     // Spring passa al costruttore i componenti di cui abbiamo bisogno (dependency injection).
     public PocRunner(EnableBankingClient client, EnableBankingProperties properties,
             ConnectionService connectionService, TransactionImportService importService,
-            ClassificationService classificationService) {
+            ClassificationService classificationService, SyncService syncService) {
         this.client = client;
         this.properties = properties;
         this.connectionService = connectionService;
         this.importService = importService;
         this.classificationService = classificationService;
+        this.syncService = syncService;
     }
 
     @Override
@@ -257,15 +261,14 @@ public class PocRunner implements CommandLineRunner {
         }
 
         // Importiamo i movimenti nel database (senza doppioni) e mostriamo un riepilogo.
-        // Se l'importazione di questo conto fallisce, lo segnaliamo e passiamo al conto successivo.
-        ImportResult result;
-        try {
-            result = importService.importAccount(account, psu);
-        } catch (RestClientResponseException e) {
-            System.out.println("Importazione non riuscita: HTTP " + e.getStatusCode().value() + " "
-                    + e.getResponseBodyAsString());
+        // SyncService salva anche l'esito nel conto (last_sync_at, last_sync_error), come fa la
+        // sincronizzazione automatica. Se l'importazione fallisce, passiamo al conto successivo.
+        AccountSync sync = syncService.syncAccount(account, psu);
+        if (!sync.ok()) {
+            System.out.println("Importazione non riuscita: " + sync.error());
             return;
         }
+        ImportResult result = sync.result();
         System.out.println("Importazione dal " + result.from() + " (" + result.fromReason() + ")");
         System.out.println("Richieste alla banca: " + result.requests() + ", ricevuti " + result.received()
                 + ", copie ripetute " + result.repeatedCopies()

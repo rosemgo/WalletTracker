@@ -8,3 +8,12 @@ spring:
 logging:
   level:
     root: warn
+    # Gli esiti delle importazioni li stampa già PocRunner: dalla sincronizzazione mostriamo solo
+    # gli errori imprevisti.
+    it.wallettracker.sync: error
+
+wallettracker:
+  sync:
+    # Il programma della Fase 0 aggiorna i conti da solo, con te presente, e poi termina:
+    # niente sincronizzazione automatica.
+    enabled: false

@@ -29,3 +29,13 @@ enable-banking:
   application-id: ${ENABLE_BANKING_APP_ID:}
   private-key-path: ${ENABLE_BANKING_PRIVATE_KEY_PATH:../secrets/enable-banking.pem}
   redirect-url: ${ENABLE_BANKING_REDIRECT_URL:https://localhost:8443/callback}
+
+# Sincronizzazione automatica (Fase 1, passo 5): vedi SyncProperties e docs/08.
+wallettracker:
+  sync:
+    enabled: true
+    # Ogni conto viene aggiornato al massimo ogni 6 ore: 4 letture al giorno, il limite PSD2 in background.
+    interval: ${SYNC_INTERVAL:6h}
+    # Ogni 30 minuti si controlla se c'è un conto da aggiornare (costa solo una lettura del database).
+    check-every: 30m
+    initial-delay: 10s

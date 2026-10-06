@@ -86,6 +86,12 @@ public class ConnectionService {
         return connectionRepository.findByValidUntilAfterOrderByAspspName(Instant.now());
     }
 
+    /** Tutti i collegamenti, anche quelli con il consenso scaduto. */
+    @Transactional(readOnly = true)
+    public List<BankConnection> allConnections() {
+        return connectionRepository.findAll();
+    }
+
     /** I conti di un collegamento. */
     @Transactional(readOnly = true)
     public List<Account> accountsOf(BankConnection connection) {

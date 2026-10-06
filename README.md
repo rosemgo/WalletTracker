@@ -14,7 +14,7 @@ e mostrati in una dashboard con elenco movimenti, categorie e grafici.
   ┌────────────── Docker Compose (server di casa o VPS) ─────────────┐
   │                                                                  │
   │   backend (Spring Boot)                                          │
-  │    ├─ client Enable Banking  ◄── Fase 0 (sei qui)                │
+  │    ├─ client Enable Banking                                      │
   │    ├─ sincronizzazione ogni 6 ore: scarica, normalizza,          │
   │    │  elimina i doppioni, categorizza, riconosce i giroconti     │
   │    └─ API REST per la dashboard                                  │
@@ -69,20 +69,24 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 5. [Fase 1, passo 2: Spring Boot + PostgreSQL + Flyway](docs/05-fase-1-passo-2-spring-jpa-flyway.md)
 6. [Fase 1, passo 3: i movimenti, senza doppioni](docs/06-fase-1-passo-3-movimenti.md)
 7. [Fase 1, passo 4: la classificazione automatica](docs/07-fase-1-passo-4-classificazione.md)
+8. [Fase 1, passo 5: la sincronizzazione automatica](docs/08-fase-1-passo-5-sincronizzazione.md)
 
 ## Piano di lavoro
 
 - [x] **Fase 0**: prova di collegamento con ING, Revolut, Fineco e Trade Republic (programma a riga di comando)
-- [ ] **Fase 1**: modello dati, PostgreSQL in Docker, sincronizzazione automatica
+- [x] **Fase 1**: modello dati, PostgreSQL in Docker, sincronizzazione automatica
   - [x] passo 1: PostgreSQL con Docker Compose
   - [x] passo 2: Spring Boot + Flyway + collegamenti e conti salvati nel database
   - [x] passo 3: movimenti e importazione senza doppioni
   - [x] passo 4: classificazione automatica (motore generico + regole configurabili)
-  - [ ] passo 5: sincronizzazione automatica programmata
+  - [x] passo 5: sincronizzazione automatica programmata
 - [ ] **Fase 2**: server web, API REST e dashboard React
   - configurazione guidata dalla dashboard: credenziali Enable Banking, collegamento delle banche, ruoli dei conti
   - elenco movimenti con correzione manuale del tipo, gestione delle regole
+  - pulsante "Aggiorna ora" e stato della sincronizzazione di ogni conto
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic)
+  - categorie con "crea una regola da questa correzione"
+  - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili
@@ -98,6 +102,7 @@ Dalla cartella `backend/` (su Windows usa `mvnw.cmd` al posto di `./mvnw`):
 ```bash
 ./mvnw test                                           # esegue i test
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=poc # collega una banca o riusa un collegamento salvato
+./mvnw spring-boot:run                                # sincronizzazione automatica: resta acceso, Ctrl+C per fermarlo
 ```
 
 ## Sicurezza

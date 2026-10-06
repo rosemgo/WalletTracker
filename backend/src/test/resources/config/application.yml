@@ -1,0 +1,10 @@
+# Impostazioni in più, valide SOLO per i test.
+#
+# Spring Boot legge sia classpath:application.yml sia classpath:config/application.yml, e il secondo
+# vince sul primo. Questo file esiste solo nelle classi di test, quindi l'applicazione vera non lo vede.
+#
+# Nei test la sincronizzazione automatica è spenta: un timer che chiama la banca nel mezzo di un test
+# renderebbe i risultati imprevedibili. SyncSchedulerTest la riaccende apposta.
+wallettracker:
+  sync:
+    enabled: false

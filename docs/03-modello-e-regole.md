@@ -153,9 +153,38 @@ movimenti o più, il periodo viene diviso a metà (solo se la banca rispetta le 
 
 ## 7. Sincronizzazione (Fase 1, passo 5)
 
+Implementata in `SyncService` e `SyncScheduler` (dettagli in `docs/08-fase-1-passo-5-sincronizzazione.md`).
+
 | Modalità | Quando | Header PSU | Limite |
 |---|---|---|---|
-| automatica | a intervalli regolari | no | ~4 letture al giorno per conto (alcune banche meno) |
-| "Aggiorna ora" | l'utente preme il pulsante nella dashboard | sì | nessun limite giornaliero |
+| automatica | ogni conto al massimo ogni 6 ore (`wallettracker.sync.interval`) | no | ~4 letture al giorno per conto (alcune banche meno) |
+| manuale | programma della Fase 0; nella Fase 2 il pulsante "Aggiorna ora" | sì | nessun limite giornaliero |
 
-Un errore su un conto non blocca gli altri: si salta quel conto e si riprova al giro successivo.
+- Ogni 30 minuti si controlla quali conti hanno l'ultimo tentativo (`account.last_sync_at`) più vecchio
+  dell'intervallo. La data sta nel database, quindi il limite vale anche dopo un riavvio.
+- Un errore su un conto non blocca gli altri: il motivo va in `account.last_sync_error` e il conto viene
+  riprovato al prossimo intervallo, non subito.
+- Con il consenso scaduto la banca non viene chiamata: il conto segnala "consenso scaduto, ricollega".
+- Dopo un giro con almeno un conto aggiornato, tutti i movimenti vengono riclassificati.
+
+---
+
+## 8. Intelligenza artificiale (Fase 3, facoltativa)
+
+Decisioni prese:
+
+1. **Il tipo** (spesa, entrata, trasferimento...) lo decidono **solo** il motore e le regole: decide
+   i totali, quindi deve essere deterministico e spiegabile. Un'IA non aiuta nemmeno con i movimenti
+   `TO_REVIEW` di Trade Republic: senza testo non c'è niente da interpretare.
+2. **La categoria** (Spesa alimentare, Carburante...) si impara prima di tutto **dalle correzioni**:
+   correggendo un movimento, la dashboard propone di creare una regola per lo stesso esercente.
+3. Un'IA può **suggerire** la categoria dei movimenti che nessuna regola riconosce. È una funzione
+   **spenta di default**, dietro un'interfaccia con più implementazioni:
+   - *nessuna* (predefinita);
+   - *locale*: un modello piccolo in un container Ollama, nello stesso Docker Compose. I dati non
+     escono dal computer, ma servono qualche GB di RAM in più;
+   - *cloud* (es. Gemini): nessuna installazione, ma i movimenti escono di casa. Va attivata
+     consapevolmente, dopo un avviso chiaro sulle condizioni d'uso dei dati del servizio scelto.
+4. L'IA **non decide mai**: il suggerimento va in un campo separato e l'utente lo accetta o lo corregge.
+   All'IA si manda il minimo indispensabile (testo dell'esercente e segno dell'importo), mai IBAN,
+   nomi o saldi.
