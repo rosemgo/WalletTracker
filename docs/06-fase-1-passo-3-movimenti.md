@@ -117,7 +117,7 @@ private String rawJson;
 
 Il metodo `importAccount(account, psu)` esegue questi passi:
 
-1. **Calcola da quale data scaricare:** dall'ultimo movimento contabilizzato salvato, meno 10
+1. **Calcola da quale data scaricare** (se la banca rifiuta il periodo con `WRONG_TRANSACTIONS_PERIOD`, riprova una volta con gli ultimi 89 giorni): dall'ultimo movimento contabilizzato salvato, meno 10
    giorni di margine (`OVERLAP_DAYS`). Alla prima importazione, un anno fa (`FIRST_IMPORT_DAYS`);
    la banca può darne meno.
 2. **Scarica** i movimenti dal client.
@@ -135,6 +135,39 @@ Il metodo `importAccount(account, psu)` esegue questi passi:
 Le funzioni di supporto (`dateOf`, `counterpartyOf`, `descriptionOf`, `dedupKeyOf`) sono piccole e
 commentate. Gli importi vengono anche riportati a 2 decimali, perché Trade Republic ne manda 6.
 
+### 4b. Da quale data si importa, e il limite dei 100 movimenti
+
+La data di inizio viene scelta in **tre casi**, e il riepilogo stampa quale si è verificato:
+
+| Caso | Quando | Data di inizio | Messaggio |
+|---|---|---|---|
+| 1 | il conto non ha movimenti salvati | oggi − `FIRST_IMPORT_DAYS` | `prima importazione: ultimi 365 giorni` |
+| 2 | il conto ha già movimenti salvati | ultimo movimento salvato − `OVERLAP_DAYS` | `ultimo movimento salvato (2026-10-01) meno 10 giorni` |
+| 3 | la banca risponde `WRONG_TRANSACTIONS_PERIOD` | oggi − `DAYS_WITHOUT_RECENT_SCA` | `la banca ha rifiutato il periodo richiesto: ultimi 89 giorni` |
+
+Quindi `FIRST_IMPORT_DAYS` conta **solo** quando il conto è vuoto. Per sperimentare con valori
+diversi, cancella prima i movimenti del conto:
+`DELETE FROM bank_transaction WHERE account_id = <id>;`.
+
+**Il limite dei 100 movimenti.** La carta di credito ING restituisce al massimo 100 movimenti per
+richiesta, e non manda una `continuation_key` per le pagine successive. Il resto andrebbe perso in
+silenzio. Il metodo `fetchInWindows` lo gestisce così:
+
+```
+richiesta 1: 07/07 → 06/10   → 100 movimenti: forse troncata, divido a metà
+  richiesta 2: 07/07 → 22/08 →  64 movimenti: ok
+  richiesta 3: 23/08 → 06/10 → 100 movimenti: forse troncata, divido ancora
+    richiesta 4: 23/08 → 14/09 → 51 ok
+    richiesta 5: 15/09 → 06/10 → 58 ok
+```
+
+È una **ricorsione**: il metodo chiama sé stesso su periodi sempre più piccoli, finché ogni risposta
+ha meno di 100 movimenti. Le copie al confine tra due periodi vengono eliminate dalla regola 1.
+
+C'è una protezione: si divide **solo se la banca rispetta le date richieste**. Trade Republic le
+ignora e restituirebbe sempre gli stessi movimenti, quindi dividere moltiplicherebbe solo le
+richieste. Il numero di richieste fatte compare nel riepilogo (`Richieste alla banca: 5`).
+
 ### 5. `PocRunner`
 
 Per ogni conto ora:
@@ -146,7 +179,8 @@ Per ogni conto ora:
 ```
 === Conto: Conto Arancio | IBAN: IT60X... | EUR | ruolo: MAIN ===
 Saldo CLBD: 1234.56 EUR
-Importazione dal 2026-09-21: ricevuti 14, copie ripetute 0, nuovi 2, già presenti 12, in attesa 0
+Importazione dal 2026-09-21 (ultimo movimento salvato (2026-10-01) meno 10 giorni)
+Richieste alla banca: 1, ricevuti 14, copie ripetute 0, nuovi 2, già presenti 12, in attesa 0
 Ultimi movimenti salvati:
   2026-10-05     -23.40 EUR  BOOKED   ESSELUNGA PAGAMENTO POS
   ...
@@ -188,7 +222,7 @@ C'è un test per ogni regola:
    git pull
    docker compose up -d
    cd backend
-   .\mvnw.cmd test        # devono passare 18 test
+   .\mvnw.cmd test        # devono passare 22 test
    ```
 2. **Lancia il programma** e scegli i collegamenti salvati uno alla volta:
    ```powershell
@@ -246,6 +280,7 @@ serve per capire quali campi usa Trade Republic per descrivere i movimenti.
 | Sintomo | Causa | Soluzione |
 |---|---|---|
 | `HTTP 429` durante l'importazione | limite di richieste della banca (vedi Fase 0) | il programma invia già gli header PSU; se succede comunque, riprova più tardi |
+| `HTTP 422 WRONG_TRANSACTIONS_PERIOD` (es. Fineco) | senza un login recente la banca concede solo gli ultimi 90 giorni (regola PSD2) | il programma ora riprova da solo con 89 giorni. Per avere lo storico completo, ricollega la banca (`0`): l'importazione subito dopo il login può andare più indietro |
 | la prima importazione di un conto riceve pochi movimenti | la banca concede meno di un anno di storico | normale: dipende dalla banca |
 | `duplicate key value violates unique constraint "uq_bank_transaction_account_dedup"` | due movimenti con la stessa impronta: non dovrebbe succedere | mandami il messaggio completo: è proprio il caso che il vincolo deve far emergere |
 

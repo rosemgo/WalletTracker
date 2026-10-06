@@ -6,9 +6,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,7 +28,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.HttpClientErrorException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -152,12 +157,89 @@ class TransactionImportServiceTest {
         assertThat(second.from()).isEqualTo(LocalDate.of(2026, 9, 10).minusDays(TransactionImportService.OVERLAP_DAYS));
     }
 
+    @Test
+    void retriesWithNinetyDaysWhenTheBankRejectsThePeriod() {
+        // Prima chiamata: la banca rifiuta un anno di storico. Seconda: risponde normalmente.
+        var wrongPeriod = HttpClientErrorException.create(HttpStatusCode.valueOf(422), "Unprocessable",
+                HttpHeaders.EMPTY,
+                "{\"error\":\"WRONG_TRANSACTIONS_PERIOD\"}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8);
+        RawTransaction transaction = raw(json("t1", "BOOK", "2026-09-10", "12.50", "DBIT", "ESSELUNGA"));
+        when(client.getTransactions(eq("uid-1"), any(), any(), any()))
+                .thenThrow(wrongPeriod)
+                .thenReturn(List.of(transaction));
+
+        var result = importService.importAccount(account, null);
+
+        assertThat(result.from())
+                .isEqualTo(LocalDate.now().minusDays(TransactionImportService.DAYS_WITHOUT_RECENT_SCA));
+        assertThat(result.fromReason()).startsWith("la banca ha rifiutato il periodo");
+        assertThat(result.inserted()).isEqualTo(1);
+    }
+
+    @Test
+    void splitsThePeriodWhenTheBankTruncatesTheResponseAt100() {
+        // Banca finta come la carta ING: 150 movimenti negli ultimi 75 giorni (2 al giorno),
+        // ma ogni risposta contiene al massimo i 100 più recenti del periodo richiesto.
+        LocalDate today = LocalDate.now();
+        List<RawTransaction> all = new ArrayList<>();
+        for (int i = 0; i < 150; i++) {
+            LocalDate date = today.minusDays(i / 2);
+            all.add(raw(json("t" + i, "BOOK", date.toString(), "1.00", "DBIT", "SPESA " + i)));
+        }
+        when(client.getTransactions(eq("uid-1"), any(), any(), any())).thenAnswer(invocation -> {
+            LocalDate from = invocation.getArgument(1);
+            LocalDate to = invocation.getArgument(2);
+            return all.stream()
+                    .filter(t -> !t.transaction().bookingDate().isBefore(from)
+                            && !t.transaction().bookingDate().isAfter(to))
+                    .limit(TransactionImportService.SUSPECTED_RESPONSE_LIMIT)
+                    .toList();
+        });
+
+        var result = importService.importAccount(account, null);
+
+        assertThat(result.requests()).isGreaterThan(1);
+        assertThat(result.inserted()).isEqualTo(150);
+        assertThat(transactionRepository.count()).isEqualTo(150);
+    }
+
+    @Test
+    void doesNotSplitWhenTheBankIgnoresTheDates() {
+        // Come Trade Republic: restituisce sempre gli stessi 100 movimenti, anche fuori dal periodo richiesto.
+        List<RawTransaction> sameAnswer = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            sameAnswer.add(raw(json("t" + i, "BOOK", "2020-01-01", "1.00", "DBIT", "VECCHIO " + i)));
+        }
+        when(client.getTransactions(eq("uid-1"), any(), any(), any())).thenReturn(sameAnswer);
+
+        var result = importService.importAccount(account, null);
+
+        assertThat(result.requests()).isEqualTo(1);
+        assertThat(result.inserted()).isEqualTo(100);
+    }
+
+    @Test
+    void explainsWhyTheStartDateWasChosen() {
+        bankReturns(json("t1", "BOOK", "2026-09-10", "12.50", "DBIT", "ESSELUNGA"));
+
+        var first = importService.importAccount(account, null);
+        var second = importService.importAccount(account, null);
+
+        assertThat(first.fromReason()).startsWith("prima importazione");
+        assertThat(second.fromReason()).startsWith("ultimo movimento salvato (2026-09-10)");
+    }
+
     /** Dice al client finto di restituire questi movimenti, qualunque siano conto e date richiesti. */
     private void bankReturns(String... jsons) {
         List<RawTransaction> transactions = Arrays.stream(jsons)
-                .map(json -> new RawTransaction(JSON.readValue(json, Transaction.class), json))
+                .map(TransactionImportServiceTest::raw)
                 .toList();
         when(client.getTransactions(eq("uid-1"), any(), any(), any())).thenReturn(transactions);
+    }
+
+    private static RawTransaction raw(String json) {
+        return new RawTransaction(JSON.readValue(json, Transaction.class), json);
     }
 
     /** Un movimento in formato JSON, come lo manda Enable Banking. */

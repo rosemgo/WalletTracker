@@ -109,6 +109,11 @@ Implementata in `TransactionImportService` (dettagli in `docs/06-fase-1-passo-3-
 5. **vincolo `UNIQUE (account_id, dedup_key)`** nel database come rete di sicurezza.
 
 Ogni importazione riparte dall'ultimo movimento contabilizzato meno 10 giorni (la prima: un anno).
+Se la banca rifiuta il periodo (`WRONG_TRANSACTIONS_PERIOD`, es. Fineco senza login recente) si
+riprova con gli ultimi 89 giorni: lo storico più lungo è disponibile solo subito dopo la SCA.
+Se una risposta contiene 100 movimenti o più (carta di credito ING: massimo 100, senza
+`continuation_key`), il periodo viene diviso a metà e richiesto in due parti, ricorsivamente;
+solo se la banca rispetta le date richieste (Trade Republic no).
 
 ## 7. Sincronizzazione
 
