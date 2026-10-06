@@ -45,7 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionImportService {
 
     /** Alla prima importazione di un conto chiediamo un anno di storico (la banca può darne meno). */
-    static final int FIRST_IMPORT_DAYS = 365;
+    static final int FIRST_IMPORT_DAYS = 100;
 
     /** Le importazioni successive ripartono dall'ultimo movimento salvato, meno qualche giorno di margine. */
     static final int OVERLAP_DAYS = 10;
@@ -73,7 +73,9 @@ public class TransactionImportService {
         // Da quale data scaricare: dall'ultimo movimento salvato (meno un margine) o, la prima volta, un anno fa.
         LocalDate to = LocalDate.now();
         LocalDate from = repository.findFirstByAccountAndStatusOrderByBookingDateDesc(account, TransactionStatus.BOOKED)
-                .map(last -> last.getBookingDate().minusDays(OVERLAP_DAYS))
+                .map(last -> {
+                    return last.getBookingDate().minusDays(OVERLAP_DAYS);
+                })
                 .orElse(to.minusDays(FIRST_IMPORT_DAYS));
 
         List<RawTransaction> received = client.getTransactions(account.getProviderUid(), from, to, psu);
@@ -123,7 +125,7 @@ public class TransactionImportService {
         return repository.findTop15ByAccountOrderByBookingDateDescIdDesc(account);
     }
 
-    /** Regola 1: tiene un solo movimento per ogni JSON identico, mantenendo l'ordine originale. */
+    /** Regola 1: tiene un solo movimento per ogni JSON identico (non considera i doppioni, se una banca dovesse restituire più volte lo stesso movimento), mantenendo l'ordine originale. */
     static List<RawTransaction> removeExactCopies(List<RawTransaction> transactions) {
         Map<String, RawTransaction> byJson = new LinkedHashMap<>();
         for (RawTransaction transaction : transactions) {

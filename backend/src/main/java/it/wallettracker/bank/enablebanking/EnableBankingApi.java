@@ -116,6 +116,8 @@ public final class EnableBankingApi {
      * Risposta di GET /accounts/{uid}/transactions: se c'è una continuationKey, esistono altre pagine.
      * I movimenti sono letti come {@link JsonNode} (JSON "grezzo") per poterne conservare il testo
      * originale completo, compresi i campi che non conosciamo.
+     *
+     * Jackson converte ogni nome Java in snake_case (continuationKey → continuation_key) e cerca quella chiave nel JSON (ottenuto dalla pagina scaricata da EnableBanking). Poi chiama il costruttore del record con i valori trovati.
      */
     @JsonNaming(SnakeCaseStrategy.class)
     public record TransactionPage(List<JsonNode> transactions, String continuationKey) {
