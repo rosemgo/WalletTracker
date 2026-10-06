@@ -5,12 +5,14 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import it.wallettracker.account.Account;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Party;
@@ -58,6 +60,13 @@ public class TransactionImportService {
      */
     static final int DAYS_WITHOUT_RECENT_SCA = 89;
 
+    /**
+     * Alcune banche (ING, carta di credito) restituiscono al massimo 100 movimenti per richiesta, senza
+     * una continuation_key per le pagine successive. Se riceviamo 100 movimenti o più, sospettiamo che
+     * la risposta sia troncata e dividiamo il periodo a metà (vedi {@link #fetchInWindows}).
+     */
+    static final int SUSPECTED_RESPONSE_LIMIT = 100;
+
     private final EnableBankingClient client;
     private final BankTransactionRepository repository;
 
@@ -66,9 +75,21 @@ public class TransactionImportService {
         this.repository = repository;
     }
 
-    /** Il risultato di un'importazione, da mostrare all'utente. */
-    public record ImportResult(LocalDate from, int received, int repeatedCopies, int inserted, int alreadyPresent,
-            int pending) {
+    /**
+     * Il risultato di un'importazione, da mostrare all'utente.
+     *
+     * @param from       la data di inizio usata
+     * @param fromReason perché è stata scelta quella data (prima importazione, ultimo movimento salvato...)
+     * @param requests   quante richieste sono state fatte alla banca
+     */
+    public record ImportResult(LocalDate from, String fromReason, int requests, int received, int repeatedCopies,
+            int inserted, int alreadyPresent, int pending) {
+    }
+
+    /** I movimenti scaricati e il numero di richieste fatte per ottenerli. */
+    private static final class Download {
+        final List<RawTransaction> transactions = new ArrayList<>();
+        int requests;
     }
 
     /**
@@ -78,15 +99,27 @@ public class TransactionImportService {
      */
     @Transactional
     public ImportResult importAccount(Account account, PsuHeaders psu) {
-        // Da quale data scaricare: dall'ultimo movimento salvato (meno un margine) o, la prima volta, un anno fa.
+        // Da quale data scaricare (tre casi, vedi docs/06):
+        //  1. prima importazione (nessun movimento salvato): oggi - FIRST_IMPORT_DAYS;
+        //  2. importazioni successive: ultimo movimento salvato - OVERLAP_DAYS;
+        //  3. se la banca rifiuta il periodo: oggi - DAYS_WITHOUT_RECENT_SCA (più sotto, nel catch).
         LocalDate to = LocalDate.now();
-        LocalDate from = repository.findFirstByAccountAndStatusOrderByBookingDateDesc(account, TransactionStatus.BOOKED)
-                .map(last -> last.getBookingDate().minusDays(OVERLAP_DAYS))
-                .orElse(to.minusDays(FIRST_IMPORT_DAYS));
+        LocalDate from;
+        String fromReason;
+        Optional<BankTransaction> lastBooked =
+                repository.findFirstByAccountAndStatusOrderByBookingDateDesc(account, TransactionStatus.BOOKED);
+        if (lastBooked.isPresent()) {
+            from = lastBooked.get().getBookingDate().minusDays(OVERLAP_DAYS);
+            fromReason = "ultimo movimento salvato (" + lastBooked.get().getBookingDate() + ") meno "
+                    + OVERLAP_DAYS + " giorni";
+        } else {
+            from = to.minusDays(FIRST_IMPORT_DAYS);
+            fromReason = "prima importazione: ultimi " + FIRST_IMPORT_DAYS + " giorni";
+        }
 
-        List<RawTransaction> received;
+        Download download = new Download();
         try {
-            received = client.getTransactions(account.getProviderUid(), from, to, psu);
+            fetchInWindows(account.getProviderUid(), from, to, psu, download);
         } catch (RestClientResponseException e) {
             // La banca rifiuta il periodo (succede con Fineco quando il login non è recente):
             // riproviamo una volta con gli ultimi 89 giorni. Qualsiasi altro errore lo rilanciamo.
@@ -95,8 +128,10 @@ public class TransactionImportService {
                 throw e;
             }
             from = shorterFrom;
-            received = client.getTransactions(account.getProviderUid(), from, to, psu);
+            fromReason = "la banca ha rifiutato il periodo richiesto: ultimi " + DAYS_WITHOUT_RECENT_SCA + " giorni";
+            fetchInWindows(account.getProviderUid(), from, to, psu, download);
         }
+        List<RawTransaction> received = download.transactions;
 
         // Regola 4: i movimenti in attesa vengono sostituiti ogni volta.
         repository.deleteByAccountAndStatus(account, TransactionStatus.PENDING);
@@ -133,8 +168,42 @@ public class TransactionImportService {
             }
         }
 
-        return new ImportResult(from, received.size(), received.size() - unique.size(), inserted, alreadyPresent,
-                pending);
+        return new ImportResult(from, fromReason, download.requests, received.size(), received.size() - unique.size(),
+                inserted, alreadyPresent, pending);
+    }
+
+    /**
+     * Scarica i movimenti tra due date. Se la banca ne restituisce 100 o più, la risposta potrebbe essere
+     * troncata (succede con la carta di credito ING): allora dividiamo il periodo in due metà e le chiediamo
+     * separatamente. Il metodo chiama sé stesso (ricorsione) finché ogni periodo dà meno di 100 movimenti.
+     *
+     * <p>Dividiamo solo se la banca rispetta le date richieste. Trade Republic, ad esempio, le ignora: in
+     * quel caso dividere non servirebbe e moltiplicherebbe soltanto le richieste.
+     */
+    private void fetchInWindows(String accountUid, LocalDate from, LocalDate to, PsuHeaders psu, Download download) {
+        List<RawTransaction> response = client.getTransactions(accountUid, from, to, psu);
+        download.requests++;
+
+        boolean maybeTruncated = response.size() >= SUSPECTED_RESPONSE_LIMIT;
+        boolean canSplit = from.isBefore(to) && allWithin(response, from, to);
+        if (maybeTruncated && canSplit) {
+            LocalDate middle = from.plusDays(ChronoUnit.DAYS.between(from, to) / 2);
+            fetchInWindows(accountUid, from, middle, psu, download);
+            fetchInWindows(accountUid, middle.plusDays(1), to, psu, download);
+        } else {
+            download.transactions.addAll(response);
+        }
+    }
+
+    /** True se tutti i movimenti hanno una data compresa nel periodo richiesto. */
+    private static boolean allWithin(List<RawTransaction> transactions, LocalDate from, LocalDate to) {
+        for (RawTransaction raw : transactions) {
+            LocalDate date = dateOf(raw.transaction());
+            if (date != null && (date.isBefore(from) || date.isAfter(to))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Enable Banking risponde 422 con l'errore WRONG_TRANSACTIONS_PERIOD quando la banca rifiuta le date. */

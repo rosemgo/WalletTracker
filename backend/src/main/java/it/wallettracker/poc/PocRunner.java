@@ -251,7 +251,8 @@ public class PocRunner implements CommandLineRunner {
                     + e.getResponseBodyAsString());
             return;
         }
-        System.out.println("Importazione dal " + result.from() + ": ricevuti " + result.received()
+        System.out.println("Importazione dal " + result.from() + " (" + result.fromReason() + ")");
+        System.out.println("Richieste alla banca: " + result.requests() + ", ricevuti " + result.received()
                 + ", copie ripetute " + result.repeatedCopies()
                 + ", nuovi " + result.inserted()
                 + ", già presenti " + result.alreadyPresent()
