@@ -104,13 +104,6 @@ public class TransactionImportService {
         //  2. importazioni successive: ultimo movimento salvato - OVERLAP_DAYS;
         //  3. se la banca rifiuta il periodo: oggi - DAYS_WITHOUT_RECENT_SCA (più sotto, nel catch).
         LocalDate to = LocalDate.now();
-<<<<<<< HEAD
-        LocalDate from = repository.findFirstByAccountAndStatusOrderByBookingDateDesc(account, TransactionStatus.BOOKED)
-                .map(last -> {
-                    return last.getBookingDate().minusDays(OVERLAP_DAYS);
-                })
-                .orElse(to.minusDays(FIRST_IMPORT_DAYS));
-=======
         LocalDate from;
         String fromReason;
         Optional<BankTransaction> lastBooked =
@@ -123,7 +116,6 @@ public class TransactionImportService {
             from = to.minusDays(FIRST_IMPORT_DAYS);
             fromReason = "prima importazione: ultimi " + FIRST_IMPORT_DAYS + " giorni";
         }
->>>>>>> 52ccf653918df89f045eacd6d26c6928138d89ac
 
         Download download = new Download();
         try {
