@@ -33,7 +33,8 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li><b>correzione manuale</b> dell'utente → il tipo scelto;</li>
  *   <li><b>importo zero</b> (es. verifiche della carta) → IGNORED;</li>
  *   <li><b>trasferimento abbinato</b>: su un altro tuo conto c'è un movimento con lo stesso importo e
- *       segno opposto, a pochi giorni di distanza → trasferimento;</li>
+ *       segno opposto, a pochi giorni di distanza, ed entrambi hanno l'aspetto di un trasferimento
+ *       (vedi {@link #looksLikeOwnTransfer}) → trasferimento;</li>
  *   <li><b>IBAN di un tuo conto</b> nel movimento (es. "IBAN beneficiario IT...") → trasferimento;</li>
  *   <li><b>regole</b> della tabella classification_rule, in ordine di priorità → tipo e categoria della regola;</li>
  *   <li><b>nessun testo</b> (né causale né controparte, es. Trade Republic) e nessun abbinamento: non
@@ -77,8 +78,10 @@ public class ClassificationService {
     public Map<TransactionType, Integer> classifyAll() {
         List<BankTransaction> transactions = transactionRepository.findAll();
         List<ClassificationRule> rules = ruleRepository.findByEnabledTrueOrderByPriorityAscIdAsc();
-        Map<String, Account> accountsByIban = ownAccountsByIban();
-        Map<Long, BankTransaction> peers = pairTransfers(transactions);
+        List<Account> accounts = accountRepository.findAll();
+        Map<String, Account> accountsByIban = ownAccountsByIban(accounts);
+        List<Set<String>> ownerNames = ownerNames(accounts);
+        Map<Long, BankTransaction> peers = pairTransfers(transactions, ownerNames, accountsByIban.keySet());
 
         Map<TransactionType, Integer> counts = new EnumMap<>(TransactionType.class);
         for (BankTransaction transaction : transactions) {
@@ -156,14 +159,18 @@ public class ClassificationService {
      * stesso importo (in valore assoluto) e la stessa valuta, su un altro conto, al massimo a
      * {@link #TRANSFER_MAX_DAYS_APART} giorni di distanza. Se ce ne sono più di una, prende la più vicina.
      *
+     * <p>Per evitare abbinamenti per coincidenza (un acquisto da 20 € e un'entrata da 20 € nello stesso
+     * periodo), si abbinano solo movimenti che hanno l'aspetto di un trasferimento tra conti propri.
+     *
      * @return per ogni movimento abbinato (per id), il movimento dall'altra parte
      */
-    static Map<Long, BankTransaction> pairTransfers(List<BankTransaction> transactions) {
+    static Map<Long, BankTransaction> pairTransfers(List<BankTransaction> transactions, List<Set<String>> ownerNames,
+            Set<String> ownIbans) {
         // Le entrate candidate, raggruppate per importo: così per ogni uscita guardiamo solo quelle dello stesso importo.
         Map<String, List<BankTransaction>> incomingByAmount = new HashMap<>();
         List<BankTransaction> outgoing = new ArrayList<>();
         for (BankTransaction transaction : transactions) {
-            if (!canBePaired(transaction)) {
+            if (!canBePaired(transaction) || !looksLikeOwnTransfer(transaction, ownerNames, ownIbans)) {
                 continue;
             }
             if (transaction.getAmount().signum() > 0) {
@@ -207,15 +214,76 @@ public class ClassificationService {
                 && transaction.getAccount().getRole() != AccountRole.EXCLUDED;
     }
 
+    /**
+     * Un movimento "ha l'aspetto" di un trasferimento tra conti propri se il suo testo:
+     * <ul>
+     *   <li>è vuoto (alcune banche, come Trade Republic, non mandano descrizioni), oppure</li>
+     *   <li>contiene il nome dell'intestatario di uno dei tuoi conti (es. "A favore di Mario Rossi",
+     *       "Payment from Mario Rossi": in un bonifico tra conti propri ordinante e beneficiario sei tu), oppure</li>
+     *   <li>contiene l'IBAN di uno dei tuoi conti.</li>
+     * </ul>
+     * Un acquisto ("CONAD ROMA") non soddisfa nessuna delle tre condizioni.
+     */
+    static boolean looksLikeOwnTransfer(BankTransaction transaction, List<Set<String>> ownerNames,
+            Set<String> ownIbans) {
+        String text = textOf(transaction);
+        if (text.isBlank()) {
+            return true;
+        }
+        Set<String> words = words(text);
+        for (Set<String> name : ownerNames) {
+            if (words.containsAll(name)) {
+                return true;
+            }
+        }
+        String compact = normalize(text);
+        for (String iban : ownIbans) {
+            if (compact.contains(iban)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * I nomi degli intestatari dei tuoi conti, come insiemi di parole: "ROSSI MARIO" e "Mario Rossi"
+     * diventano lo stesso insieme {MARIO, ROSSI}, così l'ordine non conta. Si usano solo nomi di almeno
+     * due parole, per non confondere un nome generico (es. "Conto") con un intestatario.
+     */
+    static List<Set<String>> ownerNames(List<Account> accounts) {
+        List<Set<String>> names = new ArrayList<>();
+        for (Account account : accounts) {
+            if (account.getName() == null) {
+                continue;
+            }
+            Set<String> name = words(account.getName());
+            if (name.size() >= 2 && !names.contains(name)) {
+                names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /** Le parole di un testo, in maiuscolo, senza punteggiatura. */
+    private static Set<String> words(String text) {
+        Set<String> words = new HashSet<>();
+        for (String word : text.toUpperCase().split("[^\\p{L}\\p{N}]+")) {
+            if (!word.isBlank()) {
+                words.add(word);
+            }
+        }
+        return words;
+    }
+
     /** Chiave per confrontare gli importi: valore assoluto + valuta (es. "2000.00 EUR"). */
     private static String amountKey(BankTransaction transaction) {
         return transaction.getAmount().abs().toPlainString() + " " + transaction.getCurrency();
     }
 
     /** I tuoi conti, indicizzati per IBAN (senza spazi, maiuscolo). */
-    private Map<String, Account> ownAccountsByIban() {
+    private static Map<String, Account> ownAccountsByIban(List<Account> accounts) {
         Map<String, Account> byIban = new HashMap<>();
-        for (Account account : accountRepository.findAll()) {
+        for (Account account : accounts) {
             if (account.getIban() != null && !account.getIban().isBlank()) {
                 byIban.putIfAbsent(normalize(account.getIban()), account);
             }

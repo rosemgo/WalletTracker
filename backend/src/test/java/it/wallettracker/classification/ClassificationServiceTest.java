@@ -57,10 +57,10 @@ class ClassificationServiceTest {
 
     @Test
     void transferBetweenTwoNormalAccountsIsInternal() {
-        Account main = account("IT00MAIN", AccountRole.MAIN);
-        Account spending = account("IT00SPEND", AccountRole.SPENDING);
-        BankTransaction out = transaction(main, DAY, "-200.00", null, "Bonifico");
-        BankTransaction in = transaction(spending, DAY.plusDays(1), "200.00", null, "Payment");
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "Mario Rossi");
+        Account spending = owned("IT00SPEND", AccountRole.SPENDING, "Mario Rossi");
+        BankTransaction out = transaction(main, DAY, "-200.00", null, "Bonifico a favore di Mario Rossi");
+        BankTransaction in = transaction(spending, DAY.plusDays(1), "200.00", null, "Payment from Mario Rossi");
 
         classificationService.classifyAll();
 
@@ -85,10 +85,10 @@ class ClassificationServiceTest {
 
     @Test
     void transferFromAnInvestmentAccountIsAWithdrawal() {
-        Account broker = account("IT00BROKER", AccountRole.INVESTMENT);
-        Account main = account("IT00MAIN", AccountRole.MAIN);
-        BankTransaction out = transaction(broker, DAY, "-450.00", null, "Trasferimento");
-        transaction(main, DAY, "450.00", null, "Bonifico ricevuto");
+        Account broker = owned("IT00BROKER", AccountRole.INVESTMENT, "ROSSI MARIO");
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "Mario Rossi");
+        BankTransaction out = transaction(broker, DAY, "-450.00", null, "Mario Rossi Trasferimento");
+        transaction(main, DAY, "450.00", null, "Ord: ROSSI MARIO Bonifico ricevuto");
 
         classificationService.classifyAll();
 
@@ -177,6 +177,33 @@ class ClassificationServiceTest {
     }
 
     @Test
+    void aPurchaseIsNotPairedWithAnUnrelatedIncomeOfTheSameAmount() {
+        // Un acquisto da 20 € e, due giorni dopo, 20 € ricevuti da un amico su un altro conto: non è un trasferimento.
+        Account card = account("IT00CARD", AccountRole.SPENDING);
+        Account spending = account("IT00SPEND", AccountRole.SPENDING);
+        BankTransaction purchase = transaction(card, DAY, "-20.00", "V B S R L", "FOGLIANISE ITA");
+        BankTransaction fromFriend = transaction(spending, DAY.plusDays(2), "20.00", "LUCA BIANCHI", "Pizza");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(purchase)).isEqualTo(TransactionType.EXPENSE);
+        assertThat(typeOf(fromFriend)).isEqualTo(TransactionType.INCOME);
+    }
+
+    @Test
+    void aTransferMentioningTheOwnerNameIsPairedWhateverTheWordOrder() {
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "ROSSI MARIO");
+        Account spending = owned("IT00SPEND", AccountRole.SPENDING, "Mario Rossi");
+        BankTransaction out = transaction(main, DAY, "-300.00", null, "Bonifico a favore di Mario Rossi");
+        BankTransaction in = transaction(spending, DAY, "300.00", "MARIO ROSSI", "Payment from Mario Rossi");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(out)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+    }
+
+    @Test
     void transactionsTooFarApartAreNotPaired() {
         Account main = account("IT00MAIN", AccountRole.MAIN);
         Account spending = account("IT00SPEND", AccountRole.SPENDING);
@@ -221,6 +248,15 @@ class ClassificationServiceTest {
         BankConnection connection = connectionRepository.save(
                 new BankConnection("Banca", "IT", "session-" + (++counter), Instant.now().plus(90, ChronoUnit.DAYS)));
         Account account = new Account(connection, "key-" + counter, "uid-" + counter, iban, "Conto " + iban, "EUR");
+        account.changeRole(role);
+        return accountRepository.save(account);
+    }
+
+    /** Un conto con il nome dell'intestatario, come lo restituiscono le banche. */
+    private Account owned(String iban, AccountRole role, String ownerName) {
+        BankConnection connection = connectionRepository.save(
+                new BankConnection("Banca", "IT", "session-" + (++counter), Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account account = new Account(connection, "key-" + counter, "uid-" + counter, iban, ownerName, "EUR");
         account.changeRole(role);
         return accountRepository.save(account);
     }

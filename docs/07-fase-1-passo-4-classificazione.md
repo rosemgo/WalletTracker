@@ -81,6 +81,13 @@ Il metodo `classifyAll()`:
    vicina nel tempo e al massimo a 3 giorni di distanza;
 4. le due metà si "prenotano" a vicenda (`peers`), così un movimento non viene abbinato due volte.
 
+Per evitare abbinamenti per **coincidenza**, ad esempio un acquisto da 20 € e un'entrata da 20 € da un
+amico, si abbinano solo movimenti che **hanno l'aspetto di un trasferimento tra conti propri**
+(`looksLikeOwnTransfer`). Il testo deve essere vuoto, come su Trade Republic, oppure contenere il
+**nome dell'intestatario** di un tuo conto ("A favore di Mario Rossi", "Payment from Mario Rossi")
+oppure l'**IBAN** di un tuo conto. I nomi vengono confrontati come **insiemi di parole**, così
+"ROSSI MARIO" e "Mario Rossi" coincidono.
+
 È un esempio di come una `Map` trasformi un problema "tutti contro tutti" in uno molto più veloce.
 
 **Perché ricalcolare tutto ogni volta?** Il risultato dipende solo dai dati e dalle regole, non da
@@ -106,7 +113,7 @@ Ultimi movimenti di Conto Arancio (MAIN):
 
 ### 5. I test: `ClassificationServiceTest`
 
-13 scenari, scelti apposta **diversi** dalle abitudini di una sola persona:
+15 scenari, scelti apposta **diversi** dalle abitudini di una sola persona:
 
 | Test | Scenario |
 |---|---|
@@ -120,6 +127,8 @@ Ultimi movimenti di Conto Arancio (MAIN):
 | `aManualCorrectionAlwaysWins` | la correzione manuale vince sulle regole |
 | `zeroAmountsAndExcludedAccountsAreIgnored` | importi zero e conti esclusi |
 | `withoutAnyMatchOutgoingIsExpenseAndIncomingIsIncome` | ultima risorsa |
+| `aPurchaseIsNotPairedWithAnUnrelatedIncomeOfTheSameAmount` | un acquisto da 20 € e un'entrata da 20 € da un amico: nessun abbinamento per coincidenza |
+| `aTransferMentioningTheOwnerNameIsPairedWhateverTheWordOrder` | "ROSSI MARIO" e "Mario Rossi" sono la stessa persona |
 | `transactionsTooFarApartAreNotPaired` | importi uguali ma troppo distanti nel tempo: non è un trasferimento |
 | `withoutAnyTextAndNoPairTheTransactionIsToReviewOnAnyAccount` | movimenti senza testo: `TO_REVIEW` su qualsiasi conto |
 | `aManualCorrectionResolvesATransactionToReview` | una correzione manuale risolve un movimento da verificare |
@@ -134,7 +143,7 @@ Ultimi movimenti di Conto Arancio (MAIN):
    git pull
    docker compose up -d
    cd backend
-   .\mvnw.cmd test          # 35 test
+   .\mvnw.cmd test          # 37 test
    ```
 2. **Lancia il programma** e scegli un collegamento salvato. All'avvio Flyway applica `V4`; dopo
    l'importazione vedrai la classificazione di **tutti** i movimenti, di tutte le banche.

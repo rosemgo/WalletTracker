@@ -48,7 +48,7 @@ import org.springframework.web.client.RestClientResponseException;
 public class TransactionImportService {
 
     /** Alla prima importazione di un conto chiediamo un anno di storico (la banca può darne meno). */
-    static final int FIRST_IMPORT_DAYS = 100;
+    static final int FIRST_IMPORT_DAYS = 365;
 
     /** Le importazioni successive ripartono dall'ultimo movimento salvato, meno qualche giorno di margine. */
     static final int OVERLAP_DAYS = 10;

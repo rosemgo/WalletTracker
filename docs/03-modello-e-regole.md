@@ -71,7 +71,7 @@ risposta vince**:
 | 1 | il conto è `EXCLUDED` | `IGNORED` |
 | 2 | c'è una **correzione manuale** | il tipo scelto dall'utente |
 | 3 | l'importo è zero (es. verifica della carta) | `IGNORED` |
-| 4 | **trasferimento abbinato**: su un altro tuo conto c'è un movimento con stesso importo, segno opposto e stessa valuta, al massimo a 3 giorni di distanza | trasferimento (vedi sotto) |
+| 4 | **trasferimento abbinato**: su un altro tuo conto c'è un movimento con stesso importo, segno opposto e stessa valuta, al massimo a 3 giorni di distanza, ed **entrambi** hanno l'aspetto di un trasferimento (testo vuoto, oppure contiene il nome dell'intestatario o l'IBAN di un tuo conto) | trasferimento (vedi sotto) |
 | 5 | il movimento cita l'**IBAN di un altro tuo conto** (causale o JSON originale) | trasferimento |
 | 6 | una **regola** della tabella `classification_rule` corrisponde | tipo e categoria della regola |
 | 7 | **nessun testo** (né causale né controparte) | `TO_REVIEW`: meglio chiedere all'utente che indovinare |
