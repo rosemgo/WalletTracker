@@ -11,20 +11,22 @@ import java.util.Scanner;
 import java.util.UUID;
 
 import it.wallettracker.account.Account;
+import it.wallettracker.account.AccountRole;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Access;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.AspspRef;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
-import it.wallettracker.bank.enablebanking.EnableBankingApi.Party;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Session;
-import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.ConnectionService;
+import it.wallettracker.transaction.BankTransaction;
+import it.wallettracker.transaction.TransactionImportService;
+import it.wallettracker.transaction.TransactionImportService.ImportResult;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -40,10 +42,12 @@ import org.springframework.web.util.UriComponentsBuilder;
  * <ol>
  *   <li>ti fa scegliere una banca;</li>
  *   <li>ti fa autorizzare l'accesso ai conti (login + SCA sul sito della banca);</li>
- *   <li>stampa saldi e movimenti degli ultimi 30 giorni.</li>
+ *   <li>stampa i saldi, importa i movimenti nel database e mostra gli ultimi salvati.</li>
  * </ol>
  * Dalla Fase 1 il collegamento e i conti vengono salvati nel database: la volta successiva puoi
  * riusare il collegamento salvato senza rifare il login, finché il consenso è valido.
+ * I movimenti vengono importati nel database senza doppioni (vedi TransactionImportService);
+ * i conti con ruolo EXCLUDED vengono saltati.
  *
  * <p>Un {@link CommandLineRunner} viene eseguito da Spring Boot subito dopo l'avvio.
  * {@code @Profile("poc")} fa sì che questa classe esista solo se avvii l'app con il profilo "poc".
@@ -52,14 +56,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Profile("poc")
 public class PocRunner implements CommandLineRunner {
 
-    private static final int DAYS_OF_HISTORY = 30;
-
     /** Durata massima di un consenso PSD2 per la lettura dei conti. */
     private static final Duration MAX_CONSENT = Duration.ofDays(180);
 
     private final EnableBankingClient client;
     private final EnableBankingProperties properties;
     private final ConnectionService connectionService;
+    private final TransactionImportService importService;
     private final Scanner keyboard = new Scanner(System.in);
 
     /** Il risultato del login sulla banca: il codice da scambiare e la scadenza del consenso richiesta. */
@@ -68,10 +71,11 @@ public class PocRunner implements CommandLineRunner {
 
     // Spring passa al costruttore i componenti di cui abbiamo bisogno (dependency injection).
     public PocRunner(EnableBankingClient client, EnableBankingProperties properties,
-            ConnectionService connectionService) {
+            ConnectionService connectionService, TransactionImportService importService) {
         this.client = client;
         this.properties = properties;
         this.connectionService = connectionService;
+        this.importService = importService;
     }
 
     @Override
@@ -219,8 +223,14 @@ public class PocRunner implements CommandLineRunner {
         return new AuthorizationResult(params.get("code"), validUntil);
     }
 
-    /** Passo 3: stampiamo saldi e movimenti di un conto. */
+    /** Passo 3: saldi del conto, importazione dei movimenti e riepilogo. */
     private void printAccount(Account account, PsuHeaders psu) {
+        if (account.getRole() == AccountRole.EXCLUDED) {
+            System.out.println();
+            System.out.println("(conto " + account.getName() + " escluso: lo salto)");
+            return;
+        }
+
         String iban = account.getIban() != null ? account.getIban() : "-";
         System.out.println();
         System.out.println("=== Conto: " + account.getName() + " | IBAN: " + iban + " | " + account.getCurrency()
@@ -231,18 +241,22 @@ public class PocRunner implements CommandLineRunner {
                     + balance.balanceAmount().amount() + " " + balance.balanceAmount().currency());
         }
 
-        LocalDate to = LocalDate.now();
-        LocalDate from = to.minusDays(DAYS_OF_HISTORY);
-        List<Transaction> transactions = client.getTransactions(account.getProviderUid(), from, to, psu);
-        System.out.println(transactions.size() + " movimenti dal " + from + " al " + to + ":");
+        // Importiamo i movimenti nel database (senza doppioni) e mostriamo un riepilogo.
+        ImportResult result = importService.importAccount(account, psu);
+        System.out.println("Importazione dal " + result.from() + ": ricevuti " + result.received()
+                + ", copie ripetute " + result.repeatedCopies()
+                + ", nuovi " + result.inserted()
+                + ", già presenti " + result.alreadyPresent()
+                + ", in attesa " + result.pending());
 
-        for (Transaction transaction : transactions) {
-            System.out.printf("  %s  %10s %s  %s  %s%n",
-                    dateOf(transaction),
-                    transaction.signedAmount(),
-                    transaction.transactionAmount().currency(),
-                    transaction.status(),
-                    descriptionOf(transaction));
+        System.out.println("Ultimi movimenti salvati:");
+        for (BankTransaction transaction : importService.latestTransactions(account)) {
+            System.out.printf("  %s  %10s %s  %-7s  %s%n",
+                    transaction.getBookingDate(),
+                    transaction.getAmount(),
+                    transaction.getCurrency(),
+                    transaction.getStatus(),
+                    textOf(transaction));
         }
     }
 
@@ -263,19 +277,14 @@ public class PocRunner implements CommandLineRunner {
         }
     }
 
-    /** Non tutte le banche compilano tutte le date: usiamo quella contabile e, se manca, quella di valuta. */
-    private static LocalDate dateOf(Transaction transaction) {
-        return transaction.bookingDate() != null ? transaction.bookingDate() : transaction.valueDate();
-    }
-
-    /** Descrizione leggibile: controparte (chi riceve se è un'uscita, chi invia se è un'entrata) + causale. */
-    private static String descriptionOf(Transaction transaction) {
-        Party counterparty = transaction.signedAmount().signum() < 0 ? transaction.creditor() : transaction.debtor();
-        String name = counterparty != null && counterparty.name() != null ? counterparty.name() : "";
-        String reference = transaction.remittanceInformation() != null
-                ? String.join(" ", transaction.remittanceInformation())
-                : "";
-        return (name + " " + reference).trim();
+    /** Controparte + causale, senza ripetere lo stesso testo due volte (succede con Revolut). */
+    private static String textOf(BankTransaction transaction) {
+        String counterparty = transaction.getCounterparty() != null ? transaction.getCounterparty() : "";
+        String description = transaction.getDescription() != null ? transaction.getDescription() : "";
+        if (description.equalsIgnoreCase(counterparty)) {
+            return counterparty;
+        }
+        return (counterparty + " " + description).trim();
     }
 
     private String ask(String question) {

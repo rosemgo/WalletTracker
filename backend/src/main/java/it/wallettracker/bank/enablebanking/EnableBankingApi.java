@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import tools.jackson.databind.annotation.JsonNaming;
 
@@ -111,9 +112,20 @@ public final class EnableBankingApi {
     public record Balance(String name, Amount balanceAmount, String balanceType, LocalDate referenceDate) {
     }
 
-    /** Risposta di GET /accounts/{uid}/transactions: se c'è una continuationKey, esistono altre pagine. */
+    /**
+     * Risposta di GET /accounts/{uid}/transactions: se c'è una continuationKey, esistono altre pagine.
+     * I movimenti sono letti come {@link JsonNode} (JSON "grezzo") per poterne conservare il testo
+     * originale completo, compresi i campi che non conosciamo.
+     */
     @JsonNaming(SnakeCaseStrategy.class)
-    public record TransactionPage(List<Transaction> transactions, String continuationKey) {
+    public record TransactionPage(List<JsonNode> transactions, String continuationKey) {
+    }
+
+    /**
+     * Un movimento in due forme: {@code transaction} con i campi che usiamo, già convertiti, e
+     * {@code json} con il testo originale ricevuto dalla banca, da salvare così com'è.
+     */
+    public record RawTransaction(Transaction transaction, String json) {
     }
 
     /**
@@ -139,6 +151,7 @@ public final class EnableBankingApi {
             String status,
             LocalDate bookingDate,
             LocalDate valueDate,
+            LocalDate transactionDate,
             Party creditor,
             Party debtor,
             List<String> remittanceInformation) {

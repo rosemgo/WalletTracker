@@ -10,6 +10,7 @@ import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest
 import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.BalanceList;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.RawTransaction;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Session;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.SessionRequest;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
@@ -17,6 +18,8 @@ import it.wallettracker.bank.enablebanking.EnableBankingApi.TransactionPage;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Client per le API REST di Enable Banking.
@@ -38,9 +41,11 @@ import org.springframework.web.client.RestClient;
 public class EnableBankingClient {
 
     private final RestClient restClient;
+    private final JsonMapper jsonMapper;
 
     public EnableBankingClient(RestClient.Builder builder, EnableBankingProperties properties,
-            EnableBankingJwtFactory jwtFactory) {
+            EnableBankingJwtFactory jwtFactory, JsonMapper jsonMapper) {
+        this.jsonMapper = jsonMapper;
         this.restClient = builder
                 .baseUrl(properties.baseUrl())
                 // Su ogni richiesta aggiungiamo l'header "Authorization: Bearer <JWT>".
@@ -101,7 +106,7 @@ public class EnableBankingClient {
     }
 
     /** GET /accounts/{uid}/transactions: i movimenti tra due date, letti in background (senza l'utente). */
-    public List<Transaction> getTransactions(String accountUid, LocalDate from, LocalDate to) {
+    public List<RawTransaction> getTransactions(String accountUid, LocalDate from, LocalDate to) {
         return getTransactions(accountUid, from, to, null);
     }
 
@@ -114,8 +119,8 @@ public class EnableBankingClient {
      *
      * @param psu gli header dell'utente presente, oppure {@code null} per una lettura in background
      */
-    public List<Transaction> getTransactions(String accountUid, LocalDate from, LocalDate to, PsuHeaders psu) {
-        List<Transaction> allTransactions = new ArrayList<>();
+    public List<RawTransaction> getTransactions(String accountUid, LocalDate from, LocalDate to, PsuHeaders psu) {
+        List<RawTransaction> allTransactions = new ArrayList<>();
         String continuationKey = null;
 
         do {
@@ -135,7 +140,11 @@ public class EnableBankingClient {
                     .body(TransactionPage.class);
 
             if (page.transactions() != null) {
-                allTransactions.addAll(page.transactions());
+                for (JsonNode node : page.transactions()) {
+                    // Convertiamo il JSON nel record Transaction, ma teniamo anche il testo originale.
+                    Transaction transaction = jsonMapper.treeToValue(node, Transaction.class);
+                    allTransactions.add(new RawTransaction(transaction, node.toString()));
+                }
             }
 
             // Protezione: alcune banche restituiscono di nuovo la stessa chiave, e il ciclo non finirebbe mai.
