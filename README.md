@@ -42,6 +42,13 @@ Perché queste scelte:
 - **Enable Banking**: è un fornitore autorizzato PSD2, gratuito se colleghi solo i tuoi conti.
   Senza un fornitore del genere un privato non può collegarsi alle API delle banche.
 
+## Il modello: una installazione per persona
+
+Come Firefly III e Actual Budget, WalletTracker è *self-hosted*: chi vuole usarlo scarica il progetto
+da GitHub, crea la propria applicazione (gratuita) su Enable Banking e lo avvia sul proprio computer o
+server. Ognuno ha i propri conti, le proprie regole e il proprio database. I principi sono descritti in
+[`docs/03-modello-e-regole.md`](docs/03-modello-e-regole.md).
+
 ## Struttura del repository
 
 ```
@@ -61,6 +68,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 4. [Fase 1, passo 1: PostgreSQL con Docker](docs/04-fase-1-passo-1-postgres-docker.md)
 5. [Fase 1, passo 2: Spring Boot + PostgreSQL + Flyway](docs/05-fase-1-passo-2-spring-jpa-flyway.md)
 6. [Fase 1, passo 3: i movimenti, senza doppioni](docs/06-fase-1-passo-3-movimenti.md)
+7. [Fase 1, passo 4: la classificazione automatica](docs/07-fase-1-passo-4-classificazione.md)
 
 ## Piano di lavoro
 
@@ -69,11 +77,13 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] passo 1: PostgreSQL con Docker Compose
   - [x] passo 2: Spring Boot + Flyway + collegamenti e conti salvati nel database
   - [x] passo 3: movimenti e importazione senza doppioni
-  - [ ] passo 4: classificazione automatica (ruoli, trasferimenti, investimenti)
+  - [x] passo 4: classificazione automatica (motore generico + regole configurabili)
   - [ ] passo 5: sincronizzazione automatica programmata
-- [ ] **Fase 2**: API REST e frontend React con l'elenco dei movimenti, categorie a regole, giroconti
-- [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV
-- [ ] **Fase 4**: tutto in Docker Compose, installazione su un server, accesso via Tailscale
+- [ ] **Fase 2**: server web, API REST e dashboard React
+  - configurazione guidata dalla dashboard: credenziali Enable Banking, collegamento delle banche, ruoli dei conti
+  - elenco movimenti con correzione manuale del tipo, gestione delle regole
+- [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic)
+- [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili
 

@@ -72,6 +72,29 @@ public class BankTransaction {
     @Column(name = "imported_at", nullable = false)
     private Instant importedAt;
 
+    // --- Classificazione (migrazione V4) ---
+
+    /** Il tipo assegnato dalla classificazione. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type")
+    private TransactionType type;
+
+    @Column(name = "category")
+    private String category;
+
+    /** La regola che ha deciso il tipo, se è stata una regola. */
+    @Column(name = "rule_id")
+    private Long ruleId;
+
+    /** Per i trasferimenti tra conti propri: l'id del movimento sull'altro conto. */
+    @Column(name = "transfer_peer_id")
+    private Long transferPeerId;
+
+    /** La correzione manuale dell'utente: se presente, vince su tutto il resto. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "manual_type")
+    private TransactionType manualType;
+
     protected BankTransaction() {
     }
 
@@ -89,6 +112,39 @@ public class BankTransaction {
         this.description = description;
         this.rawJson = rawJson;
         this.importedAt = Instant.now();
+    }
+
+    /** Assegna il risultato della classificazione. */
+    public void classify(TransactionType type, String category, Long ruleId, Long transferPeerId) {
+        this.type = type;
+        this.category = category;
+        this.ruleId = ruleId;
+        this.transferPeerId = transferPeerId;
+    }
+
+    /** Correzione manuale (dalla dashboard): {@code null} la toglie. */
+    public void setManualType(TransactionType manualType) {
+        this.manualType = manualType;
+    }
+
+    public TransactionType getType() {
+        return type;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public Long getRuleId() {
+        return ruleId;
+    }
+
+    public Long getTransferPeerId() {
+        return transferPeerId;
+    }
+
+    public TransactionType getManualType() {
+        return manualType;
     }
 
     public Long getId() {

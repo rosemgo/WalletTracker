@@ -22,11 +22,13 @@ import it.wallettracker.bank.enablebanking.EnableBankingApi.Session;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
+import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.ConnectionService;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.TransactionImportService;
 import it.wallettracker.transaction.TransactionImportService.ImportResult;
+import it.wallettracker.transaction.TransactionType;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -63,6 +65,7 @@ public class PocRunner implements CommandLineRunner {
     private final EnableBankingProperties properties;
     private final ConnectionService connectionService;
     private final TransactionImportService importService;
+    private final ClassificationService classificationService;
     private final Scanner keyboard = new Scanner(System.in);
 
     /** Il risultato del login sulla banca: il codice da scambiare e la scadenza del consenso richiesta. */
@@ -71,11 +74,13 @@ public class PocRunner implements CommandLineRunner {
 
     // Spring passa al costruttore i componenti di cui abbiamo bisogno (dependency injection).
     public PocRunner(EnableBankingClient client, EnableBankingProperties properties,
-            ConnectionService connectionService, TransactionImportService importService) {
+            ConnectionService connectionService, TransactionImportService importService,
+            ClassificationService classificationService) {
         this.client = client;
         this.properties = properties;
         this.connectionService = connectionService;
         this.importService = importService;
+        this.classificationService = classificationService;
     }
 
     @Override
@@ -93,6 +98,16 @@ public class PocRunner implements CommandLineRunner {
 
             for (Account account : accounts) {
                 printAccount(account, psu);
+            }
+
+            // Classifichiamo di nuovo tutti i movimenti (di tutti i conti: i trasferimenti hanno due lati).
+            Map<TransactionType, Integer> counts = classificationService.classifyAll();
+            System.out.println();
+            System.out.println("=== Classificazione di tutti i movimenti salvati ===");
+            counts.forEach((type, count) -> System.out.printf("  %-22s %d%n", type, count));
+
+            for (Account account : accounts) {
+                printLatest(account);
             }
         } catch (RestClientResponseException e) {
             System.out.println("Enable Banking ha risposto con un errore HTTP " + e.getStatusCode().value() + ":");
@@ -258,13 +273,22 @@ public class PocRunner implements CommandLineRunner {
                 + ", già presenti " + result.alreadyPresent()
                 + ", in attesa " + result.pending());
 
-        System.out.println("Ultimi movimenti salvati:");
+    }
+
+    /** Gli ultimi movimenti salvati di un conto, con il tipo assegnato dalla classificazione. */
+    private void printLatest(Account account) {
+        if (account.getRole() == AccountRole.EXCLUDED) {
+            return;
+        }
+        System.out.println();
+        System.out.println("Ultimi movimenti di " + account.getName() + " (" + account.getRole() + "):");
         for (BankTransaction transaction : importService.latestTransactions(account)) {
-            System.out.printf("  %s  %10s %s  %-7s  %s%n",
+            System.out.printf("  %s  %10s %s  %-7s  %-21s  %s%n",
                     transaction.getBookingDate(),
                     transaction.getAmount(),
                     transaction.getCurrency(),
                     transaction.getStatus(),
+                    transaction.getType(),
                     textOf(transaction));
         }
     }

@@ -87,6 +87,11 @@ public class Account {
         this.providerUid = newProviderUid;
     }
 
+    /** Cambia il ruolo del conto (dalla dashboard, nella Fase 2). */
+    public void changeRole(AccountRole newRole) {
+        this.role = newRole;
+    }
+
     public Long getId() {
         return id;
     }
