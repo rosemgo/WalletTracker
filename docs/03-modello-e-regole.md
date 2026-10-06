@@ -34,7 +34,7 @@ Ogni conto ha un ruolo (enum `AccountRole`), che si sceglie dopo averlo collegat
 | `UNASSIGNED` | appena collegato, ruolo non ancora scelto | come un conto normale |
 | `MAIN` | conto principale (es. dove arriva lo stipendio) | come un conto normale |
 | `SPENDING` | conto usato per le spese | come un conto normale |
-| `INVESTMENT` | conto di investimento | dà il nome ai trasferimenti (versamento/prelievo) e interpreta i movimenti **senza testo** |
+| `INVESTMENT` | conto di investimento | dà il nome ai trasferimenti (versamento/prelievo); **non** decide mai il tipo di un movimento |
 | `EXCLUDED` | conto da ignorare (di prova, vuoto) | tutti i suoi movimenti sono `IGNORED` |
 
 `MAIN`, `SPENDING` e `UNASSIGNED` oggi si comportano allo stesso modo: la distinzione serve alla
@@ -57,6 +57,7 @@ Enum `TransactionType`. Solo `EXPENSE` e `INCOME` contano come spese ed entrate 
 | `INVESTMENT_INCOME` | cedole, dividendi, interessi |
 | `INVESTMENT_TAX` | ritenute, imposta di bollo, capital gain, Tobin tax |
 | `IGNORED` | da ignorare (importo zero, conto escluso, correzione manuale) |
+| `TO_REVIEW` | **da verificare**: nessuna informazione per decidere; escluso dai totali finché l'utente non lo classifica a mano |
 
 ---
 
@@ -73,7 +74,7 @@ risposta vince**:
 | 4 | **trasferimento abbinato**: su un altro tuo conto c'è un movimento con stesso importo, segno opposto e stessa valuta, al massimo a 3 giorni di distanza | trasferimento (vedi sotto) |
 | 5 | il movimento cita l'**IBAN di un altro tuo conto** (causale o JSON originale) | trasferimento |
 | 6 | una **regola** della tabella `classification_rule` corrisponde | tipo e categoria della regola |
-| 7 | **nessun testo** (né causale né controparte) e conto `INVESTMENT` | uscita → `SECURITIES_BUY`, entrata → `INVESTMENT_INCOME` |
+| 7 | **nessun testo** (né causale né controparte) | `TO_REVIEW`: meglio chiedere all'utente che indovinare |
 | 8 | ultima risorsa | uscita → `EXPENSE`, entrata → `INCOME` |
 
 **Che tipo di trasferimento?** Dipende da dove partono e arrivano i soldi:
@@ -122,7 +123,7 @@ comportamento:
 | storico lungo solo subito dopo il login, poi max 90 giorni | Fineco, ING | se la banca rifiuta il periodo, si riprova con 89 giorni |
 | letture in background quasi assenti | Trade Republic | header PSU quando l'utente è presente |
 | **pagine ripetute**, date richieste ignorate, 6 decimali | Trade Republic | copie identiche eliminate, nessuna divisione del periodo, arrotondamento a 2 decimali |
-| **nessuna descrizione**: solo data, importo, direzione | Trade Republic | abbinamento dei trasferimenti + controllo 7 (nessun testo su conto di investimento) |
+| **nessuna descrizione**: solo data, importo, direzione | Trade Republic | abbinamento dei trasferimenti; il resto è `TO_REVIEW` (da classificare a mano, o con l'import del file di Trade Republic) |
 | consenso di 90 giorni invece di 180 | Trade Republic | avviso di scadenza (Fase 3) |
 
 Sulla mancanza di descrizioni di Trade Republic: è un **limite noto** della sua interfaccia PSD2,

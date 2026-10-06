@@ -189,26 +189,30 @@ class ClassificationServiceTest {
     }
 
     @Test
-    void withoutAnyTextOnAnInvestmentAccountTheAccountPurposeDecides() {
-        // Come Trade Republic: niente causale né controparte. Uscita = acquisto titoli, entrata = rendita.
+    void withoutAnyTextAndNoPairTheTransactionIsToReviewOnAnyAccount() {
+        // Come Trade Republic: niente causale né controparte. Il tipo di conto NON basta a decidere
+        // (potrebbe essere un acquisto di titoli come un pagamento con carta): lo decide l'utente.
         Account broker = account("IT00BROKER", AccountRole.INVESTMENT);
-        BankTransaction buy = transaction(broker, DAY, "-150.00", null, null);
-        BankTransaction dividend = transaction(broker, DAY.plusDays(10), "42.18", null, null);
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        BankTransaction onBroker = transaction(broker, DAY, "-150.00", null, null);
+        BankTransaction onMain = transaction(main, DAY.plusDays(10), "-30.00", null, null);
 
         classificationService.classifyAll();
 
-        assertThat(typeOf(buy)).isEqualTo(TransactionType.SECURITIES_BUY);
-        assertThat(typeOf(dividend)).isEqualTo(TransactionType.INVESTMENT_INCOME);
+        assertThat(typeOf(onBroker)).isEqualTo(TransactionType.TO_REVIEW);
+        assertThat(typeOf(onMain)).isEqualTo(TransactionType.TO_REVIEW);
     }
 
     @Test
-    void withoutAnyTextOnANormalAccountTheGenericFallbackApplies() {
-        Account main = account("IT00MAIN", AccountRole.MAIN);
-        BankTransaction unknown = transaction(main, DAY, "-30.00", null, null);
+    void aManualCorrectionResolvesATransactionToReview() {
+        Account broker = account("IT00BROKER", AccountRole.INVESTMENT);
+        BankTransaction unknown = transaction(broker, DAY, "-150.00", null, null);
+        unknown.setManualType(TransactionType.SECURITIES_BUY);
+        transactionRepository.save(unknown);
 
         classificationService.classifyAll();
 
-        assertThat(typeOf(unknown)).isEqualTo(TransactionType.EXPENSE);
+        assertThat(typeOf(unknown)).isEqualTo(TransactionType.SECURITIES_BUY);
     }
 
     // --- Strumenti per costruire gli scenari ---

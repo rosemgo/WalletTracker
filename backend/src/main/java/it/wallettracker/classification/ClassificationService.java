@@ -36,14 +36,14 @@ import org.springframework.transaction.annotation.Transactional;
  *       segno opposto, a pochi giorni di distanza → trasferimento;</li>
  *   <li><b>IBAN di un tuo conto</b> nel movimento (es. "IBAN beneficiario IT...") → trasferimento;</li>
  *   <li><b>regole</b> della tabella classification_rule, in ordine di priorità → tipo e categoria della regola;</li>
- *   <li><b>nessun testo su un conto di investimento</b> (es. Trade Republic, che non manda descrizioni):
- *       l'unica informazione è lo scopo del conto, quindi uscita → SECURITIES_BUY, entrata → INVESTMENT_INCOME;</li>
+ *   <li><b>nessun testo</b> (né causale né controparte, es. Trade Republic) e nessun abbinamento: non
+ *       sappiamo cos'è, quindi → TO_REVIEW, da classificare a mano;</li>
  *   <li><b>ultima risorsa</b>: uscita → EXPENSE, entrata → INCOME.</li>
  * </ol>
  *
- * <p>Il ruolo del conto conta solo in pochi casi: EXCLUDED (conto ignorato), e INVESTMENT, che serve
- * a dare il nome giusto ai trasferimenti (versamento o prelievo) e a interpretare i movimenti che non
- * hanno nessun testo. Una spesa con una descrizione, fatta da un conto di investimento, resta una spesa.
+ * <p>Il ruolo del conto conta solo in due casi: EXCLUDED (conto ignorato) e INVESTMENT, che serve
+ * a dare il nome giusto ai trasferimenti (versamento o prelievo dagli investimenti). Non decide mai il
+ * tipo di un movimento: una spesa fatta da un conto di investimento resta una spesa.
  */
 @Service
 public class ClassificationService {
@@ -123,10 +123,9 @@ public class ClassificationService {
                 return new Result(rule.getResultType(), rule.getCategory(), rule.getId(), null);
             }
         }
-        // 7. Nessun testo su un conto di investimento: l'unica informazione è lo scopo del conto.
-        if (text.isBlank() && account.getRole() == AccountRole.INVESTMENT) {
-            return new Result(amount.signum() < 0 ? TransactionType.SECURITIES_BUY : TransactionType.INVESTMENT_INCOME,
-                    null, null, null);
+        // 7. Nessun testo: non abbiamo informazioni per decidere. Meglio chiedere all'utente che indovinare.
+        if (text.isBlank()) {
+            return new Result(TransactionType.TO_REVIEW, null, null, null);
         }
         // 8. Ultima risorsa.
         return new Result(amount.signum() < 0 ? TransactionType.EXPENSE : TransactionType.INCOME, null, null, null);

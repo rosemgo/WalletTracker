@@ -34,5 +34,11 @@ public enum TransactionType {
     INVESTMENT_TAX,
 
     /** Da ignorare (importo zero, conto escluso...). */
-    IGNORED
+    IGNORED,
+
+    /**
+     * Da verificare: il movimento non ha nessuna informazione (né testo né abbinamento), quindi il
+     * programma non può sapere cos'è. Resta fuori dai totali finché l'utente non lo classifica a mano.
+     */
+    TO_REVIEW
 }

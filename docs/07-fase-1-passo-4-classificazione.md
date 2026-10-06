@@ -65,6 +65,12 @@ Il metodo `classifyAll()`:
 2. **abbina i trasferimenti** (`pairTransfers`);
 3. classifica ogni movimento con `classify(...)`, che prova gli 8 controlli in ordine (tabella in
    `docs/03`, sezione 4);
+
+> **Una scelta di progetto: `TO_REVIEW`.** Un movimento senza alcun testo e senza abbinamento (succede
+> con Trade Republic) potrebbe essere qualsiasi cosa: un acquisto di titoli, un pagamento con carta, un
+> dividendo. Indovinare in base al tipo di conto vorrebbe dire scrivere nel codice le abitudini di una
+> persona. Il motore quindi lo segna come **da verificare**: resta fuori dai totali, e la dashboard lo
+> mostrerà in un elenco "da classificare".
 4. restituisce quanti movimenti ci sono per tipo.
 
 **Come funziona l'abbinamento** (`pairTransfers`):
@@ -115,8 +121,8 @@ Ultimi movimenti di Conto Arancio (MAIN):
 | `zeroAmountsAndExcludedAccountsAreIgnored` | importi zero e conti esclusi |
 | `withoutAnyMatchOutgoingIsExpenseAndIncomingIsIncome` | ultima risorsa |
 | `transactionsTooFarApartAreNotPaired` | importi uguali ma troppo distanti nel tempo: non è un trasferimento |
-| `withoutAnyTextOnAnInvestmentAccountTheAccountPurposeDecides` | movimenti senza testo su un conto di investimento |
-| `withoutAnyTextOnANormalAccountTheGenericFallbackApplies` | movimenti senza testo su un conto normale |
+| `withoutAnyTextAndNoPairTheTransactionIsToReviewOnAnyAccount` | movimenti senza testo: `TO_REVIEW` su qualsiasi conto |
+| `aManualCorrectionResolvesATransactionToReview` | una correzione manuale risolve un movimento da verificare |
 
 ---
 
