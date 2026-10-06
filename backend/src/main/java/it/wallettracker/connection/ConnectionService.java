@@ -58,10 +58,15 @@ public class ConnectionService {
             accountRepository.findByExternalKey(externalKey).ifPresentOrElse(
                     // Conto già noto: aggiorniamo collegamento e uid. Non serve chiamare save():
                     // dentro una transazione Hibernate salva da solo le modifiche agli oggetti caricati.
-                    existing -> existing.moveTo(connection, apiAccount.uid()),
+                    (Account existing) -> {
+                        existing.moveTo(connection, apiAccount.uid());
+                        //accountRepository.save(existing); //NON SERVE, leggi commento sopra
+                    },
                     // Conto nuovo: lo creiamo.
-                    () -> accountRepository.save(new Account(connection, externalKey, apiAccount.uid(), iban,
-                            apiAccount.name(), apiAccount.currency())));
+                    () -> {
+                        accountRepository.save(new Account(connection, externalKey, apiAccount.uid(), iban,
+                                apiAccount.name(), apiAccount.currency()));
+                    });
         }
 
         // I vecchi collegamenti della stessa banca rimasti senza conti (perché li abbiamo appena
