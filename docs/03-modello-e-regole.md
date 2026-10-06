@@ -97,14 +97,18 @@ Conseguenze per il modello:
 
 ## 6. Eliminazione dei doppioni
 
-Ogni sincronizzazione scarica di nuovo qualche giorno già letto (per sicurezza), quindi lo stesso
-movimento arriva più volte. Per riconoscerlo:
+Implementata in `TransactionImportService` (dettagli in `docs/06-fase-1-passo-3-movimenti.md`):
 
-1. se la banca fornisce un identificativo stabile (`entry_reference`), usiamo quello;
-2. altrimenti un'"impronta" calcolata da conto, data, importo e descrizione.
+1. **copie identiche** nella stessa risposta (stesso JSON, es. pagine ripetute di Trade Republic):
+   se ne tiene una;
+2. **impronta**: `ref:<entry_reference>` se la banca lo fornisce, altrimenti `fp:<SHA-256 di data,
+   importo, valuta, controparte, causale>`;
+3. **movimenti uguali ma distinti** (JSON diversi, stessa impronta, es. due caffè): numero
+   progressivo `#2`, `#3`...;
+4. **movimenti in attesa**: sostituiti a ogni importazione;
+5. **vincolo `UNIQUE (account_id, dedup_key)`** nel database come rete di sicurezza.
 
-Due movimenti identici nello stesso giorno (es. due caffè da 1,20 €) sono possibili: l'impronta
-include anche un **numero progressivo** tra i movimenti uguali della stessa sincronizzazione.
+Ogni importazione riparte dall'ultimo movimento contabilizzato meno 10 giorni (la prima: un anno).
 
 ## 7. Sincronizzazione
 

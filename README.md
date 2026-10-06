@@ -60,6 +60,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 3. [Modello e regole: le decisioni prese](docs/03-modello-e-regole.md)
 4. [Fase 1, passo 1: PostgreSQL con Docker](docs/04-fase-1-passo-1-postgres-docker.md)
 5. [Fase 1, passo 2: Spring Boot + PostgreSQL + Flyway](docs/05-fase-1-passo-2-spring-jpa-flyway.md)
+6. [Fase 1, passo 3: i movimenti, senza doppioni](docs/06-fase-1-passo-3-movimenti.md)
 
 ## Piano di lavoro
 
@@ -67,7 +68,9 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 - [ ] **Fase 1**: modello dati, PostgreSQL in Docker, sincronizzazione automatica
   - [x] passo 1: PostgreSQL con Docker Compose
   - [x] passo 2: Spring Boot + Flyway + collegamenti e conti salvati nel database
-  - [ ] passo 3: movimenti e importazione senza doppioni
+  - [x] passo 3: movimenti e importazione senza doppioni
+  - [ ] passo 4: classificazione automatica (ruoli, trasferimenti, investimenti)
+  - [ ] passo 5: sincronizzazione automatica programmata
 - [ ] **Fase 2**: API REST e frontend React con l'elenco dei movimenti, categorie a regole, giroconti
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV
 - [ ] **Fase 4**: tutto in Docker Compose, installazione su un server, accesso via Tailscale

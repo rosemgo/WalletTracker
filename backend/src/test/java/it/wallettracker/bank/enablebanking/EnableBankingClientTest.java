@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
-import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.RawTransaction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,6 +23,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Test del client senza chiamare davvero Enable Banking: {@link MockRestServiceServer}
@@ -43,7 +44,7 @@ class EnableBankingClientTest {
 
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new EnableBankingClient(builder, properties, new EnableBankingJwtFactory(properties));
+        client = new EnableBankingClient(builder, properties, new EnableBankingJwtFactory(properties), new JsonMapper());
     }
 
     @Test
@@ -89,13 +90,15 @@ class EnableBankingClientTest {
                         ]}
                         """, MediaType.APPLICATION_JSON));
 
-        List<Transaction> transactions = client.getTransactions("acc-1",
+        List<RawTransaction> transactions = client.getTransactions("acc-1",
                 LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
 
-        assertThat(transactions).extracting(Transaction::entryReference).containsExactly("t1", "t2");
-        assertThat(transactions.get(0).signedAmount()).isEqualByComparingTo(new BigDecimal("-12.50"));
-        assertThat(transactions.get(0).creditor().name()).isEqualTo("ESSELUNGA");
-        assertThat(transactions.get(1).signedAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+        assertThat(transactions).extracting(raw -> raw.transaction().entryReference()).containsExactly("t1", "t2");
+        assertThat(transactions.get(0).transaction().signedAmount()).isEqualByComparingTo(new BigDecimal("-12.50"));
+        assertThat(transactions.get(0).transaction().creditor().name()).isEqualTo("ESSELUNGA");
+        assertThat(transactions.get(1).transaction().signedAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+        // Il JSON originale viene conservato per intero.
+        assertThat(transactions.get(0).json()).contains("\"entry_reference\":\"t1\"", "PAGAMENTO POS");
         server.verify();
     }
 
