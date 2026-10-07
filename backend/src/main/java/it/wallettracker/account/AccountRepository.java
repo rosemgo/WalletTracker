@@ -21,6 +21,16 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     boolean existsByConnection(BankConnection connection);
 
     /**
+     * Tutti i conti insieme al loro collegamento, con <b>una sola</b> query.
+     *
+     * <p>{@code JOIN FETCH} dice a Hibernate di caricare subito anche il collegamento (che altrimenti è LAZY).
+     * Senza, leggendo la banca di ogni conto Hibernate farebbe una query in più per ogni collegamento:
+     * è il famoso problema "N+1 query".
+     */
+    @Query("SELECT a FROM Account a JOIN FETCH a.connection c ORDER BY c.aspspName, a.name")
+    List<Account> findAllWithConnection();
+
+    /**
      * Salva l'esito dell'ultima importazione di un conto.
      *
      * <p>Qui il nome del metodo non basta: scriviamo noi la query, in JPQL (simile a SQL, ma usa i nomi

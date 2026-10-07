@@ -23,6 +23,21 @@ spring:
       # Le tabelle le crea Flyway, non Hibernate. "validate" fa solo un controllo all'avvio:
       # se le classi @Entity non corrispondono alle tabelle, l'applicazione non parte.
       ddl-auto: validate
+    # Con il server web, Spring Boot terrebbe aperta la sessione del database per tutta la richiesta
+    # HTTP ("open in view"): comodo, ma nasconde query fatte di nascosto. La spegniamo: i dati che
+    # servono li carichiamo nei servizi, dentro le transazioni (vedi docs/09).
+    open-in-view: false
+
+  mvc:
+    problemdetails:
+      # Gli errori delle API (404, 400...) hanno un corpo JSON standard (RFC 9457), con il motivo in "detail".
+      enabled: true
+
+# Server web (Fase 2). Ascolta SOLO su questo PC (127.0.0.1): le API non hanno ancora un login, e
+# senza questa riga chiunque sulla stessa rete Wi-Fi (a casa, in un bar...) potrebbe leggere i tuoi movimenti.
+server:
+  address: 127.0.0.1
+  port: ${SERVER_PORT:8080}
 
 enable-banking:
   base-url: https://api.enablebanking.com

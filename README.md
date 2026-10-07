@@ -70,6 +70,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 6. [Fase 1, passo 3: i movimenti, senza doppioni](docs/06-fase-1-passo-3-movimenti.md)
 7. [Fase 1, passo 4: la classificazione automatica](docs/07-fase-1-passo-4-classificazione.md)
 8. [Fase 1, passo 5: la sincronizzazione automatica](docs/08-fase-1-passo-5-sincronizzazione.md)
+9. [Fase 2, passo 1: il server web e le API REST](docs/09-fase-2-passo-1-api-rest.md)
 
 ## Piano di lavoro
 
@@ -81,9 +82,10 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] passo 4: classificazione automatica (motore generico + regole configurabili)
   - [x] passo 5: sincronizzazione automatica programmata
 - [ ] **Fase 2**: server web, API REST e dashboard React
-  - configurazione guidata dalla dashboard: credenziali Enable Banking, collegamento delle banche, ruoli dei conti
-  - elenco movimenti con correzione manuale del tipo, gestione delle regole
-  - pulsante "Aggiorna ora" e stato della sincronizzazione di ogni conto
+  - [x] passo 1: server web e API REST (conti, movimenti, ruoli, correzioni manuali)
+  - [ ] passo 2: dashboard React: conti, ruoli, elenco movimenti con correzione del tipo
+  - [ ] passo 3: collegamento delle banche dalla dashboard e pulsante "Aggiorna ora"
+  - [ ] passo 4: gestione delle regole e configurazione guidata delle credenziali Enable Banking
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic)
   - categorie con "crea una regola da questa correzione"
   - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
@@ -102,7 +104,7 @@ Dalla cartella `backend/` (su Windows usa `mvnw.cmd` al posto di `./mvnw`):
 ```bash
 ./mvnw test                                           # esegue i test
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=poc # collega una banca o riusa un collegamento salvato
-./mvnw spring-boot:run                                # sincronizzazione automatica: resta acceso, Ctrl+C per fermarlo
+./mvnw spring-boot:run                                # server web (http://localhost:8080/api/accounts) e sincronizzazione automatica; Ctrl+C per fermarlo
 ```
 
 ## Sicurezza

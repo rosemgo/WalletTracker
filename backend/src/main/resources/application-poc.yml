@@ -4,6 +4,8 @@
 spring:
   main:
     banner-mode: off
+    # Il programma della Fase 0 è a riga di comando: niente server web, così alla fine termina.
+    web-application-type: none
 
 logging:
   level:

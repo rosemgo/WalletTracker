@@ -28,6 +28,12 @@
             <artifactId>spring-boot-starter-restclient</artifactId>
         </dependency>
 
+        <!-- Server web (Tomcat) + Spring MVC: le API REST per la dashboard (dalla Fase 2) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
         <!-- Validazione della configurazione con annotazioni come @NotBlank -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -61,6 +67,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Test delle API REST con MockMvc: richieste HTTP simulate, senza aprire una porta vera -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
 
