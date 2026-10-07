@@ -79,18 +79,22 @@ public class ClassificationRule {
     }
 
     /**
+     * Questo metodo serve per capire se una regola applicata a un movimento è giusta: in pratica cataloghizza il movimento (causale del movimento)
      * True se la regola si applica a un movimento con questo testo e questo importo.
      * Maiuscole e minuscole non contano.
      */
     public boolean matches(String text, BigDecimal amount) {
+        //se il campo amountSign della regola è NEGATIVE e la somma del movimento è positiva allora la regola selezionata non va bene per quel movimento
         if (amountSign == AmountSign.NEGATIVE && amount.signum() >= 0) {
             return false;
         }
+        //se il campo amountSign della regola è POSITIVE e la somma del movimento è negativa allora la regola selezionata non va bene per quel movimento
         if (amountSign == AmountSign.POSITIVE && amount.signum() <= 0) {
             return false;
         }
-        String haystack = text.toLowerCase();
+        String haystack = text.toLowerCase(); //testo del movimento
         String needle = pattern.toLowerCase();
+        //se il matchMode della regola selezionata è STARTS_WITH allora verifica che il testo del movimento cominci con il valore del campo pattern della regola (vedere i valori di pattern nella tabella del database classification_rule) oppure che il testo del movimento contenga il pattern della regola.
         return matchMode == MatchMode.STARTS_WITH ? haystack.startsWith(needle) : haystack.contains(needle);
     }
 
