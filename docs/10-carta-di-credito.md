@@ -16,57 +16,46 @@ tipo apposito, **`CARD_SETTLEMENT`**, che, come i trasferimenti, resta fuori dai
 
 ---
 
-## Parte A: come il motore riconosce il saldo
+## Parte A: come viene riconosciuto il saldo
 
-Prima di tutto, nella dashboard (o per ora con le API) dai al conto della carta il ruolo **`CREDIT_CARD`**.
-Dopodiché il saldo viene riconosciuto in tre modi, dal più generale al più specifico.
+Prima di tutto dai al conto della carta il ruolo **`CREDIT_CARD`**. Il saldo viene poi riconosciuto in
+due modi, entrambi **sicuri**: non si basano su coincidenze.
 
-### 1. La carta mostra il pagamento: abbinamento
+1. **Con una regola sulla causale.** La regola di partenza `Estratto conto carta di credito` riconosce
+   l'addebito di ING e ora dà `CARD_SETTLEMENT` (l'ha aggiornata la migrazione **V6**, solo se non
+   l'avevi modificata). Per un'altra banca basta una regola con la sua causale: nella Fase 2 si
+   aggiungeranno dalla dashboard.
+2. **Con l'abbinamento dei trasferimenti.** Alcune banche mostrano il pagamento anche sulla carta, come
+   entrata. Se i due lati hanno l'aspetto di un trasferimento tra conti propri (le stesse condizioni
+   degli altri trasferimenti: testo vuoto, nome dell'intestatario o IBAN di un tuo conto), vengono
+   abbinati. Poiché un lato è una carta, il tipo è `CARD_SETTLEMENT`.
 
-Alcune banche mostrano il pagamento **anche sulla carta**, come entrata (+630,39 €). Allora basta
-l'abbinamento dei trasferimenti che già conosci: un'uscita da un tuo conto e un'entrata sulla carta,
-stesso importo, al massimo 3 giorni di distanza → entrambe `CARD_SETTLEMENT`.
+E se nessuno dei due funziona? Una **correzione manuale**: un clic nella dashboard.
 
-A differenza dei trasferimenti normali, qui il testo non conta. Su una carta le entrate sono solo pagamenti
-del saldo o rimborsi; anche in caso di coincidenza con un rimborso, i totali non cambierebbero, perché
-acquisto e rimborso si annullano.
+### Un errore da cui imparare
 
-### 2. La carta NON mostra il pagamento: il totale
+La prima versione di questo passo aveva un terzo controllo, "per somma". Un'uscita da un tuo conto veniva
+considerata un saldo se il suo importo era **esattamente** la somma di alcuni acquisti consecutivi della
+carta. Sembrava sicuro ("al centesimo!"), ma sui dati veri ha scambiato per saldi della carta una
+bolletta da 42,68 €, un pagamento a un amico da 7,30 € e persino una ritenuta sui dividendi da 49,70 €.
 
-Le carte ING, ad esempio, mostrano solo gli acquisti e i rimborsi. Allora il motore usa un'altra
-osservazione: **il saldo è la somma dei movimenti della carta di un periodo**, da un estratto conto al
-successivo.
+Perché? Con un centinaio di acquisti sulla carta, le somme di acquisti consecutivi sono **migliaia** di
+valori diversi, quasi tutti sotto qualche centinaio di euro. Prendi un importo piccolo qualsiasi: la
+probabilità che coincida con una di quelle somme non è affatto trascurabile. Su centinaia di movimenti,
+qualche coincidenza è praticamente certa. Per esempio:
 
 ```
-Movimenti della carta              Somma "tornando indietro" dall'ultimo
- 15/09  SUPERMERCATO    -45,30           -210,00  ← uguale all'addebito: è il saldo!
- 23/09  NEGOZIO ONLINE -120,00           -164,70
- 27/09  RIMBORSO        +15,30           -44,70
- 30/09  RISTORANTE      -60,00           -60,00
-                                    
-Conto corrente
- 10/10  ADDEBITO ...   -210,00
+Carta:         BAR -30,00   EDICOLA -12,68   FARMACIA -37,02
+Somme:         -30,00 -12,68 = -42,68   ← uguale alla bolletta
+               -12,68 -37,02 = -49,70   ← uguale alla ritenuta
 ```
 
-Per ogni uscita dai tuoi conti, il motore prova ogni movimento della carta come **ultimo del periodo**.
-Da lì torna indietro un movimento alla volta, sommando, e controlla se la somma è **esattamente** uguale
-all'uscita, al centesimo. Per evitare coincidenze:
-- servono **almeno 2 movimenti** della carta: un singolo acquisto da 20 € e un'uscita da 20 € dal conto
-  corrente non sono un saldo;
-- il periodo copre **al massimo 45 giorni**;
-- l'addebito arriva **entro 45 giorni** dall'ultimo movimento del periodo.
+In più quel controllo veniva **prima** delle regole, quindi sovrascriveva anche risultati giusti (la
+ritenuta è `INVESTMENT_TAX`).
 
-### 3. La regola di partenza
-
-La regola `Estratto conto carta di credito` (migrazione V4) ora dà `CARD_SETTLEMENT` invece di
-`INTERNAL_TRANSFER`: l'ha aggiornata la migrazione **V6**. Funziona anche senza il ruolo `CREDIT_CARD`,
-ma solo con la causale di ING. Le altre banche hanno causali diverse: per loro servono il ruolo e i
-controlli 1 e 2.
-
-**Un limite del controllo 2.** La banca chiude il periodo dell'estratto conto con le sue regole. Se un
-acquisto fatto il 9 viene contabilizzato l'11, la banca potrebbe metterlo nel periodo precedente mentre
-noi, che ordiniamo per data contabile, nel successivo. In quel caso la somma non torna. Restano la regola
-(per ING) e la correzione manuale.
+La lezione è la stessa del passo 4: **il motore non deve indovinare**. Meglio un movimento da correggere a
+mano che un errore silenzioso nei totali. Il controllo è stato rimosso, e quegli esempi sono diventati un
+test di **regressione**: un test che ricorda un errore passato, perché non torni.
 
 ---
 
@@ -75,30 +64,17 @@ noi, che ordiniamo per data contabile, nel successivo. In quel caso la somma non
 - **`AccountRole.CREDIT_CARD`** e **`TransactionType.CARD_SETTLEMENT`**: due nuovi valori negli enum.
   Non servono colonne nuove nel database, perché ruoli e tipi sono salvati come testo.
 - **`V6__saldo_carta_di_credito.sql`**: aggiorna la regola di partenza, **solo se è ancora quella
-  originale**. Se l'avessi modificata tu, non la tocca: una migrazione non deve cancellare le scelte
-  dell'utente.
-- **`ClassificationService`**:
-  - `transferType`: un trasferimento da o verso una carta è `CARD_SETTLEMENT`;
-  - `pairTransfers`: un'entrata su una carta è sempre candidata all'abbinamento (controllo 1);
-  - `findCardSettlements` e `matchesACardPeriod`: il controllo 2, con un doppio ciclo;
-  - in `classify`, il nuovo controllo **4b**, subito dopo l'abbinamento.
-
-**Un dettaglio Java.** Per confrontare due `BigDecimal` si usa `compareTo`, non `equals`:
-
-```java
-new BigDecimal("10.5").equals(new BigDecimal("10.50"))          // false: scala diversa (1 e 2 decimali)
-new BigDecimal("10.5").compareTo(new BigDecimal("10.50")) == 0  // true: stesso valore
-```
+  originale**. Una migrazione non deve cancellare le scelte dell'utente.
+- **`ClassificationService.transferType`**: un trasferimento da o verso una carta è `CARD_SETTLEMENT`.
 
 ### I test
 
 | Test | Scenario |
 |---|---|
-| `theCreditCardSettlementIsRecognisedByTheStarterRule` | la causale di ING, anche senza ruolo |
-| `aSettlementEqualToTheCardTotalIsRecognisedWhateverTheText` | addebito con un testo qualsiasi, uguale alla somma di acquisti e rimborso della carta; gli acquisti restano `EXPENSE` |
+| `theCreditCardSettlementIsRecognisedByTheStarterRule` | l'addebito di ING, riconosciuto dalla regola |
 | `aPaymentShownAlsoOnTheCardIsPairedAsASettlement` | banca che mostra il pagamento anche sulla carta |
-| `aSinglePurchaseOfTheSameAmountIsNotASettlement` | un solo acquisto dello stesso importo: nessun saldo |
-| `withoutTheCreditCardRoleTheTotalIsNotChecked` | senza il ruolo il controllo 2 non si applica |
+| `movementsThatHappenToEqualSumsOfCardPurchasesKeepTheirType` | **regressione**: bolletta e ritenuta uguali per caso alla somma di acquisti della carta restano `EXPENSE` e `INVESTMENT_TAX` |
+| `aRefundOnTheCardIsNotPairedWithAnUnrelatedPurchase` | un rimborso sulla carta e un acquisto dello stesso importo non sono un saldo |
 
 ---
 
@@ -107,35 +83,23 @@ new BigDecimal("10.5").compareTo(new BigDecimal("10.50")) == 0  // true: stesso 
 1. **Aggiorna e lancia i test:**
    ```powershell
    git pull
-   docker compose up -d
    cd backend
-   .\mvnw.cmd test          # 54 test
+   .\mvnw.cmd test          # 53 test
    ```
-2. **Avvia l'applicazione** (`.\mvnw.cmd spring-boot:run`). Flyway applica V6.
-3. **Dai il ruolo `CREDIT_CARD` alla carta** (conto 3), da un'altra finestra di PowerShell:
+2. **Avvia l'applicazione** (`.\mvnw.cmd spring-boot:run`).
+3. **Fai riclassificare tutto.** La classificazione viene ricalcolata dopo una sincronizzazione o un
+   cambio di ruolo. Il modo più rapido è riassegnare il ruolo alla carta:
    ```powershell
    Invoke-RestMethod -Method Put -Uri http://localhost:8080/api/accounts/3/role `
        -ContentType "application/json" -Body '{"role": "CREDIT_CARD"}'
    ```
-   Il cambio di ruolo riclassifica subito tutti i movimenti.
-4. **Controlla gli addebiti mensili** nel browser:
-   <http://localhost:8080/api/transactions?type=CARD_SETTLEMENT>.
-   Ogni `Estratto conto carta di credito` deve esserci.
-5. **Esercizio: il controllo 2 funziona anche sui tuoi dati?** La regola riconosce già gli addebiti ING,
-   quindi il controllo 2 non si vede. Per scoprire se la somma torna, calcola in IntelliJ la somma dei
-   movimenti della carta in un periodo, ad esempio dall'11 settembre al 10 ottobre:
-   ```sql
-   SELECT SUM(amount), COUNT(*)
-   FROM bank_transaction
-   WHERE account_id = 3 AND status = 'BOOKED'
-     AND booking_date BETWEEN '2026-09-11' AND '2026-10-10';
-   ```
-   Se il risultato è `-630.39`, il periodo della banca coincide con le date contabili. Altrimenti, prova
-   a spostare le date di uno o due giorni: scoprirai come ING delimita i suoi periodi.
+4. **Controlla** <http://localhost:8080/api/transactions?type=CARD_SETTLEMENT>: devono esserci solo gli
+   `Estratto conto carta di credito`.
 
 ## Cosa hai imparato
 
 - La differenza tra **spesa** e **rimborso di un anticipo**, e perché contarli entrambi è un errore.
-- Un algoritmo di **somma su finestre consecutive** (doppio ciclo), con vincoli contro le coincidenze.
+- Perché un controllo "esatto al centesimo" può comunque produrre **coincidenze**, quando i confronti
+  possibili sono migliaia.
+- I **test di regressione**.
 - Una **migrazione che aggiorna dati** solo se non sono stati modificati dall'utente.
-- `BigDecimal.compareTo` contro `equals`.
