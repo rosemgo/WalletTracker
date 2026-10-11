@@ -98,8 +98,8 @@ task di Gradle (`gradle build`), qui è Maven (`./mvnw verify`). Jenkins e GitHu
 | **action** | un "pezzo di pipeline" riutilizzabile scritto da altri, es. `actions/checkout` | un plugin |
 | **artifact** | un file prodotto dall'esecuzione e conservato per scaricarlo | gli artefatti archiviati |
 
-Più job in un workflow girano **in parallelo**, ognuno sulla **sua** macchina. Quando arriverà la
-dashboard React aggiungeremo un job `frontend` accanto al job `backend`: i due verranno verificati
+Più job in un workflow girano **in parallelo**, ognuno sulla **sua** macchina. Con la dashboard
+Angular (`docs/12`) è arrivato il job `frontend` accanto al job `backend`: i due vengono verificati
 insieme, su due macchine diverse.
 
 ---
@@ -245,4 +245,4 @@ in **Settings → Secrets and variables → Actions** del repository, mai nel fi
 
 ## Prossimo passo
 
-**Fase 2, passo 2:** la dashboard React. Nella pipeline aggiungeremo il job `frontend`.
+**Fase 2, passo 2:** la dashboard Angular (`docs/12`), con il suo job `frontend` nella pipeline.

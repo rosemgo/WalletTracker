@@ -2,7 +2,7 @@
 
 **Obiettivo:** il backend diventa un **server web**. Risponde a richieste HTTP con i tuoi conti e
 movimenti in formato JSON, e permette di cambiare il ruolo di un conto e correggere un movimento. È la
-base su cui, nel passo successivo, costruiremo la dashboard React.
+base su cui, nel passo successivo, costruiremo la dashboard (in Angular).
 
 > Prerequisiti: Fase 1 completata e `git pull` fatto.
 
@@ -11,12 +11,12 @@ base su cui, nel passo successivo, costruiremo la dashboard React.
 | Passo | Cosa |
 |---|---|
 | **1 (questo)** | server web e API REST: conti, movimenti, ruoli, correzioni manuali |
-| 2 | la dashboard React: elenco conti e movimenti, correzione del tipo, scelta dei ruoli |
+| 2 | la dashboard Angular: elenco conti e movimenti, correzione del tipo, scelta dei ruoli |
 | 3 | collegare le banche dalla dashboard (niente più indirizzo da copiare e incollare) e pulsante "Aggiorna ora" |
 | 4 | regole dalla dashboard e configurazione guidata delle credenziali Enable Banking |
 
 Perché le API prima della grafica? Perché la dashboard non farà altro che **chiamare queste API** e
-mostrare il risultato. Se le API funzionano e sono testate, la parte React sarà "solo" grafica.
+mostrare il risultato. Se le API funzionano e sono testate, la dashboard sarà "solo" grafica.
 
 ---
 
@@ -25,7 +25,7 @@ mostrare il risultato. Se le API funzionano e sono testate, la parte React sarà
 ### 1. Client e server
 
 ```
-  browser / dashboard React  ── GET /api/accounts ──►  backend Spring Boot  ──►  PostgreSQL
+  browser / dashboard        ── GET /api/accounts ──►  backend Spring Boot  ──►  PostgreSQL
            (client)          ◄──── JSON ────────────        (server)
 ```
 
@@ -310,5 +310,5 @@ senza aprire una porta vera. `extractingPath("$.detail")` usa **JsonPath**: `$` 
 
 ## Prossimo passo
 
-**Fase 2, passo 2:** il progetto React (con Vite e TypeScript) nella cartella `frontend/`, con le prime
+**Fase 2, passo 2:** il progetto Angular nella cartella `frontend/` (vedi `docs/12`), con le prime
 pagine che usano queste API: i conti con il loro ruolo e l'elenco dei movimenti con la correzione del tipo.

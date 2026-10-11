@@ -1,0 +1,68 @@
+<h1>Conti</h1>
+
+<p class="hint">
+  Il ruolo dice al programma come trattare i movimenti di un conto: ad esempio, i trasferimenti
+  verso un conto "Investimenti" sono versamenti, quelli verso una "Carta di credito" sono saldi
+  della carta. Cambiando un ruolo, tutti i movimenti vengono riclassificati.
+</p>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Caricamento...</p>
+} @else {
+  <table>
+    <thead>
+      <tr>
+        <th>Banca</th>
+        <th>Conto</th>
+        <th>Ruolo</th>
+        <th>Consenso valido fino al</th>
+        <th>Ultimo aggiornamento</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (account of accounts(); track account.id) {
+        <tr>
+          <td>{{ account.bank }}</td>
+          <td>
+            {{ nameOf(account) }}
+            <div class="secondary">{{ account.iban ?? 'senza IBAN' }} · {{ account.currency }}</div>
+          </td>
+          <td>
+            <select
+              [attr.aria-label]="'Ruolo di ' + nameOf(account)"
+              (change)="onRoleChange(account, $event)"
+            >
+              @for (role of roles; track role) {
+                <option [value]="role" [selected]="role === account.role">
+                  {{ roleLabels[role] }}
+                </option>
+              }
+            </select>
+          </td>
+          <td>{{ account.consentValidUntil | date: 'dd/MM/yyyy' }}</td>
+          <td>
+            @if (account.lastSyncAt) {
+              {{ account.lastSyncAt | date: 'dd/MM/yyyy HH:mm' }}
+            } @else {
+              mai
+            }
+            @if (account.lastSyncError) {
+              <div class="error">{{ account.lastSyncError }}</div>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5">Nessun conto collegato.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}

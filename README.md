@@ -20,7 +20,7 @@ e mostrati in una dashboard con elenco movimenti, categorie e grafici.
   │    └─ API REST per la dashboard                                  │
   │          │                       ▲                               │
   │          ▼                       │                               │
-  │     PostgreSQL              frontend (React)                     │
+  │     PostgreSQL              frontend (Angular)                   │
   └──────────────────────────────────▲───────────────────────────────┘
                                      │ accesso solo via VPN (Tailscale)
                                 tu (PC / telefono)
@@ -32,7 +32,7 @@ e mostrati in una dashboard con elenco movimenti, categorie e grafici.
 |---|---|
 | Backend | Java 21, Spring Boot 4, Maven |
 | Database | PostgreSQL (dalla Fase 1), migrazioni con Flyway |
-| Frontend | React + TypeScript (dalla Fase 2) |
+| Frontend | Angular + TypeScript (dalla Fase 2) |
 | Accesso alle banche | [Enable Banking](https://enablebanking.com), modalità gratuita per uso personale |
 | Esecuzione | Docker Compose |
 
@@ -54,12 +54,13 @@ server. Ognuno ha i propri conti, le proprie regole e il proprio database. I pri
 ```
 .github/    pipeline di integrazione continua (GitHub Actions): build e test a ogni push
 backend/    applicazione Spring Boot
+frontend/   dashboard Angular
 docs/       guide passo passo
 secrets/    chiave privata di Enable Banking (ignorata da Git)
 .env        configurazione personale (ignorato da Git; parti da .env.example)
 ```
 
-`docker-compose.yml` (nella radice) avvia il database PostgreSQL. La cartella `frontend/` arriverà nelle fasi successive.
+`docker-compose.yml` (nella radice) avvia il database PostgreSQL.
 
 ## Guide
 
@@ -74,6 +75,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 9. [Fase 2, passo 1: il server web e le API REST](docs/09-fase-2-passo-1-api-rest.md)
 10. [La carta di credito: il saldo non è una spesa](docs/10-carta-di-credito.md)
 11. [Integrazione continua con GitHub Actions](docs/11-ci-github-actions.md)
+12. [Fase 2, passo 2: la dashboard Angular](docs/12-fase-2-passo-2-dashboard-angular.md)
 
 ## Piano di lavoro
 
@@ -84,9 +86,9 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] passo 3: movimenti e importazione senza doppioni
   - [x] passo 4: classificazione automatica (motore generico + regole configurabili)
   - [x] passo 5: sincronizzazione automatica programmata
-- [ ] **Fase 2**: server web, API REST e dashboard React
+- [ ] **Fase 2**: server web, API REST e dashboard Angular
   - [x] passo 1: server web e API REST (conti, movimenti, ruoli, correzioni manuali)
-  - [ ] passo 2: dashboard React: conti, ruoli, elenco movimenti con correzione del tipo
+  - [x] passo 2: dashboard Angular: conti, ruoli, elenco movimenti con correzione del tipo
   - [ ] passo 3: collegamento delle banche dalla dashboard e pulsante "Aggiorna ora"
   - [ ] passo 4: gestione delle regole e configurazione guidata delle credenziali Enable Banking
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic)
@@ -107,7 +109,15 @@ Dalla cartella `backend/` (su Windows usa `mvnw.cmd` al posto di `./mvnw`):
 ```bash
 ./mvnw test                                           # esegue i test
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=poc # collega una banca o riusa un collegamento salvato
-./mvnw spring-boot:run                                # server web (http://localhost:8080/api/accounts) e sincronizzazione automatica; Ctrl+C per fermarlo
+./mvnw spring-boot:run                                # server web (API su http://localhost:8080) e sincronizzazione automatica; Ctrl+C per fermarlo
+```
+
+Dalla cartella `frontend/` (serve Node.js 24 LTS):
+
+```bash
+npm install                    # la prima volta, e dopo ogni modifica a package.json
+npm start                      # la dashboard su http://localhost:4200 (il backend deve essere avviato)
+npm test -- --watch=false      # esegue i test una volta
 ```
 
 ## Sicurezza

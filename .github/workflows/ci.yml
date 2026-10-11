@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   # Un "job" è un gruppo di passi eseguiti in ordine sulla stessa macchina.
-  # Per ora ce n'è uno; con la dashboard React ne aggiungeremo un secondo ("frontend").
+  # I due job (backend e frontend) girano IN PARALLELO, ognuno sulla sua macchina.
   backend:
     name: Backend (build e test)
     # La macchina su cui girare: Linux (Ubuntu), fornita da GitHub. Ha già Docker, Git e molti altri strumenti.
@@ -55,3 +55,38 @@ jobs:
         with:
           name: rapporti-test
           path: backend/target/surefire-reports/
+
+  # La dashboard Angular: stessi principi, ma con Node.js e npm al posto di Java e Maven.
+  frontend:
+    name: Frontend (build e test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Tutti i comandi "run" di questo job partono dalla cartella frontend.
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v5
+
+      # Installa Node.js 24 (LTS). "cache: npm" conserva i pacchetti scaricati tra un'esecuzione e l'altra.
+      - name: Installa Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # "npm ci" installa ESATTAMENTE le versioni scritte in package-lock.json (a differenza di
+      # "npm install", che può aggiornarle): in CI vogliamo build ripetibili.
+      - name: Installa le dipendenze
+        run: npm ci
+
+      # I test girano una volta sola (--watch=false) in un DOM simulato (jsdom): niente browser.
+      - name: Esegui i test
+        run: npm test -- --watch=false
+
+      # La build di produzione: se il codice o i template hanno errori, fallisce qui.
+      - name: Compila
+        run: npm run build
