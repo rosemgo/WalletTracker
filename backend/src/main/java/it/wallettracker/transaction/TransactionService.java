@@ -32,7 +32,7 @@ public class TransactionService {
     public TransactionPageDto search(Long accountId, TransactionType type, int page, int size) {
         // PageRequest dice a Spring Data quale pagina vogliamo; Spring aggiunge da solo LIMIT e OFFSET
         // alla query, e fa una seconda query (COUNT) per sapere quanti movimenti ci sono in tutto.
-        PageRequest pageRequest = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE));
+        PageRequest pageRequest = PageRequest.of( Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE) );
         Page<BankTransaction> result = repository.search(accountId, type, pageRequest);
         return new TransactionPageDto(
                 result.getContent().stream().map(TransactionDto::from).toList(),

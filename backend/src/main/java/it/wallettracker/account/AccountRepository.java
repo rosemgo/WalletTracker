@@ -26,6 +26,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      * <p>{@code JOIN FETCH} dice a Hibernate di caricare subito anche il collegamento (che altrimenti è LAZY).
      * Senza, leggendo la banca di ogni conto Hibernate farebbe una query in più per ogni collegamento:
      * è il famoso problema "N+1 query".
+     *
+     * <p>Un {@code JOIN FETCH} dice a Hibernate: "Fai una sola grande query SQL con una JOIN interna. Prendi tutti i dati degli Account e, nello stesso identico momento, riempi anche i dati delle Connection associate".
      */
     @Query("SELECT a FROM Account a JOIN FETCH a.connection c ORDER BY c.aspspName, a.name")
     List<Account> findAllWithConnection();
