@@ -123,7 +123,7 @@ Ultimi movimenti di Conto Arancio (MAIN):
 | `aPurchaseFromAnInvestmentAccountIsStillAnExpense` | **spesa** al supermercato da un conto di investimento |
 | `aDividendOnASpendingAccountIsInvestmentIncome` | **dividendo** su un conto di spesa |
 | `theIbanOfAnotherOwnAccountInTheDescriptionMeansTransfer` | l'IBAN di un tuo conto nella causale |
-| `theCreditCardMonthlySettlementIsAnInternalTransfer` | saldo mensile della carta di credito |
+| `theCreditCardSettlementIsRecognisedByTheStarterRule` | saldo mensile della carta di credito (dal passo della carta di credito, `docs/10`, è `CARD_SETTLEMENT`) |
 | `aManualCorrectionAlwaysWins` | la correzione manuale vince sulle regole |
 | `zeroAmountsAndExcludedAccountsAreIgnored` | importi zero e conti esclusi |
 | `withoutAnyMatchOutgoingIsExpenseAndIncomingIsIncome` | ultima risorsa |

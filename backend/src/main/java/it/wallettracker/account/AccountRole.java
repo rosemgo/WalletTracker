@@ -8,13 +8,19 @@ public enum AccountRole {
     /** Non ancora assegnato: è il valore iniziale di ogni conto nuovo. */
     UNASSIGNED,
 
-    /** Il conto principale, dove arriva lo stipendio (ING conto corrente). */
+    /** Il conto principale (es. dove arriva lo stipendio). */
     MAIN,
 
-    /** Conti usati per le spese (Revolut, ING carta di credito, BBVA). */
+    /** Un conto usato per le spese. */
     SPENDING,
 
-    /** Conti di investimento (Fineco, Trade Republic). */
+    /**
+     * Una carta di credito: i suoi acquisti sono spese vere, mentre il pagamento del suo saldo da un altro
+     * conto è un CARD_SETTLEMENT, che non conta come spesa (vedi ClassificationService).
+     */
+    CREDIT_CARD,
+
+    /** Un conto di investimento (broker, conto titoli). */
     INVESTMENT,
 
     /** Conti da ignorare (collegati per prova, vuoti). */

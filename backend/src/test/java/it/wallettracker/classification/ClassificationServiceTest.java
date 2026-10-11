@@ -130,13 +130,74 @@ class ClassificationServiceTest {
     }
 
     @Test
-    void theCreditCardMonthlySettlementIsAnInternalTransfer() {
+    void theCreditCardSettlementIsRecognisedByTheStarterRule() {
+        // La regola di partenza riconosce la causale di ING anche senza il ruolo CREDIT_CARD.
         Account main = account("IT00MAIN", AccountRole.MAIN);
         BankTransaction settlement = transaction(main, DAY, "-1820.11", null, "Estratto conto carta di credito al 20260910");
 
         classificationService.classifyAll();
 
-        assertThat(typeOf(settlement)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+        assertThat(typeOf(settlement)).isEqualTo(TransactionType.CARD_SETTLEMENT);
+    }
+
+    @Test
+    void aSettlementEqualToTheCardTotalIsRecognisedWhateverTheText() {
+        // Come le carte ING: sulla carta ci sono solo gli acquisti (e i rimborsi), non il pagamento del saldo.
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        Account card = account(null, AccountRole.CREDIT_CARD);
+        BankTransaction groceries = transaction(card, DAY.minusDays(20), "-45.30", null, "SUPERMERCATO");
+        transaction(card, DAY.minusDays(12), "-120.00", null, "NEGOZIO ONLINE");
+        transaction(card, DAY.minusDays(8), "15.30", null, "RIMBORSO NEGOZIO ONLINE");
+        transaction(card, DAY.minusDays(5), "-60.00", null, "RISTORANTE");
+        // 45,30 + 120,00 - 15,30 + 60,00 = 210,00: un testo qualsiasi, che nessuna regola conosce.
+        BankTransaction settlement = transaction(main, DAY.plusDays(10), "-210.00", null, "ADDEBITO SALDO XYZ");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(settlement)).isEqualTo(TransactionType.CARD_SETTLEMENT);
+        // Gli acquisti della carta restano spese vere: sono contati una volta sola.
+        assertThat(typeOf(groceries)).isEqualTo(TransactionType.EXPENSE);
+    }
+
+    @Test
+    void aPaymentShownAlsoOnTheCardIsPairedAsASettlement() {
+        // Altre banche mostrano il pagamento anche sulla carta, come entrata: basta l'abbinamento.
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        Account card = account(null, AccountRole.CREDIT_CARD);
+        BankTransaction out = transaction(main, DAY, "-830.00", null, "Addebito carta");
+        BankTransaction in = transaction(card, DAY.plusDays(1), "830.00", null, "PAGAMENTO RICEVUTO");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(out)).isEqualTo(TransactionType.CARD_SETTLEMENT);
+        assertThat(typeOf(in)).isEqualTo(TransactionType.CARD_SETTLEMENT);
+    }
+
+    @Test
+    void aSinglePurchaseOfTheSameAmountIsNotASettlement() {
+        // Un acquisto da 20 € sulla carta e uno da 20 € dal conto corrente: coincidenza, non un saldo.
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        Account card = account(null, AccountRole.CREDIT_CARD);
+        transaction(card, DAY.minusDays(3), "-20.00", null, "BAR");
+        BankTransaction purchase = transaction(main, DAY, "-20.00", null, "LIBRERIA");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(purchase)).isEqualTo(TransactionType.EXPENSE);
+    }
+
+    @Test
+    void withoutTheCreditCardRoleTheTotalIsNotChecked() {
+        // Stessi movimenti del test sul totale, ma la carta ha il ruolo SPENDING: il motore non lo sa.
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        Account card = account(null, AccountRole.SPENDING);
+        transaction(card, DAY.minusDays(20), "-45.30", null, "SUPERMERCATO");
+        transaction(card, DAY.minusDays(5), "-60.00", null, "RISTORANTE");
+        BankTransaction settlement = transaction(main, DAY.plusDays(10), "-105.30", null, "ADDEBITO SALDO XYZ");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(settlement)).isEqualTo(TransactionType.EXPENSE);
     }
 
     @Test

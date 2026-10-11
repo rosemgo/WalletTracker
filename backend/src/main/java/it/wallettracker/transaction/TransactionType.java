@@ -15,6 +15,13 @@ public enum TransactionType {
     /** Soldi spostati tra due tuoi conti: non è né una spesa né un'entrata. */
     INTERNAL_TRANSFER,
 
+    /**
+     * Il pagamento del saldo di una carta di credito (es. l'addebito mensile sul conto corrente).
+     * Non è una spesa: le spese vere sono i singoli acquisti fatti con la carta, già contati. Contarlo
+     * di nuovo vorrebbe dire contare due volte le stesse spese.
+     */
+    CARD_SETTLEMENT,
+
     /** Soldi spostati da un tuo conto normale a un tuo conto di investimento. */
     INVESTMENT_DEPOSIT,
 

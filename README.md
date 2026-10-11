@@ -71,6 +71,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 7. [Fase 1, passo 4: la classificazione automatica](docs/07-fase-1-passo-4-classificazione.md)
 8. [Fase 1, passo 5: la sincronizzazione automatica](docs/08-fase-1-passo-5-sincronizzazione.md)
 9. [Fase 2, passo 1: il server web e le API REST](docs/09-fase-2-passo-1-api-rest.md)
+10. [La carta di credito: il saldo non è una spesa](docs/10-carta-di-credito.md)
 
 ## Piano di lavoro
 

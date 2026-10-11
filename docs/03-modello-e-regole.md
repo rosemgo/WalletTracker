@@ -34,6 +34,7 @@ Ogni conto ha un ruolo (enum `AccountRole`), che si sceglie dopo averlo collegat
 | `UNASSIGNED` | appena collegato, ruolo non ancora scelto | come un conto normale |
 | `MAIN` | conto principale (es. dove arriva lo stipendio) | come un conto normale |
 | `SPENDING` | conto usato per le spese | come un conto normale |
+| `CREDIT_CARD` | carta di credito | i suoi acquisti sono spese; il pagamento del suo saldo da un altro conto è `CARD_SETTLEMENT` (vedi sotto) |
 | `INVESTMENT` | conto di investimento | dà il nome ai trasferimenti (versamento/prelievo); **non** decide mai il tipo di un movimento |
 | `EXCLUDED` | conto da ignorare (di prova, vuoto) | tutti i suoi movimenti sono `IGNORED` |
 
@@ -51,6 +52,7 @@ Enum `TransactionType`. Solo `EXPENSE` e `INCOME` contano come spese ed entrate 
 | `EXPENSE` | spesa |
 | `INCOME` | entrata (stipendio, rimborso, regalo ricevuto...) |
 | `INTERNAL_TRANSFER` | soldi spostati tra due tuoi conti |
+| `CARD_SETTLEMENT` | pagamento del saldo di una carta di credito: le spese vere sono i singoli acquisti, già contati sulla carta |
 | `INVESTMENT_DEPOSIT` | soldi spostati da un conto normale a un conto di investimento |
 | `INVESTMENT_WITHDRAWAL` | soldi spostati da un conto di investimento a un conto normale |
 | `SECURITIES_BUY` / `SECURITIES_SELL` | acquisto / vendita di titoli |
@@ -71,13 +73,15 @@ risposta vince**:
 | 1 | il conto è `EXCLUDED` | `IGNORED` |
 | 2 | c'è una **correzione manuale** | il tipo scelto dall'utente |
 | 3 | l'importo è zero (es. verifica della carta) | `IGNORED` |
-| 4 | **trasferimento abbinato**: su un altro tuo conto c'è un movimento con stesso importo, segno opposto e stessa valuta, al massimo a 3 giorni di distanza, ed **entrambi** hanno l'aspetto di un trasferimento (testo vuoto, oppure contiene il nome dell'intestatario o l'IBAN di un tuo conto) | trasferimento (vedi sotto) |
+| 4 | **trasferimento abbinato**: su un altro tuo conto c'è un movimento con stesso importo, segno opposto e stessa valuta, al massimo a 3 giorni di distanza, ed **entrambi** hanno l'aspetto di un trasferimento (testo vuoto, oppure contiene il nome dell'intestatario o l'IBAN di un tuo conto). Un'entrata su una carta di credito non ha bisogno di questo aspetto | trasferimento (vedi sotto) |
+| 4b | **saldo della carta**: un'uscita da un tuo conto il cui importo è esattamente la somma di un periodo di movimenti di un conto `CREDIT_CARD` (almeno 2 movimenti, al massimo 45 giorni, addebitato entro 45 giorni) | `CARD_SETTLEMENT` |
 | 5 | il movimento cita l'**IBAN di un altro tuo conto** (causale o JSON originale) | trasferimento |
 | 6 | una **regola** della tabella `classification_rule` corrisponde | tipo e categoria della regola |
 | 7 | **nessun testo** (né causale né controparte) | `TO_REVIEW`: meglio chiedere all'utente che indovinare |
 | 8 | ultima risorsa | uscita → `EXPENSE`, entrata → `INCOME` |
 
 **Che tipo di trasferimento?** Dipende da dove partono e arrivano i soldi:
+- da o verso un conto `CREDIT_CARD` → `CARD_SETTLEMENT`;
 - verso un conto `INVESTMENT` da un conto normale → `INVESTMENT_DEPOSIT`;
 - da un conto `INVESTMENT` verso un conto normale → `INVESTMENT_WITHDRAWAL`;
 - negli altri casi → `INTERNAL_TRANSFER`.
@@ -100,7 +104,7 @@ a partire dalle causali reali viste nella Fase 0. Valgono su **qualsiasi conto**
 | Cedola, dividendo, interessi | inizia con `Ced.su`, `Div.su`, `Interessi Portaf` | `INVESTMENT_INCOME` |
 | Ritenute, bolli, capital gain, Tobin tax | `Rit.ced`, `Rit.div`, `Ritenuta Fiscale`, `Imposta Sostitutiva`... | `INVESTMENT_TAX` |
 | Compravendita titoli | contiene `Compravendita Titoli` | `SECURITIES_BUY` (−) / `SECURITIES_SELL` (+) |
-| Saldo della carta di credito | contiene `Estratto conto carta di credito` | `INTERNAL_TRANSFER` |
+| Saldo della carta di credito | contiene `Estratto conto carta di credito` | `CARD_SETTLEMENT` |
 | Trasferimento a un proprio conto | contiene `Trasferimento a mio conto` | `INTERNAL_TRANSFER` |
 | Costi del conto | `Canone Mensile`, `Imposta di bollo` | `EXPENSE` (categoria "Costi bancari") |
 
