@@ -76,6 +76,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 10. [La carta di credito: il saldo non è una spesa](docs/10-carta-di-credito.md)
 11. [Integrazione continua con GitHub Actions](docs/11-ci-github-actions.md)
 12. [Fase 2, passo 2: la dashboard Angular](docs/12-fase-2-passo-2-dashboard-angular.md)
+13. [Fase 2, passo 3: collegare le banche dalla dashboard e "Aggiorna ora"](docs/13-fase-2-passo-3-collega-banca.md)
 
 ## Piano di lavoro
 
@@ -89,7 +90,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 - [ ] **Fase 2**: server web, API REST e dashboard Angular
   - [x] passo 1: server web e API REST (conti, movimenti, ruoli, correzioni manuali)
   - [x] passo 2: dashboard Angular: conti, ruoli, elenco movimenti con correzione del tipo
-  - [ ] passo 3: collegamento delle banche dalla dashboard e pulsante "Aggiorna ora"
+  - [x] passo 3: collegamento delle banche dalla dashboard e pulsante "Aggiorna ora"
   - [ ] passo 4: gestione delle regole e configurazione guidata delle credenziali Enable Banking
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic)
   - categorie con "crea una regola da questa correzione"
@@ -116,7 +117,7 @@ Dalla cartella `frontend/` (serve Node.js 24 LTS):
 
 ```bash
 npm install                    # la prima volta, e dopo ogni modifica a package.json
-npm start                      # la dashboard su http://localhost:4200 (il backend deve essere avviato)
+npm start                      # la dashboard su https://localhost:8443 (il backend deve essere avviato)
 npm test -- --watch=false      # esegue i test una volta
 ```
 

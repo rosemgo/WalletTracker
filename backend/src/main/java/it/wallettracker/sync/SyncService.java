@@ -125,6 +125,26 @@ public class SyncService {
      * tutti i movimenti (i trasferimenti hanno due lati, magari su conti diversi).
      */
     public Round syncAllInBackground() {
+        return syncAll(null, true);
+    }
+
+    /**
+     * "Aggiorna ora": aggiorna SUBITO tutti i conti non esclusi, con gli header PSU (l'utente ha appena
+     * premuto il pulsante, quindi è presente e le letture non consumano il limite giornaliero).
+     *
+     * @param psu gli header dell'utente presente; null se il suo IP non è noto (allora conta come lettura
+     *            in background)
+     */
+    public Round syncAllNow(PsuHeaders psu) {
+        return syncAll(psu, false);
+    }
+
+    /**
+     * Il giro vero e proprio, comune ai due metodi sopra.
+     *
+     * @param onlyDue true = solo i conti non aggiornati da almeno un intervallo (sincronizzazione automatica)
+     */
+    private Round syncAll(PsuHeaders psu, boolean onlyDue) {
         Instant now = Instant.now();
         int updated = 0;
         int failed = 0;
@@ -135,7 +155,7 @@ public class SyncService {
                 if (account.getRole() == AccountRole.EXCLUDED) {
                     continue;
                 }
-                if (!isDue(account, now)) {
+                if (onlyDue && !isDue(account, now)) {
                     notDue++;
                     continue;
                 }
@@ -150,7 +170,7 @@ public class SyncService {
                     continue;
                 }
 
-                if (syncAccount(account, null).ok()) {
+                if (syncAccount(account, psu).ok()) {
                     updated++;
                 } else {
                     failed++;

@@ -16,6 +16,10 @@ describe('App', () => {
     await fixture.whenStable();
     const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
 
-    expect(links.map((a) => a.textContent?.trim())).toEqual(['Movimenti', 'Conti']);
+    expect(links.map((a) => a.textContent?.trim())).toEqual([
+      'Movimenti',
+      'Conti',
+      'Collega una banca',
+    ]);
   });
 });

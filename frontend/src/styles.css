@@ -146,3 +146,15 @@ button.link {
   gap: 1rem;
   margin-top: 1rem;
 }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+input {
+  font: inherit;
+  padding: 0.3rem 0.5rem;
+}

@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -24,6 +23,7 @@ import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
+import it.wallettracker.connection.BankLinkService;
 import it.wallettracker.connection.ConnectionService;
 import it.wallettracker.sync.SyncService;
 import it.wallettracker.sync.SyncService.AccountSync;
@@ -59,9 +59,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Component
 @Profile("poc")
 public class PocRunner implements CommandLineRunner {
-
-    /** Durata massima di un consenso PSD2 per la lettura dei conti. */
-    private static final Duration MAX_CONSENT = Duration.ofDays(180);
 
     private final EnableBankingClient client;
     private final EnableBankingProperties properties;
@@ -196,14 +193,10 @@ public class PocRunner implements CommandLineRunner {
 
     /** Passo 2: l'utente accede alla banca e ci restituisce il codice di autorizzazione. */
     private AuthorizationResult authorize(Aspsp bank) {
-        // Chiediamo il consenso per la durata massima ammessa dalla banca, senza superare i 180 giorni.
-        Duration validity = MAX_CONSENT;
-        if (bank.maximumConsentValidity() != null && bank.maximumConsentValidity() < MAX_CONSENT.toSeconds()) {
-            validity = Duration.ofSeconds(bank.maximumConsentValidity());
-        }
-        // Togliamo qualche minuto di margine, per non superare il limite a causa di orologi non allineati.
-        Instant validUntil = Instant.now().plus(validity).minus(Duration.ofMinutes(5)).truncatedTo(ChronoUnit.SECONDS);
-        System.out.println("Il consenso durerà " + validity.toDays() + " giorni.");
+        // Chiediamo il consenso per la durata massima ammessa dalla banca, senza superare i 180 giorni
+        // (lo stesso calcolo usato dalla dashboard, in BankLinkService).
+        Instant validUntil = BankLinkService.consentValidUntil(bank, Instant.now());
+        System.out.println("Il consenso durerà " + Duration.between(Instant.now(), validUntil).toDays() + " giorni.");
 
         // "state" è un valore casuale che ci torna indietro invariato dopo il login:
         // se coincide, siamo sicuri che la risposta corrisponde alla nostra richiesta.

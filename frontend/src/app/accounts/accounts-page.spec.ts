@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Account, AccountRole } from '../api/models';
+import { Account, AccountRole, SyncRound } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AccountsPage } from './accounts-page';
 
@@ -24,19 +25,25 @@ const CARD: Account = {
  */
 describe('AccountsPage', () => {
   const changedRoles: [number, AccountRole][] = [];
+  let syncCalls = 0;
 
   beforeEach(() => {
     changedRoles.length = 0;
+    syncCalls = 0;
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of([CARD]),
       changeRole: (id: number, role: AccountRole) => {
         changedRoles.push([id, role]);
         return of({ ...CARD, role });
       },
+      syncNow: () => {
+        syncCalls++;
+        return of<SyncRound>({ updated: 2, failed: 1, notDue: 0 });
+      },
     };
     TestBed.configureTestingModule({
       imports: [AccountsPage],
-      providers: [{ provide: WalletApi, useValue: fakeApi }],
+      providers: [{ provide: WalletApi, useValue: fakeApi }, provideRouter([])],
     });
   });
 
@@ -66,6 +73,22 @@ describe('AccountsPage', () => {
     expect(changedRoles).toEqual([[3, 'CREDIT_CARD']]);
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'movimenti riclassificati',
+    );
+  });
+
+  it('"Aggiorna ora" updates the accounts and shows the summary', async () => {
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '.toolbar button',
+    ) as HTMLButtonElement;
+
+    button.click();
+    await fixture.whenStable();
+
+    expect(syncCalls).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Aggiornati 2 conti, 1 con errori',
     );
   });
 });

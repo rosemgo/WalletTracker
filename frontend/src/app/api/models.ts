@@ -69,3 +69,25 @@ export interface TransactionFilter {
   page: number;
   size: number;
 }
+
+/** Una banca supportata da Enable Banking (GET /api/banks). */
+export interface Bank {
+  name: string;
+  country: string;
+  maxConsentDays: number | null; // per quanti giorni la banca concede il consenso (null = non indicato)
+}
+
+/** Il risultato di un collegamento completato (POST /api/connections/complete). */
+export interface LinkResult {
+  bank: string;
+  accounts: number; // quanti conti sono stati autorizzati
+  imported: number; // quanti movimenti nuovi sono stati importati
+  errors: string[]; // gli errori di importazione, conto per conto
+}
+
+/** Il riepilogo di "Aggiorna ora" (POST /api/sync). */
+export interface SyncRound {
+  updated: number;
+  failed: number;
+  notDue: number;
+}

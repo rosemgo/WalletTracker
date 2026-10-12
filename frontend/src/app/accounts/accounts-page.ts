@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { ROLES, ROLE_LABELS } from '../api/labels';
 import { Account, AccountRole } from '../api/models';
@@ -13,7 +14,7 @@ import { WalletApi } from '../api/wallet-api';
  */
 @Component({
   selector: 'app-accounts-page',
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   templateUrl: './accounts-page.html',
 })
 export class AccountsPage implements OnInit {
@@ -29,9 +30,38 @@ export class AccountsPage implements OnInit {
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly message = signal<string | null>(null);
+  protected readonly syncing = signal(false);
 
   /** Eseguito una volta, quando il componente è pronto: come allora, è il posto dove caricare i dati. */
   ngOnInit(): void {
+    this.loadAccounts();
+  }
+
+  /**
+   * "Aggiorna ora": il backend legge subito tutti i conti, con gli header PSU (sei tu ad averlo chiesto,
+   * quindi sei presente). Poi ricarichiamo i conti, per mostrare l'ora e gli eventuali errori.
+   */
+  syncNow(): void {
+    this.syncing.set(true);
+    this.message.set(null);
+    this.error.set(null);
+    this.api.syncNow().subscribe({
+      next: (round) => {
+        this.syncing.set(false);
+        const failed = round.failed > 0 ? `, ${round.failed} con errori (vedi sotto)` : '';
+        const updated =
+          round.updated === 1 ? 'Aggiornato 1 conto' : `Aggiornati ${round.updated} conti`;
+        this.message.set(`${updated}${failed}.`);
+        this.loadAccounts();
+      },
+      error: () => {
+        this.syncing.set(false);
+        this.error.set("L'aggiornamento non è riuscito: il backend è avviato?");
+      },
+    });
+  }
+
+  private loadAccounts(): void {
     this.api.accounts().subscribe({
       next: (accounts) => {
         this.accounts.set(accounts);

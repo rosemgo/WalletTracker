@@ -5,6 +5,9 @@ import { Observable } from 'rxjs';
 import {
   Account,
   AccountRole,
+  Bank,
+  LinkResult,
+  SyncRound,
   Transaction,
   TransactionFilter,
   TransactionPage,
@@ -53,5 +56,25 @@ export class WalletApi {
   /** PUT /api/transactions/{id}/manual-type; con `null` la correzione viene tolta. */
   correctType(transactionId: number, type: TransactionType | null): Observable<Transaction> {
     return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-type`, { type });
+  }
+
+  /** GET /api/banks?country=IT */
+  banks(country: string): Observable<Bank[]> {
+    return this.http.get<Bank[]>('/api/banks', { params: { country } });
+  }
+
+  /** POST /api/connections: avvia il collegamento e restituisce l'indirizzo del login sulla banca. */
+  startLink(bank: string, country: string): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>('/api/connections', { bank, country });
+  }
+
+  /** POST /api/connections/complete: completa il collegamento con i parametri ricevuti dalla banca. */
+  completeLink(code: string, state: string): Observable<LinkResult> {
+    return this.http.post<LinkResult>('/api/connections/complete', { code, state });
+  }
+
+  /** POST /api/sync: "Aggiorna ora". */
+  syncNow(): Observable<SyncRound> {
+    return this.http.post<SyncRound>('/api/sync', {});
   }
 }

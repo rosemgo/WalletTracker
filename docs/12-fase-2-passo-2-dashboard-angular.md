@@ -10,6 +10,9 @@
 La dashboard non contiene logica sui movimenti: chiama le API REST del passo 1 e mostra il risultato.
 
 > Prerequisiti: passo 1 completato e `git pull` fatto.
+>
+> **Nota:** dal passo 3 la dashboard non è più su `http://localhost:4200` ma su
+> **`https://localhost:8443`** (vedi `docs/13`). I concetti di questa guida restano gli stessi.
 
 ---
 
@@ -391,7 +394,7 @@ cd frontend
 npm start
 ```
 
-Apri <http://localhost:4200>.
+Apri <http://localhost:4200> (dal passo 3: <https://localhost:8443>, vedi `docs/13`).
 
 ### 4. Prova
 

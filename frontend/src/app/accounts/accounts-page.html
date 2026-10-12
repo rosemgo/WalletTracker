@@ -1,5 +1,12 @@
 <h1>Conti</h1>
 
+<div class="toolbar">
+  <button type="button" [disabled]="syncing()" (click)="syncNow()">
+    {{ syncing() ? 'Aggiornamento in corso...' : 'Aggiorna ora' }}
+  </button>
+  <a routerLink="/collega">Collega una banca</a>
+</div>
+
 <p class="hint">
   Il ruolo dice al programma come trattare i movimenti di un conto: ad esempio, i trasferimenti
   verso un conto "Investimenti" sono versamenti, quelli verso una "Carta di credito" sono saldi

@@ -1,0 +1,29 @@
+<h1>Collegamento della banca</h1>
+
+@if (working()) {
+  <p>Collegamento in corso e importazione dei movimenti... può richiedere qualche secondo.</p>
+}
+
+@if (result(); as r) {
+  <p class="message">
+    <strong>{{ r.bank }}</strong> collegata: {{ r.accounts }}
+    {{ r.accounts === 1 ? 'conto' : 'conti' }}, {{ r.imported }} movimenti nuovi importati.
+  </p>
+  @if (r.errors.length > 0) {
+    <p>Alcuni conti non sono stati importati (riproveremo al prossimo aggiornamento):</p>
+    <ul>
+      @for (e of r.errors; track e) {
+        <li class="error">{{ e }}</li>
+      }
+    </ul>
+  }
+  <p>
+    Ora scegli il <a routerLink="/conti">ruolo dei nuovi conti</a>, oppure guarda i
+    <a routerLink="/movimenti">movimenti</a>.
+  </p>
+}
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+  <p><a routerLink="/collega">Riprova a collegare una banca</a></p>
+}

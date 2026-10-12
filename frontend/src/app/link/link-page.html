@@ -1,0 +1,54 @@
+<h1>Collega una banca</h1>
+
+<ol class="hint">
+  <li>Scegli la tua banca e premi <strong>Collega</strong>.</li>
+  <li>Verrai portato sul sito della banca: accedi e autorizza la lettura dei conti.</li>
+  <li>Alla fine tornerai qui, e i movimenti verranno importati in automatico.</li>
+</ol>
+
+<div class="filters">
+  <label>
+    Paese
+    <select (change)="onCountry($event)">
+      @for (c of countries; track c.code) {
+        <option [value]="c.code" [selected]="c.code === country()">{{ c.name }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    Cerca
+    <input type="search" placeholder="es. ING, Revolut" (input)="onSearch($event)" />
+  </label>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Caricamento delle banche...</p>
+} @else {
+  <table>
+    <tbody>
+      @for (bank of filteredBanks(); track bank.name) {
+        <tr>
+          <td>
+            {{ bank.name }}
+            @if (bank.maxConsentDays) {
+              <div class="secondary">consenso fino a {{ bank.maxConsentDays }} giorni</div>
+            }
+          </td>
+          <td class="amount">
+            <button type="button" [disabled]="starting() !== null" (click)="connect(bank)">
+              {{ starting() === bank.name ? 'Apertura della banca...' : 'Collega' }}
+            </button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td>Nessuna banca trovata.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
