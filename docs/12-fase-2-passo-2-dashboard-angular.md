@@ -327,15 +327,33 @@ installa Node.js 24, poi `npm ci` (installa **esattamente** le versioni di `pack
 
 ## Parte C: cosa fare
 
-### 1. Installa Node.js e Angular CLI
+### 1. Node.js 24 e Angular CLI
 
-Angular 22 richiede **Node.js 24 LTS** (o almeno 22.22.3). Da PowerShell:
+Angular 22 richiede **Node.js 24 LTS** (o almeno 22.22.3).
+
+**Se usi nvm-windows** (più versioni di Node sullo stesso PC, ad esempio perché un altro progetto ne
+richiede una diversa):
 
 ```powershell
-node -v                                   # se manca o è più vecchio di v22.22.3:
+nvm list                         # le versioni installate
+nvm install 24.21.0              # solo se la 24 non c'è ancora
+nvm use 24.21.0                  # vale per tutto il PC, non solo per questa finestra
+node -v                          # v24.21.0
+npm install -g @angular/cli      # il comando "ng", installato SOLO per questa versione di Node
+ng version
+```
+
+Con nvm ogni versione di Node ha la sua cartella, e i programmi installati con `npm install -g` stanno
+**dentro** quella cartella. Per questo la CLI di Angular va installata con la 24 attiva, e un programma
+installato con un'altra versione (es. `clasp`) va reinstallato anche per la 24, se ti serve lì.
+Ricordati di fare `nvm use` con la versione giusta prima di lavorare su un progetto.
+
+**Se non usi nvm**, installa direttamente Node.js LTS:
+
+```powershell
 winget install OpenJS.NodeJS.LTS          # poi chiudi e riapri PowerShell
-node -v                                   # es. v24.x
-npm install -g @angular/cli               # il comando "ng"
+node -v
+npm install -g @angular/cli
 ng version
 ```
 
