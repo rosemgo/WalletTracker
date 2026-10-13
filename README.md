@@ -77,6 +77,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 11. [Integrazione continua con GitHub Actions](docs/11-ci-github-actions.md)
 12. [Fase 2, passo 2: la dashboard Angular](docs/12-fase-2-passo-2-dashboard-angular.md)
 13. [Fase 2, passo 3: collegare le banche dalla dashboard e "Aggiorna ora"](docs/13-fase-2-passo-3-collega-banca.md)
+14. [Angular da zero: capire il frontend di WalletTracker](docs/14-guida-angular-da-zero.md)
 
 ## Piano di lavoro
 
