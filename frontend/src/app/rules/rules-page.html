@@ -1,0 +1,163 @@
+<h1>Regole</h1>
+
+<p class="hint">
+  Una regola dice:
+  <em>"se il testo del movimento contiene (o inizia con) queste parole, allora il tipo è..."</em>.
+  Le regole si provano in ordine di <strong>priorità</strong> (il numero più basso per primo) e la
+  prima che corrisponde vince. Prima delle regole vengono le correzioni manuali e i trasferimenti
+  tra i tuoi conti. Dopo ogni modifica tutti i movimenti vengono riclassificati.
+</p>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<!-- Il modulo. [formGroup] lo collega a "form" nella classe; (ngSubmit) scatta premendo "Salva" o Invio. -->
+<form class="card" [formGroup]="form" (ngSubmit)="save()">
+  <h2>{{ editing() ? 'Modifica la regola' : 'Nuova regola' }}</h2>
+
+  <div class="form-grid">
+    <label>
+      Nome
+      <input formControlName="name" placeholder="es. Supermercato" />
+      @if (showError('name')) {
+        <span class="error">Scrivi un nome (massimo 100 caratteri).</span>
+      }
+    </label>
+
+    <label>
+      Se il testo
+      <select formControlName="matchMode">
+        @for (mode of matchModes; track mode) {
+          <option [value]="mode">{{ matchModeLabels[mode] }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      queste parole
+      <input formControlName="pattern" placeholder="es. ESSELUNGA" />
+      @if (showError('pattern')) {
+        <span class="error">Almeno 2 caratteri.</span>
+      }
+    </label>
+
+    <label>
+      per
+      <select formControlName="amountSign">
+        @for (sign of amountSigns; track sign) {
+          <option [value]="sign">{{ amountSignLabels[sign] }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      allora il tipo è
+      <select formControlName="resultType">
+        @for (type of types; track type) {
+          <option [value]="type">{{ typeLabels[type] }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Categoria (facoltativa)
+      <input formControlName="category" placeholder="es. Spesa alimentare" />
+    </label>
+
+    <label>
+      Priorità
+      <input type="number" formControlName="priority" />
+      @if (showError('priority')) {
+        <span class="error">Un numero da 0 a 10000.</span>
+      }
+    </label>
+
+    <label class="checkbox">
+      <input type="checkbox" formControlName="enabled" />
+      Attiva
+    </label>
+  </div>
+
+  <div class="toolbar">
+    <button type="button" (click)="tryRule()">Prova</button>
+    <button type="submit">Salva</button>
+    @if (editing()) {
+      <button type="button" class="link" (click)="cancel()">Annulla</button>
+    }
+  </div>
+
+  @if (preview(); as p) {
+    <div class="preview">
+      <p>
+        Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong> movimenti.
+        @if (p.matches > 0) {
+          Ecco i più recenti:
+        }
+      </p>
+      <ul>
+        @for (t of p.examples; track t.id) {
+          <li>
+            {{ t.bookingDate | date: 'dd/MM/yyyy' }} · {{ t.description ?? t.counterparty }} ·
+            {{ t.amount | currency: t.currency }}
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Priorità</th>
+      <th>Nome</th>
+      <th>Condizione</th>
+      <th>Risultato</th>
+      <th class="amount">Usata</th>
+      <th>Attiva</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (rule of rules(); track rule.id) {
+      <tr [class.disabled]="!rule.enabled">
+        <td>{{ rule.priority }}</td>
+        <td>
+          {{ rule.name }}
+          @if (rule.builtin) {
+            <div class="secondary">regola di partenza</div>
+          }
+        </td>
+        <td>
+          {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
+          <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
+        </td>
+        <td>
+          {{ typeLabels[rule.resultType] }}
+          @if (rule.category) {
+            <div class="secondary">{{ rule.category }}</div>
+          }
+        </td>
+        <td class="amount">{{ rule.uses }}</td>
+        <td>
+          <input
+            type="checkbox"
+            [checked]="rule.enabled"
+            [attr.aria-label]="'Attiva ' + rule.name"
+            (change)="toggle(rule)"
+          />
+        </td>
+        <td>
+          <button type="button" class="link" (click)="edit(rule)">Modifica</button>
+          @if (!rule.builtin) {
+            · <button type="button" class="link" (click)="remove(rule)">Elimina</button>
+          }
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>

@@ -9,4 +9,7 @@ public interface ClassificationRuleRepository extends JpaRepository<Classificati
 
     /** Le regole attive, nell'ordine in cui vanno provate. */
     List<ClassificationRule> findByEnabledTrueOrderByPriorityAscIdAsc();
+
+    /** Tutte le regole, attive e non, nell'ordine in cui vengono provate (per la dashboard). */
+    List<ClassificationRule> findAllByOrderByPriorityAscIdAsc();
 }

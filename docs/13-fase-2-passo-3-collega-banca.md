@@ -239,6 +239,5 @@ error: (response) => this.error.set(response.error?.detail ?? 'Il collegamento n
 
 ## Prossimo passo
 
-**Fase 2, passo 4:** le **regole** dalla dashboard (vederle, aggiungerle, modificarle) e la
-**configurazione guidata** delle credenziali Enable Banking, così chi installa WalletTracker non deve
-toccare il file `.env`.
+**Fase 2, passo 4:** le **regole** dalla dashboard (`docs/15`); poi, al passo 5, la **configurazione
+guidata** delle credenziali Enable Banking, così chi installa WalletTracker non deve toccare il file `.env`.

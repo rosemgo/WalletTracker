@@ -7,6 +7,9 @@ import {
   AccountRole,
   Bank,
   LinkResult,
+  Rule,
+  RulePreview,
+  RuleRequest,
   SyncRound,
   Transaction,
   TransactionFilter,
@@ -76,5 +79,30 @@ export class WalletApi {
   /** POST /api/sync: "Aggiorna ora". */
   syncNow(): Observable<SyncRound> {
     return this.http.post<SyncRound>('/api/sync', {});
+  }
+
+  /** GET /api/rules */
+  rules(): Observable<Rule[]> {
+    return this.http.get<Rule[]>('/api/rules');
+  }
+
+  /** POST /api/rules */
+  createRule(rule: RuleRequest): Observable<Rule> {
+    return this.http.post<Rule>('/api/rules', rule);
+  }
+
+  /** PUT /api/rules/{id} */
+  updateRule(id: number, rule: RuleRequest): Observable<Rule> {
+    return this.http.put<Rule>(`/api/rules/${id}`, rule);
+  }
+
+  /** DELETE /api/rules/{id} (il backend risponde 204, senza corpo: per questo Observable<void>) */
+  deleteRule(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/rules/${id}`);
+  }
+
+  /** POST /api/rules/preview: a quali movimenti si applicherebbe la regola, senza salvarla. */
+  previewRule(rule: RuleRequest): Observable<RulePreview> {
+    return this.http.post<RulePreview>('/api/rules/preview', rule);
   }
 }

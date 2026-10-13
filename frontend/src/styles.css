@@ -158,3 +158,53 @@ input {
   font: inherit;
   padding: 0.3rem 0.5rem;
 }
+
+h2 {
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.form-grid label.checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+
+.form-grid .error {
+  font-size: 0.8rem;
+}
+
+/* Un campo non valido, dopo che l'utente ci è passato: Angular aggiunge da solo le classi ng-invalid e ng-touched. */
+input.ng-invalid.ng-touched {
+  border-color: var(--negative);
+}
+
+.preview {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
+
+tr.disabled {
+  color: var(--muted);
+}

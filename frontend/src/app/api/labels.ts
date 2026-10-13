@@ -3,7 +3,7 @@
 // Record<K, V> è un tipo di TypeScript: un oggetto con una chiave per ogni valore di K. Se un giorno
 // aggiungessimo un ruolo o un tipo in models.ts dimenticando di tradurlo qui, la compilazione fallirebbe.
 
-import { AccountRole, TransactionType } from './models';
+import { AccountRole, AmountSign, MatchMode, TransactionType } from './models';
 
 export const ROLE_LABELS: Record<AccountRole, string> = {
   UNASSIGNED: 'Da assegnare',
@@ -32,3 +32,17 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
 /** Gli elenchi, nell'ordine in cui compaiono nei menu a tendina. */
 export const ROLES = Object.keys(ROLE_LABELS) as AccountRole[];
 export const TYPES = Object.keys(TYPE_LABELS) as TransactionType[];
+
+export const MATCH_MODE_LABELS: Record<MatchMode, string> = {
+  CONTAINS: 'contiene',
+  STARTS_WITH: 'inizia con',
+};
+
+export const AMOUNT_SIGN_LABELS: Record<AmountSign, string> = {
+  ANY: 'entrate e uscite',
+  NEGATIVE: 'solo uscite',
+  POSITIVE: 'solo entrate',
+};
+
+export const MATCH_MODES = Object.keys(MATCH_MODE_LABELS) as MatchMode[];
+export const AMOUNT_SIGNS = Object.keys(AMOUNT_SIGN_LABELS) as AmountSign[];

@@ -78,6 +78,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 12. [Fase 2, passo 2: la dashboard Angular](docs/12-fase-2-passo-2-dashboard-angular.md)
 13. [Fase 2, passo 3: collegare le banche dalla dashboard e "Aggiorna ora"](docs/13-fase-2-passo-3-collega-banca.md)
 14. [Angular da zero: capire il frontend di WalletTracker](docs/14-guida-angular-da-zero.md)
+15. [Fase 2, passo 4: le regole dalla dashboard](docs/15-fase-2-passo-4-regole.md)
 
 ## Piano di lavoro
 
@@ -92,7 +93,8 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] passo 1: server web e API REST (conti, movimenti, ruoli, correzioni manuali)
   - [x] passo 2: dashboard Angular: conti, ruoli, elenco movimenti con correzione del tipo
   - [x] passo 3: collegamento delle banche dalla dashboard e pulsante "Aggiorna ora"
-  - [ ] passo 4: gestione delle regole e configurazione guidata delle credenziali Enable Banking
+  - [x] passo 4: gestione delle regole dalla dashboard (con prova prima di salvare)
+  - [ ] passo 5: configurazione guidata delle credenziali Enable Banking
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic)
   - categorie con "crea una regola da questa correzione"
   - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`

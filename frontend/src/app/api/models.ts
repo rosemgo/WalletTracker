@@ -91,3 +91,35 @@ export interface SyncRound {
   failed: number;
   notDue: number;
 }
+
+/** Come una regola confronta il testo (enum MatchMode nel backend). */
+export type MatchMode = 'CONTAINS' | 'STARTS_WITH';
+
+/** A quali importi si applica una regola (enum AmountSign nel backend). */
+export type AmountSign = 'ANY' | 'NEGATIVE' | 'POSITIVE';
+
+/** I dati di una regola che l'utente può scrivere (POST/PUT /api/rules, POST /api/rules/preview). */
+export interface RuleRequest {
+  name: string;
+  priority: number;
+  enabled: boolean;
+  matchMode: MatchMode;
+  pattern: string;
+  amountSign: AmountSign;
+  resultType: TransactionType;
+  category: string;
+}
+
+/** Una regola salvata (GET /api/rules): i dati scritti dall'utente più quelli calcolati dal backend. */
+export interface Rule extends Omit<RuleRequest, 'category'> {
+  id: number;
+  category: string | null;
+  builtin: boolean; // regola di partenza: si può modificare o disattivare, non cancellare
+  uses: number; // quanti movimenti ha classificato
+}
+
+/** Il risultato della prova di una regola. */
+export interface RulePreview {
+  matches: number;
+  examples: Transaction[];
+}

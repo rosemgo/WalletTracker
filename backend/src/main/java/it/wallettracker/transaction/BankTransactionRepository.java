@@ -27,6 +27,22 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     long countByAccount(Account account);
 
     /**
+     * Quante volte è stata usata ogni regola: una riga per regola, con l'id della regola e il numero di movimenti.
+     *
+     * <p>Il risultato è una <b>proiezione</b>: invece di entità intere, Spring Data riempie l'interfaccia
+     * {@link RuleUsage} con le colonne della query, abbinate per nome ({@code AS ruleId}, {@code AS uses}).
+     */
+    @Query("SELECT t.ruleId AS ruleId, COUNT(t) AS uses FROM BankTransaction t WHERE t.ruleId IS NOT NULL GROUP BY t.ruleId")
+    List<RuleUsage> countUsesByRule();
+
+    /** Una riga di {@link #countUsesByRule()}. */
+    interface RuleUsage {
+        Long getRuleId();
+
+        long getUses();
+    }
+
+    /**
      * I movimenti dal più recente, con due filtri facoltativi.
      *
      * <p>Il trucco {@code (:accountId IS NULL OR ...)}: se il parametro è null la condizione è sempre vera,

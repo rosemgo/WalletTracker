@@ -26,7 +26,7 @@ public record TransactionDto(
         TransactionType manualType,
         Long transferPeerId) {
 
-    static TransactionDto from(BankTransaction transaction) {
+    public static TransactionDto from(BankTransaction transaction) {
         return new TransactionDto(
                 transaction.getId(),
                 transaction.getAccount().getId(),

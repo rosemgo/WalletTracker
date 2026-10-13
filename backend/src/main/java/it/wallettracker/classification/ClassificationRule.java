@@ -98,6 +98,24 @@ public class ClassificationRule {
         return matchMode == MatchMode.STARTS_WITH ? haystack.startsWith(needle) : haystack.contains(needle);
     }
 
+    /** Modifica la regola (dalla dashboard). Anche le regole di partenza si possono modificare o disattivare. */
+    public void update(String name, int priority, boolean enabled, MatchMode matchMode, String pattern,
+            AmountSign amountSign, TransactionType resultType, String category) {
+        this.name = name;
+        this.priority = priority;
+        this.enabled = enabled;
+        this.matchMode = matchMode;
+        this.pattern = pattern;
+        this.amountSign = amountSign;
+        this.resultType = resultType;
+        this.category = category;
+    }
+
+    /** Attiva o disattiva la regola: una regola disattivata resta salvata ma non viene provata. */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
     public Long getId() {
         return id;
     }
@@ -112,6 +130,18 @@ public class ClassificationRule {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public MatchMode getMatchMode() {
+        return matchMode;
+    }
+
+    public String getPattern() {
+        return pattern;
+    }
+
+    public AmountSign getAmountSign() {
+        return amountSign;
     }
 
     public TransactionType getResultType() {
