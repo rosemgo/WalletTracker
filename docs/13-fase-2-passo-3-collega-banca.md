@@ -79,6 +79,22 @@ Senza questo controllo, un sito malevolo potrebbe mandarti a
 WalletTracker. Questo tipo di attacco si chiama **CSRF** (*Cross-Site Request Forgery*), e lo `state` è
 la protezione standard di OAuth 2, il protocollo su cui si basano questi login.
 
+È come il talloncino del guardaroba: ritiri il cappotto solo con il talloncino che ti hanno dato
+**all'ingresso**, e il talloncino vale una volta sola. Uno `state` è un UUID casuale (122 bit): un sito
+esterno non può indovinarlo.
+
+**Quanto è grande il rischio, nel nostro caso?** L'attacco descritto sopra è lo scenario classico dei siti
+con milioni di utenti, dove l'attaccante ottiene un codice per il **proprio** conto e lo fa usare al tuo
+browser. Con Enable Banking è più difficile: un `code` può essere scambiato solo dall'applicazione che ha
+avviato il login, cioè la **tua** (con la tua chiave privata). Lo `state` resta comunque importante:
+- garantisce che ogni ritorno corrisponda a un collegamento avviato **da te, adesso**;
+- impedisce di riusare lo stesso codice, anche per sbaglio (ad esempio ricaricando la pagina);
+- è la pratica standard richiesta da OAuth 2 e da Enable Banking.
+
+Nel codice: `BankLinkService.start()` genera e ricorda lo `state`; `complete()` lo controlla e lo toglie
+(`pending.remove(state)`). Il test `anUnknownStateIsRejectedWithoutCallingTheBank` verifica che uno
+`state` sconosciuto venga rifiutato **prima** di contattare la banca.
+
 ### 4. "Aggiorna ora" e gli header PSU
 
 Ricordi i due tipi di lettura della PSD2?
