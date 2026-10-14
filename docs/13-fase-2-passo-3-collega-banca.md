@@ -14,6 +14,12 @@
 
 ### 1. Il flusso del collegamento
 
+Lo schema completo, con chi parla con chi e dove entrano in gioco `state`, `code` e JWT:
+
+![Come si collega una banca](img/collegamento-banca.svg)
+
+E in forma testuale:
+
 È lo stesso flusso del programma della Fase 0. Cambia solo **chi** fa i vari passaggi:
 
 ```
@@ -67,6 +73,8 @@ avviso: "La connessione non è privata". Per `localhost`, cioè il tuo PC, è no
 Procedi su localhost**. La comunicazione è comunque cifrata.
 
 ### 3. Lo `state`: una protezione contro i collegamenti "infilati"
+
+![Perché serve lo state](img/attacco-csrf.svg)
 
 Al punto 1 il backend genera uno **`state`** casuale e se lo ricorda. La banca lo restituisce identico
 al punto 3, e il backend accetta il ritorno solo se lo `state` è uno dei suoi:
