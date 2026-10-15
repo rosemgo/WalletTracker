@@ -1,0 +1,17 @@
+# Dependabot: ogni settimana controlla se le librerie usate hanno versioni nuove o vulnerabilità note
+# e, se sì, apre una pull request con l'aggiornamento. La pipeline CI verifica che tutto funzioni ancora.
+# Spiegazione in docs/17-sicurezza.md.
+version: 2
+updates:
+  - package-ecosystem: maven        # le dipendenze del backend (backend/pom.xml)
+    directory: /backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm          # le dipendenze del frontend (frontend/package.json)
+    directory: /frontend
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions   # le action usate in .github/workflows
+    directory: /
+    schedule:
+      interval: weekly

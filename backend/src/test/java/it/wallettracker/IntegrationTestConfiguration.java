@@ -40,6 +40,9 @@ public class IntegrationTestConfiguration {
                         Files.createTempDirectory("wallettracker-test"));
                 registry.add("enable-banking.application-id", () -> TestKeys.APPLICATION_ID);
                 registry.add("enable-banking.private-key-path", privateKey::toString);
+                // Una chiave di cifratura usa e getta, creata al primo avvio nella cartella temporanea.
+                Path keyFile = privateKey.getParent().resolve("encryption.key");
+                registry.add("wallettracker.encryption.key-file", keyFile::toString);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

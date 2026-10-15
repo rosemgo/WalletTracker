@@ -93,6 +93,9 @@ class SetupControllerTest {
         assertThat(kidOf(token.getValue())).isEqualTo(NEW_APPLICATION_ID);
         // ...e da ora in poi tutti i JWT usano le credenziali salvate dalla dashboard.
         assertThat(kidOf(jwtFactory.createToken())).isEqualTo(NEW_APPLICATION_ID);
+        // Nel database la chiave è cifrata: il testo PEM non compare.
+        assertThat(settingsRepository.findAll()).singleElement()
+                .satisfies(saved -> assertThat(saved.getPrivateKeyEncrypted()).startsWith("v1:").doesNotContain("PRIVATE KEY"));
     }
 
     @Test

@@ -80,6 +80,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 14. [Angular da zero: capire il frontend di WalletTracker](docs/14-guida-angular-da-zero.md)
 15. [Fase 2, passo 4: le regole dalla dashboard](docs/15-fase-2-passo-4-regole.md)
 16. [Fase 2, passo 5: la configurazione guidata di Enable Banking](docs/16-fase-2-passo-5-configurazione-guidata.md)
+17. [La sicurezza di WalletTracker: modello, protezioni, piano](docs/17-sicurezza.md)
 
 ## Piano di lavoro
 
@@ -126,6 +127,9 @@ npm test -- --watch=false      # esegue i test una volta
 ```
 
 ## Sicurezza
+
+La sicurezza ha la precedenza su ogni funzione: modello, protezioni attive e piano sono in
+[`docs/17-sicurezza.md`](docs/17-sicurezza.md); per segnalare una vulnerabilità vedi [`SECURITY.md`](SECURITY.md).
 
 Non fare mai commit di `.env`, della cartella `secrets/` o di file `.pem`: il `.gitignore` li esclude,
 ma controlla sempre con `git status` prima di un commit.
