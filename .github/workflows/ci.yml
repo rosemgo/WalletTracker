@@ -28,7 +28,7 @@ jobs:
     steps:
       # 1. Scarica il codice del commit appena pubblicato.
       - name: Scarica il codice
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # 2. Installa Java 21 (distribuzione Temurin, la stessa che usi sul PC) sulla macchina.
       #    "cache: maven" conserva tra un'esecuzione e l'altra le dipendenze scaricate da Maven,
@@ -68,7 +68,7 @@ jobs:
 
     steps:
       - name: Scarica il codice
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # Installa Node.js 24 (LTS). "cache: npm" conserva i pacchetti scaricati tra un'esecuzione e l'altra.
       - name: Installa Node.js 24
