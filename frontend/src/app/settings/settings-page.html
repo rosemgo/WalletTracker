@@ -1,0 +1,94 @@
+<h1>Impostazioni</h1>
+
+<h2>Enable Banking</h2>
+
+@if (setup.status(); as status) {
+  @if (status.configured) {
+    <p class="message">
+      ✓ Configurato
+      {{ status.source === 'DASHBOARD' ? 'da questa pagina' : 'dal file .env' }} · Application ID
+      <code>{{ status.applicationId }}</code>
+    </p>
+    <p class="hint">
+      Puoi sostituire le credenziali in qualsiasi momento ripetendo i passi qui sotto.
+    </p>
+  } @else {
+    <p class="error">Non ancora configurato: segui i tre passi qui sotto.</p>
+  }
+
+  <div class="card">
+    <h2>1. Crea la tua applicazione su Enable Banking</h2>
+    <p class="hint">
+      Enable Banking è il servizio autorizzato (PSD2) che legge i conti dalle banche. L'uso per i
+      <strong>tuoi</strong> conti è gratuito. I nomi delle voci sul sito potrebbero cambiare
+      leggermente.
+    </p>
+    <ol>
+      <li>
+        Vai su
+        <a href="https://enablebanking.com" target="_blank" rel="noopener">enablebanking.com</a>,
+        crea un account e apri il pannello di controllo (<em>Control Panel</em>).
+      </li>
+      <li>
+        Registra una nuova applicazione (<em>Applications</em>), ambiente
+        <strong>Production</strong>.
+      </li>
+      <li>
+        Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
+        <code>{{ status.redirectUrl }}</code>
+        <button type="button" class="link" (click)="copyRedirectUrl(status.redirectUrl)">
+          {{ copied() ? 'copiato ✓' : 'copia' }}
+        </button>
+      </li>
+      <li>
+        Alla fine il browser scarica un file <code>.pem</code>: è la tua
+        <strong>chiave privata</strong>. Conservalo con cura e non condividerlo con nessuno. Il nome
+        del file è l'Application ID.
+      </li>
+      <li>
+        Se Enable Banking ti chiede di attivare l'applicazione collegando i tuoi conti, segui le sue
+        istruzioni.
+      </li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>2. Inserisci le credenziali</h2>
+    <div class="form-grid">
+      <label>
+        File della chiave privata (.pem)
+        <input type="file" accept=".pem" (change)="onFile($event)" />
+        @if (fileName()) {
+          <span class="secondary">{{ fileName() }}</span>
+        }
+      </label>
+      <label>
+        Application ID
+        <input
+          [value]="applicationId()"
+          (input)="onApplicationId($event)"
+          placeholder="es. cf589be3-3755-465b-a8df-a90a16a31403"
+        />
+      </label>
+    </div>
+
+    <h2>3. Verifica e salva</h2>
+    <p class="hint">
+      WalletTracker prova le credenziali con Enable Banking e le salva solo se vengono accettate.
+    </p>
+    <button type="button" [disabled]="saving()" (click)="save()">
+      {{ saving() ? 'Verifica in corso...' : 'Verifica e salva' }}
+    </button>
+
+    @if (message()) {
+      <p class="message">
+        {{ message() }} Ora puoi <a routerLink="/collega">collegare la tua prima banca</a>.
+      </p>
+    }
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  </div>
+} @else {
+  <p>Caricamento... (se resta così, controlla che il backend sia avviato)</p>
+}

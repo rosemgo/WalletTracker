@@ -44,7 +44,7 @@ class EnableBankingClientTest {
 
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new EnableBankingClient(builder, properties, new EnableBankingJwtFactory(properties), new JsonMapper());
+        client = new EnableBankingClient(builder, properties, new EnableBankingJwtFactory(EnableBankingCredentials.fromPropertiesOnly(properties)), new JsonMapper());
     }
 
     @Test

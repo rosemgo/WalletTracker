@@ -10,6 +10,7 @@ import {
   Rule,
   RulePreview,
   RuleRequest,
+  SetupStatus,
   SyncRound,
   Transaction,
   TransactionFilter,
@@ -104,5 +105,18 @@ export class WalletApi {
   /** POST /api/rules/preview: a quali movimenti si applicherebbe la regola, senza salvarla. */
   previewRule(rule: RuleRequest): Observable<RulePreview> {
     return this.http.post<RulePreview>('/api/rules/preview', rule);
+  }
+
+  /** GET /api/setup */
+  setupStatus(): Observable<SetupStatus> {
+    return this.http.get<SetupStatus>('/api/setup');
+  }
+
+  /** PUT /api/setup/enable-banking: verifica e salva le credenziali di Enable Banking. */
+  saveEnableBanking(applicationId: string, privateKeyPem: string): Observable<SetupStatus> {
+    return this.http.put<SetupStatus>('/api/setup/enable-banking', {
+      applicationId,
+      privateKeyPem,
+    });
   }
 }

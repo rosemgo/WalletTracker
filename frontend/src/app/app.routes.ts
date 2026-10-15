@@ -4,6 +4,7 @@ import { AccountsPage } from './accounts/accounts-page';
 import { CallbackPage } from './link/callback-page';
 import { LinkPage } from './link/link-page';
 import { RulesPage } from './rules/rules-page';
+import { SettingsPage } from './settings/settings-page';
 import { TransactionsPage } from './transactions/transactions-page';
 
 /**
@@ -16,6 +17,7 @@ export const routes: Routes = [
   { path: 'conti', component: AccountsPage, title: 'Conti · WalletTracker' },
   { path: 'regole', component: RulesPage, title: 'Regole · WalletTracker' },
   { path: 'collega', component: LinkPage, title: 'Collega una banca · WalletTracker' },
+  { path: 'impostazioni', component: SettingsPage, title: 'Impostazioni · WalletTracker' },
   // L'indirizzo di ritorno dopo il login sulla banca: deve coincidere con il "redirect URL"
   // registrato su Enable Banking (https://localhost:8443/callback).
   { path: 'callback', component: CallbackPage, title: 'Collegamento · WalletTracker' },

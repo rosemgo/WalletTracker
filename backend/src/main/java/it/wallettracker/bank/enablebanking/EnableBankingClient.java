@@ -48,11 +48,30 @@ public class EnableBankingClient {
         this.jsonMapper = jsonMapper;
         this.restClient = builder
                 .baseUrl(properties.baseUrl())
-                // Su ogni richiesta aggiungiamo l'header "Authorization: Bearer <JWT>".
+                // Su ogni richiesta aggiungiamo l'header "Authorization: Bearer <JWT>", se non c'è già
+                // (c'è solo in checkCredentials, che prova un JWT preparato apposta).
+                // Un "interceptor" è codice eseguito su ogni richiesta, appena prima di inviarla.
                 // Creiamo un JWT nuovo ogni volta: costa pochissimo e non dobbiamo gestirne la scadenza.
-                .defaultRequest(request -> request.header(HttpHeaders.AUTHORIZATION,
-                        "Bearer " + jwtFactory.createToken()))
+                .requestInterceptor((request, body, execution) -> {
+                    if (request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION) == null) {
+                        request.getHeaders().setBearerAuth(jwtFactory.createToken());
+                    }
+                    return execution.execute(request, body);
+                })
                 .build();
+    }
+
+    /**
+     * Prova delle credenziali nuove, prima di salvarle: una richiesta qualsiasi (l'elenco delle banche
+     * italiane) firmata con il JWT indicato. Se Enable Banking non riconosce la firma, risponde 401 e
+     * questo metodo lancia una {@code RestClientResponseException}.
+     */
+    public void checkCredentials(String token) {
+        restClient.get()
+                .uri("/aspsps?country=IT")
+                .headers(headers -> headers.setBearerAuth(token))
+                .retrieve()
+                .toBodilessEntity();
     }
 
     /** GET /aspsps: le banche disponibili in un paese (es. "IT"). */

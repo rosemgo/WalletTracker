@@ -5,8 +5,16 @@
     <a routerLink="/conti" routerLinkActive="active">Conti</a>
     <a routerLink="/regole" routerLinkActive="active">Regole</a>
     <a routerLink="/collega" routerLinkActive="active">Collega una banca</a>
+    <a routerLink="/impostazioni" routerLinkActive="active">Impostazioni</a>
   </nav>
 </header>
+
+@if (setup.status()?.configured === false) {
+  <div class="banner">
+    Per iniziare, configura il collegamento con Enable Banking:
+    <a routerLink="/impostazioni">apri le Impostazioni</a>.
+  </div>
+}
 
 <main>
   <router-outlet />

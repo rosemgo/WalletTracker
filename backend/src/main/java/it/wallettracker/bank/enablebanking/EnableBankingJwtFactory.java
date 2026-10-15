@@ -34,15 +34,24 @@ public class EnableBankingJwtFactory {
     /** Durata di ogni token: 1 ora (Enable Banking accetta al massimo 24 ore). */
     private static final long TOKEN_VALIDITY_SECONDS = 3600;
 
-    private final String applicationId;
-    private final PrivateKey privateKey;
+    private final EnableBankingCredentials credentials;
 
-    public EnableBankingJwtFactory(EnableBankingProperties properties) {
-        this.applicationId = properties.applicationId();
-        this.privateKey = loadPrivateKey(Path.of(properties.privateKeyPath()));
+    public EnableBankingJwtFactory(EnableBankingCredentials credentials) {
+        this.credentials = credentials;
     }
 
+    /** Un JWT firmato con le credenziali in uso (dashboard o .env). */
     public String createToken() {
+        EnableBankingCredentials.Credentials current = credentials.current()
+                .orElseThrow(EnableBankingNotConfiguredException::new);
+        return createToken(current.applicationId(), current.privateKey());
+    }
+
+    /**
+     * Un JWT firmato con queste credenziali. È {@code static}: serve anche per provare credenziali nuove,
+     * prima di salvarle (vedi SetupService).
+     */
+    public static String createToken(String applicationId, PrivateKey privateKey) {
         long now = Instant.now().getEpochSecond();
 
         // "kid" (key id) dice a Enable Banking quale chiave pubblica usare per verificare la firma.
@@ -52,10 +61,10 @@ public class EnableBankingJwtFactory {
 
         String unsignedToken = base64Url(header.getBytes(StandardCharsets.UTF_8))
                 + "." + base64Url(payload.getBytes(StandardCharsets.UTF_8));
-        return unsignedToken + "." + base64Url(sign(unsignedToken));
+        return unsignedToken + "." + base64Url(sign(unsignedToken, privateKey));
     }
 
-    private byte[] sign(String data) {
+    private static byte[] sign(String data, PrivateKey privateKey) {
         try {
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initSign(privateKey);
@@ -86,9 +95,17 @@ public class EnableBankingJwtFactory {
         } catch (IOException e) {
             throw new IllegalStateException("Non riesco a leggere la chiave privata: " + pemFile.toAbsolutePath(), e);
         }
+        return parsePrivateKey(pem, pemFile.toString());
+    }
 
+    /**
+     * Legge la chiave privata dal TESTO di un file PEM (es. quello caricato dalla dashboard).
+     *
+     * @param origin da dove arriva il testo, per i messaggi di errore (es. il nome del file)
+     */
+    public static PrivateKey parsePrivateKey(String pem, String origin) {
         if (!pem.contains("-----BEGIN PRIVATE KEY-----")) {
-            throw new IllegalStateException("Il file " + pemFile + " non è una chiave in formato PKCS#8 "
+            throw new IllegalStateException("La chiave " + origin + " non è in formato PKCS#8 "
                     + "('-----BEGIN PRIVATE KEY-----'). Se inizia con 'BEGIN RSA PRIVATE KEY' convertila con: "
                     + "openssl pkcs8 -topk8 -nocrypt -in vecchia.pem -out enable-banking.pem");
         }
@@ -97,12 +114,11 @@ public class EnableBankingJwtFactory {
                 .replace("-----BEGIN PRIVATE KEY-----", "")
                 .replace("-----END PRIVATE KEY-----", "")
                 .replaceAll("\\s", "");
-        byte[] keyBytes = Base64.getDecoder().decode(base64);
-
         try {
+            byte[] keyBytes = Base64.getDecoder().decode(base64);
             return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("Il file " + pemFile + " non contiene una chiave privata RSA valida", e);
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
+            throw new IllegalStateException("La chiave " + origin + " non contiene una chiave privata RSA valida", e);
         }
     }
 }

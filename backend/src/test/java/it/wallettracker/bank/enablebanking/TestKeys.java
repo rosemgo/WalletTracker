@@ -28,9 +28,13 @@ public final class TestKeys {
 
     /** Salva la chiave privata in un file PEM (formato PKCS#8, come quello di Enable Banking). */
     public static Path writePrivateKey(KeyPair keyPair, Path directory) throws IOException {
+        return Files.writeString(directory.resolve("test-key.pem"), pem(keyPair));
+    }
+
+    /** Il testo PEM della chiave privata (formato PKCS#8), come il contenuto del file di Enable Banking. */
+    public static String pem(KeyPair keyPair) {
         String base64 = Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(keyPair.getPrivate().getEncoded());
-        String pem = "-----BEGIN PRIVATE KEY-----\n" + base64 + "\n-----END PRIVATE KEY-----\n";
-        return Files.writeString(directory.resolve("test-key.pem"), pem);
+        return "-----BEGIN PRIVATE KEY-----\n" + base64 + "\n-----END PRIVATE KEY-----\n";
     }
 
     public static EnableBankingProperties properties(Path privateKey) {

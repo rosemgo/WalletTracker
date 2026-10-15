@@ -123,3 +123,11 @@ export interface RulePreview {
   matches: number;
   examples: Transaction[];
 }
+
+/** Lo stato della configurazione di Enable Banking (GET /api/setup). */
+export interface SetupStatus {
+  configured: boolean;
+  source: 'DASHBOARD' | 'ENV' | null; // da dove arrivano le credenziali in uso
+  applicationId: string | null;
+  redirectUrl: string; // da registrare nell'applicazione Enable Banking
+}

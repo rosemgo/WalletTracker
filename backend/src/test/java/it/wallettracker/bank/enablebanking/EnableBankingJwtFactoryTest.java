@@ -22,7 +22,7 @@ class EnableBankingJwtFactoryTest {
     void createsTokenWithHeaderAndClaimsRequiredByEnableBanking() throws Exception {
         KeyPair keyPair = TestKeys.generateKeyPair();
         Path privateKey = TestKeys.writePrivateKey(keyPair, tempDir);
-        EnableBankingJwtFactory factory = new EnableBankingJwtFactory(TestKeys.properties(privateKey));
+        EnableBankingJwtFactory factory = new EnableBankingJwtFactory(EnableBankingCredentials.fromPropertiesOnly(TestKeys.properties(privateKey)));
 
         String[] parts = factory.createToken().split("\\.");
 
@@ -37,7 +37,7 @@ class EnableBankingJwtFactoryTest {
     void signatureCanBeVerifiedWithThePublicKey() throws Exception {
         KeyPair keyPair = TestKeys.generateKeyPair();
         Path privateKey = TestKeys.writePrivateKey(keyPair, tempDir);
-        EnableBankingJwtFactory factory = new EnableBankingJwtFactory(TestKeys.properties(privateKey));
+        EnableBankingJwtFactory factory = new EnableBankingJwtFactory(EnableBankingCredentials.fromPropertiesOnly(TestKeys.properties(privateKey)));
 
         String[] parts = factory.createToken().split("\\.");
 
@@ -60,5 +60,16 @@ class EnableBankingJwtFactoryTest {
 
     private static String decode(String base64Url) {
         return new String(Base64.getUrlDecoder().decode(base64Url), StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void withoutCredentialsTheErrorSaysToOpenTheSettings() {
+        EnableBankingProperties noCredentials = new EnableBankingProperties("https://api.enablebanking.test", "", "",
+                "https://localhost:8443/callback");
+        EnableBankingJwtFactory factory = new EnableBankingJwtFactory(EnableBankingCredentials.fromPropertiesOnly(noCredentials));
+
+        assertThatThrownBy(factory::createToken)
+                .isInstanceOf(EnableBankingNotConfiguredException.class)
+                .hasMessageContaining("Impostazioni");
     }
 }
