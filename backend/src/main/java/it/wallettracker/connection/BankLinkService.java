@@ -120,6 +120,7 @@ public class BankLinkService {
      */
     public LinkResult complete(String code, String state, PsuHeaders psu) {
         // remove(): uno state si può usare una volta sola.
+        //il remove() verifica se la chiave è presente nell'hashmap e se è presente, restituisce l'oggetto e rimuove la coppia chiave, valore dalla mappa
         Pending started = state != null ? pending.remove(state) : null;
         if (started == null || isExpired(started)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
