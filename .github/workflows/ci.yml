@@ -51,7 +51,7 @@ jobs:
       #    un file zip scaricabile dalla pagina dell'esecuzione, per capire quale test è fallito e perché.
       - name: Salva i rapporti dei test
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rapporti-test
           path: backend/target/surefire-reports/
