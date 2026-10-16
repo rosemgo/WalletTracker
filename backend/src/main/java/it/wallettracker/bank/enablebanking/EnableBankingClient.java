@@ -49,7 +49,7 @@ public class EnableBankingClient {
         this.restClient = builder
                 .baseUrl(properties.baseUrl())
                 // Su ogni richiesta aggiungiamo l'header "Authorization: Bearer <JWT>", se non c'è già
-                // (c'è solo in checkCredentials, che prova un JWT preparato apposta).
+                // (solo in checkCredentials c'è ".headers(headers -> headers.setBearerAuth(token))", che prova un JWT preparato apposta).
                 // Un "interceptor" è codice eseguito su ogni richiesta, appena prima di inviarla.
                 // Creiamo un JWT nuovo ogni volta: costa pochissimo e non dobbiamo gestirne la scadenza.
                 .requestInterceptor((request, body, execution) -> {
