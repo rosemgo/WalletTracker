@@ -48,7 +48,11 @@ describe('SettingsPage', () => {
   /** Simula la scelta di un file nel campo <input type="file">. */
   async function chooseFile(page: HTMLElement, name: string, content: string): Promise<void> {
     const input = page.querySelector('input[type="file"]') as HTMLInputElement;
-    Object.defineProperty(input, 'files', { value: [new File([content], name)] });
+    // configurable: true permette di scegliere un secondo file sullo stesso campo
+    Object.defineProperty(input, 'files', {
+      value: [new File([content], name)],
+      configurable: true,
+    });
     input.dispatchEvent(new Event('change'));
     await new Promise((resolve) => setTimeout(resolve, 10)); // il tempo di leggere il file
   }
@@ -82,6 +86,51 @@ describe('SettingsPage', () => {
     expect(page.textContent).toContain('Credenziali verificate e salvate');
     expect(page.textContent).toContain('Configurato');
     expect(TestBed.inject(SetupStore).status()?.configured).toBe(true); // lo stato condiviso è aggiornato
+  });
+
+  /** Il valore del campo "Application ID" (il secondo <input> della pagina). */
+  function applicationIdField(page: HTMLElement): HTMLInputElement {
+    return page.querySelectorAll('input')[1] as HTMLInputElement;
+  }
+
+  it('replaces the Application ID when a different file is chosen', async () => {
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const otherAppId = '11111111-2222-4333-8444-555555555555';
+
+    await chooseFile(page, `${APP_ID}.pem`, PEM);
+    await chooseFile(page, `${otherAppId}.pem`, PEM); // ci si è accorti di aver sbagliato file
+    await fixture.whenStable();
+
+    expect(applicationIdField(page).value).toBe(otherAppId);
+  });
+
+  it('clears an Application ID taken from the previous file when the new file is renamed', async () => {
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    await chooseFile(page, `${APP_ID}.pem`, PEM);
+    await chooseFile(page, 'chiave.pem', PEM); // da questo nome non si capisce l'ID
+    await fixture.whenStable();
+
+    expect(applicationIdField(page).value).toBe('');
+    expect(page.textContent).toContain("Il nome del file non contiene l'Application ID");
+  });
+
+  it('keeps an Application ID typed by the user when the file is renamed', async () => {
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    const field = applicationIdField(page);
+    field.value = APP_ID;
+    field.dispatchEvent(new Event('input')); // come se l'utente l'avesse scritto
+    await chooseFile(page, 'chiave.pem', PEM);
+    await fixture.whenStable();
+
+    expect(applicationIdField(page).value).toBe(APP_ID);
   });
 
   it('shows why Enable Banking rejected the credentials', async () => {

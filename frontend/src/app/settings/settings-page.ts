@@ -31,8 +31,16 @@ export class SettingsPage {
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
+  /**
+   * Chi ha scritto l'Application ID che c'è ora nel campo? true = l'abbiamo preso noi dal nome del file,
+   * false = l'ha scritto l'utente (o il campo è vuoto). Serve a scegliere un file nuovo senza tenere l'ID
+   * del file vecchio, e senza mai cancellare quello che l'utente ha scritto a mano.
+   */
+  private idFromFileName = false;
+
   onApplicationId(event: Event): void {
     this.applicationId.set((event.target as HTMLInputElement).value.trim());
+    this.idFromFileName = false; // da qui in poi il valore è dell'utente
   }
 
   /**
@@ -50,12 +58,19 @@ export class SettingsPage {
     this.fileName.set(file.name);
     this.pem.set(await file.text());
 
-    // Enable Banking chiama il file con l'Application ID (es. "cf589be3-....pem"): se il campo è vuoto,
-    // lo compiliamo noi.
+    // Enable Banking chiama il file con l'Application ID (es. "cf589be3-....pem"). Se il nome ha quella
+    // forma, è l'ID giusto per QUESTO file: lo mettiamo nel campo, anche al posto di un ID precedente.
     const nameWithoutExtension = file.name.replace(/\.pem$/i, '');
-    if (this.applicationId() === '' && UUID.test(nameWithoutExtension)) {
+    if (UUID.test(nameWithoutExtension)) {
       this.applicationId.set(nameWithoutExtension);
+      this.idFromFileName = true;
+    } else if (this.idFromFileName) {
+      // File rinominato (es. "chiave.pem"): non sappiamo il suo ID. Quello nel campo veniva dal file
+      // precedente e sarebbe sbagliato, quindi lo togliamo: l'utente lo scriverà a mano.
+      this.applicationId.set('');
+      this.idFromFileName = false;
     }
+    // Altrimenti il campo è vuoto o l'ha scritto l'utente: non lo tocchiamo.
   }
 
   /** Copia l'indirizzo di ritorno negli appunti, da incollare sul sito di Enable Banking. */

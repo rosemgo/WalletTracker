@@ -69,6 +69,11 @@
           (input)="onApplicationId($event)"
           placeholder="es. cf589be3-3755-465b-a8df-a90a16a31403"
         />
+        @if (fileName() && applicationId() === '') {
+          <span class="secondary">
+            Il nome del file non contiene l'Application ID: copialo dal sito di Enable Banking.
+          </span>
+        }
       </label>
     </div>
 

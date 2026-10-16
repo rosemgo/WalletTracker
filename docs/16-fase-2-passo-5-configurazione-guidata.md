@@ -215,18 +215,33 @@ async onFile(event: Event): Promise<void> {
 - il contenuto parte verso il backend solo quando premi "Verifica e salva".
 
 **L'Application ID dal nome del file.** Enable Banking chiama il file con l'Application ID (es.
-`cf589be3-3755-465b-a8df-a90a16a31403.pem`). Se il campo è vuoto e il nome ha la forma di un UUID
-(controllata con un'**espressione regolare**), lo compiliamo noi:
+`cf589be3-3755-465b-a8df-a90a16a31403.pem`). Se il nome ha la forma di un UUID (controllata con
+un'**espressione regolare**), lo mettiamo noi nel campo:
 
 ```ts
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 ```
 
+Il campo resta comunque **modificabile**, perché il nome del file non sempre contiene l'ID: chi segue la
+guida del `.env` lo ha rinominato in `enable-banking.pem`, e molti rinominano i file scaricati. Le regole:
+
+| Cosa succede | Il campo Application ID |
+|---|---|
+| scegli un file con l'ID nel nome | prende l'ID del file, **anche se ne aveva già uno**: vince il file |
+| scegli un file rinominato, e l'ID nel campo veniva dal file precedente | si **svuota** (quell'ID sarebbe sbagliato) e compare un avviso |
+| scegli un file rinominato, e l'ID l'hai scritto tu | **resta** com'è |
+
+Per distinguere gli ultimi due casi, il componente ricorda chi ha scritto il valore (`idFromFileName`).
+
+> **Aggiornamento.** Nella prima versione il campo si compilava solo se era vuoto: scegliendo un secondo
+> file, restava l'ID del primo. Il backend se ne sarebbe accorto (Enable Banking rifiuta la coppia
+> sbagliata), ma l'utente non avrebbe capito perché.
+
 ### I test
 
 | Test | Cosa verifica |
 |---|---|
-| `SettingsPage` (4) | mostra l'indirizzo di ritorno; compila l'Application ID dal nome del file e salva la chiave (e aggiorna lo stato condiviso); mostra il motivo del rifiuto; chiede il file prima di salvare |
+| `SettingsPage` (7) | mostra l'indirizzo di ritorno; compila l'Application ID dal nome del file e salva la chiave (e aggiorna lo stato condiviso); un secondo file sostituisce l'ID; un file rinominato svuota l'ID preso dal file precedente ma non quello scritto dall'utente; mostra il motivo del rifiuto; chiede il file prima di salvare |
 | `App` (2) | i link della barra (con "Impostazioni"); l'avviso quando Enable Banking non è configurato |
 
 Per simulare la scelta di un file, il test sostituisce la proprietà `files` dell'input e lancia l'evento
@@ -247,7 +262,7 @@ input.dispatchEvent(new Event('change'));
    cd backend
    .\mvnw.cmd test               # 74 test
    cd ..\frontend
-   npm test -- --watch=false     # 23 test
+   npm test -- --watch=false     # 26 test
    ```
 2. **Avvia** backend e dashboard e apri **Impostazioni** (<https://localhost:8443/impostazioni>). Vedrai
    "✓ Configurato dal file .env" con il tuo Application ID.
