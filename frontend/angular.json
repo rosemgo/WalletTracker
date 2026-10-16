@@ -3,7 +3,7 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "analytics": "a5ca49e0-b71a-414c-a91f-43b9b0398bb7"
+    "analytics": false
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -25,7 +25,9 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": [
+              "src/styles.css"
+            ]
           },
           "configurations": {
             "production": {

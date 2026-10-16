@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.Optional;
 
+import it.wallettracker.security.SecretCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ import org.springframework.stereotype.Component;
  * Se nessuna delle due è disponibile, l'applicazione parte lo stesso: la dashboard mostrerà la procedura
  * guidata, e le chiamate a Enable Banking falliranno con un messaggio chiaro.
  *
+ * <p>Nel database la chiave privata è <b>cifrata</b> con {@link SecretCipher}: viene decifrata solo qui, in
+ * memoria, al momento di firmare i JWT.
+ *
  * <p>La chiave letta resta in memoria ("cache"): leggerla e decodificarla a ogni richiesta sarebbe inutile.
  * Quando si salvano credenziali nuove, la cache viene svuotata.
  */
@@ -33,24 +37,30 @@ public class EnableBankingCredentials {
     /** Da dove arrivano le credenziali in uso. */
     public enum Source { DASHBOARD, ENV }
 
+    /** L'etichetta (dati associati di AES-GCM) del segreto: "a cosa serve" (vedi SecretCipher). */
+    static final String KEY_PURPOSE = "enable_banking.private_key";
+
     /** Le credenziali pronte per firmare i JWT. */
     public record Credentials(String applicationId, PrivateKey privateKey, Source source) {
     }
 
     private final EnableBankingProperties properties;
     private final EnableBankingSettingsRepository repository; // null nei test senza database
+    private final SecretCipher cipher; // null nei test senza database
 
     private Optional<Credentials> cached;
 
     @Autowired
-    public EnableBankingCredentials(EnableBankingProperties properties, EnableBankingSettingsRepository repository) {
+    public EnableBankingCredentials(EnableBankingProperties properties, EnableBankingSettingsRepository repository,
+            SecretCipher cipher) {
         this.properties = properties;
         this.repository = repository;
+        this.cipher = cipher;
     }
 
     /** Solo per i test senza database: usa soltanto le impostazioni del file .env. */
     public static EnableBankingCredentials fromPropertiesOnly(EnableBankingProperties properties) {
-        return new EnableBankingCredentials(properties, null);
+        return new EnableBankingCredentials(properties, null, null);
     }
 
     /**
@@ -68,7 +78,7 @@ public class EnableBankingCredentials {
 
     /** Salva credenziali nuove (già verificate) dalla dashboard: da ora in poi si usano queste. */
     public synchronized void save(String applicationId, String privateKeyPem) {
-        repository.save(new EnableBankingSettings(applicationId, privateKeyPem));
+        repository.save(new EnableBankingSettings(applicationId, cipher.encrypt(privateKeyPem, KEY_PURPOSE)));
         cached = null; // al prossimo current() verranno rilette
     }
 
@@ -82,8 +92,16 @@ public class EnableBankingCredentials {
         if (repository != null) {
             Optional<EnableBankingSettings> saved = repository.findById(EnableBankingSettings.SINGLE_ROW_ID);
             if (saved.isPresent()) {
-                PrivateKey key = EnableBankingJwtFactory.parsePrivateKey(saved.get().getPrivateKeyPem(), "salvata");
-                return Optional.of(new Credentials(saved.get().getApplicationId(), key, Source.DASHBOARD));
+                try {
+                    String pem = cipher.decrypt(saved.get().getPrivateKeyEncrypted(), KEY_PURPOSE);
+                    PrivateKey key = EnableBankingJwtFactory.parsePrivateKey(pem, "salvata");
+                    return Optional.of(new Credentials(saved.get().getApplicationId(), key, Source.DASHBOARD));
+                } catch (IllegalStateException e) {
+                    // Es. il file della chiave di cifratura è stato cambiato o perso: le credenziali salvate
+                    // non sono più leggibili. Si torna al .env (se c'è) e la dashboard chiederà di ricaricarle.
+                    log.error("Le credenziali salvate dalla dashboard non sono leggibili ({}). "
+                            + "Caricale di nuovo dalla pagina Impostazioni.", e.getMessage());
+                }
             }
         }
         // 2. Dal file .env.

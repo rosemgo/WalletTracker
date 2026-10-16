@@ -55,14 +55,17 @@ browser ── PUT /api/setup/enable-banking { applicationId, privateKeyPem } �
 del JWT con la chiave pubblica registrata per quell'Application ID: se Application ID e file `.pem` non
 appartengono alla stessa applicazione, la firma non torna e la risposta è `401`.
 
-### 4. La chiave privata nel database: cosa comporta
+### 4. La chiave privata nel database: cifrata
 
-Salvando dalla dashboard, la chiave privata finisce nel database, **in chiaro**. È lo stesso livello di
-protezione del file `.pem` sul disco: chi può leggere il file, o il database, può usarla. Quindi:
-- il database è raggiungibile **solo da questo PC** (porta `127.0.0.1` in `docker-compose.yml`);
+> **Aggiornamento.** Nella prima versione di questo passo la chiave privata veniva salvata **in chiaro**. Non
+> era accettabile per un progetto che mette la sicurezza al primo posto: ora è **cifrata con AES-256-GCM**,
+> con la chiave di cifratura in un file separato (`.data/encryption.key`). Tutti i dettagli sono in
+> [`docs/17-sicurezza.md`](17-sicurezza.md).
+
 - **la chiave non esce mai dalle API**: `GET /api/setup` restituisce solo se c'è, da dove arriva e
   l'Application ID, che non è un segreto. Un test lo verifica;
-- i **backup del database** (`pg_dump`) contengono la chiave: trattali come il file `.pem`.
+- il database è raggiungibile **solo da questo PC**;
+- nei backup, il file della chiave di cifratura va salvato **separato** dal backup del database.
 
 ---
 

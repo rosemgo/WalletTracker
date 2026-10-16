@@ -1,0 +1,145 @@
+# 17. La sicurezza di WalletTracker
+
+WalletTracker gestisce **dati bancari**. L'obiettivo è che chi lo installa, o chi ne legge il codice, non
+possa criticarlo né attaccarlo facilmente. Da qui in avanti vale il principio **"shift left"** (*sposta a
+sinistra*): la sicurezza si pensa **all'inizio** di ogni passo, insieme al codice, e non alla fine. Correggere
+un problema di sicurezza dopo, quando il progetto è già usato da altri, costa molto di più.
+
+Questo documento è il **modello di sicurezza** del progetto:
+- cosa proteggiamo, e da chi;
+- cosa è già attivo;
+- cosa è pianificato, e in quale fase.
+
+Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`SECURITY.md`](../SECURITY.md).
+
+---
+
+## 1. Cosa proteggiamo
+
+| Bene | Perché è prezioso |
+|---|---|
+| **chiave privata di Enable Banking** (`.pem`) | con la chiave e una sessione valida si leggono i tuoi conti |
+| **sessioni** (`session_id`, nel database) | da sole non bastano: servono anche la chiave privata e il JWT |
+| **movimenti, saldi, IBAN, nomi** | dati personali e finanziari (GDPR) |
+| **password del database** (`.env`) | dà accesso a tutto il database |
+| **chiave di cifratura** (`.data/encryption.key`) | decifra i segreti salvati nel database |
+
+## 2. Da chi (le minacce)
+
+| Chi | Cosa potrebbe fare |
+|---|---|
+| **un sito che visiti**, nello stesso browser | far partire richieste verso `localhost` (CSRF) o leggere le API con il DNS rebinding |
+| **un altro dispositivo** sulla stessa rete (Wi-Fi di casa, bar, treno) | raggiungere le porte aperte del tuo PC |
+| **chi ottiene una copia del database** (backup perso, disco rubato) | leggere dati e segreti salvati |
+| **una libreria compromessa o vulnerabile** (*supply chain*) | eseguire codice dentro WalletTracker |
+| **un errore di chi sviluppa** | pubblicare per sbaglio un segreto su GitHub |
+
+---
+
+## 3. Le protezioni attive
+
+| # | Protezione | Contro cosa | Dove |
+|---|---|---|---|
+| 1 | backend e database ascoltano **solo su 127.0.0.1** | altri dispositivi in rete | `server.address` in `application.yml`; porta del database in `docker-compose.yml` |
+| 2 | **controllo dell'header `Host`**: solo `localhost` e `127.0.0.1` | DNS rebinding | `web/LocalOnlyRequestFilter` |
+| 3 | **controllo dell'header `Origin`** sulle richieste che modificano dati | CSRF (richieste da altri siti) | `web/LocalOnlyRequestFilter` |
+| 4 | parametro **`state`** monouso (30 minuti) nel collegamento delle banche | CSRF sul ritorno dal login | `connection/BankLinkService`, `docs/13` |
+| 5 | **chiave privata cifrata** nel database (AES-256-GCM), con la chiave di cifratura **fuori** dal database | furto del database o di un suo backup | `security/SecretCipher` |
+| 6 | la chiave privata **non esce mai dalle API** | lettura dei segreti dalla dashboard | `setup/SetupService` (un test lo verifica) |
+| 7 | **credenziali verificate** prima di salvarle | configurazioni sbagliate | `setup/SetupService` |
+| 8 | **validazione** di ogni richiesta nel backend (Bean Validation) | dati malformati o malevoli | `RuleRequest`, `RoleChange`... |
+| 9 | **segreti esclusi da Git** (`.env`, `secrets/`, `*.pem`, `.data/`) | pubblicazione di segreti | `.gitignore` |
+| 10 | header **PSU** solo quando l'utente è davvero presente | violazione delle regole PSD2 | `web/PresentUser`, `docs/13` |
+| 11 | **Dependabot**: aggiornamenti delle librerie ogni settimana | librerie vulnerabili | `.github/dependabot.yml` |
+| 12 | **CI**: tutti i test a ogni push | regressioni, anche di sicurezza | `.github/workflows/ci.yml` |
+| 13 | nessuna statistica d'uso inviata da Angular CLI | privacy di chi sviluppa | `"analytics": false` in `frontend/angular.json` |
+
+### Approfondimento: la cifratura dei segreti (n. 5)
+
+Nel database la chiave privata **non** è salvata in chiaro:
+
+```
+enable_banking_settings.private_key_encrypted = "v1:q8Zf3...Kp0="   ← illeggibile senza encryption.key
+```
+
+- **AES-256-GCM**: AES con chiave da 256 bit; la modalità GCM aggiunge un "sigillo", per cui un valore
+  alterato non viene decifrato. Un **IV** casuale (12 byte) fa sì che lo stesso segreto cifrato due volte
+  dia risultati diversi.
+- **Cifratura a busta**: la chiave di cifratura sta in un **file separato** (`.data/encryption.key`), creato
+  al primo avvio e leggibile solo dal tuo utente (su Linux/macOS: permessi `600`). Chi ruba **solo** il
+  database, o un suo backup (`pg_dump`), vede testo illeggibile. Per leggerlo servono **entrambi**.
+- **Dati associati (AAD)**: ogni segreto è cifrato con un'etichetta (`enable_banking.private_key`). Un valore
+  cifrato non può essere spostato in un'altra colonna e usato per un altro scopo.
+
+**Cosa comporta per te:**
+- **backup**: salva il file `.data/encryption.key` **insieme** al backup del database ma **in un posto
+  diverso**. Se lo perdi, le credenziali salvate dalla dashboard non si possono più leggere: basta
+  ricaricare il file `.pem` dalla pagina Impostazioni;
+- se usi il **file `.env`**, la chiave privata resta nel file `secrets/enable-banking.pem` sul disco. È
+  protetta dai permessi del tuo utente, non dalla cifratura.
+
+### Approfondimento: il "buttafuori" delle API (n. 2 e 3)
+
+Le API non hanno ancora un login, perché oggi sono raggiungibili solo dal tuo PC. Restano però due attacchi
+che passano **attraverso il tuo browser**:
+
+- **DNS rebinding.** Un sito fa puntare un suo dominio a `127.0.0.1`. Per il browser, la pagina del sito e
+  le nostre API diventano "lo stesso sito", e la pagina potrebbe leggere i tuoi movimenti. Il filtro rifiuta
+  ogni richiesta il cui header `Host` non sia `localhost` o `127.0.0.1`.
+- **CSRF.** Una pagina qualsiasi può far partire dal tuo browser un `POST` verso le nostre API, ad esempio
+  "Aggiorna ora". Non può leggerne la risposta, ma l'azione avverrebbe. Il filtro rifiuta le richieste che
+  modificano dati se il browser dichiara (header `Origin`) che partono da un altro sito.
+
+Prove fatte con la dashboard e il proxy di Angular:
+
+| Richiesta | Risultato |
+|---|---|
+| la dashboard legge e salva | ✅ passa |
+| `POST /api/sync` da `https://evil.example` | ⛔ 403 "proviene da un altro sito" |
+| richiesta con `Host: evil.example` (DNS rebinding), diretta o attraverso il proxy | ⛔ 403 "indirizzo non consentito" |
+
+---
+
+## 4. Le protezioni pianificate
+
+Il principio guida: **nessun accesso da fuori dal PC finché non c'è il login.**
+
+| Quando | Protezione |
+|---|---|
+| **Fase 4, prima di qualsiasi accesso remoto** | **login** con Spring Security: password salvata con un hash lento (Argon2 o bcrypt), sessione in un cookie `HttpOnly`, `Secure`, `SameSite=Strict`, protezione CSRF con token, blocco dopo troppi tentativi |
+| Fase 4 | **HTTPS** con un certificato vero (Tailscale), invece del certificato autofirmato di sviluppo |
+| Fase 4 | **container sicuri**: utente non root, file system in sola lettura, solo le porte necessarie; password del database **generata a caso** all'installazione |
+| Fase 4 | **header di sicurezza** per la dashboard: `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy` |
+| Fase 3–4 | **backup cifrati** del database, con una procedura guidata |
+| Fase 3–4 | **rotazione** della chiave di cifratura (il prefisso `v1:` serve proprio a questo) |
+| Fase 3–4 | **minimizzazione dei dati**: oggi salviamo il JSON originale di ogni movimento (`raw_json`), che contiene nomi e IBAN delle controparti. Valutare cosa tenere e per quanto |
+| CI | **analisi statica** del codice (CodeQL) a ogni push |
+
+---
+
+## 5. Cosa puoi attivare tu su GitHub (5 minuti)
+
+Sono impostazioni del repository, non codice: le puoi attivare solo tu, da **Settings → Code security**
+(i nomi delle voci potrebbero variare leggermente).
+
+- **Dependabot alerts** e **Dependabot security updates**: avvisi e pull request per le librerie vulnerabili.
+  Il file `dependabot.yml` gestisce gli aggiornamenti periodici; gli avvisi si attivano da qui;
+- **Secret scanning** e **Push protection**: GitHub blocca un push che contiene un segreto riconoscibile
+  (chiavi API, chiavi private...). È una rete di sicurezza in più oltre al `.gitignore`;
+- **Private vulnerability reporting**: permette a chiunque di segnalarti una vulnerabilità in privato,
+  come descritto in `SECURITY.md`;
+- in **Settings → Branches**: una regola che **richiede la CI verde** prima di unire una pull request nel
+  branch principale.
+
+---
+
+## 6. Le regole per chi sviluppa (anche per noi)
+
+1. **Mai un segreto nel codice o su Git**: né nei file, né nei messaggi di commit, né negli screenshot.
+2. **Mai un segreto nei log**: i messaggi di errore riportano il motivo, mai chiavi o token.
+3. **Validare tutto nel backend**: il frontend aiuta l'utente, ma non è una protezione.
+4. **Il minimo indispensabile**: ogni API restituisce solo i dati che servono (i DTO), ogni componente ha
+   solo i permessi che gli servono (`permissions: contents: read` nella CI).
+5. **Un test per ogni protezione**: se una protezione non è testata, prima o poi qualcuno la rompe senza
+   accorgersene. Le protezioni attive di questo documento hanno tutte un test.
+6. **Ogni passo aggiorna questo documento.**
