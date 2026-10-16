@@ -67,6 +67,31 @@
       <app-monthly-chart [months]="c.months" [currency]="c.currency" />
     </div>
 
+    @if (categoryRows().length > 0) {
+      <div class="card">
+        <h2>Spese per categoria</h2>
+        <!-- Ogni barra ha accanto il suo importo scritto: si legge anche senza guardare la barra. -->
+        <div class="category-list">
+          @for (row of categoryRows(); track row.label) {
+            <div class="category-row" [class.muted]="row.muted">
+              <span class="category-name">{{ row.label }}</span>
+              <span class="category-track"
+                ><span class="category-bar" [style.width.%]="row.barPercent"></span
+              ></span>
+              <span class="amount">{{ row.amount | currency: c.currency }}</span>
+              <span class="amount secondary">{{ row.share | percent: '1.0-0' }}</span>
+            </div>
+          }
+        </div>
+        <p class="hint">
+          Per dare una categoria a una spesa, usa "modifica" nella pagina
+          <a routerLink="/movimenti">Movimenti</a>; da lì puoi anche creare una regola per i
+          movimenti simili. Un rimborso (un'entrata segnata come "Rimborso di una spesa") riduce le
+          spese della sua categoria.
+        </p>
+      </div>
+    }
+
     <!-- La tabella: gli stessi numeri del grafico, leggibili anche senza colori o senza mouse. -->
     <div class="table-scroll">
       <table [class.loading]="loading()">

@@ -82,6 +82,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 16. [Fase 2, passo 5: la configurazione guidata di Enable Banking](docs/16-fase-2-passo-5-configurazione-guidata.md)
 17. [La sicurezza di WalletTracker: modello, protezioni, piano](docs/17-sicurezza.md)
 18. [Fase 3, passo 1: il riepilogo mensile e il primo grafico](docs/18-fase-3-passo-1-riepilogo.md)
+19. [Fase 3, passo 2: le categorie, le regole dalle correzioni e i rimborsi](docs/19-fase-3-passo-2-categorie.md)
 
 ## Piano di lavoro
 
@@ -100,7 +101,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] passo 5: configurazione guidata delle credenziali Enable Banking (pagina Impostazioni)
 - [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic); il piano a passi è in `docs/18`
   - [x] riepilogo mensile con grafico entrate/spese
-  - categorie con "crea una regola da questa correzione"
+  - [x] categorie: scelta a mano, "crea una regola da questa correzione", rimborsi, spese per categoria
   - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 

@@ -65,7 +65,12 @@
 
     <label>
       Categoria (facoltativa)
-      <input formControlName="category" placeholder="es. Spesa alimentare" />
+      <input formControlName="category" list="rule-categories" placeholder="es. Spesa alimentare" />
+      <datalist id="rule-categories">
+        @for (category of categories(); track category) {
+          <option [value]="category"></option>
+        }
+      </datalist>
     </label>
 
     <label>

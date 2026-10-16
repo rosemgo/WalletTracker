@@ -63,6 +63,18 @@ export class WalletApi {
     return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-type`, { type });
   }
 
+  /** PUT /api/transactions/{id}/manual-category; con `null` la scelta viene tolta. */
+  correctCategory(transactionId: number, category: string | null): Observable<Transaction> {
+    return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-category`, {
+      category,
+    });
+  }
+
+  /** GET /api/categories: le categorie già usate, in ordine alfabetico (per i suggerimenti). */
+  categories(): Observable<string[]> {
+    return this.http.get<string[]>('/api/categories');
+  }
+
   /** GET /api/banks?country=IT */
   banks(country: string): Observable<Bank[]> {
     return this.http.get<Bank[]>('/api/banks', { params: { country } });

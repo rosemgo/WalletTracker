@@ -50,6 +50,7 @@ export interface Transaction {
   type: TransactionType | null;
   category: string | null;
   manualType: TransactionType | null;
+  manualCategory: string | null; // la categoria scelta a mano, se c'è (vince su quella delle regole)
   transferPeerId: number | null;
 }
 
@@ -145,11 +146,19 @@ export interface MonthSummary {
 /** I totali del periodo: le stesse voci di MonthSummary, senza il mese. */
 export type SummaryTotals = Omit<MonthSummary, 'month'>;
 
+/** Le spese di una categoria nel periodo (positive; i rimborsi le riducono). */
+export interface CategoryExpense {
+  category: string | null; // null = spese senza categoria
+  amount: number;
+  movements: number;
+}
+
 /** Il riepilogo di una valuta: un elemento per mese, anche i mesi vuoti. */
 export interface CurrencySummary {
   currency: string;
   months: MonthSummary[];
   total: SummaryTotals;
+  expensesByCategory: CategoryExpense[]; // dalla spesa più alta
 }
 
 /** La risposta di GET /api/summary/monthly. */

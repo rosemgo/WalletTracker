@@ -1,5 +1,6 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { TYPES, TYPE_LABELS } from '../api/labels';
 import { Account, Transaction, TransactionPage, TransactionType } from '../api/models';
@@ -9,11 +10,12 @@ import { WalletApi } from '../api/wallet-api';
 const PAGE_SIZE = 50;
 
 /**
- * La pagina dei movimenti: filtri per conto e per tipo, elenco a pagine, correzione manuale del tipo.
+ * La pagina dei movimenti: filtri per conto e per tipo, elenco a pagine, correzione manuale del tipo e
+ * della categoria, e "crea una regola" da una correzione.
  */
 @Component({
   selector: 'app-transactions-page',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [CurrencyPipe, DatePipe, RouterLink],
   templateUrl: './transactions-page.html',
 })
 export class TransactionsPage implements OnInit {
@@ -32,6 +34,11 @@ export class TransactionsPage implements OnInit {
   protected readonly type = signal<TransactionType | null>(null);
   protected readonly page = signal(0);
 
+  /** Le categorie già usate, suggerite mentre si scrive (elemento HTML <datalist>). */
+  protected readonly categories = signal<string[]>([]);
+  /** Il movimento di cui si sta modificando la categoria; null = nessuno. */
+  protected readonly editingCategory = signal<number | null>(null);
+
   /**
    * Un signal "calcolato": il nome di ogni conto, per id. Si ricalcola da solo quando cambia
    * accounts(), e solo allora (il risultato viene memorizzato).
@@ -42,6 +49,7 @@ export class TransactionsPage implements OnInit {
 
   ngOnInit(): void {
     this.api.accounts().subscribe({ next: (accounts) => this.accounts.set(accounts) });
+    this.loadCategories();
     this.load();
   }
 
@@ -107,6 +115,44 @@ export class TransactionsPage implements OnInit {
     });
   }
 
+  /** Il nome di un tipo nel menu di un movimento. Per un'entrata, "Spesa" vuol dire rimborso di una spesa. */
+  protected typeLabel(transaction: Transaction, type: TransactionType): string {
+    return type === 'EXPENSE' && transaction.amount > 0
+      ? 'Rimborso di una spesa'
+      : this.typeLabels[type];
+  }
+
+  /** "Salva" della categoria: il testo scritto, oppure null se il campo è vuoto (toglie la scelta). */
+  saveCategory(transaction: Transaction, value: string): void {
+    const category = value.trim() === '' ? null : value.trim();
+    this.api.correctCategory(transaction.id, category).subscribe({
+      next: () => {
+        this.editingCategory.set(null);
+        this.loadCategories(); // una categoria nuova entra subito nei suggerimenti
+        this.load();
+      },
+      error: (response) =>
+        this.error.set(response.error?.detail ?? 'La categoria non è stata salvata.'),
+    });
+  }
+
+  /**
+   * I dati per "crea una regola da questa correzione": la pagina Regole li legge dall'indirizzo
+   * (es. /regole?pattern=NETFLIX&resultType=EXPENSE&category=Abbonamenti) e compila il modulo.
+   * Come testo da cercare proponiamo la controparte o, se manca, la causale: l'utente può accorciarlo.
+   */
+  protected ruleParams(transaction: Transaction): Record<string, string> {
+    const pattern = (transaction.counterparty || transaction.description || '')
+      .trim()
+      .slice(0, 200);
+    return {
+      pattern,
+      resultType: transaction.type ?? 'EXPENSE',
+      amountSign: transaction.amount < 0 ? 'NEGATIVE' : 'POSITIVE',
+      category: transaction.category ?? '',
+    };
+  }
+
   /** Controparte e causale, senza ripetere lo stesso testo due volte. */
   protected textOf(transaction: Transaction): string {
     const counterparty = transaction.counterparty ?? '';
@@ -115,5 +161,9 @@ export class TransactionsPage implements OnInit {
       return counterparty || '(nessuna descrizione)';
     }
     return `${counterparty} ${description}`.trim();
+  }
+
+  private loadCategories(): void {
+    this.api.categories().subscribe({ next: (categories) => this.categories.set(categories) });
   }
 }

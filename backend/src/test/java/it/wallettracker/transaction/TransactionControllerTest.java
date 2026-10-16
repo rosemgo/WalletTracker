@@ -118,6 +118,54 @@ class TransactionControllerTest {
     }
 
     @Test
+    void aManualCategoryWinsOverTheRuleAndCanBeRemoved() {
+        // "Canone Mensile" è una regola di partenza: tipo EXPENSE, categoria "Costi bancari".
+        BankTransaction fee = transaction(account(), LocalDate.of(2026, 9, 1), "-2.00", "Canone Mensile conto");
+        classificationService.classifyAll();
+
+        assertThat(correctCategory(fee, "\"  Banca  \""))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.category").isEqualTo("Banca"); // senza gli spazi
+                    json.assertThat().extractingPath("$.manualCategory").isEqualTo("Banca");
+                    json.assertThat().extractingPath("$.type").isEqualTo("EXPENSE");
+                });
+
+        // Anche una correzione del tipo (che riclassifica tutto) non la perde.
+        assertThat(correct(fee, "\"INCOME\"")).hasStatusOk()
+                .bodyJson().extractingPath("$.category").isEqualTo("Banca");
+        correct(fee, "null");
+
+        // Tolta la scelta manuale, torna la categoria della regola. Una stringa vuota vale come null.
+        assertThat(correctCategory(fee, "\"  \""))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.category").isEqualTo("Costi bancari");
+                    json.assertThat().extractingPath("$.manualCategory").isNull();
+                });
+    }
+
+    @Test
+    void categoriesFromRulesAndMovementsAreSuggestedInAlphabeticalOrder() {
+        BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-30.00", "NEGOZIO");
+        classificationService.classifyAll();
+        correctCategory(purchase, "\"abbigliamento\"");
+
+        assertThat(mvc.get().uri("/api/categories"))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    // "abbigliamento" (minuscola) viene prima di "Capital gain", come in un dizionario.
+                    json.assertThat().extractingPath("$[0]").isEqualTo("abbigliamento");
+                    json.assertThat().extractingPath("$[1]").isEqualTo("Capital gain");
+                    // "Costi bancari" c'è in due regole di partenza, ma compare una volta sola.
+                    json.assertThat().extractingPath("$").asArray().containsOnlyOnce("Costi bancari");
+                });
+    }
+
+    @Test
     void wrongRequestsAreRejected() {
         assertThat(mvc.get().uri("/api/transactions?type=BOH")).hasStatus(400);
         assertThat(mvc.put().uri("/api/transactions/999999/manual-type")
@@ -125,6 +173,16 @@ class TransactionControllerTest {
                 .content("{\"type\": \"EXPENSE\"}"))
                 .hasStatus(404)
                 .bodyJson().extractingPath("$.detail").isEqualTo("Movimento 999999 non trovato");
+        BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-30.00", "NEGOZIO");
+        assertThat(correctCategory(purchase, "\"" + "x".repeat(101) + "\"")).hasStatus(400);
+    }
+
+    /** Manda la categoria scelta a mano; {@code category} è già in formato JSON. */
+    private MvcTestResult correctCategory(BankTransaction transaction, String category) {
+        return mvc.put().uri("/api/transactions/{id}/manual-category", transaction.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"category\": " + category + "}")
+                .exchange();
     }
 
     /** Manda la correzione; {@code type} è già in formato JSON (es. {@code "\"IGNORED\""} oppure {@code "null"}). */

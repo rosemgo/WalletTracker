@@ -95,6 +95,10 @@ public class BankTransaction {
     @Column(name = "manual_type")
     private TransactionType manualType;
 
+    /** La categoria scelta a mano dall'utente (migrazione V9): se presente, vince su quella delle regole. */
+    @Column(name = "manual_category")
+    private String manualCategory;
+
     protected BankTransaction() {
     }
 
@@ -114,10 +118,13 @@ public class BankTransaction {
         this.importedAt = Instant.now();
     }
 
-    /** Assegna il risultato della classificazione. */
+    /**
+     * Assegna il risultato della classificazione. La categoria scelta a mano, se c'è, vince su quella
+     * proposta dalla classificazione.
+     */
     public void classify(TransactionType type, String category, Long ruleId, Long transferPeerId) {
         this.type = type;
-        this.category = category;
+        this.category = manualCategory != null ? manualCategory : category;
         this.ruleId = ruleId;
         this.transferPeerId = transferPeerId;
     }
@@ -145,6 +152,15 @@ public class BankTransaction {
 
     public TransactionType getManualType() {
         return manualType;
+    }
+
+    /** Categoria scelta a mano (dalla dashboard): {@code null} la toglie. */
+    public void setManualCategory(String manualCategory) {
+        this.manualCategory = manualCategory;
+    }
+
+    public String getManualCategory() {
+        return manualCategory;
     }
 
     public Long getId() {

@@ -41,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       sappiamo cos'è, quindi → TO_REVIEW, da classificare a mano;</li>
  *   <li><b>ultima risorsa</b>: uscita → EXPENSE, entrata → INCOME.</li>
  * </ol>
+ * La <b>categoria</b> segue una regola a parte: quella scelta a mano dall'utente, se c'è, vince sempre;
+ * altrimenti è quella della regola che ha deciso il tipo (vedi {@link BankTransaction#classify}).
  *
  * <p>Il ruolo del conto conta solo in pochi casi: EXCLUDED (conto ignorato), INVESTMENT e CREDIT_CARD,
  * che servono a dare il nome giusto ai trasferimenti (versamento, prelievo, saldo della carta). Non decide

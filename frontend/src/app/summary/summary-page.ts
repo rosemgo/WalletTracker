@@ -9,6 +9,18 @@ import { MonthlyChart } from './monthly-chart';
 /** I periodi che si possono scegliere, in mesi (il mese in corso compreso). */
 const PERIODS = [6, 12, 24];
 
+/** Quante categorie mostrare una per una: le altre finiscono insieme in "Altre categorie". */
+const TOP_CATEGORIES = 8;
+
+/** Una riga delle spese per categoria, pronta da mostrare. */
+interface CategoryRow {
+  label: string;
+  amount: number;
+  share: number; // la parte delle spese totali, da 0 a 1
+  barPercent: number; // la lunghezza della barra, rispetto alla categoria più alta
+  muted: boolean; // "Senza categoria" e "Altre categorie" sono mostrate in grigio
+}
+
 /**
  * Il riepilogo: entrate, spese e risparmio del periodo, mese per mese.
  *
@@ -42,6 +54,40 @@ export class SummaryPage implements OnInit {
   protected readonly savingsRate = computed(() => {
     const total = this.current()?.total;
     return total && total.income > 0 ? total.savings / total.income : null;
+  });
+
+  /**
+   * Le spese per categoria, dalla più alta. Oltre le prime TOP_CATEGORIES, le altre vengono sommate in una
+   * riga sola: un elenco di 30 categorie non si legge. Una categoria con più rimborsi che spese ha un
+   * totale negativo: la barra non si disegna, ma l'importo resta scritto.
+   */
+  protected readonly categoryRows = computed<CategoryRow[]>(() => {
+    const current = this.current();
+    if (!current) {
+      return [];
+    }
+    const all = current.expensesByCategory;
+    const top = all.slice(0, TOP_CATEGORIES);
+    const rest = all.slice(TOP_CATEGORIES);
+    const rows = top.map((c) => ({
+      label: c.category ?? 'Senza categoria',
+      amount: c.amount,
+      muted: c.category === null,
+    }));
+    if (rest.length > 0) {
+      rows.push({
+        label: `Altre categorie (${rest.length})`,
+        amount: rest.reduce((sum, c) => sum + c.amount, 0),
+        muted: true,
+      });
+    }
+    const highest = Math.max(0, ...rows.map((r) => r.amount));
+    const total = current.total.expenses;
+    return rows.map((r) => ({
+      ...r,
+      share: total > 0 ? r.amount / total : 0,
+      barPercent: highest > 0 ? (Math.max(r.amount, 0) / highest) * 100 : 0,
+    }));
   });
 
   ngOnInit(): void {

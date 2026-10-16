@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
@@ -17,6 +18,7 @@ import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
+import it.wallettracker.transaction.TransactionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,6 +107,41 @@ class SummaryControllerTest {
     }
 
     @Test
+    void expensesAreGroupedByCategoryAndRefundsReduceTheirCategory() {
+        Account account = account();
+        BankTransaction shoes = transaction(account, "2026-10-02", "-120.00", "NEGOZIO SCARPE", "EUR");
+        BankTransaction refund = transaction(account, "2026-10-09", "40.00", "RIMBORSO NEGOZIO SCARPE", "EUR");
+        BankTransaction groceries = transaction(account, "2026-10-03", "-60.00", "SUPERMERCATO", "EUR");
+        transaction(account, "2026-10-04", "-15.00", "EDICOLA", "EUR"); // senza categoria
+        transaction(account, "2026-10-05", "-2.00", "Canone Mensile", "EUR"); // regola: "Costi bancari"
+        shoes.setManualCategory("Abbigliamento");
+        refund.setManualCategory("Abbigliamento");
+        refund.setManualType(TransactionType.EXPENSE); // un rimborso è una spesa "al contrario"
+        groceries.setManualCategory("Spesa");
+        transactionRepository.saveAll(List.of(shoes, refund, groceries));
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/summary/monthly?from=2026-10&to=2026-10"))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    // Dalla spesa più alta: 120 - 40 di rimborso = 80.
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory.length()").isEqualTo(4);
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[0].category")
+                            .isEqualTo("Abbigliamento");
+                    amount(json, "$.currencies[0].expensesByCategory[0].amount", "80");
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[0].movements").isEqualTo(2);
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[1].category").isEqualTo("Spesa");
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[2].category").isNull();
+                    amount(json, "$.currencies[0].expensesByCategory[2].amount", "15");
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[3].category")
+                            .isEqualTo("Costi bancari");
+                    // Il rimborso riduce anche le spese del mese: 120 - 40 + 60 + 15 + 2.
+                    amount(json, "$.currencies[0].total.expenses", "157");
+                });
+    }
+
+    @Test
     void differentCurrenciesAreNeverAddedTogether() {
         Account account = account();
         transaction(account, "2026-10-05", "-100.00", "SUPERMERCATO", "EUR");
@@ -163,8 +200,9 @@ class SummaryControllerTest {
                 "Conto " + counter, "EUR"));
     }
 
-    private void transaction(Account account, String date, String amount, String description, String currency) {
-        transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
+    private BankTransaction transaction(Account account, String date, String amount, String description,
+            String currency) {
+        return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
                 LocalDate.parse(date), null, new BigDecimal(amount), currency, null, description, "{}"));
     }
 

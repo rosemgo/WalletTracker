@@ -1,5 +1,7 @@
 package it.wallettracker.transaction;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -47,5 +49,18 @@ public class TransactionController {
 
     /** Il corpo della richiesta di correzione: {@code type} può essere null. */
     public record ManualTypeChange(TransactionType type) {
+    }
+
+    /**
+     * {@code PUT /api/transactions/{id}/manual-category} con corpo {@code {"category": "Spesa"}}: sceglie a
+     * mano la categoria. Con {@code {"category": null}} la scelta viene tolta.
+     */
+    @PutMapping("/{id}/manual-category")
+    public TransactionDto correctCategory(@PathVariable Long id, @Valid @RequestBody ManualCategoryChange change) {
+        return transactionService.correctCategory(id, change.category());
+    }
+
+    /** Il corpo della richiesta: {@code category} può essere null; al massimo 100 caratteri, come nelle regole. */
+    public record ManualCategoryChange(@Size(max = 100) String category) {
     }
 }

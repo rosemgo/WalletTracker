@@ -50,8 +50,38 @@
           <td>{{ accountNames().get(t.accountId) }}</td>
           <td>
             {{ textOf(t) }}
-            @if (t.category) {
-              <div class="secondary">{{ t.category }}</div>
+            @if (editingCategory() === t.id) {
+              <!--
+                #categoryInput è una "variabile del template": dà un nome all'elemento <input>, così i
+                pulsanti qui accanto possono leggerne il valore (categoryInput.value) senza un campo nella classe.
+              -->
+              <div class="category-edit">
+                <input
+                  #categoryInput
+                  list="categories"
+                  maxlength="100"
+                  [value]="t.category ?? ''"
+                  [attr.aria-label]="'Categoria del movimento ' + t.id"
+                  placeholder="es. Spesa alimentare"
+                  (keydown.enter)="saveCategory(t, categoryInput.value)"
+                  (keydown.escape)="editingCategory.set(null)"
+                />
+                <button type="button" (click)="saveCategory(t, categoryInput.value)">Salva</button>
+                <button type="button" class="link" (click)="editingCategory.set(null)">
+                  annulla
+                </button>
+              </div>
+            } @else {
+              <div class="secondary">
+                {{ t.category ?? 'senza categoria' }}
+                @if (t.manualCategory) {
+                  (scelta a mano)
+                }
+                ·
+                <button type="button" class="link" (click)="editingCategory.set(t.id)">
+                  modifica
+                </button>
+              </div>
             }
           </td>
           <td class="amount" [class.negative]="t.amount < 0" [class.positive]="t.amount > 0">
@@ -63,13 +93,21 @@
               (change)="onCorrect(t, $event)"
             >
               @for (type of types; track type) {
-                <option [value]="type" [selected]="type === t.type">{{ typeLabels[type] }}</option>
+                <option [value]="type" [selected]="type === t.type">
+                  {{ typeLabel(t, type) }}
+                </option>
               }
             </select>
             @if (t.manualType) {
               <div class="secondary">
                 corretto a mano ·
                 <button type="button" class="link" (click)="onResetCorrection(t)">annulla</button>
+              </div>
+            }
+            @if (t.manualType || t.manualCategory) {
+              <div class="secondary">
+                <a routerLink="/regole" [queryParams]="ruleParams(t)">crea una regola</a> per i
+                movimenti simili
               </div>
             }
           </td>
@@ -101,3 +139,10 @@
 } @else if (loading()) {
   <p>Caricamento...</p>
 }
+
+<!-- I suggerimenti per il campo categoria (attributo list="categories"): le categorie già usate. -->
+<datalist id="categories">
+  @for (category of categories(); track category) {
+    <option [value]="category"></option>
+  }
+</datalist>

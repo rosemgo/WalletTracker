@@ -95,4 +95,33 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
         long getMovements();
     }
+
+    /** Le categorie usate nei movimenti, senza doppioni (per i suggerimenti della dashboard). */
+    @Query("SELECT DISTINCT t.category FROM BankTransaction t WHERE t.category IS NOT NULL")
+    List<String> findDistinctCategories();
+
+    /**
+     * Le spese di un periodo per valuta e categoria, già sommate (vedi {@link #sumByMonthAndType}).
+     * Solo i movimenti di tipo {@code EXPENSE}: un rimborso segnato come spesa (importo positivo) riduce
+     * il totale della sua categoria. La categoria è null per le spese senza categoria.
+     */
+    @Query("""
+            SELECT t.currency AS currency, t.category AS category, SUM(t.amount) AS total, COUNT(t) AS movements
+            FROM BankTransaction t
+            WHERE t.type = it.wallettracker.transaction.TransactionType.EXPENSE
+              AND t.bookingDate >= :from AND t.bookingDate < :to
+            GROUP BY t.currency, t.category
+            """)
+    List<CategoryTotal> sumExpensesByCategory(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Una riga di {@link #sumExpensesByCategory}. */
+    interface CategoryTotal {
+        String getCurrency();
+
+        String getCategory();
+
+        BigDecimal getTotal();
+
+        long getMovements();
+    }
 }

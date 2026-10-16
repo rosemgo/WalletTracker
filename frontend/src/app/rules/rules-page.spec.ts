@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { Rule, RulePreview, RuleRequest } from '../api/models';
@@ -23,8 +24,12 @@ describe('RulesPage', () => {
   const created: RuleRequest[] = [];
   const updated: [number, RuleRequest][] = [];
   let previews = 0;
+  let previewed: RuleRequest[];
+  let queryParams: Record<string, string>;
 
   beforeEach(() => {
+    previewed = [];
+    queryParams = {};
     created.length = 0;
     updated.length = 0;
     previews = 0;
@@ -38,14 +43,31 @@ describe('RulesPage', () => {
         updated.push([id, rule]);
         return of({ ...DIVIDEND, ...rule });
       },
-      previewRule: () => {
+      categories: () => of(['Dividendi']),
+      previewRule: (rule: RuleRequest) => {
+        previewed.push(rule);
         previews++;
         return of<RulePreview>({ matches: 4, examples: [] });
       },
     };
     TestBed.configureTestingModule({
       imports: [RulesPage],
-      providers: [{ provide: WalletApi, useValue: fakeApi }],
+      providers: [
+        provideRouter([]),
+        { provide: WalletApi, useValue: fakeApi },
+        // L'indirizzo finto: queryParams viene letto quando la pagina parte, quindi un test può
+        // cambiarlo prima di createComponent.
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              get queryParamMap() {
+                return convertToParamMap(queryParams);
+              },
+            },
+          },
+        },
+      ],
     });
   });
 
@@ -145,5 +167,41 @@ describe('RulesPage', () => {
 
     expect(previews).toBe(1);
     expect(page.textContent).toMatch(/corrisponde a\s*4\s*movimenti/);
+  });
+
+  it('fills the form from a correction (address parameters) and tries the rule right away', async () => {
+    queryParams = {
+      pattern: 'NETFLIX.COM',
+      resultType: 'EXPENSE',
+      amountSign: 'NEGATIVE',
+      category: 'Abbonamenti',
+    };
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(previewed).toEqual([
+      {
+        name: 'Movimenti con "NETFLIX.COM"',
+        pattern: 'NETFLIX.COM',
+        matchMode: 'CONTAINS',
+        amountSign: 'NEGATIVE',
+        resultType: 'EXPENSE',
+        category: 'Abbonamenti',
+        priority: 100,
+        enabled: true,
+      },
+    ]);
+    expect(page.textContent).toContain('Modulo compilato dalla tua correzione');
+    expect(created).toEqual([]); // salva solo l'utente
+  });
+
+  it('ignores unknown values in the address', async () => {
+    queryParams = { pattern: 'BAR', resultType: 'BOH', amountSign: '<script>' };
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+
+    expect(previewed[0].resultType).toBe('EXPENSE'); // il valore predefinito
+    expect(previewed[0].amountSign).toBe('ANY');
   });
 });

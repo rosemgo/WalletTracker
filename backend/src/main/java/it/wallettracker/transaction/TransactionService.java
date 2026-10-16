@@ -56,4 +56,18 @@ public class TransactionService {
         classificationService.classifyAll();
         return TransactionDto.from(transaction);
     }
+
+    /**
+     * Sceglie a mano la categoria di un movimento ({@code null} o vuota la toglie: torna a deciderla la
+     * regola, se c'è). Gli spazi all'inizio e alla fine non contano.
+     */
+    @Transactional
+    public TransactionDto correctCategory(Long id, String manualCategory) {
+        BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
+        String category = manualCategory == null || manualCategory.isBlank() ? null : manualCategory.trim();
+        transaction.setManualCategory(category);
+        // Riclassifichiamo per ritrovare la categoria della regola quando la scelta manuale viene tolta.
+        classificationService.classifyAll();
+        return TransactionDto.from(transaction);
+    }
 }

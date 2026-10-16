@@ -1,6 +1,7 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 
 import {
   AMOUNT_SIGNS,
@@ -10,7 +11,7 @@ import {
   TYPES,
   TYPE_LABELS,
 } from '../api/labels';
-import { Rule, RulePreview, RuleRequest } from '../api/models';
+import { AmountSign, Rule, RulePreview, RuleRequest, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
 /** I valori del modulo per una regola nuova. */
@@ -39,6 +40,7 @@ const NEW_RULE: RuleRequest = {
 })
 export class RulesPage implements OnInit {
   private readonly api = inject(WalletApi);
+  private readonly route = inject(ActivatedRoute);
 
   /**
    * Il "costruttore di moduli". NonNullable: con reset() i campi tornano al valore iniziale, non a null,
@@ -58,6 +60,8 @@ export class RulesPage implements OnInit {
   protected readonly preview = signal<RulePreview | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
+  /** Le categorie già usate, suggerite nel campo "Categoria". */
+  protected readonly categories = signal<string[]>([]);
 
   /**
    * Il modulo: un FormGroup con un FormControl per ogni campo. Per ogni campo: [valore iniziale, validatori].
@@ -80,6 +84,36 @@ export class RulesPage implements OnInit {
 
   ngOnInit(): void {
     this.loadRules();
+    this.api.categories().subscribe({ next: (categories) => this.categories.set(categories) });
+    this.prefillFromAddress();
+  }
+
+  /**
+   * "Crea una regola da questa correzione" (pagina Movimenti) arriva qui con i dati nell'indirizzo:
+   * /regole?pattern=NETFLIX&resultType=EXPENSE&amountSign=NEGATIVE&category=Abbonamenti.
+   * Compiliamo il modulo e facciamo subito la prova, così l'utente vede a quali movimenti si
+   * applicherebbe prima di salvare. I valori che non conosciamo vengono ignorati: l'indirizzo lo può
+   * scrivere chiunque, quindi non ci fidiamo (e comunque l'ultima parola resta al backend).
+   */
+  private prefillFromAddress(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const pattern = params.get('pattern')?.trim();
+    if (!pattern) {
+      return;
+    }
+    const resultType = params.get('resultType') as TransactionType;
+    const amountSign = params.get('amountSign') as AmountSign;
+    this.form.patchValue({
+      name: `Movimenti con "${pattern}"`.slice(0, 100),
+      pattern: pattern.slice(0, 200),
+      ...(this.types.includes(resultType) ? { resultType } : {}),
+      ...(this.amountSigns.includes(amountSign) ? { amountSign } : {}),
+      category: (params.get('category') ?? '').slice(0, 100),
+    });
+    this.message.set(
+      'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.',
+    );
+    this.tryRule();
   }
 
   /** "Modifica": carica la regola nel modulo. */

@@ -8,7 +8,9 @@ import java.time.LocalDate;
  * Il JSON originale della banca ({@code rawJson}) non c'è: è grande e alla lista non serve.
  *
  * @param type           il tipo deciso dalla classificazione (tiene già conto della correzione manuale)
+ * @param category       la categoria (tiene già conto di quella scelta a mano)
  * @param manualType     la correzione manuale, null se non c'è
+ * @param manualCategory la categoria scelta a mano, null se non c'è
  * @param transferPeerId per i trasferimenti: l'id del movimento sull'altro conto
  */
 public record TransactionDto(
@@ -24,6 +26,7 @@ public record TransactionDto(
         TransactionType type,
         String category,
         TransactionType manualType,
+        String manualCategory,
         Long transferPeerId) {
 
     public static TransactionDto from(BankTransaction transaction) {
@@ -40,6 +43,7 @@ public record TransactionDto(
                 transaction.getType(),
                 transaction.getCategory(),
                 transaction.getManualType(),
+                transaction.getManualCategory(),
                 transaction.getTransferPeerId());
     }
 }
