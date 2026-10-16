@@ -1,0 +1,101 @@
+<!-- La legenda: due serie, quindi serve sempre (il colore da solo non basta a capire chi è chi). -->
+<div class="legend">
+  <span><span class="swatch income"></span>Entrate</span>
+  <span><span class="swatch expenses"></span>Spese</span>
+</div>
+
+<!-- Su uno schermo stretto il grafico non si rimpicciolisce oltre una certa misura: scorre in orizzontale. -->
+<div class="chart-scroll">
+  <div class="chart">
+    <!--
+    viewBox: il sistema di coordinate del disegno (0,0 in alto a sinistra). Il browser lo scala sulla
+    larghezza disponibile, mantenendo le proporzioni.
+  -->
+    <svg
+      [attr.viewBox]="'0 0 ' + width + ' ' + height"
+      role="img"
+      aria-label="Entrate e spese mese per mese. I valori sono anche nella tabella sotto."
+    >
+      <!-- Le linee orizzontali della scala, con i valori a sinistra. -->
+      @for (tick of tickLines(); track tick.y) {
+        <line
+          class="grid"
+          [attr.x1]="plotLeft"
+          [attr.x2]="plotRight"
+          [attr.y1]="tick.y"
+          [attr.y2]="tick.y"
+        />
+        <text
+          class="axis"
+          [attr.x]="plotLeft - 8"
+          [attr.y]="tick.y"
+          text-anchor="end"
+          dominant-baseline="middle"
+        >
+          {{ tick.label }}
+        </text>
+      }
+
+      @for (band of bands(); track band.month.month) {
+        <!-- Lo sfondo del mese attivo, dietro le colonne. -->
+        @if (active() === band.index) {
+          <rect
+            class="highlight"
+            [attr.x]="band.x"
+            [attr.y]="plotTop"
+            [attr.width]="bandWidth()"
+            [attr.height]="baseline - plotTop"
+          />
+        }
+        @for (bar of band.bars; track bar.series) {
+          <path [attr.class]="'bar ' + bar.series" [attr.d]="bar.path" />
+        }
+        <text class="axis" [attr.x]="band.center" [attr.y]="baseline + 18" text-anchor="middle">
+          {{ band.label }}
+        </text>
+        <!--
+        L'area sensibile del mese: tutta la fascia, invisibile, più grande delle colonne così è facile da
+        "prendere" con il mouse. tabindex="0" la rende raggiungibile anche con il tasto Tab.
+      -->
+        <rect
+          class="hit"
+          tabindex="0"
+          [attr.x]="band.x"
+          [attr.y]="plotTop"
+          [attr.width]="bandWidth()"
+          [attr.height]="baseline - plotTop + 24"
+          [attr.aria-label]="band.month.month"
+          (pointerenter)="active.set(band.index)"
+          (pointerleave)="active.set(null)"
+          (focus)="active.set(band.index)"
+          (blur)="active.set(null)"
+        />
+      }
+
+      <line
+        class="baseline"
+        [attr.x1]="plotLeft"
+        [attr.x2]="plotRight"
+        [attr.y1]="baseline"
+        [attr.y2]="baseline"
+      />
+    </svg>
+
+    @if (tooltip(); as tip) {
+      <div class="tooltip" [style.left.%]="tip.leftPercent" [class.right]="tip.alignRight">
+        <div class="tooltip-title">{{ tip.month }}</div>
+        <div>
+          <span class="key income"></span
+          ><strong>{{ tip.values.income | currency: currency() }}</strong> entrate
+        </div>
+        <div>
+          <span class="key expenses"></span
+          ><strong>{{ tip.values.expenses | currency: currency() }}</strong> spese
+        </div>
+        <div>
+          <strong>{{ tip.values.savings | currency: currency() }}</strong> risparmio
+        </div>
+      </div>
+    }
+  </div>
+</div>

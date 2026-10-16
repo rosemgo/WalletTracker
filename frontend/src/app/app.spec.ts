@@ -32,6 +32,7 @@ describe('App', () => {
     const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
 
     expect(links.map((a) => a.textContent?.trim())).toEqual([
+      'Riepilogo',
       'Movimenti',
       'Conti',
       'Regole',

@@ -1,5 +1,7 @@
 package it.wallettracker.transaction;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,4 +62,37 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             """)
     Page<BankTransaction> search(@Param("accountId") Long accountId, @Param("type") TransactionType type,
             Pageable pageable);
+
+    /**
+     * I totali dei movimenti di un periodo, raggruppati per mese, valuta e tipo: una riga per ogni
+     * combinazione (es. "ottobre 2026, EUR, EXPENSE, -1234.56, 42 movimenti").
+     *
+     * <p>La somma la fa il database ({@code SUM} con {@code GROUP BY}): invece di caricare in Java migliaia
+     * di movimenti per sommarli, riceviamo poche decine di righe già pronte. {@code extract(year from ...)}
+     * estrae l'anno da una data. Il periodo va da {@code from} (incluso) a {@code to} (escluso).
+     */
+    @Query("""
+            SELECT extract(year from t.bookingDate) AS bookingYear,
+                   extract(month from t.bookingDate) AS bookingMonth,
+                   t.currency AS currency, t.type AS type, SUM(t.amount) AS total, COUNT(t) AS movements
+            FROM BankTransaction t
+            WHERE t.bookingDate >= :from AND t.bookingDate < :to
+            GROUP BY extract(year from t.bookingDate), extract(month from t.bookingDate), t.currency, t.type
+            """)
+    List<MonthlyTotal> sumByMonthAndType(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Una riga di {@link #sumByMonthAndType}. */
+    interface MonthlyTotal {
+        int getBookingYear();
+
+        int getBookingMonth();
+
+        String getCurrency();
+
+        TransactionType getType(); // null se il movimento non è ancora stato classificato
+
+        BigDecimal getTotal();
+
+        long getMovements();
+    }
 }

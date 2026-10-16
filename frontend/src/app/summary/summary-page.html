@@ -1,0 +1,112 @@
+<h1>Riepilogo</h1>
+
+<div class="filters">
+  <label>
+    Periodo
+    <select (change)="onPeriod($event)">
+      @for (p of periods; track p) {
+        <option [value]="p" [selected]="p === months()">Ultimi {{ p }} mesi</option>
+      }
+    </select>
+  </label>
+  @if ((summary()?.currencies?.length ?? 0) > 1) {
+    <label>
+      Valuta
+      <select (change)="onCurrency($event)">
+        @for (c of summary()!.currencies; track c.currency) {
+          <option [value]="c.currency" [selected]="c.currency === current()?.currency">
+            {{ c.currency }}
+          </option>
+        }
+      </select>
+    </label>
+  }
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (summary(); as s) {
+  @if (current(); as c) {
+    @if (c.total.toReview > 0) {
+      <div class="card warning">
+        {{ c.total.toReview }} movimenti sono <strong>da verificare</strong>: finché non li
+        classifichi, questi numeri sono incompleti.
+        <a routerLink="/movimenti">Vai ai movimenti</a> e filtra per "Da verificare".
+      </div>
+    }
+
+    <div class="tiles" [class.loading]="loading()">
+      <div class="tile">
+        <div class="tile-label">Entrate</div>
+        <div class="tile-value">{{ c.total.income | currency: c.currency }}</div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Spese</div>
+        <div class="tile-value">{{ c.total.expenses | currency: c.currency }}</div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Risparmio</div>
+        <div class="tile-value" [class.negative]="c.total.savings < 0">
+          {{ c.total.savings | currency: c.currency }}
+        </div>
+        @if (savingsRate() !== null) {
+          <div class="secondary">{{ savingsRate() | percent: '1.0-0' }} delle entrate</div>
+        }
+      </div>
+      <div class="tile">
+        <div class="tile-label">Rendite nette investimenti</div>
+        <div class="tile-value">{{ c.total.investmentNet | currency: c.currency }}</div>
+        <div class="secondary">cedole e dividendi meno le tasse</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Entrate e spese, mese per mese</h2>
+      <app-monthly-chart [months]="c.months" [currency]="c.currency" />
+    </div>
+
+    <!-- La tabella: gli stessi numeri del grafico, leggibili anche senza colori o senza mouse. -->
+    <div class="table-scroll">
+      <table [class.loading]="loading()">
+        <thead>
+          <tr>
+            <th>Mese</th>
+            <th class="amount">Entrate</th>
+            <th class="amount">Spese</th>
+            <th class="amount">Risparmio</th>
+            <th class="amount">Rendite nette</th>
+            <th class="amount">Da verificare</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of c.months; track m.month) {
+            <tr>
+              <td>{{ m.month + '-01' | date: 'MMMM yyyy' }}</td>
+              <td class="amount">{{ m.income | currency: c.currency }}</td>
+              <td class="amount">{{ m.expenses | currency: c.currency }}</td>
+              <td class="amount" [class.negative]="m.savings < 0">
+                {{ m.savings | currency: c.currency }}
+              </td>
+              <td class="amount">{{ m.investmentNet | currency: c.currency }}</td>
+              <td class="amount">{{ m.toReview || '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">
+      Contano solo le entrate e le spese vere: i trasferimenti tra i tuoi conti, il saldo della
+      carta di credito e la compravendita di titoli sono soldi che si spostano, non che entrano o
+      escono. Sono compresi i movimenti ancora in attesa.
+    </p>
+  } @else {
+    <p>
+      Nessun movimento in questo periodo. <a routerLink="/collega">Collega una banca</a> per
+      iniziare.
+    </p>
+  }
+} @else if (loading()) {
+  <p>Caricamento...</p>
+}

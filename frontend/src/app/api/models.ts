@@ -131,3 +131,30 @@ export interface SetupStatus {
   applicationId: string | null;
   redirectUrl: string; // da registrare nell'applicazione Enable Banking
 }
+
+/** I numeri di un mese (record MonthSummary nel backend). Le spese sono positive: 1200 = spesi 1200. */
+export interface MonthSummary {
+  month: string; // es. "2026-10"
+  income: number;
+  expenses: number;
+  savings: number; // entrate meno spese
+  investmentNet: number; // rendite meno tasse degli investimenti
+  toReview: number; // movimenti ancora da verificare in quel mese
+}
+
+/** I totali del periodo: le stesse voci di MonthSummary, senza il mese. */
+export type SummaryTotals = Omit<MonthSummary, 'month'>;
+
+/** Il riepilogo di una valuta: un elemento per mese, anche i mesi vuoti. */
+export interface CurrencySummary {
+  currency: string;
+  months: MonthSummary[];
+  total: SummaryTotals;
+}
+
+/** La risposta di GET /api/summary/monthly. */
+export interface Summary {
+  from: string;
+  to: string;
+  currencies: CurrencySummary[]; // vuoto se nel periodo non ci sono movimenti
+}

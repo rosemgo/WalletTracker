@@ -5,6 +5,7 @@ import { CallbackPage } from './link/callback-page';
 import { LinkPage } from './link/link-page';
 import { RulesPage } from './rules/rules-page';
 import { SettingsPage } from './settings/settings-page';
+import { SummaryPage } from './summary/summary-page';
 import { TransactionsPage } from './transactions/transactions-page';
 
 /**
@@ -12,7 +13,8 @@ import { TransactionsPage } from './transactions/transactions-page';
  * `title` diventa il titolo della scheda del browser.
  */
 export const routes: Routes = [
-  { path: '', redirectTo: 'movimenti', pathMatch: 'full' },
+  { path: '', redirectTo: 'riepilogo', pathMatch: 'full' },
+  { path: 'riepilogo', component: SummaryPage, title: 'Riepilogo · WalletTracker' },
   { path: 'movimenti', component: TransactionsPage, title: 'Movimenti · WalletTracker' },
   { path: 'conti', component: AccountsPage, title: 'Conti · WalletTracker' },
   { path: 'regole', component: RulesPage, title: 'Regole · WalletTracker' },
@@ -21,5 +23,5 @@ export const routes: Routes = [
   // L'indirizzo di ritorno dopo il login sulla banca: deve coincidere con il "redirect URL"
   // registrato su Enable Banking (https://localhost:8443/callback).
   { path: 'callback', component: CallbackPage, title: 'Collegamento · WalletTracker' },
-  { path: '**', redirectTo: 'movimenti' }, // qualsiasi altro indirizzo
+  { path: '**', redirectTo: 'riepilogo' }, // qualsiasi altro indirizzo
 ];

@@ -47,7 +47,7 @@ Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`S
 | 5 | **chiave privata cifrata** nel database (AES-256-GCM), con la chiave di cifratura **fuori** dal database | furto del database o di un suo backup | `security/SecretCipher` |
 | 6 | la chiave privata **non esce mai dalle API** | lettura dei segreti dalla dashboard | `setup/SetupService` (un test lo verifica) |
 | 7 | **credenziali verificate** prima di salvarle | configurazioni sbagliate | `setup/SetupService` |
-| 8 | **validazione** di ogni richiesta nel backend (Bean Validation) | dati malformati o malevoli | `RuleRequest`, `RoleChange`... |
+| 8 | **validazione** di ogni richiesta nel backend (Bean Validation), con limiti alle richieste pesanti (pagine da massimo 200 movimenti, riepiloghi da massimo 120 mesi) | dati malformati o malevoli, richieste che sovraccaricano il database | `RuleRequest`, `RoleChange`, `TransactionService`, `SummaryService`... |
 | 9 | **segreti esclusi da Git** (`.env`, `secrets/`, `*.pem`, `.data/`) | pubblicazione di segreti | `.gitignore` |
 | 10 | header **PSU** solo quando l'utente è davvero presente | violazione delle regole PSD2 | `web/PresentUser`, `docs/13` |
 | 11 | **Dependabot**: aggiornamenti delle librerie ogni settimana | librerie vulnerabili | `.github/dependabot.yml` |

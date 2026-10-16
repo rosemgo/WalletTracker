@@ -11,6 +11,7 @@ import {
   RulePreview,
   RuleRequest,
   SetupStatus,
+  Summary,
   SyncRound,
   Transaction,
   TransactionFilter,
@@ -118,5 +119,10 @@ export class WalletApi {
       applicationId,
       privateKeyPem,
     });
+  }
+
+  /** GET /api/summary/monthly?from=2025-11: il riepilogo da quel mese al mese in corso. */
+  monthlySummary(from: string): Observable<Summary> {
+    return this.http.get<Summary>('/api/summary/monthly', { params: { from } });
   }
 }
