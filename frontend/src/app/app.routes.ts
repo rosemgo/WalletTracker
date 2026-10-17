@@ -6,6 +6,7 @@ import { CallbackPage } from './link/callback-page';
 import { LinkPage } from './link/link-page';
 import { RulesPage } from './rules/rules-page';
 import { SettingsPage } from './settings/settings-page';
+import { SubscriptionsPage } from './subscriptions/subscriptions-page';
 import { SummaryPage } from './summary/summary-page';
 import { TransactionsPage } from './transactions/transactions-page';
 
@@ -17,6 +18,7 @@ export const routes: Routes = [
   { path: '', redirectTo: 'riepilogo', pathMatch: 'full' },
   { path: 'riepilogo', component: SummaryPage, title: 'Riepilogo · WalletTracker' },
   { path: 'budget', component: BudgetPage, title: 'Budget · WalletTracker' },
+  { path: 'abbonamenti', component: SubscriptionsPage, title: 'Abbonamenti · WalletTracker' },
   { path: 'movimenti', component: TransactionsPage, title: 'Movimenti · WalletTracker' },
   { path: 'conti', component: AccountsPage, title: 'Conti · WalletTracker' },
   { path: 'regole', component: RulesPage, title: 'Regole · WalletTracker' },

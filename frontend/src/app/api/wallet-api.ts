@@ -14,6 +14,9 @@ import {
   RulePreview,
   RuleRequest,
   SetupStatus,
+  SubscriptionConfirmation,
+  SubscriptionOverview,
+  SubscriptionSuggestion,
   Summary,
   SyncRound,
   Transaction,
@@ -164,5 +167,30 @@ export class WalletApi {
   /** GET /api/alerts: gli avvisi di adesso, dal più urgente. */
   alerts(): Observable<Alert[]> {
     return this.http.get<Alert[]>('/api/alerts');
+  }
+
+  /** GET /api/subscriptions: abbonamenti confermati, totali, esercenti ignorati. */
+  subscriptions(): Observable<SubscriptionOverview> {
+    return this.http.get<SubscriptionOverview>('/api/subscriptions');
+  }
+
+  /** GET /api/subscriptions/suggestions */
+  subscriptionSuggestions(): Observable<SubscriptionSuggestion[]> {
+    return this.http.get<SubscriptionSuggestion[]>('/api/subscriptions/suggestions');
+  }
+
+  /** POST /api/subscriptions: "sì, è un abbonamento". */
+  confirmSubscription(confirmation: SubscriptionConfirmation): Observable<void> {
+    return this.http.post<void>('/api/subscriptions', confirmation);
+  }
+
+  /** POST /api/subscriptions/dismissed: "no, non suggerirlo più". */
+  dismissSubscription(merchantKey: string, currency: string): Observable<void> {
+    return this.http.post<void>('/api/subscriptions/dismissed', { merchantKey, currency });
+  }
+
+  /** DELETE /api/subscriptions/{id}: cancella una decisione. */
+  deleteSubscription(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/subscriptions/${id}`);
   }
 }

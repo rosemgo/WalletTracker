@@ -1,0 +1,135 @@
+<h1>Abbonamenti</h1>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (overview(); as o) {
+  <!-- Il totale: quanto costano tutti gli abbonamenti attivi. -->
+  @for (total of o.totals; track total.currency) {
+    <div class="tiles">
+      <div class="tile">
+        <div class="tile-label">Al mese</div>
+        <div class="tile-value">{{ total.monthly | currency: total.currency }}</div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">All'anno</div>
+        <div class="tile-value">{{ total.yearly | currency: total.currency }}</div>
+      </div>
+    </div>
+  }
+
+  @if (o.subscriptions.length > 0) {
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Abbonamento</th>
+            <th class="amount">Importo</th>
+            <th class="amount">Al mese</th>
+            <th>Ultimo pagamento</th>
+            <th>Prossimo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of o.subscriptions; track s.id) {
+            <tr [class.disabled]="s.late">
+              <td>
+                {{ s.name }}
+                @if (s.priceChanged) {
+                  <div class="secondary">
+                    <!-- Un rincaro si nota: era l'importo al momento della conferma. -->
+                    prezzo cambiato: prima {{ s.expectedAmount | currency: s.currency }}
+                  </div>
+                }
+                @if (s.late) {
+                  <div class="secondary">
+                    ! nessun pagamento recente: forse l'hai disdetto? Non conta nel totale.
+                  </div>
+                }
+              </td>
+              <td class="amount">
+                {{ s.lastAmount ?? s.expectedAmount | currency: s.currency }}
+                {{ frequencyLabels[s.frequency] }}
+              </td>
+              <td class="amount">{{ s.monthlyCost | currency: s.currency }}</td>
+              <td>{{ s.lastDate ? (s.lastDate | date: 'dd/MM/yyyy') : '—' }}</td>
+              <td>{{ s.nextDate && !s.late ? (s.nextDate | date: 'dd/MM/yyyy') : '—' }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="link"
+                  (click)="remove(s.id, s.name + ' tolto dagli abbonamenti')"
+                >
+                  togli
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p>Nessun abbonamento confermato. Confermali dai suggerimenti qui sotto.</p>
+  }
+
+  <h2 class="section-title">Suggerimenti</h2>
+  <p class="hint">
+    WalletTracker cerca tra le spese degli ultimi 13 mesi i pagamenti allo stesso esercente che si
+    ripetono ogni mese (almeno 3 volte) o ogni anno, con importi simili. Sono solo suggerimenti:
+    conferma quelli giusti, ignora gli altri.
+  </p>
+  @for (suggestion of suggestions(); track suggestion.merchantKey + suggestion.currency) {
+    <div class="card suggestion">
+      <label class="suggestion-name">
+        Nome
+        <input
+          #nameInput
+          [value]="suggestion.name"
+          maxlength="100"
+          [attr.aria-label]="'Nome di ' + suggestion.name"
+        />
+      </label>
+      <div>
+        <strong>{{ suggestion.typicalAmount | currency: suggestion.currency }}</strong>
+        {{ frequencyLabels[suggestion.frequency] }} · {{ suggestion.occurrences }} pagamenti ·
+        ultimo il
+        {{ suggestion.lastDate | date: 'dd/MM/yyyy' }}
+      </div>
+      <div class="suggestion-actions">
+        <button type="button" (click)="confirm(suggestion, nameInput.value)">
+          È un abbonamento
+        </button>
+        <button type="button" class="link" (click)="dismiss(suggestion)">
+          no, non suggerirlo più
+        </button>
+      </div>
+    </div>
+  } @empty {
+    <p class="secondary">Nessun suggerimento al momento.</p>
+  }
+
+  @if (o.dismissed.length > 0) {
+    <details class="dismissed">
+      <summary>Esercenti che hai detto di non suggerire più ({{ o.dismissed.length }})</summary>
+      <ul>
+        @for (d of o.dismissed; track d.id) {
+          <li>
+            {{ d.merchantKey }} ({{ d.currency }}) ·
+            <button
+              type="button"
+              class="link"
+              (click)="remove(d.id, d.merchantKey + ' potrà essere suggerito di nuovo')"
+            >
+              suggeriscilo di nuovo
+            </button>
+          </li>
+        }
+      </ul>
+    </details>
+  }
+}

@@ -206,3 +206,50 @@ export interface Alert {
   items: string[]; // le categorie dei budget superati
   message: string | null; // il motivo dell'errore di sincronizzazione
 }
+
+/** Ogni quanto si ripete un abbonamento (enum Frequency nel backend). */
+export type Frequency = 'MONTHLY' | 'YEARLY';
+
+/** Un abbonamento suggerito (GET /api/subscriptions/suggestions). */
+export interface SubscriptionSuggestion {
+  merchantKey: string; // la "chiave" dell'esercente: va rimandata per confermare o ignorare
+  currency: string;
+  name: string; // il nome proposto: il testo dell'ultimo pagamento
+  frequency: Frequency;
+  typicalAmount: number;
+  occurrences: number;
+  lastDate: string;
+  nextDate: string;
+}
+
+/** Un abbonamento confermato, con i dati aggiornati dai movimenti. */
+export interface Subscription {
+  id: number;
+  merchantKey: string;
+  currency: string;
+  name: string;
+  frequency: Frequency;
+  expectedAmount: number; // l'importo al momento della conferma
+  lastAmount: number | null;
+  lastDate: string | null;
+  nextDate: string | null;
+  monthlyCost: number;
+  priceChanged: boolean;
+  late: boolean; // il pagamento previsto non è arrivato: forse disdetto?
+}
+
+/** La risposta di GET /api/subscriptions. */
+export interface SubscriptionOverview {
+  subscriptions: Subscription[];
+  totals: { currency: string; monthly: number; yearly: number }[];
+  dismissed: { id: number; merchantKey: string; currency: string }[];
+}
+
+/** Il corpo di POST /api/subscriptions. */
+export interface SubscriptionConfirmation {
+  merchantKey: string;
+  currency: string;
+  name: string;
+  frequency: Frequency;
+  expectedAmount: number;
+}
