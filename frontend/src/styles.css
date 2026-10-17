@@ -421,3 +421,97 @@ app-monthly-chart {
 .category-row.muted .category-bar {
   background: #9aa5b1;
 }
+
+/* ---- Budget ----
+   I colori di stato (verde, giallo, rosso) sono riservati agli stati: non vengono mai usati per le serie
+   dei grafici, e accanto c'è sempre un'icona con un'etichetta scritta. */
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.month-name {
+  min-width: 10rem;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.budget-list.loading {
+  opacity: 0.5;
+}
+
+.budget-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.status {
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.status.ok .status-icon,
+.meter-fill.ok {
+  background: #0ca30c;
+}
+
+.status.warning .status-icon,
+.meter-fill.warning {
+  background: #fab219;
+}
+
+.status.warning .status-icon {
+  color: #1f2933; /* sul giallo il bianco non si legge */
+}
+
+.status.over .status-icon,
+.meter-fill.over {
+  background: #d03b3b;
+}
+
+.meter {
+  position: relative;
+  height: 12px;
+  background: #e6e9ee;
+  border-radius: 6px;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 6px;
+}
+
+.meter-today {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+}
+
+.budget-numbers {
+  display: flex;
+  flex-wrap: wrap; /* su un telefono "restano ..." va a capo invece di attaccarsi all'importo */
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0 0.25rem;
+}

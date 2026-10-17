@@ -1,0 +1,128 @@
+<h1>Budget</h1>
+
+<p class="hint">
+  Un budget è quanto vuoi spendere al massimo in una categoria ogni mese. Contano solo le spese
+  vere: un rimborso ("Rimborso di una spesa") le riduce, i trasferimenti tra i tuoi conti non
+  contano mai.
+</p>
+
+<div class="month-nav">
+  <button type="button" aria-label="Mese precedente" (click)="changeMonth(-1)">‹</button>
+  <strong class="month-name">{{ month() + '-01' | date: 'MMMM yyyy' }}</strong>
+  <button
+    type="button"
+    aria-label="Mese successivo"
+    [disabled]="isCurrentMonth()"
+    (click)="changeMonth(1)"
+  >
+    ›
+  </button>
+</div>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<div class="budget-list" [class.loading]="loading()">
+  @for (b of budgets(); track b.id) {
+    <div class="card budget">
+      <div class="budget-head">
+        <strong>{{ b.category }}</strong>
+        <!-- Lo stato: icona colorata + etichetta scritta. Il colore da solo non basterebbe. -->
+        <span [class]="'status ' + b.status.toLowerCase()">
+          <span class="status-icon" aria-hidden="true">{{ statusInfo[b.status].icon }}</span>
+          {{ statusInfo[b.status].label }}
+        </span>
+      </div>
+
+      <!--
+        La barra: la parte colorata è quanto hai speso. Il trattino verticale ("oggi") è quanto avresti speso
+        finora spendendo in modo regolare: se la barra lo supera, stai spendendo più in fretta del previsto.
+      -->
+      <div
+        class="meter"
+        role="meter"
+        [attr.aria-valuenow]="b.spent"
+        [attr.aria-valuemax]="b.monthlyAmount"
+        aria-valuemin="0"
+        [attr.aria-label]="'Spesa di ' + b.category"
+      >
+        <div [class]="'meter-fill ' + b.status.toLowerCase()" [style.width.%]="barPercent(b)"></div>
+        @if (isCurrentMonth()) {
+          <div class="meter-today" [style.left.%]="expectedPercent(b)" title="oggi"></div>
+        }
+      </div>
+
+      <div class="budget-numbers">
+        <span>
+          <strong>{{ b.spent | currency: b.currency }}</strong> di
+          {{ b.monthlyAmount | currency: b.currency }}
+        </span>
+        @if (b.remaining >= 0) {
+          <span>restano {{ b.remaining | currency: b.currency }}</span>
+        } @else {
+          <span class="negative">superato di {{ -b.remaining | currency: b.currency }}</span>
+        }
+      </div>
+      <div class="secondary">
+        @if (isCurrentMonth()) {
+          a oggi, spendendo in modo regolare, saresti a
+          {{ b.expectedSoFar | currency: b.currency }} ·
+        }
+        media dei 3 mesi prima: {{ b.averageLast3Months | currency: b.currency }} ·
+        <button type="button" class="link" (click)="edit(b)">modifica</button> ·
+        <button type="button" class="link" (click)="remove(b)">elimina</button>
+      </div>
+    </div>
+  } @empty {
+    @if (!loading()) {
+      <p>Nessun budget. Crea il primo qui sotto: ad esempio "Spesa alimentare", 400 € al mese.</p>
+    }
+  }
+</div>
+
+<form class="card" [formGroup]="form" (ngSubmit)="save()">
+  <h2>{{ editing() ? 'Modifica il budget' : 'Nuovo budget' }}</h2>
+  <div class="form-grid">
+    <label>
+      Categoria
+      <input
+        formControlName="category"
+        list="budget-categories"
+        placeholder="es. Spesa alimentare"
+      />
+      <datalist id="budget-categories">
+        @for (category of categories(); track category) {
+          <option [value]="category"></option>
+        }
+      </datalist>
+      @if (showError('category')) {
+        <span class="error">Scrivi la categoria (al massimo 100 caratteri).</span>
+      }
+    </label>
+    <label>
+      Al mese, al massimo
+      <input formControlName="monthlyAmount" inputmode="decimal" placeholder="es. 400" />
+      @if (showError('monthlyAmount')) {
+        <span class="error">Un importo maggiore di zero, al massimo con due decimali.</span>
+      }
+    </label>
+    @if (currencies().length > 1) {
+      <label>
+        Valuta
+        <select formControlName="currency">
+          @for (c of currencies(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </label>
+    }
+  </div>
+  <button type="submit">{{ editing() ? 'Salva le modifiche' : 'Crea il budget' }}</button>
+  @if (editing()) {
+    <button type="button" class="link" (click)="cancel()">annulla</button>
+  }
+</form>

@@ -122,6 +122,96 @@ tipo Spesa, categoria Abbigliamento.
 
 ---
 
+## Approfondimento: un rimborso, dal clic al numero
+
+Seguiamo il rimborso Zalando di 40 € passo per passo, per vedere che cosa fa il frontend, che cosa fa il
+backend e che cosa finisce nel database.
+
+### 1. Il rimborso arriva dalla banca
+
+La sincronizzazione importa il movimento così com'è: **+40,00**, controparte "ZALANDO". Nessuna regola
+corrisponde, quindi il motore arriva all'ultima risorsa: importo positivo → `INCOME` (entrata).
+
+Il motore **non può sapere** che è un rimborso: +40 € da Zalando potrebbe anche essere un buono o un
+errore. Indovinare sarebbe pericoloso (ricordi la carta di credito, `docs/10`). Quindi lo dici tu.
+
+| Colonna | Valore |
+|---|---|
+| `amount` | 40.00 |
+| `type` | INCOME |
+| `manual_type` | NULL |
+| `category` / `manual_category` | NULL / NULL |
+
+### 2. Il frontend: solo un'etichetta diversa
+
+Nella pagina Movimenti il menu del tipo ha un'opzione per ogni valore di `TransactionType`. L'unica
+differenza per le entrate è **il testo** di un'opzione:
+
+```ts
+protected typeLabel(transaction: Transaction, type: TransactionType): string {
+  return type === 'EXPENSE' && transaction.amount > 0
+    ? 'Rimborso di una spesa'
+    : this.typeLabels[type];
+}
+```
+
+```html
+<option [value]="type" ...>{{ typeLabel(t, type) }}</option>
+```
+
+Il **valore** dell'opzione resta `EXPENSE`. Cambia solo la scritta che vedi, perché "Spesa" su
+un'entrata di +40 € confonderebbe. Quando la scegli, parte la stessa richiesta di qualsiasi correzione
+del tipo:
+
+```
+PUT /api/transactions/123/manual-type      {"type": "EXPENSE"}
+```
+
+### 3. Il backend: una correzione manuale come le altre
+
+`TransactionService.correctType` salva `manual_type = EXPENSE` e riclassifica. Nel motore la correzione
+manuale vince (passo 2 dell'ordine in `ClassificationService`), quindi il tipo diventa `EXPENSE`. Poi dai
+la categoria con "modifica" (`PUT .../manual-category {"category": "Abbigliamento"}`).
+
+| Colonna | Valore |
+|---|---|
+| `amount` | **40.00** (non cambia mai: è il dato della banca) |
+| `type` | **EXPENSE** |
+| `manual_type` | EXPENSE |
+| `category` / `manual_category` | Abbigliamento / Abbigliamento |
+
+**Nel backend la parola "rimborso" non esiste.** Non c'è un tipo `REFUND` né un `if` speciale: c'è solo
+una spesa con l'importo positivo.
+
+### 4. Il calcolo: la somma con il segno fa tutto
+
+Il riepilogo, le spese per categoria e i budget usano la stessa idea: il database **somma gli importi con
+il loro segno**, poi Java cambia segno per avere una spesa positiva.
+
+```sql
+SELECT category, SUM(amount) ... WHERE type = 'EXPENSE' GROUP BY category
+```
+
+| Movimento | `amount` |
+|---|---|
+| scarpe | −120.00 |
+| rimborso | +40.00 |
+| **SUM** | **−80.00** → `negate()` → **80 € spesi in Abbigliamento** |
+
+Se il rimborso fosse rimasto `INCOME`, la stessa query non lo vedrebbe (filtra `type = 'EXPENSE'`): le
+spese sarebbero 120 € e le entrate gonfiate di 40 €.
+
+### 5. Perché non un tipo "Rimborso" a parte?
+
+Avremmo potuto aggiungere `REFUND` all'enum. Ma ogni parte del programma che conta le spese (riepilogo,
+categorie, budget, e quelle future) avrebbe dovuto ricordarsi di sottrarlo: basta dimenticarlo in un
+punto per avere un numero sbagliato. Con il segno, la matematica è giusta **da sola**, ovunque.
+
+È anche per questo che una regola può gestire i rimborsi in automatico: testo "ZALANDO", **solo
+entrate**, tipo Spesa, categoria Abbigliamento.
+
+---
+
 ## Parte B: il backend
 
 | File | Cosa cambia |

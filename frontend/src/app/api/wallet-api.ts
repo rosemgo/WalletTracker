@@ -6,6 +6,8 @@ import {
   Account,
   AccountRole,
   Bank,
+  Budget,
+  BudgetRequest,
   LinkResult,
   Rule,
   RulePreview,
@@ -136,5 +138,25 @@ export class WalletApi {
   /** GET /api/summary/monthly?from=2025-11: il riepilogo da quel mese al mese in corso. */
   monthlySummary(from: string): Observable<Summary> {
     return this.http.get<Summary>('/api/summary/monthly', { params: { from } });
+  }
+
+  /** GET /api/budgets?month=2026-10 */
+  budgets(month: string): Observable<Budget[]> {
+    return this.http.get<Budget[]>('/api/budgets', { params: { month } });
+  }
+
+  /** POST /api/budgets */
+  createBudget(budget: BudgetRequest): Observable<Budget> {
+    return this.http.post<Budget>('/api/budgets', budget);
+  }
+
+  /** PUT /api/budgets/{id} */
+  updateBudget(id: number, budget: BudgetRequest): Observable<Budget> {
+    return this.http.put<Budget>(`/api/budgets/${id}`, budget);
+  }
+
+  /** DELETE /api/budgets/{id} */
+  deleteBudget(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/budgets/${id}`);
   }
 }

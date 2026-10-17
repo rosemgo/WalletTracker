@@ -167,3 +167,23 @@ export interface Summary {
   to: string;
   currencies: CurrencySummary[]; // vuoto se nel periodo non ci sono movimenti
 }
+
+/** Come sta andando un budget (enum BudgetStatus nel backend). */
+export type BudgetStatus = 'OK' | 'WARNING' | 'OVER';
+
+/** I dati di un budget che l'utente può scrivere (POST/PUT /api/budgets). */
+export interface BudgetRequest {
+  category: string;
+  currency: string; // es. "EUR"
+  monthlyAmount: number;
+}
+
+/** Un budget con l'andamento del mese scelto (GET /api/budgets?month=2026-10). */
+export interface Budget extends BudgetRequest {
+  id: number;
+  spent: number; // le spese della categoria nel mese (i rimborsi le riducono)
+  remaining: number; // negativo = superato
+  expectedSoFar: number; // quanto "dovresti" aver speso finora spendendo in modo regolare
+  averageLast3Months: number; // la spesa media nei 3 mesi prima
+  status: BudgetStatus;
+}

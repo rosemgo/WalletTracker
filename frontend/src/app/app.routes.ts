@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AccountsPage } from './accounts/accounts-page';
+import { BudgetPage } from './budget/budget-page';
 import { CallbackPage } from './link/callback-page';
 import { LinkPage } from './link/link-page';
 import { RulesPage } from './rules/rules-page';
@@ -15,6 +16,7 @@ import { TransactionsPage } from './transactions/transactions-page';
 export const routes: Routes = [
   { path: '', redirectTo: 'riepilogo', pathMatch: 'full' },
   { path: 'riepilogo', component: SummaryPage, title: 'Riepilogo · WalletTracker' },
+  { path: 'budget', component: BudgetPage, title: 'Budget · WalletTracker' },
   { path: 'movimenti', component: TransactionsPage, title: 'Movimenti · WalletTracker' },
   { path: 'conti', component: AccountsPage, title: 'Conti · WalletTracker' },
   { path: 'regole', component: RulesPage, title: 'Regole · WalletTracker' },

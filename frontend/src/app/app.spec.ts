@@ -33,6 +33,7 @@ describe('App', () => {
 
     expect(links.map((a) => a.textContent?.trim())).toEqual([
       'Riepilogo',
+      'Budget',
       'Movimenti',
       'Conti',
       'Regole',
