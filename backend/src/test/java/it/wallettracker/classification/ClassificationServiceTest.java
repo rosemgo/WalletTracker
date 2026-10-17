@@ -11,6 +11,8 @@ import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.transaction.BankTransaction;
@@ -45,6 +47,9 @@ class ClassificationServiceTest {
 
     @Autowired
     BankConnectionRepository connectionRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     private int counter;
 
@@ -113,7 +118,7 @@ class ClassificationServiceTest {
         classificationService.classifyAll();
 
         assertThat(typeOf(dividend)).isEqualTo(TransactionType.INVESTMENT_INCOME);
-        assertThat(reload(dividend).getCategory()).isEqualTo("Dividendi");
+        assertThat(reload(dividend).getCategory().getId()).isEqualTo(category("Dividendi").getId());
     }
 
     @Test
@@ -322,5 +327,10 @@ class ClassificationServiceTest {
 
     private TransactionType typeOf(BankTransaction transaction) {
         return reload(transaction).getType();
+    }
+
+    /** Una categoria dell'elenco di partenza, per nome. */
+    private Category category(String name) {
+        return categoryRepository.findByNameIgnoreCase(name).orElseThrow();
     }
 }

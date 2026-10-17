@@ -24,10 +24,5 @@ public record RuleRequest(
         @NotBlank @Size(min = 2, max = 200) String pattern,
         @NotNull AmountSign amountSign,
         @NotNull TransactionType resultType,
-        @Size(max = 100) String category) {
-
-    /** Una categoria vuota ("") viene salvata come "nessuna categoria" (null). */
-    String categoryOrNull() {
-        return category == null || category.isBlank() ? null : category.trim();
-    }
+        Long categoryId) { // l'id di una categoria dell'elenco, oppure null (nessuna categoria)
 }

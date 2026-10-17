@@ -68,7 +68,8 @@ public class SummaryService {
         Map<String, List<CategoryExpense>> categoriesByCurrency = new TreeMap<>();
         for (CategoryTotal row : repository.sumExpensesByCategory(start, end)) {
             categoriesByCurrency.computeIfAbsent(row.getCurrency(), currency -> new ArrayList<>())
-                    .add(new CategoryExpense(row.getCategory(), row.getTotal().negate(), row.getMovements()));
+                    .add(new CategoryExpense(row.getCategoryId(), row.getCategory(), row.getTotal().negate(),
+                            row.getMovements()));
         }
 
         // 2. Per ogni valuta, un elemento per OGNI mese del periodo: anche i mesi vuoti, così il grafico

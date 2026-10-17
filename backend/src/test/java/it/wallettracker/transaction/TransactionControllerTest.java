@@ -10,6 +10,8 @@ import java.time.temporal.ChronoUnit;
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
@@ -43,6 +45,9 @@ class TransactionControllerTest {
 
     @Autowired
     BankConnectionRepository connectionRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     private int counter;
 
@@ -123,12 +128,14 @@ class TransactionControllerTest {
         BankTransaction fee = transaction(account(), LocalDate.of(2026, 9, 1), "-2.00", "Canone Mensile conto");
         classificationService.classifyAll();
 
-        assertThat(correctCategory(fee, "\"  shopping  \""))
+        Long shopping = category("Shopping").getId();
+        assertThat(correctCategory(fee, shopping))
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
-                    json.assertThat().extractingPath("$.category").isEqualTo("Shopping"); // il nome dell'elenco
-                    json.assertThat().extractingPath("$.manualCategory").isEqualTo("Shopping");
+                    json.assertThat().extractingPath("$.categoryId").isEqualTo(shopping.intValue());
+                    json.assertThat().extractingPath("$.category").isEqualTo("Shopping"); // il nome, da mostrare
+                    json.assertThat().extractingPath("$.manualCategoryId").isEqualTo(shopping.intValue());
                     json.assertThat().extractingPath("$.type").isEqualTo("EXPENSE");
                 });
 
@@ -137,13 +144,13 @@ class TransactionControllerTest {
                 .bodyJson().extractingPath("$.category").isEqualTo("Shopping");
         correct(fee, "null");
 
-        // Tolta la scelta manuale, torna la categoria della regola. Una stringa vuota vale come null.
-        assertThat(correctCategory(fee, "\"  \""))
+        // Tolta la scelta manuale, torna la categoria della regola.
+        assertThat(correctCategory(fee, null))
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$.category").isEqualTo("Costi bancari");
-                    json.assertThat().extractingPath("$.manualCategory").isNull();
+                    json.assertThat().extractingPath("$.manualCategoryId").isNull();
                 });
     }
 
@@ -156,15 +163,17 @@ class TransactionControllerTest {
                 .hasStatus(404)
                 .bodyJson().extractingPath("$.detail").isEqualTo("Movimento 999999 non trovato");
         BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-30.00", "NEGOZIO");
-        assertThat(correctCategory(purchase, "\"" + "x".repeat(101) + "\"")).hasStatus(400);
-        assertThat(correctCategory(purchase, "\"Inventata\"")).hasStatus(400); // non è nell'elenco
+        assertThat(correctCategory(purchase, 999_999L)) // una categoria che non esiste
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail")
+                .isEqualTo("La categoria 999999 non esiste: forse è stata eliminata. Ricarica la pagina.");
     }
 
-    /** Manda la categoria scelta a mano; {@code category} è già in formato JSON. */
-    private MvcTestResult correctCategory(BankTransaction transaction, String category) {
+    /** Manda la categoria scelta a mano: il suo id, oppure null per togliere la scelta. */
+    private MvcTestResult correctCategory(BankTransaction transaction, Long categoryId) {
         return mvc.put().uri("/api/transactions/{id}/manual-category", transaction.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"category\": " + category + "}")
+                .content("{\"categoryId\": " + categoryId + "}")
                 .exchange();
     }
 
@@ -187,5 +196,10 @@ class TransactionControllerTest {
     private BankTransaction transaction(Account account, LocalDate date, String amount, String description) {
         return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
                 date, null, new BigDecimal(amount), "EUR", null, description, "{}"));
+    }
+
+    /** Una categoria dell'elenco di partenza, per nome. */
+    private Category category(String name) {
+        return categoryRepository.findByNameIgnoreCase(name).orElseThrow();
     }
 }

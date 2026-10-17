@@ -56,12 +56,24 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
      * <p>Il parametro {@link Pageable} fa aggiungere a Spring Data {@code LIMIT} e {@code OFFSET}, e la
      * query di conteggio per il totale. La {@code """...""" } è un "text block" di Java: una stringa su
      * più righe.
+     *
+     * <p>{@code LEFT JOIN FETCH}: carica le categorie insieme ai movimenti, nella stessa query, perché la
+     * dashboard ne mostra il nome. Senza, Hibernate farebbe una query in più per ogni categoria (il problema
+     * N+1, docs/09). La query di conteggio delle pagine ({@code countQuery}) Spring Data saprebbe ricavarla
+     * da sola, ma la scriviamo noi: per contare i movimenti le categorie non servono, quindi niente join.
      */
-    @Query("""
+    @Query(value = """
             SELECT t FROM BankTransaction t
+            LEFT JOIN FETCH t.category
+            LEFT JOIN FETCH t.manualCategory
             WHERE (:accountId IS NULL OR t.account.id = :accountId)
               AND (:type IS NULL OR t.type = :type)
             ORDER BY t.bookingDate DESC, t.id DESC
+            """,
+            countQuery = """
+            SELECT COUNT(t) FROM BankTransaction t
+            WHERE (:accountId IS NULL OR t.account.id = :accountId)
+              AND (:type IS NULL OR t.type = :type)
             """)
     Page<BankTransaction> search(@Param("accountId") Long accountId, @Param("type") TransactionType type,
             Pageable pageable);
@@ -100,12 +112,12 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     }
 
     /** Quanti movimenti ha ogni categoria (vedi {@link #countUsesByRule()} per le proiezioni). */
-    @Query("SELECT t.category AS category, COUNT(t) AS uses FROM BankTransaction t WHERE t.category IS NOT NULL GROUP BY t.category")
+    @Query("SELECT t.category.id AS categoryId, COUNT(t) AS uses FROM BankTransaction t WHERE t.category IS NOT NULL GROUP BY t.category.id")
     List<CategoryUsage> countUsesByCategory();
 
     /** Una riga di {@link #countUsesByCategory()}. */
     interface CategoryUsage {
-        String getCategory();
+        Long getCategoryId();
 
         long getUses();
     }
@@ -113,20 +125,26 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     /**
      * Le spese di un periodo per valuta e categoria, già sommate (vedi {@link #sumByMonthAndType}).
      * Solo i movimenti di tipo {@code EXPENSE}: un rimborso segnato come spesa (importo positivo) riduce
-     * il totale della sua categoria. La categoria è null per le spese senza categoria.
+     * il totale della sua categoria. Id e nome della categoria sono null per le spese senza categoria.
+     *
+     * <p>{@code LEFT JOIN t.category c}: per avere il nome serve la tabella {@code category}. "LEFT" vuol dire
+     * "anche i movimenti senza categoria" (con un JOIN normale sparirebbero dal risultato).
      */
     @Query("""
-            SELECT t.currency AS currency, t.category AS category, SUM(t.amount) AS total, COUNT(t) AS movements
-            FROM BankTransaction t
+            SELECT t.currency AS currency, c.id AS categoryId, c.name AS category,
+                   SUM(t.amount) AS total, COUNT(t) AS movements
+            FROM BankTransaction t LEFT JOIN t.category c
             WHERE t.type = it.wallettracker.transaction.TransactionType.EXPENSE
               AND t.bookingDate >= :from AND t.bookingDate < :to
-            GROUP BY t.currency, t.category
+            GROUP BY t.currency, c.id, c.name
             """)
     List<CategoryTotal> sumExpensesByCategory(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
     /** Una riga di {@link #sumExpensesByCategory}. */
     interface CategoryTotal {
         String getCurrency();
+
+        Long getCategoryId();
 
         String getCategory();
 

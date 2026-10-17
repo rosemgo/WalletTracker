@@ -1,7 +1,6 @@
 package it.wallettracker.transaction;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -52,15 +51,15 @@ public class TransactionController {
     }
 
     /**
-     * {@code PUT /api/transactions/{id}/manual-category} con corpo {@code {"category": "Spesa"}}: sceglie a
-     * mano la categoria. Con {@code {"category": null}} la scelta viene tolta.
+     * {@code PUT /api/transactions/{id}/manual-category} con corpo {@code {"categoryId": 7}}: sceglie a mano la
+     * categoria. Con {@code {"categoryId": null}} la scelta viene tolta.
      */
     @PutMapping("/{id}/manual-category")
     public TransactionDto correctCategory(@PathVariable Long id, @Valid @RequestBody ManualCategoryChange change) {
-        return transactionService.correctCategory(id, change.category());
+        return transactionService.correctCategory(id, change.categoryId());
     }
 
-    /** Il corpo della richiesta: {@code category} può essere null; al massimo 100 caratteri, come nelle regole. */
-    public record ManualCategoryChange(@Size(max = 100) String category) {
+    /** Il corpo della richiesta: l'id di una categoria dell'elenco, oppure null. */
+    public record ManualCategoryChange(Long categoryId) {
     }
 }

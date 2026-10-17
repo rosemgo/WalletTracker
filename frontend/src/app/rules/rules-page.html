@@ -66,12 +66,13 @@
     <label>
       Categoria (facoltativa)
       <!-- In cima le categorie che si addicono al tipo scelto qui sopra ("allora il tipo è"). -->
-      <select formControlName="category">
-        <option value="">— nessuna —</option>
+      <!-- [ngValue] invece di [value]: il valore del campo resta un numero (o null), non diventa testo. -->
+      <select formControlName="categoryId">
+        <option [ngValue]="null">— nessuna —</option>
         @for (group of categoryGroups(); track group.kind) {
           <optgroup [label]="group.label">
             @for (category of group.categories; track category.id) {
-              <option [value]="category.name">{{ category.name }}</option>
+              <option [ngValue]="category.id">{{ category.name }}</option>
             }
           </optgroup>
         }

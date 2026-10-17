@@ -21,9 +21,9 @@ public record CurrencySummary(String currency, List<MonthSummary> months, Totals
     /**
      * Le spese di una categoria nel periodo, come numero positivo.
      *
-     * @param category  null = spese senza categoria
+     * @param category  il nome della categoria (categoryId è il suo id); entrambi null = spese senza categoria
      * @param movements quanti movimenti, rimborsi compresi
      */
-    public record CategoryExpense(String category, BigDecimal amount, long movements) {
+    public record CategoryExpense(Long categoryId, String category, BigDecimal amount, long movements) {
     }
 }

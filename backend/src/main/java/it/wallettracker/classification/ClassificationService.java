@@ -14,6 +14,7 @@ import java.util.Set;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.category.Category;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
@@ -66,7 +67,7 @@ public class ClassificationService {
     }
 
     /** Il risultato della classificazione di un movimento. */
-    record Result(TransactionType type, String category, Long ruleId, Long peerId) {
+    record Result(TransactionType type, Category category, Long ruleId, Long peerId) {
     }
 
     /**

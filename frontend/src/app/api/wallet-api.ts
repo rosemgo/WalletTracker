@@ -71,10 +71,10 @@ export class WalletApi {
     return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-type`, { type });
   }
 
-  /** PUT /api/transactions/{id}/manual-category; con `null` la scelta viene tolta. */
-  correctCategory(transactionId: number, category: string | null): Observable<Transaction> {
+  /** PUT /api/transactions/{id}/manual-category con l'id della categoria; con `null` la scelta viene tolta. */
+  correctCategory(transactionId: number, categoryId: number | null): Observable<Transaction> {
     return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-category`, {
-      category,
+      categoryId,
     });
   }
 
