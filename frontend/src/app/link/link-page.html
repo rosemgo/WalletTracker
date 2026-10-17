@@ -6,6 +6,14 @@
   <li>Alla fine tornerai qui, e i movimenti verranno importati in automatico.</li>
 </ol>
 
+@if (renewing()) {
+  <p class="message">
+    Per rinnovare il collegamento con <strong>{{ renewing() }}</strong
+    >, premi <strong>Collega</strong> qui sotto e accedi alla banca. I conti, i movimenti e le tue
+    correzioni restano: WalletTracker riconosce i conti e li sposta sul nuovo collegamento.
+  </p>
+}
+
 <div class="filters">
   <label>
     Paese
@@ -17,7 +25,12 @@
   </label>
   <label>
     Cerca
-    <input type="search" placeholder="es. ING, Revolut" (input)="onSearch($event)" />
+    <input
+      type="search"
+      placeholder="es. ING, Revolut"
+      [value]="search()"
+      (input)="onSearch($event)"
+    />
   </label>
 </div>
 

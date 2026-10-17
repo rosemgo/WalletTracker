@@ -187,3 +187,22 @@ export interface Budget extends BudgetRequest {
   averageLast3Months: number; // la spesa media nei 3 mesi prima
   status: BudgetStatus;
 }
+
+/** I tipi di avviso (enum AlertKind nel backend). */
+export type AlertKind = 'CONSENT_EXPIRED' | 'CONSENT_EXPIRING' | 'SYNC_FAILED' | 'BUDGET_OVER';
+
+/**
+ * Un avviso (GET /api/alerts). Il backend manda i dati, non la frase: il testo lo scrive la dashboard
+ * (vedi AlertsPanel). I campi che non servono a un tipo di avviso sono null.
+ */
+export interface Alert {
+  kind: AlertKind;
+  severity: 'CRITICAL' | 'WARNING';
+  bank: string | null;
+  country: string | null;
+  account: string | null;
+  date: string | null; // la scadenza del consenso, es. "2027-01-05T14:35:51Z"
+  daysLeft: number | null; // giorni alla scadenza; negativo = scaduto
+  items: string[]; // le categorie dei budget superati
+  message: string | null; // il motivo dell'errore di sincronizzazione
+}

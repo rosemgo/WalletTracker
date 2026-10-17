@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Summary } from '../api/models';
+import { AlertsPanel } from '../alerts/alerts-panel';
 import { WalletApi } from '../api/wallet-api';
 import { MonthlyChart } from './monthly-chart';
 
@@ -29,7 +30,7 @@ interface CategoryRow {
  */
 @Component({
   selector: 'app-summary-page',
-  imports: [CurrencyPipe, DatePipe, PercentPipe, RouterLink, MonthlyChart],
+  imports: [CurrencyPipe, DatePipe, PercentPipe, RouterLink, MonthlyChart, AlertsPanel],
   templateUrl: './summary-page.html',
 })
 export class SummaryPage implements OnInit {

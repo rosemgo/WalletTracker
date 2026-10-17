@@ -1,0 +1,45 @@
+@if (alerts().length > 0) {
+  <section class="alerts" aria-label="Avvisi">
+    @for (alert of alerts(); track $index) {
+      <!-- Lo stato: icona + testo, come nei budget. CRITICAL = rosso ✕, WARNING = giallo !. -->
+      <div class="alert" [class]="'alert ' + alert.severity.toLowerCase()">
+        <span
+          [class]="'status-icon ' + (alert.severity === 'CRITICAL' ? 'critical' : 'warning')"
+          aria-hidden="true"
+        >
+          {{ alert.severity === 'CRITICAL' ? '✕' : '!' }}
+        </span>
+        <div>
+          @switch (alert.kind) {
+            @case ('CONSENT_EXPIRED') {
+              <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
+              Dal {{ alert.date | date: 'dd/MM/yyyy' }} i movimenti non vengono più aggiornati.
+              Ricollegala: conti, movimenti e correzioni restano.
+              <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
+                >Ricollega {{ alert.bank }}</a
+              >
+            }
+            @case ('CONSENT_EXPIRING') {
+              <strong>Il collegamento con {{ alert.bank }} scade {{ when(alert.daysLeft) }}</strong>
+              ({{ alert.date | date: 'dd/MM/yyyy' }}). Le regole europee (PSD2) chiedono di
+              rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza, non
+              perdi niente.
+              <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
+                >Ricollega {{ alert.bank }}</a
+              >
+            }
+            @case ('SYNC_FAILED') {
+              <strong>Aggiornamento non riuscito: {{ alert.account }} ({{ alert.bank }}).</strong>
+              {{ alert.message }}
+              <a routerLink="/conti">Vai ai conti</a>
+            }
+            @case ('BUDGET_OVER') {
+              <strong>Budget superati questo mese:</strong> {{ alert.items.join(', ') }}.
+              <a routerLink="/budget">Vai ai budget</a>
+            }
+          }
+        </div>
+      </div>
+    }
+  </section>
+}

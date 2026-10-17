@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import {
   Account,
   AccountRole,
+  Alert,
   Bank,
   Budget,
   BudgetRequest,
@@ -158,5 +159,10 @@ export class WalletApi {
   /** DELETE /api/budgets/{id} */
   deleteBudget(id: number): Observable<void> {
     return this.http.delete<void>(`/api/budgets/${id}`);
+  }
+
+  /** GET /api/alerts: gli avvisi di adesso, dal più urgente. */
+  alerts(): Observable<Alert[]> {
+    return this.http.get<Alert[]>('/api/alerts');
   }
 }

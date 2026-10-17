@@ -39,6 +39,7 @@ describe('SummaryPage', () => {
     requestedFrom.length = 0;
     response = SUMMARY;
     const fakeApi: Partial<WalletApi> = {
+      alerts: () => of([]), // il pannello degli avvisi ha i suoi test (alerts-panel.spec.ts)
       monthlySummary: (from: string) => {
         requestedFrom.push(from);
         return of(response);

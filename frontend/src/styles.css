@@ -515,3 +515,43 @@ app-monthly-chart {
   gap: 0.25rem 1rem;
   margin: 0.5rem 0 0.25rem;
 }
+
+/* ---- Avvisi (app-alerts-panel) ---- */
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.alert {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+}
+
+.alert.critical {
+  border-left-color: #d03b3b;
+}
+
+.alert.warning {
+  border-left-color: #fab219;
+}
+
+.alert .status-icon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.status-icon.critical {
+  background: #d03b3b;
+}
+
+.status-icon.warning {
+  background: #fab219;
+  color: #1f2933;
+}
