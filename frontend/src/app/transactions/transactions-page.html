@@ -52,21 +52,26 @@
             {{ textOf(t) }}
             @if (editingCategory() === t.id) {
               <!--
-                #categoryInput è una "variabile del template": dà un nome all'elemento <input>, così i
-                pulsanti qui accanto possono leggerne il valore (categoryInput.value) senza un campo nella classe.
+                Il menu delle categorie: per primo il gruppo che si addice al tipo del movimento (a una spesa
+                le categorie di spesa), poi gli altri. Scegliere una voce salva subito.
               -->
               <div class="category-edit">
-                <input
-                  #categoryInput
-                  list="categories"
-                  maxlength="100"
-                  [value]="t.category ?? ''"
+                <select
                   [attr.aria-label]="'Categoria del movimento ' + t.id"
-                  placeholder="es. Spesa alimentare"
-                  (keydown.enter)="saveCategory(t, categoryInput.value)"
+                  (change)="saveCategory(t, $any($event.target).value)"
                   (keydown.escape)="editingCategory.set(null)"
-                />
-                <button type="button" (click)="saveCategory(t, categoryInput.value)">Salva</button>
+                >
+                  <option value="" [selected]="!t.category">— nessuna categoria —</option>
+                  @for (group of groupsFor(t); track group.kind) {
+                    <optgroup [label]="group.label">
+                      @for (category of group.categories; track category.id) {
+                        <option [value]="category.name" [selected]="category.name === t.category">
+                          {{ category.name }}
+                        </option>
+                      }
+                    </optgroup>
+                  }
+                </select>
                 <button type="button" class="link" (click)="editingCategory.set(null)">
                   annulla
                 </button>
@@ -139,10 +144,3 @@
 } @else if (loading()) {
   <p>Caricamento...</p>
 }
-
-<!-- I suggerimenti per il campo categoria (attributo list="categories"): le categorie già usate. -->
-<datalist id="categories">
-  @for (category of categories(); track category) {
-    <option [value]="category"></option>
-  }
-</datalist>

@@ -65,12 +65,17 @@
 
     <label>
       Categoria (facoltativa)
-      <input formControlName="category" list="rule-categories" placeholder="es. Spesa alimentare" />
-      <datalist id="rule-categories">
-        @for (category of categories(); track category) {
-          <option [value]="category"></option>
+      <!-- In cima le categorie che si addicono al tipo scelto qui sopra ("allora il tipo è"). -->
+      <select formControlName="category">
+        <option value="">— nessuna —</option>
+        @for (group of categoryGroups(); track group.kind) {
+          <optgroup [label]="group.label">
+            @for (category of group.categories; track category.id) {
+              <option [value]="category.name">{{ category.name }}</option>
+            }
+          </optgroup>
         }
-      </datalist>
+      </select>
     </label>
 
     <label>

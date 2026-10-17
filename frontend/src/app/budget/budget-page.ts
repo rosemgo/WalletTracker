@@ -2,7 +2,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import { Budget, BudgetStatus } from '../api/models';
+import { Budget, BudgetStatus, Category } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
 /** Come si presenta ogni stato: un'icona e un'etichetta, mai solo il colore. */
@@ -31,7 +31,11 @@ export class BudgetPage implements OnInit {
 
   protected readonly month = signal(this.thisMonth);
   protected readonly budgets = signal<Budget[]>([]);
-  protected readonly categories = signal<string[]>([]);
+  protected readonly categories = signal<Category[]>([]);
+  /** Le categorie di spesa: le uniche che hanno senso per un budget. */
+  protected readonly expenseCategories = computed(() =>
+    this.categories().filter((c) => c.kind === 'EXPENSE'),
+  );
   protected readonly currencies = signal<string[]>(['EUR']); // le valute dei conti
   protected readonly editing = signal<Budget | null>(null);
   protected readonly loading = signal(true);

@@ -13,6 +13,11 @@
 
 ---
 
+> **Aggiornamento (passo 5b, `docs/23`).** Le categorie non sono più testo libero: ora c'è un **elenco**
+> (pagina Categorie) con un menu a discesa, e il database garantisce che ogni categoria usata sia
+> nell'elenco. Quello che segue sul "testo libero" e sui suggerimenti con `<datalist>` racconta la prima
+> versione; il resto (chi vince, le regole dalle correzioni, i rimborsi) vale ancora.
+
 ## Parte A: i concetti
 
 ### 1. Tipo e categoria: due domande diverse

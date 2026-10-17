@@ -114,10 +114,10 @@ class SummaryControllerTest {
         BankTransaction groceries = transaction(account, "2026-10-03", "-60.00", "SUPERMERCATO", "EUR");
         transaction(account, "2026-10-04", "-15.00", "EDICOLA", "EUR"); // senza categoria
         transaction(account, "2026-10-05", "-2.00", "Canone Mensile", "EUR"); // regola: "Costi bancari"
-        shoes.setManualCategory("Abbigliamento");
-        refund.setManualCategory("Abbigliamento");
+        shoes.setManualCategory("Shopping");
+        refund.setManualCategory("Shopping");
         refund.setManualType(TransactionType.EXPENSE); // un rimborso è una spesa "al contrario"
-        groceries.setManualCategory("Spesa");
+        groceries.setManualCategory("Spesa alimentare");
         transactionRepository.saveAll(List.of(shoes, refund, groceries));
         classificationService.classifyAll();
 
@@ -125,13 +125,14 @@ class SummaryControllerTest {
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
-                    // Dalla spesa più alta: 120 - 40 di rimborso = 80.
+                    // Dalla spesa più alta: 120 - 40 di rimborso = 80 in Shopping.
                     json.assertThat().extractingPath("$.currencies[0].expensesByCategory.length()").isEqualTo(4);
                     json.assertThat().extractingPath("$.currencies[0].expensesByCategory[0].category")
-                            .isEqualTo("Abbigliamento");
+                            .isEqualTo("Shopping");
                     amount(json, "$.currencies[0].expensesByCategory[0].amount", "80");
                     json.assertThat().extractingPath("$.currencies[0].expensesByCategory[0].movements").isEqualTo(2);
-                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[1].category").isEqualTo("Spesa");
+                    json.assertThat().extractingPath("$.currencies[0].expensesByCategory[1].category")
+                            .isEqualTo("Spesa alimentare");
                     json.assertThat().extractingPath("$.currencies[0].expensesByCategory[2].category").isNull();
                     amount(json, "$.currencies[0].expensesByCategory[2].amount", "15");
                     json.assertThat().extractingPath("$.currencies[0].expensesByCategory[3].category")

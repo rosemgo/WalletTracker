@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Transaction, TransactionFilter, TransactionType } from '../api/models';
+import { Category, Transaction, TransactionFilter, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { TransactionsPage } from './transactions-page';
 
@@ -25,6 +25,14 @@ const SETTLEMENT: Transaction = {
   manualCategory: null,
   transferPeerId: null,
 };
+
+/** Un pezzo dell'elenco delle categorie, come lo restituisce GET /api/categories. */
+const CATEGORIES: Category[] = [
+  { id: 1, name: 'Shopping', kind: 'EXPENSE', builtin: true, uses: 3 },
+  { id: 2, name: 'Intrattenimento e tempo libero', kind: 'EXPENSE', builtin: true, uses: 1 },
+  { id: 3, name: 'Stipendio e pensione', kind: 'INCOME', builtin: true, uses: 2 },
+  { id: 4, name: 'Saldo carta', kind: 'OTHER', builtin: true, uses: 3 },
+];
 
 describe('TransactionsPage', () => {
   const requests: TransactionFilter[] = [];
@@ -52,7 +60,7 @@ describe('TransactionsPage', () => {
         categoryChanges.push([id, category]);
         return of({ ...SETTLEMENT, manualCategory: category });
       },
-      categories: () => of(['Abbonamenti', 'Spesa alimentare']),
+      categories: () => of(CATEGORIES),
     };
     TestBed.configureTestingModule({
       imports: [TransactionsPage],
@@ -106,7 +114,7 @@ describe('TransactionsPage', () => {
     expect(requests.length).toBe(2); // il primo caricamento + quello dopo la correzione
   });
 
-  it('a category typed by the user is saved, and an empty one removes the choice', async () => {
+  it('the category is chosen from a menu with the right group first, and "nessuna" removes it', async () => {
     const fixture = TestBed.createComponent(TransactionsPage);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
@@ -117,20 +125,26 @@ describe('TransactionsPage', () => {
 
     button('modifica').click();
     await fixture.whenStable();
-    const input = page.querySelector('.category-edit input') as HTMLInputElement;
-    expect(input.value).toBe('Saldo carta'); // si parte dalla categoria attuale
-    expect(page.querySelectorAll('datalist option').length).toBe(2); // i suggerimenti
+    const select = page.querySelector('.category-edit select') as HTMLSelectElement;
+    expect(select.value).toBe('Saldo carta'); // si parte dalla categoria attuale
+    // Un saldo della carta (tipo "Altro"): in cima le altre categorie, poi spese ed entrate.
+    expect(Array.from(select.querySelectorAll('optgroup')).map((g) => g.label)).toEqual([
+      'Altre categorie',
+      'Categorie di spesa',
+      'Categorie di entrata',
+    ]);
 
-    input.value = '  Carta  ';
-    button('Salva').click();
+    select.value = 'Shopping';
+    select.dispatchEvent(new Event('change'));
     await fixture.whenStable();
-    expect(categoryChanges).toEqual([[449, 'Carta']]);
-    expect(page.querySelector('.category-edit')).toBeNull(); // il campo si chiude
+    expect(categoryChanges).toEqual([[449, 'Shopping']]);
+    expect(page.querySelector('.category-edit')).toBeNull(); // il menu si chiude
 
     button('modifica').click();
     await fixture.whenStable();
-    (page.querySelector('.category-edit input') as HTMLInputElement).value = '';
-    button('Salva').click();
+    const again = page.querySelector('.category-edit select') as HTMLSelectElement;
+    again.value = '';
+    again.dispatchEvent(new Event('change'));
     await fixture.whenStable();
     expect(categoryChanges[1]).toEqual([449, null]);
   });
@@ -144,8 +158,8 @@ describe('TransactionsPage', () => {
         counterparty: 'NETFLIX.COM',
         description: 'Pagamento carta',
         type: 'EXPENSE',
-        category: 'Abbonamenti',
-        manualCategory: 'Abbonamenti',
+        category: 'Intrattenimento e tempo libero',
+        manualCategory: 'Intrattenimento e tempo libero',
       },
     ];
     const fixture = TestBed.createComponent(TransactionsPage);
@@ -160,7 +174,7 @@ describe('TransactionsPage', () => {
       pattern: 'NETFLIX.COM',
       resultType: 'EXPENSE',
       amountSign: 'NEGATIVE',
-      category: 'Abbonamenti',
+      category: 'Intrattenimento e tempo libero',
     });
   });
 

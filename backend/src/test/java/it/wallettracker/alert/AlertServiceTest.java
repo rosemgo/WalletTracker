@@ -113,14 +113,14 @@ class AlertServiceTest {
     @Test
     void budgetsOverTheLimitThisMonthAreReportedTogether() {
         Account account = account(connection("ING", Instant.now().plus(100, ChronoUnit.DAYS)));
-        expense(account, "-120.00", "Ristoranti");
-        expense(account, "-60.00", "Viaggi");
-        expense(account, "-10.00", "Spesa");
+        expense(account, "-120.00", "Bar e ristoranti");
+        expense(account, "-60.00", "Viaggi e vacanze");
+        expense(account, "-10.00", "Spesa alimentare");
         classificationService.classifyAll();
         budgetRepository.saveAll(List.of(
-                new Budget("Ristoranti", "EUR", new BigDecimal("100")),
-                new Budget("Viaggi", "EUR", new BigDecimal("50")),
-                new Budget("Spesa", "EUR", new BigDecimal("400"))));
+                new Budget("Bar e ristoranti", "EUR", new BigDecimal("100")),
+                new Budget("Viaggi e vacanze", "EUR", new BigDecimal("50")),
+                new Budget("Spesa alimentare", "EUR", new BigDecimal("400"))));
 
         assertThat(mvc.get().uri("/api/alerts"))
                 .hasStatusOk()
@@ -129,7 +129,7 @@ class AlertServiceTest {
                     json.assertThat().extractingPath("$.length()").isEqualTo(1);
                     json.assertThat().extractingPath("$[0].kind").isEqualTo("BUDGET_OVER");
                     json.assertThat().extractingPath("$[0].items").asArray()
-                            .containsExactly("Ristoranti", "Viaggi");
+                            .containsExactly("Bar e ristoranti", "Viaggi e vacanze");
                 });
     }
 

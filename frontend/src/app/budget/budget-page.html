@@ -89,18 +89,15 @@
   <div class="form-grid">
     <label>
       Categoria
-      <input
-        formControlName="category"
-        list="budget-categories"
-        placeholder="es. Spesa alimentare"
-      />
-      <datalist id="budget-categories">
-        @for (category of categories(); track category) {
-          <option [value]="category"></option>
+      <!-- Solo le categorie di spesa: un budget conta le spese. -->
+      <select formControlName="category">
+        <option value="">— scegli —</option>
+        @for (category of expenseCategories(); track category.id) {
+          <option [value]="category.name">{{ category.name }}</option>
         }
-      </datalist>
+      </select>
       @if (showError('category')) {
-        <span class="error">Scrivi la categoria (al massimo 100 caratteri).</span>
+        <span class="error">Scegli la categoria.</span>
       }
     </label>
     <label>

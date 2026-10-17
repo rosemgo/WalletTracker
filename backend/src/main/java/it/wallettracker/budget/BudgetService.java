@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import it.wallettracker.budget.BudgetDto.BudgetStatus;
+import it.wallettracker.category.CategoryService;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.CategoryTotal;
 import it.wallettracker.web.NotFoundException;
@@ -35,10 +36,13 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final BankTransactionRepository transactionRepository;
+    private final CategoryService categoryService;
 
-    public BudgetService(BudgetRepository budgetRepository, BankTransactionRepository transactionRepository) {
+    public BudgetService(BudgetRepository budgetRepository, BankTransactionRepository transactionRepository,
+            CategoryService categoryService) {
         this.budgetRepository = budgetRepository;
         this.transactionRepository = transactionRepository;
+        this.categoryService = categoryService;
     }
 
     /** I budget con l'andamento del mese {@code month}, in ordine alfabetico di categoria. */
@@ -57,7 +61,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetDto create(BudgetRequest request) {
-        String category = request.category().trim();
+        String category = categoryService.resolve(request.category()); // deve essere nell'elenco
         checkNotDuplicate(category, request.currency(), null);
         Budget budget = budgetRepository.save(new Budget(category, request.currency(), request.monthlyAmount()));
         return describeCurrentMonth(budget);
@@ -66,7 +70,7 @@ public class BudgetService {
     @Transactional
     public BudgetDto update(Long id, BudgetRequest request) {
         Budget budget = find(id);
-        String category = request.category().trim();
+        String category = categoryService.resolve(request.category());
         checkNotDuplicate(category, request.currency(), budget);
         budget.update(category, request.currency(), request.monthlyAmount());
         return describeCurrentMonth(budget);

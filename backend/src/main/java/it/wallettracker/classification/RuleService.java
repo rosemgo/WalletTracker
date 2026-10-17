@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import it.wallettracker.category.CategoryService;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.RuleUsage;
@@ -29,12 +30,14 @@ public class RuleService {
     private final ClassificationRuleRepository ruleRepository;
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
+    private final CategoryService categoryService;
 
     public RuleService(ClassificationRuleRepository ruleRepository, BankTransactionRepository transactionRepository,
-            ClassificationService classificationService) {
+            ClassificationService classificationService, CategoryService categoryService) {
         this.ruleRepository = ruleRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
+        this.categoryService = categoryService;
     }
 
     /** Il risultato della prova di una regola. */
@@ -56,7 +59,7 @@ public class RuleService {
     public RuleDto create(RuleRequest request) {
         ClassificationRule rule = new ClassificationRule(request.name().trim(), request.priority(),
                 request.matchMode(), request.pattern().trim(), request.amountSign(), request.resultType(),
-                request.categoryOrNull());
+                categoryService.resolve(request.category())); // la categoria deve essere nell'elenco
         rule.setEnabled(request.enabled());
         ruleRepository.save(rule);
         return reclassifyAndDescribe(rule);
@@ -66,7 +69,8 @@ public class RuleService {
     public RuleDto update(Long id, RuleRequest request) {
         ClassificationRule rule = find(id);
         rule.update(request.name().trim(), request.priority(), request.enabled(), request.matchMode(),
-                request.pattern().trim(), request.amountSign(), request.resultType(), request.categoryOrNull());
+                request.pattern().trim(), request.amountSign(), request.resultType(),
+                categoryService.resolve(request.category()));
         return reclassifyAndDescribe(rule);
     }
 

@@ -2,8 +2,9 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { CategoryGroup, categoryGroups, kindOf } from '../api/category-groups';
 import { TYPES, TYPE_LABELS } from '../api/labels';
-import { Account, Transaction, TransactionPage, TransactionType } from '../api/models';
+import { Account, Category, Transaction, TransactionPage, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
 /** Quanti movimenti per pagina. */
@@ -34,8 +35,8 @@ export class TransactionsPage implements OnInit {
   protected readonly type = signal<TransactionType | null>(null);
   protected readonly page = signal(0);
 
-  /** Le categorie già usate, suggerite mentre si scrive (elemento HTML <datalist>). */
-  protected readonly categories = signal<string[]>([]);
+  /** L'elenco delle categorie, per il menu a discesa. */
+  protected readonly categories = signal<Category[]>([]);
   /** Il movimento di cui si sta modificando la categoria; null = nessuno. */
   protected readonly editingCategory = signal<number | null>(null);
 
@@ -122,13 +123,16 @@ export class TransactionsPage implements OnInit {
       : this.typeLabels[type];
   }
 
-  /** "Salva" della categoria: il testo scritto, oppure null se il campo è vuoto (toglie la scelta). */
+  /** Le categorie del menu, con in cima il gruppo che si addice al tipo del movimento. */
+  protected groupsFor(transaction: Transaction): CategoryGroup[] {
+    return categoryGroups(this.categories(), kindOf(transaction.type));
+  }
+
+  /** La categoria scelta nel menu; "" (nessuna categoria) toglie la scelta manuale. */
   saveCategory(transaction: Transaction, value: string): void {
-    const category = value.trim() === '' ? null : value.trim();
-    this.api.correctCategory(transaction.id, category).subscribe({
+    this.api.correctCategory(transaction.id, value === '' ? null : value).subscribe({
       next: () => {
         this.editingCategory.set(null);
-        this.loadCategories(); // una categoria nuova entra subito nei suggerimenti
         this.load();
       },
       error: (response) =>

@@ -99,9 +99,16 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
         long getMovements();
     }
 
-    /** Le categorie usate nei movimenti, senza doppioni (per i suggerimenti della dashboard). */
-    @Query("SELECT DISTINCT t.category FROM BankTransaction t WHERE t.category IS NOT NULL")
-    List<String> findDistinctCategories();
+    /** Quanti movimenti ha ogni categoria (vedi {@link #countUsesByRule()} per le proiezioni). */
+    @Query("SELECT t.category AS category, COUNT(t) AS uses FROM BankTransaction t WHERE t.category IS NOT NULL GROUP BY t.category")
+    List<CategoryUsage> countUsesByCategory();
+
+    /** Una riga di {@link #countUsesByCategory()}. */
+    interface CategoryUsage {
+        String getCategory();
+
+        long getUses();
+    }
 
     /**
      * Le spese di un periodo per valuta e categoria, già sommate (vedi {@link #sumByMonthAndType}).

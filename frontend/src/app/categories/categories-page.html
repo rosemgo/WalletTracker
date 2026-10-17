@@ -1,0 +1,115 @@
+<h1>Categorie</h1>
+
+<p class="hint">
+  La categoria dice <strong>per che cosa</strong> sono i soldi (Spesa alimentare, Stipendio e
+  pensione...); il tipo del movimento dice <strong>che cos'è</strong> (spesa, entrata,
+  trasferimento). Ogni categoria sta in un gruppo: nei menu compaiono per prime le categorie del
+  gruppo che si addice al movimento, ma puoi sempre sceglierne un'altra. Puoi rinominare, aggiungere
+  ed eliminare le categorie: rinominandone una, movimenti, regole e budget si aggiornano da soli.
+</p>
+
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<form class="card" [formGroup]="form" (ngSubmit)="add()">
+  <h2>Nuova categoria</h2>
+  <div class="form-grid">
+    <label>
+      Nome
+      <input formControlName="name" maxlength="100" placeholder="es. Animali domestici" />
+      @if (showNameError()) {
+        <span class="error">Scrivi un nome (al massimo 100 caratteri).</span>
+      }
+    </label>
+    <label>
+      Gruppo
+      <select formControlName="kind">
+        @for (kind of kinds; track kind) {
+          <option [value]="kind">{{ kindLabels[kind] }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <button type="submit">Aggiungi</button>
+</form>
+
+@for (group of groups(); track group.kind) {
+  <h2 class="section-title">{{ group.label }}</h2>
+  <div class="table-scroll">
+    <table>
+      <tbody>
+        @for (category of group.categories; track category.id) {
+          <tr>
+            <td>
+              @if (renaming() === category.id) {
+                <!-- Invio salva, Esc annulla (come la categoria nella pagina Movimenti). -->
+                <div class="category-edit">
+                  <input
+                    #nameInput
+                    [value]="category.name"
+                    maxlength="100"
+                    [attr.aria-label]="'Nuovo nome di ' + category.name"
+                    (keydown.enter)="rename(category, nameInput.value)"
+                    (keydown.escape)="renaming.set(null)"
+                  />
+                  <button type="button" (click)="rename(category, nameInput.value)">Salva</button>
+                  <button type="button" class="link" (click)="renaming.set(null)">annulla</button>
+                </div>
+              } @else {
+                {{ category.name }}
+                @if (category.builtin) {
+                  <span class="secondary">· di partenza</span>
+                }
+              }
+            </td>
+            <td class="amount secondary">
+              {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
+            </td>
+            <td>
+              <select
+                [attr.aria-label]="'Gruppo di ' + category.name"
+                (change)="changeKind(category, $any($event.target).value)"
+              >
+                @for (kind of kinds; track kind) {
+                  <option [value]="kind" [selected]="kind === category.kind">
+                    {{ kindLabels[kind] }}
+                  </option>
+                }
+              </select>
+            </td>
+            <td class="amount">
+              @if (confirmingDelete() === category.id) {
+                <!-- Eliminare chiede conferma: non si può annullare. -->
+                <span class="secondary">
+                  @if (category.uses > 0) {
+                    {{ category.uses }}
+                    {{ category.uses === 1 ? 'movimento resterà' : 'movimenti resteranno' }}
+                    senza categoria.
+                  } @else {
+                    Nessun movimento la usa.
+                  }
+                </span>
+                <button type="button" (click)="remove(category)">Elimina</button>
+                <button type="button" class="link" (click)="confirmingDelete.set(null)">
+                  annulla
+                </button>
+              } @else {
+                <button type="button" class="link" (click)="renaming.set(category.id)">
+                  rinomina
+                </button>
+                ·
+                <button type="button" class="link" (click)="confirmingDelete.set(category.id)">
+                  elimina
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

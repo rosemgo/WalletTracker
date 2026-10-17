@@ -86,6 +86,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 20. [Fase 3, passo 3: i budget mensili](docs/20-fase-3-passo-3-budget.md)
 21. [Fase 3, passo 4: gli avvisi (consenso in scadenza, sincronizzazioni fallite, budget superati)](docs/21-fase-3-passo-4-avvisi.md)
 22. [Fase 3, passo 5: gli abbonamenti ricorrenti](docs/22-fase-3-passo-5-abbonamenti.md)
+23. [Fase 3, passo 5b: l'elenco delle categorie (menu a discesa, rinomina a cascata)](docs/23-categorie-standard.md)
 
 ## Piano di lavoro
 
@@ -108,6 +109,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] budget mensili per categoria, con stato e ritmo di spesa
   - [x] avvisi: consenso in scadenza o scaduto (con "Ricollega"), sincronizzazioni fallite, budget superati
   - [x] abbonamenti ricorrenti: suggeriti dal programma, confermati dall'utente, con rincari e disdette
+  - [x] elenco delle categorie: di partenza e modificabile, menu a discesa ordinati per tipo, integrità garantita dal database
   - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 

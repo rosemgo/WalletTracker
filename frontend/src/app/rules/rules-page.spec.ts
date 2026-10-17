@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Rule, RulePreview, RuleRequest } from '../api/models';
+import { Category, Rule, RulePreview, RuleRequest } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { RulesPage } from './rules-page';
 
@@ -19,6 +19,12 @@ const DIVIDEND: Rule = {
   builtin: true,
   uses: 7,
 };
+
+const CATEGORIES: Category[] = [
+  { id: 1, name: 'Spesa alimentare', kind: 'EXPENSE', builtin: true, uses: 0 },
+  { id: 2, name: 'Intrattenimento e tempo libero', kind: 'EXPENSE', builtin: true, uses: 0 },
+  { id: 3, name: 'Dividendi', kind: 'INVESTMENT', builtin: true, uses: 7 },
+];
 
 describe('RulesPage', () => {
   const created: RuleRequest[] = [];
@@ -43,7 +49,7 @@ describe('RulesPage', () => {
         updated.push([id, rule]);
         return of({ ...DIVIDEND, ...rule });
       },
-      categories: () => of(['Dividendi']),
+      categories: () => of(CATEGORIES),
       previewRule: (rule: RuleRequest) => {
         previewed.push(rule);
         previews++;
@@ -71,6 +77,13 @@ describe('RulesPage', () => {
     });
   });
 
+  /** Sceglie una voce in un menu del modulo (per un <select> l'evento è "change"). */
+  function choose(page: HTMLElement, field: string, value: string): void {
+    const select = page.querySelector(`[formControlName="${field}"]`) as HTMLSelectElement;
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
+  }
+
   /** Scrive in un campo del modulo come farebbe l'utente (l'evento "input" avvisa il Reactive Form). */
   function type(page: HTMLElement, field: string, value: string): void {
     const input = page.querySelector(`[formControlName="${field}"]`) as HTMLInputElement;
@@ -96,7 +109,7 @@ describe('RulesPage', () => {
 
     type(page, 'name', 'Supermercato');
     type(page, 'pattern', 'ESSELUNGA');
-    type(page, 'category', 'Spesa alimentare');
+    choose(page, 'category', 'Spesa alimentare');
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
@@ -174,7 +187,7 @@ describe('RulesPage', () => {
       pattern: 'NETFLIX.COM',
       resultType: 'EXPENSE',
       amountSign: 'NEGATIVE',
-      category: 'Abbonamenti',
+      category: 'Intrattenimento e tempo libero',
     };
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();
@@ -187,7 +200,7 @@ describe('RulesPage', () => {
         matchMode: 'CONTAINS',
         amountSign: 'NEGATIVE',
         resultType: 'EXPENSE',
-        category: 'Abbonamenti',
+        category: 'Intrattenimento e tempo libero',
         priority: 100,
         enabled: true,
       },

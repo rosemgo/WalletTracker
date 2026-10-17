@@ -1,8 +1,10 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
+import { categoryGroups, kindOf } from '../api/category-groups';
 import {
   AMOUNT_SIGNS,
   AMOUNT_SIGN_LABELS,
@@ -11,7 +13,14 @@ import {
   TYPES,
   TYPE_LABELS,
 } from '../api/labels';
-import { AmountSign, Rule, RulePreview, RuleRequest, TransactionType } from '../api/models';
+import {
+  AmountSign,
+  Category,
+  Rule,
+  RulePreview,
+  RuleRequest,
+  TransactionType,
+} from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
 /** I valori del modulo per una regola nuova. */
@@ -60,8 +69,8 @@ export class RulesPage implements OnInit {
   protected readonly preview = signal<RulePreview | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
-  /** Le categorie già usate, suggerite nel campo "Categoria". */
-  protected readonly categories = signal<string[]>([]);
+  /** L'elenco delle categorie, per il menu "Categoria". */
+  protected readonly categories = signal<Category[]>([]);
 
   /**
    * Il modulo: un FormGroup con un FormControl per ogni campo. Per ogni campo: [valore iniziale, validatori].
@@ -81,6 +90,19 @@ export class RulesPage implements OnInit {
     priority: [NEW_RULE.priority, [Validators.required, Validators.min(0), Validators.max(10000)]],
     enabled: [NEW_RULE.enabled],
   });
+
+  /**
+   * Il tipo scelto nel modulo, come signal. `valueChanges` è un Observable che emette a ogni modifica del
+   * campo; `toSignal` lo trasforma in un signal, così un `computed` può dipenderne.
+   */
+  private readonly resultType = toSignal(this.form.controls.resultType.valueChanges, {
+    initialValue: this.form.controls.resultType.value,
+  });
+
+  /** Il menu delle categorie, con in cima il gruppo che si addice al tipo scelto. */
+  protected readonly categoryGroups = computed(() =>
+    categoryGroups(this.categories(), kindOf(this.resultType())),
+  );
 
   ngOnInit(): void {
     this.loadRules();

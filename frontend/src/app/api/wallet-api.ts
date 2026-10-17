@@ -9,6 +9,8 @@ import {
   Bank,
   Budget,
   BudgetRequest,
+  Category,
+  CategoryRequest,
   LinkResult,
   Rule,
   RulePreview,
@@ -76,9 +78,24 @@ export class WalletApi {
     });
   }
 
-  /** GET /api/categories: le categorie già usate, in ordine alfabetico (per i suggerimenti). */
-  categories(): Observable<string[]> {
-    return this.http.get<string[]>('/api/categories');
+  /** GET /api/categories: l'elenco delle categorie, per gruppo e nell'ordine dei menu. */
+  categories(): Observable<Category[]> {
+    return this.http.get<Category[]>('/api/categories');
+  }
+
+  /** POST /api/categories */
+  createCategory(category: CategoryRequest): Observable<Category> {
+    return this.http.post<Category>('/api/categories', category);
+  }
+
+  /** PUT /api/categories/{id}: rinomina (movimenti, regole e budget seguono da soli). */
+  updateCategory(id: number, category: CategoryRequest): Observable<Category> {
+    return this.http.put<Category>(`/api/categories/${id}`, category);
+  }
+
+  /** DELETE /api/categories/{id} */
+  deleteCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/categories/${id}`);
   }
 
   /** GET /api/banks?country=IT */

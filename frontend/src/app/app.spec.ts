@@ -38,6 +38,7 @@ describe('App', () => {
       'Movimenti',
       'Conti',
       'Regole',
+      'Categorie',
       'Collega una banca',
       'Impostazioni',
     ]);

@@ -253,3 +253,24 @@ export interface SubscriptionConfirmation {
   frequency: Frequency;
   expectedAmount: number;
 }
+
+/**
+ * Il gruppo di una categoria (enum CategoryKind nel backend): a quali movimenti si addice.
+ * Serve a mettere in cima ai menu le categorie giuste, senza vietare le altre.
+ */
+export type CategoryKind = 'EXPENSE' | 'INCOME' | 'INVESTMENT' | 'OTHER';
+
+/** Una categoria dell'elenco (GET /api/categories). */
+export interface Category {
+  id: number;
+  name: string;
+  kind: CategoryKind;
+  builtin: boolean; // categoria di partenza
+  uses: number; // quanti movimenti la usano
+}
+
+/** Il corpo di POST/PUT /api/categories. */
+export interface CategoryRequest {
+  name: string;
+  kind: CategoryKind;
+}

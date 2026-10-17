@@ -66,21 +66,21 @@ class BudgetControllerTest {
     @Test
     void aBudgetShowsTheExpensesOfItsCategoryInTheMonthRefundsIncluded() {
         Account account = account();
-        expense(account, "2026-09-03", "-150.00", "Spesa");
-        expense(account, "2026-09-20", "-200.00", "Spesa");
-        BankTransaction refund = expense(account, "2026-09-22", "30.00", "Spesa"); // rimborso: riduce la spesa
+        expense(account, "2026-09-03", "-150.00", "Spesa alimentare");
+        expense(account, "2026-09-20", "-200.00", "Spesa alimentare");
+        BankTransaction refund = expense(account, "2026-09-22", "30.00", "Spesa alimentare"); // rimborso: riduce la spesa
         refund.setManualType(TransactionType.EXPENSE);
         transactionRepository.save(refund);
-        expense(account, "2026-09-10", "-500.00", "Casa");  // altra categoria: non conta
-        expense(account, "2026-10-01", "-99.00", "Spesa");  // altro mese: non conta
+        expense(account, "2026-09-10", "-500.00", "Spese fisse e utenze");  // altra categoria: non conta
+        expense(account, "2026-10-01", "-99.00", "Spesa alimentare");  // altro mese: non conta
         // I 3 mesi prima di settembre, per la media: 300 + 0 + 150 = 450 → 150 al mese.
-        expense(account, "2026-06-15", "-300.00", "Spesa");
-        expense(account, "2026-08-15", "-150.00", "Spesa");
+        expense(account, "2026-06-15", "-300.00", "Spesa alimentare");
+        expense(account, "2026-08-15", "-150.00", "Spesa alimentare");
         classificationService.classifyAll();
 
-        assertThat(create("{\"category\": \"  Spesa \", \"currency\": \"EUR\", \"monthlyAmount\": 400}"))
+        assertThat(create("{\"category\": \"  spesa alimentare \", \"currency\": \"EUR\", \"monthlyAmount\": 400}"))
                 .hasStatus(201)
-                .bodyJson().extractingPath("$.category").isEqualTo("Spesa"); // senza spazi
+                .bodyJson().extractingPath("$.category").isEqualTo("Spesa alimentare"); // il nome dell'elenco
 
         assertThat(mvc.get().uri("/api/budgets?month=2026-09"))
                 .hasStatusOk()
@@ -98,11 +98,11 @@ class BudgetControllerTest {
     @Test
     void theStatusDependsOnHowMuchOfTheBudgetIsSpent() {
         Account account = account();
-        expense(account, "2026-09-03", "-79.00", "A");
-        expense(account, "2026-09-03", "-100.00", "B");
-        expense(account, "2026-09-03", "-100.01", "C");
+        expense(account, "2026-09-03", "-79.00", "Bar e ristoranti");
+        expense(account, "2026-09-03", "-100.00", "Shopping");
+        expense(account, "2026-09-03", "-100.01", "Viaggi e vacanze");
         classificationService.classifyAll();
-        for (String category : new String[] {"A", "B", "C"}) {
+        for (String category : new String[] {"Bar e ristoranti", "Shopping", "Viaggi e vacanze"}) {
             create("{\"category\": \"" + category + "\", \"currency\": \"EUR\", \"monthlyAmount\": 100}");
         }
 
@@ -119,17 +119,17 @@ class BudgetControllerTest {
 
     @Test
     void aBudgetCanBeChangedAndDeletedButNotDuplicated() {
-        create("{\"category\": \"Spesa\", \"currency\": \"EUR\", \"monthlyAmount\": 400}");
+        create("{\"category\": \"Spesa alimentare\", \"currency\": \"EUR\", \"monthlyAmount\": 400}");
         Long budgetId = budgetRepository.findAll().getFirst().getId();
 
-        assertThat(create("{\"category\": \"Spesa\", \"currency\": \"EUR\", \"monthlyAmount\": 100}"))
+        assertThat(create("{\"category\": \"Spesa alimentare\", \"currency\": \"EUR\", \"monthlyAmount\": 100}"))
                 .hasStatus(409)
-                .bodyJson().extractingPath("$.detail").isEqualTo("Esiste già un budget per \"Spesa\" in EUR.");
+                .bodyJson().extractingPath("$.detail").isEqualTo("Esiste già un budget per \"Spesa alimentare\" in EUR.");
         // La stessa categoria in un'altra valuta è un budget diverso.
-        assertThat(create("{\"category\": \"Spesa\", \"currency\": \"USD\", \"monthlyAmount\": 100}")).hasStatus(201);
+        assertThat(create("{\"category\": \"Spesa alimentare\", \"currency\": \"USD\", \"monthlyAmount\": 100}")).hasStatus(201);
 
         assertThat(mvc.put().uri("/api/budgets/{id}", budgetId).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"category\": \"Spesa\", \"currency\": \"EUR\", \"monthlyAmount\": 450.50}"))
+                .content("{\"category\": \"Spesa alimentare\", \"currency\": \"EUR\", \"monthlyAmount\": 450.50}"))
                 .hasStatusOk()
                 .bodyJson().satisfies(json -> amount(json, "$.monthlyAmount", "450.50"));
 
@@ -144,6 +144,11 @@ class BudgetControllerTest {
         assertThat(create("{\"category\": \"Spesa\", \"currency\": \"EUR\", \"monthlyAmount\": 10.123}"))
                 .hasStatus(400);
         assertThat(create("{\"category\": \" \", \"currency\": \"EUR\", \"monthlyAmount\": 10}")).hasStatus(400);
+        // Una categoria che non è nell'elenco.
+        assertThat(create("{\"category\": \"Inventata\", \"currency\": \"EUR\", \"monthlyAmount\": 10}"))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail")
+                .isEqualTo("La categoria \"Inventata\" non esiste: aggiungila dalla pagina Categorie.");
         assertThat(mvc.get().uri("/api/budgets?month=2026-13")).hasStatus(400);
         assertThat(budgetRepository.count()).isZero();
     }

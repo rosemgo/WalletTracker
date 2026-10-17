@@ -1,5 +1,6 @@
 package it.wallettracker.transaction;
 
+import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.data.domain.Page;
@@ -16,10 +17,13 @@ public class TransactionService {
 
     private final BankTransactionRepository repository;
     private final ClassificationService classificationService;
+    private final CategoryService categoryService;
 
-    public TransactionService(BankTransactionRepository repository, ClassificationService classificationService) {
+    public TransactionService(BankTransactionRepository repository, ClassificationService classificationService,
+            CategoryService categoryService) {
         this.repository = repository;
         this.classificationService = classificationService;
+        this.categoryService = categoryService;
     }
 
     /**
@@ -58,13 +62,14 @@ public class TransactionService {
     }
 
     /**
-     * Sceglie a mano la categoria di un movimento ({@code null} o vuota la toglie: torna a deciderla la
-     * regola, se c'è). Gli spazi all'inizio e alla fine non contano.
+     * Sceglie a mano la categoria di un movimento, tra quelle dell'elenco ({@code null} o vuota la toglie:
+     * torna a deciderla la regola, se c'è).
      */
     @Transactional
     public TransactionDto correctCategory(Long id, String manualCategory) {
         BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
-        String category = manualCategory == null || manualCategory.isBlank() ? null : manualCategory.trim();
+        // Il nome "ufficiale" dall'elenco ("spesa alimentare" diventa "Spesa alimentare"); 400 se non c'è.
+        String category = categoryService.resolve(manualCategory);
         transaction.setManualCategory(category);
         // Riclassifichiamo per ritrovare la categoria della regola quando la scelta manuale viene tolta.
         classificationService.classifyAll();
