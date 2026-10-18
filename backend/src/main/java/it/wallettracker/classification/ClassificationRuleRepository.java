@@ -17,6 +17,7 @@ public interface ClassificationRuleRepository extends JpaRepository<Classificati
      * <p>{@code @EntityGraph}: carica anche la categoria di ogni regola, nella stessa query (un JOIN), perché
      * la dashboard ne mostra il nome. È l'alternativa a un {@code JOIN FETCH} scritto a mano, per i metodi
      * di cui Spring Data scrive la query da solo.
+     * L'annotazione @EntityGraph(attributePaths = "category") è il fulcro di questo metodo. Fa esattamente lo stesso lavoro del LEFT JOIN FETCH, ma senza a scrivere la query a mano.
      */
     @EntityGraph(attributePaths = "category")
     List<ClassificationRule> findAllByOrderByPriorityAscIdAsc();
