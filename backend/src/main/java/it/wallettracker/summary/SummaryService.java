@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.summary.CurrencySummary.CategoryExpense;
@@ -64,6 +65,10 @@ public class SummaryService {
         Map<String, List<MonthlyTotal>> rowsByCurrency = new TreeMap<>();
         for (MonthlyTotal row : repository.sumByMonthAndType(start, end)) {
             rowsByCurrency.computeIfAbsent(row.getCurrency(), currency -> new ArrayList<>()).add(row);
+            //La riga di sopra sarebbe queste:
+            //List<MonthlyTotal> list = rowsByCurrency.computeIfAbsent(row.getCurrency(),  currency ->new ArrayList<>());
+            //list.add(row);
+
         }
         Map<String, List<CategoryExpense>> categoriesByCurrency = new TreeMap<>();
         for (CategoryTotal row : repository.sumExpensesByCategory(start, end)) {
