@@ -15,6 +15,8 @@ import it.wallettracker.alert.AlertDto.AlertKind;
 import it.wallettracker.alert.AlertDto.Severity;
 import it.wallettracker.budget.Budget;
 import it.wallettracker.budget.BudgetRepository;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
@@ -58,6 +60,9 @@ class AlertServiceTest {
 
     @Autowired
     ClassificationService classificationService;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     private int counter;
 
@@ -118,9 +123,9 @@ class AlertServiceTest {
         expense(account, "-10.00", "Spesa alimentare");
         classificationService.classifyAll();
         budgetRepository.saveAll(List.of(
-                new Budget("Bar e ristoranti", "EUR", new BigDecimal("100")),
-                new Budget("Viaggi e vacanze", "EUR", new BigDecimal("50")),
-                new Budget("Spesa alimentare", "EUR", new BigDecimal("400"))));
+                new Budget(category("Bar e ristoranti"), "EUR", new BigDecimal("100")),
+                new Budget(category("Viaggi e vacanze"), "EUR", new BigDecimal("50")),
+                new Budget(category("Spesa alimentare"), "EUR", new BigDecimal("400"))));
 
         assertThat(mvc.get().uri("/api/alerts"))
                 .hasStatusOk()
@@ -155,7 +160,12 @@ class AlertServiceTest {
     private void expense(Account account, String amount, String category) {
         BankTransaction transaction = new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
                 LocalDate.now(), null, new BigDecimal(amount), "EUR", null, "NEGOZIO " + counter, "{}");
-        transaction.setManualCategory(category);
+        transaction.setManualCategory(category(category));
         transactionRepository.save(transaction);
+    }
+
+    /** Una categoria dell'elenco di partenza, per nome. */
+    private Category category(String name) {
+        return categoryRepository.findByNameIgnoreCase(name).orElseThrow();
     }
 }

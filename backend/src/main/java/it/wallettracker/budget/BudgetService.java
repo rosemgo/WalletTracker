@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import it.wallettracker.budget.BudgetDto.BudgetStatus;
+import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryService;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.CategoryTotal;
@@ -52,7 +53,8 @@ public class BudgetService {
         Map<String, BigDecimal> spentInLast3Months = expensesByKey(month.minusMonths(3), month.minusMonths(1));
         Collator collator = Collator.getInstance(Locale.ITALIAN);
         return budgetRepository.findAll().stream()
-                .sorted(Comparator.comparing(Budget::getCategory, collator).thenComparing(Budget::getCurrency))
+                .sorted(Comparator.comparing((Budget b) -> b.getCategory().getName(), collator)
+                        .thenComparing(Budget::getCurrency))
                 .map(budget -> describe(budget, month,
                         spentInMonth.getOrDefault(key(budget), BigDecimal.ZERO),
                         spentInLast3Months.getOrDefault(key(budget), BigDecimal.ZERO)))
@@ -61,7 +63,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetDto create(BudgetRequest request) {
-        String category = categoryService.resolve(request.category()); // deve essere nell'elenco
+        Category category = categoryService.require(request.categoryId()); // deve essere nell'elenco
         checkNotDuplicate(category, request.currency(), null);
         Budget budget = budgetRepository.save(new Budget(category, request.currency(), request.monthlyAmount()));
         return describeCurrentMonth(budget);
@@ -70,7 +72,7 @@ public class BudgetService {
     @Transactional
     public BudgetDto update(Long id, BudgetRequest request) {
         Budget budget = find(id);
-        String category = categoryService.resolve(request.category());
+        Category category = categoryService.require(request.categoryId());
         checkNotDuplicate(category, request.currency(), budget);
         budget.update(category, request.currency(), request.monthlyAmount());
         return describeCurrentMonth(budget);
@@ -82,12 +84,12 @@ public class BudgetService {
     }
 
     /** Un budget per categoria e valuta: un secondo budget per la stessa coppia → 409 Conflict. */
-    private void checkNotDuplicate(String category, String currency, Budget current) {
+    private void checkNotDuplicate(Category category, String currency, Budget current) {
         boolean sameAsCurrent = current != null
-                && current.getCategory().equals(category) && current.getCurrency().equals(currency);
+                && current.getCategory().getId().equals(category.getId()) && current.getCurrency().equals(currency);
         if (!sameAsCurrent && budgetRepository.existsByCategoryAndCurrency(category, currency)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Esiste già un budget per \"" + category + "\" in " + currency + ".");
+                    "Esiste già un budget per \"" + category.getName() + "\" in " + currency + ".");
         }
     }
 
@@ -109,7 +111,8 @@ public class BudgetService {
         } else {
             status = BudgetStatus.OK;
         }
-        return new BudgetDto(budget.getId(), budget.getCategory(), budget.getCurrency(), amount, spent,
+        return new BudgetDto(budget.getId(), budget.getCategory().getId(), budget.getCategory().getName(),
+                budget.getCurrency(), amount, spent,
                 amount.subtract(spent), expectedSoFar(amount, month, LocalDate.now()),
                 spentIn3Months.divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP), status);
     }
@@ -130,19 +133,19 @@ public class BudgetService {
                 .divide(BigDecimal.valueOf(month.lengthOfMonth()), 2, RoundingMode.HALF_UP);
     }
 
-    /** Le spese per categoria tra due mesi (inclusi), come mappa "categoria|valuta" → spesa positiva. */
+    /** Le spese per categoria tra due mesi (inclusi), come mappa "id categoria|valuta" → spesa positiva. */
     private Map<String, BigDecimal> expensesByKey(YearMonth from, YearMonth to) {
         Map<String, BigDecimal> expenses = new HashMap<>();
         for (CategoryTotal row : transactionRepository.sumExpensesByCategory(from.atDay(1), to.plusMonths(1).atDay(1))) {
-            if (row.getCategory() != null) {
-                expenses.put(row.getCategory() + "|" + row.getCurrency(), row.getTotal().negate());
+            if (row.getCategoryId() != null) {
+                expenses.put(row.getCategoryId() + "|" + row.getCurrency(), row.getTotal().negate());
             }
         }
         return expenses;
     }
 
     private static String key(Budget budget) {
-        return budget.getCategory() + "|" + budget.getCurrency();
+        return budget.getCategory().getId() + "|" + budget.getCurrency();
     }
 
     private Budget find(Long id) {

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 /**
  * Un budget come lo vede la dashboard: il budget e come sta andando nel mese scelto.
  *
+ * @param category        il nome della categoria (categoryId è il suo id)
  * @param spent           le spese della categoria nel mese (i rimborsi le riducono)
  * @param remaining       quanto resta (negativo = budget superato)
  * @param expectedSoFar   quanto "dovresti" aver speso finora spendendo in modo regolare: per il mese in corso
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
  */
 public record BudgetDto(
         Long id,
+        Long categoryId,
         String category,
         String currency,
         BigDecimal monthlyAmount,

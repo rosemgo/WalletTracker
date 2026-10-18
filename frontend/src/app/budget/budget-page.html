@@ -90,13 +90,13 @@
     <label>
       Categoria
       <!-- Solo le categorie di spesa: un budget conta le spese. -->
-      <select formControlName="category">
-        <option value="">— scegli —</option>
+      <select formControlName="categoryId">
+        <option [ngValue]="null">— scegli —</option>
         @for (category of expenseCategories(); track category.id) {
-          <option [value]="category.name">{{ category.name }}</option>
+          <option [ngValue]="category.id">{{ category.name }}</option>
         }
       </select>
-      @if (showError('category')) {
+      @if (showError('categoryId')) {
         <span class="error">Scegli la categoria.</span>
       }
     </label>

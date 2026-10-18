@@ -103,47 +103,47 @@ class CategoryControllerTest {
     }
 
     @Test
-    void renamingACategoryUpdatesMovementsRulesAndBudgetsByItself() {
+    void renamingACategoryChangesOneRowAndTheNewNameShowsUpEverywhere() {
         // Una categoria creata apposta: i test non devono cambiare l'elenco di partenza, che usano anche gli altri.
         save(null, "{\"name\": \"Animali\", \"kind\": \"EXPENSE\"}");
+        Category animals = categoryRepository.findByNameIgnoreCase("Animali").orElseThrow();
         BankTransaction purchase = purchase();
-        purchase.setManualCategory("Animali");
+        purchase.setManualCategory(animals);
         transactionRepository.save(purchase);
-        ClassificationRule rule = ruleRepository.save(new ClassificationRule("Zoo shop", 100,
-                ClassificationRule.MatchMode.CONTAINS, "ZOO", ClassificationRule.AmountSign.ANY,
-                TransactionType.EXPENSE, "Animali"));
-        budgetRepository.save(new Budget("Animali", "EUR", new BigDecimal("100")));
+        ruleRepository.save(new ClassificationRule("Zoo shop", 100, ClassificationRule.MatchMode.CONTAINS, "ZOO",
+                ClassificationRule.AmountSign.ANY, TransactionType.EXPENSE, animals));
+        budgetRepository.save(new Budget(animals, "EUR", new BigDecimal("100")));
         classificationService.classifyAll();
 
-        Long id = categoryRepository.findByNameIgnoreCase("Animali").orElseThrow().getId();
-        assertThat(save(id, "{\"name\": \"Animali domestici\", \"kind\": \"EXPENSE\"}"))
+        assertThat(save(animals.getId(), "{\"name\": \"Animali domestici\", \"kind\": \"EXPENSE\"}"))
                 .hasStatusOk()
                 .bodyJson().extractingPath("$.uses").isEqualTo(1);
 
-        // Nessuna riga di Java ha toccato movimenti, regole e budget: ci ha pensato ON UPDATE CASCADE.
-        BankTransaction reloaded = transactionRepository.findById(purchase.getId()).orElseThrow();
-        assertThat(reloaded.getManualCategory()).isEqualTo("Animali domestici");
-        assertThat(reloaded.getCategory()).isEqualTo("Animali domestici");
-        assertThat(ruleRepository.findById(rule.getId()).orElseThrow().getCategory()).isEqualTo("Animali domestici");
-        assertThat(budgetRepository.findAll().getFirst().getCategory()).isEqualTo("Animali domestici");
+        // Movimento, regola e budget tengono l'id, che non è cambiato: leggendoli, il nome è già quello nuovo.
+        assertThat(mvc.get().uri("/api/transactions")).bodyJson()
+                .extractingPath("$.items[0].category").isEqualTo("Animali domestici");
+        assertThat(mvc.get().uri("/api/rules")).bodyJson()
+                .extractingPath("$[?(@.name == 'Zoo shop')].category").asArray().containsExactly("Animali domestici");
+        assertThat(mvc.get().uri("/api/budgets?month=2026-10")).bodyJson()
+                .extractingPath("$[0].category").isEqualTo("Animali domestici");
     }
 
     @Test
     void deletingACategoryLeavesMovementsWithoutItButNotIfItHasABudget() {
         save(null, "{\"name\": \"Animali domestici\", \"kind\": \"EXPENSE\"}");
-        Long id = categoryRepository.findByNameIgnoreCase("Animali domestici").orElseThrow().getId();
+        Category animals = categoryRepository.findByNameIgnoreCase("Animali domestici").orElseThrow();
         BankTransaction purchase = purchase();
-        purchase.setManualCategory("Animali domestici");
+        purchase.setManualCategory(animals);
         transactionRepository.save(purchase);
-        budgetRepository.save(new Budget("Animali domestici", "EUR", new BigDecimal("50")));
+        budgetRepository.save(new Budget(animals, "EUR", new BigDecimal("50")));
 
-        assertThat(mvc.delete().uri("/api/categories/{id}", id))
+        assertThat(mvc.delete().uri("/api/categories/{id}", animals.getId()))
                 .hasStatus(409)
                 .bodyJson().extractingPath("$.detail")
                 .isEqualTo("C'è un budget per \"Animali domestici\": eliminalo prima dalla pagina Budget.");
 
         budgetRepository.deleteAll();
-        assertThat(mvc.delete().uri("/api/categories/{id}", id)).hasStatus(204);
+        assertThat(mvc.delete().uri("/api/categories/{id}", animals.getId())).hasStatus(204);
         // ON DELETE SET NULL: il movimento resta, senza categoria.
         assertThat(transactionRepository.findById(purchase.getId()).orElseThrow().getManualCategory()).isNull();
     }

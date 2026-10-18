@@ -50,7 +50,7 @@ export class BudgetPage implements OnInit {
    * (BudgetRequest.java), ripetuto qui per avvisare subito.
    */
   protected readonly form = this.fb.group({
-    category: ['', [Validators.required, Validators.maxLength(100)]],
+    categoryId: [null as number | null, [Validators.required]], // l'id della categoria
     monthlyAmount: [
       null as number | null,
       [
@@ -97,7 +97,7 @@ export class BudgetPage implements OnInit {
     this.editing.set(budget);
     this.message.set(null);
     this.form.setValue({
-      category: budget.category,
+      categoryId: budget.categoryId,
       monthlyAmount: budget.monthlyAmount,
       currency: budget.currency,
     });
@@ -106,7 +106,7 @@ export class BudgetPage implements OnInit {
   cancel(): void {
     this.editing.set(null);
     this.form.reset({
-      category: '',
+      categoryId: null,
       monthlyAmount: null,
       currency: this.form.controls.currency.value,
     });
@@ -117,10 +117,10 @@ export class BudgetPage implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    const { category, monthlyAmount, currency } = this.form.getRawValue();
+    const { categoryId, monthlyAmount, currency } = this.form.getRawValue();
     // Chi scrive "12,50" (con la virgola italiana) intende 12.50.
     const request = {
-      category: category.trim(),
+      categoryId: categoryId as number, // il validatore "required" garantisce che c'è
       currency,
       monthlyAmount: Number(String(monthlyAmount).replace(',', '.')),
     };
@@ -151,7 +151,7 @@ export class BudgetPage implements OnInit {
     });
   }
 
-  protected showError(field: 'category' | 'monthlyAmount'): boolean {
+  protected showError(field: 'categoryId' | 'monthlyAmount'): boolean {
     const control = this.form.controls[field];
     return control.invalid && control.touched;
   }

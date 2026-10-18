@@ -10,6 +10,8 @@ import java.time.temporal.ChronoUnit;
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.transaction.BankTransaction;
@@ -33,11 +35,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 @Import(IntegrationTestConfiguration.class)
 class RuleControllerTest {
 
-    /** Una regola nuova: "se il testo contiene ESSELUNGA ed è un'uscita, è una spesa (Spesa alimentare)". */
-    private static final String GROCERIES = """
-            {"name": "Supermercato", "priority": 100, "enabled": true, "matchMode": "CONTAINS",
-             "pattern": "esselunga", "amountSign": "NEGATIVE", "resultType": "EXPENSE", "category": "Spesa alimentare"}
-            """;
 
     @Autowired
     MockMvcTester mvc;
@@ -47,6 +44,9 @@ class RuleControllerTest {
 
     @Autowired
     ClassificationRuleRepository ruleRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     @Autowired
     BankTransactionRepository transactionRepository;
@@ -91,7 +91,7 @@ class RuleControllerTest {
 
     @Test
     void aNewRuleIsCreatedAndAppliedToTheExistingTransactions() {
-        assertThat(post("/api/rules", GROCERIES))
+        assertThat(post("/api/rules", groceries()))
                 .hasStatus(201)
                 .bodyJson()
                 .satisfies(json -> {
@@ -100,7 +100,8 @@ class RuleControllerTest {
                 });
 
         BankTransaction reloaded = transactionRepository.findById(groceries.getId()).orElseThrow();
-        assertThat(reloaded.getCategory()).isEqualTo("Spesa alimentare");
+        // Il movimento tiene l'id della categoria (leggerne l'id non richiede di caricarla).
+        assertThat(reloaded.getCategory().getId()).isEqualTo(category("Spesa alimentare").getId());
     }
 
     @Test
@@ -109,8 +110,8 @@ class RuleControllerTest {
                 .filter(r -> r.getName().equals("Dividendo")).findFirst().orElseThrow();
         String disabled = """
                 {"name": "Dividendo", "priority": 10, "enabled": false, "matchMode": "STARTS_WITH",
-                 "pattern": "Div.su", "amountSign": "POSITIVE", "resultType": "INVESTMENT_INCOME", "category": "Dividendi"}
-                """;
+                 "pattern": "Div.su", "amountSign": "POSITIVE", "resultType": "INVESTMENT_INCOME", "categoryId": %d}
+                """.formatted(category("Dividendi").getId());
 
         assertThat(mvc.put().uri("/api/rules/{id}", dividend.getId()).contentType(MediaType.APPLICATION_JSON).content(disabled))
                 .hasStatusOk()
@@ -131,7 +132,7 @@ class RuleControllerTest {
                 .hasStatus(400)
                 .bodyJson().extractingPath("$.detail").asString().contains("disattivarle");
 
-        post("/api/rules", GROCERIES);
+        post("/api/rules", groceries());
         ClassificationRule created = ruleRepository.findAll().stream().filter(r -> !r.isBuiltin())
                 .findFirst().orElseThrow();
         assertThat(mvc.delete().uri("/api/rules/{id}", created.getId())).hasStatus(204);
@@ -142,7 +143,7 @@ class RuleControllerTest {
     void aPreviewShowsTheMatchingTransactionsWithoutSaving() {
         long rulesBefore = ruleRepository.count();
 
-        assertThat(post("/api/rules/preview", GROCERIES))
+        assertThat(post("/api/rules/preview", groceries()))
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
@@ -167,5 +168,18 @@ class RuleControllerTest {
     private BankTransaction transaction(Account account, String key, String amount, String description) {
         return transactionRepository.save(new BankTransaction(account, key, TransactionStatus.BOOKED,
                 LocalDate.of(2026, 10, 1), null, new BigDecimal(amount), "EUR", null, description, "{}"));
+    }
+
+    /** Una categoria dell'elenco di partenza, per nome. */
+    private Category category(String name) {
+        return categoryRepository.findByNameIgnoreCase(name).orElseThrow();
+    }
+
+    /** Una regola nuova: "se il testo contiene ESSELUNGA ed è un'uscita, è una spesa (Spesa alimentare)". */
+    private String groceries() {
+        return """
+                {"name": "Supermercato", "priority": 100, "enabled": true, "matchMode": "CONTAINS",
+                 "pattern": "esselunga", "amountSign": "NEGATIVE", "resultType": "EXPENSE", "categoryId": %d}
+                """.formatted(category("Spesa alimentare").getId());
     }
 }

@@ -61,11 +61,11 @@
                   (change)="saveCategory(t, $any($event.target).value)"
                   (keydown.escape)="editingCategory.set(null)"
                 >
-                  <option value="" [selected]="!t.category">— nessuna categoria —</option>
+                  <option value="" [selected]="t.categoryId === null">— nessuna categoria —</option>
                   @for (group of groupsFor(t); track group.kind) {
                     <optgroup [label]="group.label">
                       @for (category of group.categories; track category.id) {
-                        <option [value]="category.name" [selected]="category.name === t.category">
+                        <option [value]="category.id" [selected]="category.id === t.categoryId">
                           {{ category.name }}
                         </option>
                       }
@@ -79,7 +79,7 @@
             } @else {
               <div class="secondary">
                 {{ t.category ?? 'senza categoria' }}
-                @if (t.manualCategory) {
+                @if (t.manualCategoryId) {
                   (scelta a mano)
                 }
                 ·
@@ -109,7 +109,7 @@
                 <button type="button" class="link" (click)="onResetCorrection(t)">annulla</button>
               </div>
             }
-            @if (t.manualType || t.manualCategory) {
+            @if (t.manualType || t.manualCategoryId) {
               <div class="secondary">
                 <a routerLink="/regole" [queryParams]="ruleParams(t)">crea una regola</a> per i
                 movimenti simili

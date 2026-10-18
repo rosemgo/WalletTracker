@@ -12,6 +12,8 @@ import java.util.List;
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
@@ -48,6 +50,9 @@ class SummaryControllerTest {
 
     @Autowired
     BankConnectionRepository connectionRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     private int counter;
 
@@ -114,10 +119,10 @@ class SummaryControllerTest {
         BankTransaction groceries = transaction(account, "2026-10-03", "-60.00", "SUPERMERCATO", "EUR");
         transaction(account, "2026-10-04", "-15.00", "EDICOLA", "EUR"); // senza categoria
         transaction(account, "2026-10-05", "-2.00", "Canone Mensile", "EUR"); // regola: "Costi bancari"
-        shoes.setManualCategory("Shopping");
-        refund.setManualCategory("Shopping");
+        shoes.setManualCategory(category("Shopping"));
+        refund.setManualCategory(category("Shopping"));
         refund.setManualType(TransactionType.EXPENSE); // un rimborso è una spesa "al contrario"
-        groceries.setManualCategory("Spesa alimentare");
+        groceries.setManualCategory(category("Spesa alimentare"));
         transactionRepository.saveAll(List.of(shoes, refund, groceries));
         classificationService.classifyAll();
 
@@ -210,5 +215,10 @@ class SummaryControllerTest {
     private void pending(Account account, String date, String amount, String description) {
         transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.PENDING,
                 LocalDate.parse(date), null, new BigDecimal(amount), "EUR", null, description, "{}"));
+    }
+
+    /** Una categoria dell'elenco di partenza, per nome. */
+    private Category category(String name) {
+        return categoryRepository.findByNameIgnoreCase(name).orElseThrow();
     }
 }

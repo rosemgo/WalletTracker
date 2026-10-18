@@ -20,9 +20,10 @@ const SETTLEMENT: Transaction = {
   counterparty: null,
   description: 'Estratto conto carta di credito al 20261010',
   type: 'CARD_SETTLEMENT',
+  categoryId: 4,
   category: 'Saldo carta',
   manualType: null,
-  manualCategory: null,
+  manualCategoryId: null,
   transferPeerId: null,
 };
 
@@ -37,7 +38,7 @@ const CATEGORIES: Category[] = [
 describe('TransactionsPage', () => {
   const requests: TransactionFilter[] = [];
   const corrections: [number, TransactionType | null][] = [];
-  const categoryChanges: [number, string | null][] = [];
+  const categoryChanges: [number, number | null][] = [];
   let items: Transaction[];
 
   beforeEach(() => {
@@ -56,9 +57,9 @@ describe('TransactionsPage', () => {
         corrections.push([id, type]);
         return of({ ...SETTLEMENT, manualType: type });
       },
-      correctCategory: (id: number, category: string | null) => {
-        categoryChanges.push([id, category]);
-        return of({ ...SETTLEMENT, manualCategory: category });
+      correctCategory: (id: number, categoryId: number | null) => {
+        categoryChanges.push([id, categoryId]);
+        return of({ ...SETTLEMENT, manualCategoryId: categoryId });
       },
       categories: () => of(CATEGORIES),
     };
@@ -126,7 +127,8 @@ describe('TransactionsPage', () => {
     button('modifica').click();
     await fixture.whenStable();
     const select = page.querySelector('.category-edit select') as HTMLSelectElement;
-    expect(select.value).toBe('Saldo carta'); // si parte dalla categoria attuale
+    // Si parte dalla categoria attuale. Il valore di un'opzione HTML è testo: l'id 4 diventa "4".
+    expect(select.value).toBe('4');
     // Un saldo della carta (tipo "Altro"): in cima le altre categorie, poi spese ed entrate.
     expect(Array.from(select.querySelectorAll('optgroup')).map((g) => g.label)).toEqual([
       'Altre categorie',
@@ -134,10 +136,10 @@ describe('TransactionsPage', () => {
       'Categorie di entrata',
     ]);
 
-    select.value = 'Shopping';
+    select.value = '1'; // Shopping
     select.dispatchEvent(new Event('change'));
     await fixture.whenStable();
-    expect(categoryChanges).toEqual([[449, 'Shopping']]);
+    expect(categoryChanges).toEqual([[449, 1]]); // l'id, come numero
     expect(page.querySelector('.category-edit')).toBeNull(); // il menu si chiude
 
     button('modifica').click();
@@ -158,8 +160,9 @@ describe('TransactionsPage', () => {
         counterparty: 'NETFLIX.COM',
         description: 'Pagamento carta',
         type: 'EXPENSE',
+        categoryId: 2,
         category: 'Intrattenimento e tempo libero',
-        manualCategory: 'Intrattenimento e tempo libero',
+        manualCategoryId: 2,
       },
     ];
     const fixture = TestBed.createComponent(TransactionsPage);
@@ -174,12 +177,12 @@ describe('TransactionsPage', () => {
       pattern: 'NETFLIX.COM',
       resultType: 'EXPENSE',
       amountSign: 'NEGATIVE',
-      category: 'Intrattenimento e tempo libero',
+      categoryId: '2',
     });
   });
 
   it('for an income, the "Spesa" type is offered as the refund of an expense', async () => {
-    items = [{ ...SETTLEMENT, amount: 40, type: 'INCOME', category: null }];
+    items = [{ ...SETTLEMENT, amount: 40, type: 'INCOME', categoryId: null, category: null }];
     const fixture = TestBed.createComponent(TransactionsPage);
     await fixture.whenStable();
     const options = Array.from(

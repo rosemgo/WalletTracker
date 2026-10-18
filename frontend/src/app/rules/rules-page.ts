@@ -32,7 +32,7 @@ const NEW_RULE: RuleRequest = {
   pattern: '',
   amountSign: 'ANY',
   resultType: 'EXPENSE',
-  category: '',
+  categoryId: null,
 };
 
 /**
@@ -86,7 +86,7 @@ export class RulesPage implements OnInit {
     matchMode: [NEW_RULE.matchMode],
     amountSign: [NEW_RULE.amountSign],
     resultType: [NEW_RULE.resultType],
-    category: [NEW_RULE.category, [Validators.maxLength(100)]],
+    categoryId: [NEW_RULE.categoryId as number | null], // l'id della categoria, oppure null
     priority: [NEW_RULE.priority, [Validators.required, Validators.min(0), Validators.max(10000)]],
     enabled: [NEW_RULE.enabled],
   });
@@ -112,7 +112,7 @@ export class RulesPage implements OnInit {
 
   /**
    * "Crea una regola da questa correzione" (pagina Movimenti) arriva qui con i dati nell'indirizzo:
-   * /regole?pattern=NETFLIX&resultType=EXPENSE&amountSign=NEGATIVE&category=Abbonamenti.
+   * /regole?pattern=NETFLIX&resultType=EXPENSE&amountSign=NEGATIVE&categoryId=8.
    * Compiliamo il modulo e facciamo subito la prova, così l'utente vede a quali movimenti si
    * applicherebbe prima di salvare. I valori che non conosciamo vengono ignorati: l'indirizzo lo può
    * scrivere chiunque, quindi non ci fidiamo (e comunque l'ultima parola resta al backend).
@@ -125,12 +125,14 @@ export class RulesPage implements OnInit {
     }
     const resultType = params.get('resultType') as TransactionType;
     const amountSign = params.get('amountSign') as AmountSign;
+    // L'id deve essere un numero intero positivo; se non c'è nell'elenco, il backend risponde 400.
+    const categoryId = Number(params.get('categoryId'));
     this.form.patchValue({
       name: `Movimenti con "${pattern}"`.slice(0, 100),
       pattern: pattern.slice(0, 200),
       ...(this.types.includes(resultType) ? { resultType } : {}),
       ...(this.amountSigns.includes(amountSign) ? { amountSign } : {}),
-      category: (params.get('category') ?? '').slice(0, 100),
+      ...(Number.isInteger(categoryId) && categoryId > 0 ? { categoryId } : {}),
     });
     this.message.set(
       'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.',
@@ -143,14 +145,14 @@ export class RulesPage implements OnInit {
     this.editing.set(rule);
     this.preview.set(null);
     this.message.set(null);
-    // setValue vuole TUTTI i campi del modulo; la categoria null diventa una stringa vuota.
+    // setValue vuole TUTTI i campi del modulo.
     this.form.setValue({
       name: rule.name,
       pattern: rule.pattern,
       matchMode: rule.matchMode,
       amountSign: rule.amountSign,
       resultType: rule.resultType,
-      category: rule.category ?? '',
+      categoryId: rule.categoryId,
       priority: rule.priority,
       enabled: rule.enabled,
     });
@@ -201,13 +203,12 @@ export class RulesPage implements OnInit {
 
   /** La casella "Attiva" di una riga: salva la regola con enabled cambiato. */
   toggle(rule: Rule): void {
-    const { id, builtin, uses, ...request } = rule; // tutti i campi tranne id, builtin e uses
-    this.api
-      .updateRule(id, { ...request, category: rule.category ?? '', enabled: !rule.enabled })
-      .subscribe({
-        next: () => this.loadRules(),
-        error: () => this.error.set('La regola non è stata aggiornata.'),
-      });
+    // Tutti i campi tranne quelli calcolati dal backend (id, nome della categoria, builtin, uses).
+    const { id, category, builtin, uses, ...request } = rule;
+    this.api.updateRule(id, { ...request, enabled: !rule.enabled }).subscribe({
+      next: () => this.loadRules(),
+      error: () => this.error.set('La regola non è stata aggiornata.'),
+    });
   }
 
   remove(rule: Rule): void {

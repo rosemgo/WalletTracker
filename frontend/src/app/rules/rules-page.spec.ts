@@ -15,6 +15,7 @@ const DIVIDEND: Rule = {
   pattern: 'Div.su',
   amountSign: 'POSITIVE',
   resultType: 'INVESTMENT_INCOME',
+  categoryId: 3,
   category: 'Dividendi',
   builtin: true,
   uses: 7,
@@ -77,10 +78,15 @@ describe('RulesPage', () => {
     });
   });
 
-  /** Sceglie una voce in un menu del modulo (per un <select> l'evento è "change"). */
-  function choose(page: HTMLElement, field: string, value: string): void {
+  /**
+   * Sceglie in un menu del modulo la voce con questo testo, come farebbe l'utente. Cerchiamo per testo
+   * perché con [ngValue] il valore HTML di un'opzione non è l'id (Angular ci mette un suo codice).
+   */
+  function choose(page: HTMLElement, field: string, text: string): void {
     const select = page.querySelector(`[formControlName="${field}"]`) as HTMLSelectElement;
-    select.value = value;
+    select.selectedIndex = Array.from(select.options).findIndex(
+      (o) => o.textContent?.trim() === text,
+    );
     select.dispatchEvent(new Event('change'));
   }
 
@@ -109,7 +115,7 @@ describe('RulesPage', () => {
 
     type(page, 'name', 'Supermercato');
     type(page, 'pattern', 'ESSELUNGA');
-    choose(page, 'category', 'Spesa alimentare');
+    choose(page, 'categoryId', 'Spesa alimentare');
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
@@ -120,7 +126,7 @@ describe('RulesPage', () => {
         matchMode: 'CONTAINS',
         amountSign: 'ANY',
         resultType: 'EXPENSE',
-        category: 'Spesa alimentare',
+        categoryId: 1, // Spesa alimentare
         priority: 100,
         enabled: true,
       },
@@ -187,7 +193,7 @@ describe('RulesPage', () => {
       pattern: 'NETFLIX.COM',
       resultType: 'EXPENSE',
       amountSign: 'NEGATIVE',
-      category: 'Intrattenimento e tempo libero',
+      categoryId: '2', // nell'indirizzo tutto è testo
     };
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();
@@ -200,7 +206,7 @@ describe('RulesPage', () => {
         matchMode: 'CONTAINS',
         amountSign: 'NEGATIVE',
         resultType: 'EXPENSE',
-        category: 'Intrattenimento e tempo libero',
+        categoryId: 2, // Intrattenimento e tempo libero
         priority: 100,
         enabled: true,
       },
@@ -210,11 +216,12 @@ describe('RulesPage', () => {
   });
 
   it('ignores unknown values in the address', async () => {
-    queryParams = { pattern: 'BAR', resultType: 'BOH', amountSign: '<script>' };
+    queryParams = { pattern: 'BAR', resultType: 'BOH', amountSign: '<script>', categoryId: '-1' };
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();
 
     expect(previewed[0].resultType).toBe('EXPENSE'); // il valore predefinito
     expect(previewed[0].amountSign).toBe('ANY');
+    expect(previewed[0].categoryId).toBeNull();
   });
 });

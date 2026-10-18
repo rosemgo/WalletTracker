@@ -48,9 +48,10 @@ export interface Transaction {
   counterparty: string | null;
   description: string | null;
   type: TransactionType | null;
-  category: string | null;
+  categoryId: number | null; // l'id della categoria (tiene già conto di quella scelta a mano)
+  category: string | null; // il nome della categoria, da mostrare
   manualType: TransactionType | null;
-  manualCategory: string | null; // la categoria scelta a mano, se c'è (vince su quella delle regole)
+  manualCategoryId: number | null; // la categoria scelta a mano, se c'è (vince su quella delle regole)
   transferPeerId: number | null;
 }
 
@@ -108,13 +109,13 @@ export interface RuleRequest {
   pattern: string;
   amountSign: AmountSign;
   resultType: TransactionType;
-  category: string;
+  categoryId: number | null; // l'id di una categoria dell'elenco, oppure null
 }
 
 /** Una regola salvata (GET /api/rules): i dati scritti dall'utente più quelli calcolati dal backend. */
-export interface Rule extends Omit<RuleRequest, 'category'> {
+export interface Rule extends RuleRequest {
   id: number;
-  category: string | null;
+  category: string | null; // il nome della categoria, da mostrare
   builtin: boolean; // regola di partenza: si può modificare o disattivare, non cancellare
   uses: number; // quanti movimenti ha classificato
 }
@@ -148,7 +149,8 @@ export type SummaryTotals = Omit<MonthSummary, 'month'>;
 
 /** Le spese di una categoria nel periodo (positive; i rimborsi le riducono). */
 export interface CategoryExpense {
-  category: string | null; // null = spese senza categoria
+  categoryId: number | null;
+  category: string | null; // il nome; null = spese senza categoria
   amount: number;
   movements: number;
 }
@@ -173,7 +175,7 @@ export type BudgetStatus = 'OK' | 'WARNING' | 'OVER';
 
 /** I dati di un budget che l'utente può scrivere (POST/PUT /api/budgets). */
 export interface BudgetRequest {
-  category: string;
+  categoryId: number; // l'id di una categoria dell'elenco
   currency: string; // es. "EUR"
   monthlyAmount: number;
 }
@@ -181,6 +183,7 @@ export interface BudgetRequest {
 /** Un budget con l'andamento del mese scelto (GET /api/budgets?month=2026-10). */
 export interface Budget extends BudgetRequest {
   id: number;
+  category: string; // il nome della categoria, da mostrare
   spent: number; // le spese della categoria nel mese (i rimborsi le riducono)
   remaining: number; // negativo = superato
   expectedSoFar: number; // quanto "dovresti" aver speso finora spendendo in modo regolare

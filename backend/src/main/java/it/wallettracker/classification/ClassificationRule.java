@@ -2,14 +2,18 @@ package it.wallettracker.classification;
 
 import java.math.BigDecimal;
 
+import it.wallettracker.category.Category;
 import it.wallettracker.transaction.TransactionType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
@@ -56,8 +60,10 @@ public class ClassificationRule {
     @Column(name = "result_type", nullable = false)
     private TransactionType resultType;
 
-    @Column(name = "category")
-    private String category;
+    /** La categoria da assegnare, facoltativa: un riferimento alla tabella {@code category} (colonna category_id). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     @Column(name = "builtin", nullable = false)
     private boolean builtin;
@@ -66,7 +72,7 @@ public class ClassificationRule {
     }
 
     public ClassificationRule(String name, int priority, MatchMode matchMode, String pattern, AmountSign amountSign,
-            TransactionType resultType, String category) {
+            TransactionType resultType, Category category) {
         this.name = name;
         this.priority = priority;
         this.enabled = true;
@@ -100,7 +106,7 @@ public class ClassificationRule {
 
     /** Modifica la regola (dalla dashboard). Anche le regole di partenza si possono modificare o disattivare. */
     public void update(String name, int priority, boolean enabled, MatchMode matchMode, String pattern,
-            AmountSign amountSign, TransactionType resultType, String category) {
+            AmountSign amountSign, TransactionType resultType, Category category) {
         this.name = name;
         this.priority = priority;
         this.enabled = enabled;
@@ -148,7 +154,7 @@ public class ClassificationRule {
         return resultType;
     }
 
-    public String getCategory() {
+    public Category getCategory() {
         return category;
     }
 

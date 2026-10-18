@@ -66,11 +66,10 @@ public class TransactionService {
      * torna a deciderla la regola, se c'è).
      */
     @Transactional
-    public TransactionDto correctCategory(Long id, String manualCategory) {
+    public TransactionDto correctCategory(Long id, Long categoryId) {
         BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
-        // Il nome "ufficiale" dall'elenco ("spesa alimentare" diventa "Spesa alimentare"); 400 se non c'è.
-        String category = categoryService.resolve(manualCategory);
-        transaction.setManualCategory(category);
+        // La categoria dell'elenco con quell'id (400 se non esiste); null toglie la scelta.
+        transaction.setManualCategory(categoryService.require(categoryId));
         // Riclassifichiamo per ritrovare la categoria della regola quando la scelta manuale viene tolta.
         classificationService.classifyAll();
         return TransactionDto.from(transaction);

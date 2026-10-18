@@ -22,9 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
  * L'elenco delle categorie: lettura, aggiunta, modifica, eliminazione, e il controllo che una categoria
  * scelta (per un movimento, una regola, un budget) esista davvero.
  *
- * <p>Movimenti, regole e budget salvano il <b>nome</b> della categoria. Il database garantisce che quel nome
- * sia nell'elenco (chiave esterna) e lo aggiorna da solo quando la categoria viene rinominata
- * ({@code ON UPDATE CASCADE}, migrazione V12).
+ * <p>Movimenti, regole e budget salvano l'<b>id</b> della categoria (migrazione V13): il nome sta solo nella
+ * tabella {@code category}. Il database garantisce che l'id esista (chiave esterna).
  */
 @Service
 public class CategoryService {
@@ -43,15 +42,15 @@ public class CategoryService {
     /** Tutte le categorie: per gruppo, poi nell'ordine dell'elenco, poi in ordine alfabetico. */
     @Transactional(readOnly = true)
     public List<CategoryDto> categories() {
-        Map<String, Long> uses = transactionRepository.countUsesByCategory().stream()
-                .collect(Collectors.toMap(CategoryUsage::getCategory, CategoryUsage::getUses));
+        Map<Long, Long> uses = transactionRepository.countUsesByCategory().stream()
+                .collect(Collectors.toMap(CategoryUsage::getCategoryId, CategoryUsage::getUses));
         Collator collator = Collator.getInstance(Locale.ITALIAN);
         return categoryRepository.findAll().stream()
                 .sorted(Comparator.comparing(Category::getKind)
                         .thenComparing(Category::getPosition)
                         .thenComparing(Category::getName, collator))
                 .map(c -> new CategoryDto(c.getId(), c.getName(), c.getKind(), c.isBuiltin(),
-                        uses.getOrDefault(c.getName(), 0L)))
+                        uses.getOrDefault(c.getId(), 0L)))
                 .toList();
     }
 
@@ -63,14 +62,16 @@ public class CategoryService {
         return new CategoryDto(category.getId(), category.getName(), category.getKind(), false, 0);
     }
 
-    /** Rinomina (o cambia gruppo): movimenti, regole e budget seguono da soli, grazie al database. */
+    /**
+     * Rinomina (o cambia gruppo). Movimenti, regole e budget tengono l'id della categoria, che non cambia:
+     * il nuovo nome compare ovunque senza toccare nessun'altra riga.
+     */
     @Transactional
     public CategoryDto update(Long id, CategoryRequest request) {
         Category category = find(id);
         String name = request.name().trim();
         checkNameFree(name, category);
         category.update(name, request.kind());
-        categoryRepository.flush(); // manda subito l'UPDATE: il CASCADE nel database parte adesso
         return categories().stream().filter(c -> c.id().equals(id)).findFirst().orElseThrow();
     }
 
@@ -81,7 +82,7 @@ public class CategoryService {
     @Transactional
     public void delete(Long id) {
         Category category = find(id);
-        if (budgetRepository.existsByCategory(category.getName())) {
+        if (budgetRepository.existsByCategory(category)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "C'è un budget per \"" + category.getName() + "\": eliminalo prima dalla pagina Budget.");
         }
@@ -89,20 +90,23 @@ public class CategoryService {
     }
 
     /**
-     * Il nome "ufficiale" di una categoria scelta dall'utente: "spesa alimentare" diventa "Spesa alimentare".
-     * Se la categoria non è nell'elenco → 400, con un messaggio che dice dove aggiungerla.
+     * La categoria scelta dall'utente (per un movimento, una regola, un budget), dal suo id.
      *
-     * @return null se {@code name} è null o vuoto (nessuna categoria)
+     * <p>Se l'id non è nell'elenco → 400 (la richiesta indica una categoria che non c'è: ad esempio è stata
+     * eliminata in un'altra finestra). Senza questo controllo arriverebbe al database, che la rifiuterebbe
+     * con la chiave esterna: un errore 500 incomprensibile. Il controllo qui dà il messaggio chiaro, il
+     * vincolo nel database resta l'ultima difesa.
+     *
+     * @return null se {@code id} è null (nessuna categoria)
      */
     @Transactional(readOnly = true)
-    public String resolve(String name) {
-        if (name == null || name.isBlank()) {
+    public Category require(Long id) {
+        if (id == null) {
             return null;
         }
-        return categoryRepository.findByNameIgnoreCase(name.trim())
-                .map(Category::getName)
+        return categoryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "La categoria \"" + name.trim() + "\" non esiste: aggiungila dalla pagina Categorie."));
+                        "La categoria " + id + " non esiste: forse è stata eliminata. Ricarica la pagina."));
     }
 
     /** Il nome è libero? Maiuscole e minuscole non contano: "spesa" e "Spesa" sono lo stesso nome. */

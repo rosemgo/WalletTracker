@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 import it.wallettracker.account.Account;
+import it.wallettracker.category.Category;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -79,8 +80,18 @@ public class BankTransaction {
     @Column(name = "type")
     private TransactionType type;
 
-    @Column(name = "category")
-    private String category;
+    /**
+     * La categoria (tiene già conto di quella scelta a mano). È un riferimento a una riga della tabella
+     * {@code category}: nel database c'è solo il suo id (colonna {@code category_id}, migrazione V13).
+     *
+     * <p>{@code @ManyToOne}: molti movimenti possono avere la stessa categoria. {@code LAZY}: Hibernate non
+     * legge la categoria finché non serve (ad esempio per scriverne il nome), così caricare mille movimenti
+     * non vuol dire caricare anche le loro categorie una per una. Dove il nome serve per tanti movimenti
+     * insieme, la query la carica subito con un {@code JOIN FETCH} (vedi BankTransactionRepository.search).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     /** La regola che ha deciso il tipo, se è stata una regola. */
     @Column(name = "rule_id")
@@ -95,9 +106,10 @@ public class BankTransaction {
     @Column(name = "manual_type")
     private TransactionType manualType;
 
-    /** La categoria scelta a mano dall'utente (migrazione V9): se presente, vince su quella delle regole. */
-    @Column(name = "manual_category")
-    private String manualCategory;
+    /** La categoria scelta a mano dall'utente (V9, per id da V13): se presente, vince su quella delle regole. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manual_category_id")
+    private Category manualCategory;
 
     protected BankTransaction() {
     }
@@ -122,7 +134,7 @@ public class BankTransaction {
      * Assegna il risultato della classificazione. La categoria scelta a mano, se c'è, vince su quella
      * proposta dalla classificazione.
      */
-    public void classify(TransactionType type, String category, Long ruleId, Long transferPeerId) {
+    public void classify(TransactionType type, Category category, Long ruleId, Long transferPeerId) {
         this.type = type;
         this.category = manualCategory != null ? manualCategory : category;
         this.ruleId = ruleId;
@@ -138,7 +150,7 @@ public class BankTransaction {
         return type;
     }
 
-    public String getCategory() {
+    public Category getCategory() {
         return category;
     }
 
@@ -155,11 +167,11 @@ public class BankTransaction {
     }
 
     /** Categoria scelta a mano (dalla dashboard): {@code null} la toglie. */
-    public void setManualCategory(String manualCategory) {
+    public void setManualCategory(Category manualCategory) {
         this.manualCategory = manualCategory;
     }
 
-    public String getManualCategory() {
+    public Category getManualCategory() {
         return manualCategory;
     }
 

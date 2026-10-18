@@ -22,9 +22,9 @@ const SUMMARY: Summary = {
       months: [month('2026-09', 2000, 1500), month('2026-10', 2000, 2500, 3)],
       total: { income: 4000, expenses: 4000, savings: 0, investmentNet: 37, toReview: 3 },
       expensesByCategory: [
-        { category: 'Casa', amount: 2000, movements: 2 },
-        { category: null, amount: 1000, movements: 9 },
-        { category: 'Spesa', amount: 1000, movements: 12 },
+        { categoryId: 3, category: 'Spese fisse e utenze', amount: 2000, movements: 2 },
+        { categoryId: null, category: null, amount: 1000, movements: 9 },
+        { categoryId: 1, category: 'Spesa alimentare', amount: 1000, movements: 12 },
       ],
     },
   ],
@@ -112,9 +112,9 @@ describe('SummaryPage', () => {
     );
 
     expect(rows.map((r) => r.querySelector('.category-name')?.textContent?.trim())).toEqual([
-      'Casa',
+      'Spese fisse e utenze',
       'Senza categoria',
-      'Spesa',
+      'Spesa alimentare',
     ]);
     expect(rows[0].textContent).toContain('50%');
     expect(rows[1].classList).toContain('muted');
@@ -125,6 +125,7 @@ describe('SummaryPage', () => {
 
   it('folds the smallest categories into one row', async () => {
     const many = Array.from({ length: 10 }, (_, i) => ({
+      categoryId: i + 1,
       category: `Categoria ${i + 1}`,
       amount: 100 - i,
       movements: 1,

@@ -128,9 +128,12 @@ export class TransactionsPage implements OnInit {
     return categoryGroups(this.categories(), kindOf(transaction.type));
   }
 
-  /** La categoria scelta nel menu; "" (nessuna categoria) toglie la scelta manuale. */
+  /**
+   * La categoria scelta nel menu. Il valore di un'opzione HTML è sempre testo ("7"): lo trasformiamo nel
+   * numero dell'id. "" (nessuna categoria) toglie la scelta manuale.
+   */
   saveCategory(transaction: Transaction, value: string): void {
-    this.api.correctCategory(transaction.id, value === '' ? null : value).subscribe({
+    this.api.correctCategory(transaction.id, value === '' ? null : Number(value)).subscribe({
       next: () => {
         this.editingCategory.set(null);
         this.load();
@@ -142,7 +145,7 @@ export class TransactionsPage implements OnInit {
 
   /**
    * I dati per "crea una regola da questa correzione": la pagina Regole li legge dall'indirizzo
-   * (es. /regole?pattern=NETFLIX&resultType=EXPENSE&category=Abbonamenti) e compila il modulo.
+   * (es. /regole?pattern=NETFLIX&resultType=EXPENSE&categoryId=8) e compila il modulo.
    * Come testo da cercare proponiamo la controparte o, se manca, la causale: l'utente può accorciarlo.
    */
   protected ruleParams(transaction: Transaction): Record<string, string> {
@@ -153,7 +156,7 @@ export class TransactionsPage implements OnInit {
       pattern,
       resultType: transaction.type ?? 'EXPENSE',
       amountSign: transaction.amount < 0 ? 'NEGATIVE' : 'POSITIVE',
-      category: transaction.category ?? '',
+      categoryId: transaction.categoryId !== null ? String(transaction.categoryId) : '',
     };
   }
 

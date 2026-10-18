@@ -17,6 +17,7 @@ const CATEGORIES: Category[] = [
 
 const GROCERIES: Budget = {
   id: 1,
+  categoryId: 1,
   category: 'Spesa alimentare',
   currency: 'EUR',
   monthlyAmount: 400,
@@ -30,12 +31,18 @@ const GROCERIES: Budget = {
 const TRAVEL: Budget = {
   ...GROCERIES,
   id: 2,
+  categoryId: 3,
   category: 'Viaggi e vacanze',
   monthlyAmount: 100,
   spent: 130,
   remaining: -30,
   status: 'OVER',
 };
+
+/** Come il backend vero: nella risposta c'è anche il nome della categoria scelta. */
+function nameOf(categoryId: number): string {
+  return CATEGORIES.find((c) => c.id === categoryId)?.name ?? '?';
+}
 
 describe('BudgetPage', () => {
   const requestedMonths: string[] = [];
@@ -64,11 +71,11 @@ describe('BudgetPage', () => {
           ? throwError(() => ({
               error: { detail: 'Esiste già un budget per "Spesa alimentare" in EUR.' },
             }))
-          : of({ ...GROCERIES, ...budget, id: 3 });
+          : of({ ...GROCERIES, ...budget, category: nameOf(budget.categoryId), id: 3 });
       },
       updateBudget: (id: number, budget: BudgetRequest) => {
         updated.push([id, budget]);
-        return of({ ...GROCERIES, ...budget });
+        return of({ ...GROCERIES, ...budget, category: nameOf(budget.categoryId) });
       },
     };
     TestBed.configureTestingModule({
@@ -80,12 +87,23 @@ describe('BudgetPage', () => {
     });
   });
 
-  /** Scrive in un campo del modulo, o sceglie una voce in un menu, come farebbe l'utente. */
+  /** Scrive in un campo del modulo come farebbe l'utente (l'evento "input" avvisa il Reactive Form). */
   function type(page: HTMLElement, field: string, value: string): void {
-    const element = page.querySelector(`[formControlName="${field}"]`) as HTMLInputElement;
-    element.value = value;
-    // Un <input> avvisa il Reactive Form con l'evento "input", un <select> con "change".
-    element.dispatchEvent(new Event(element.tagName === 'SELECT' ? 'change' : 'input'));
+    const input = page.querySelector(`[formControlName="${field}"]`) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  }
+
+  /**
+   * Sceglie in un menu del modulo la voce con questo testo, come farebbe l'utente. Cerchiamo per testo
+   * perché con [ngValue] il valore HTML di un'opzione non è l'id (Angular ci mette un suo codice).
+   */
+  function choose(page: HTMLElement, field: string, text: string): void {
+    const select = page.querySelector(`[formControlName="${field}"]`) as HTMLSelectElement;
+    select.selectedIndex = Array.from(select.options).findIndex(
+      (o) => o.textContent?.trim() === text,
+    );
+    select.dispatchEvent(new Event('change'));
   }
 
   it('shows each budget with its status as icon and words, and how much is left', async () => {
@@ -127,13 +145,13 @@ describe('BudgetPage', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    type(page, 'category', 'Bar e ristoranti');
+    choose(page, 'categoryId', 'Bar e ristoranti');
     type(page, 'monthlyAmount', '150,50');
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
     expect(created).toEqual([
-      { category: 'Bar e ristoranti', currency: 'EUR', monthlyAmount: 150.5 },
+      { categoryId: 2, currency: 'EUR', monthlyAmount: 150.5 }, // Bar e ristoranti
     ]);
     expect(page.textContent).toContain('Budget "Bar e ristoranti" salvato');
   });
@@ -144,7 +162,7 @@ describe('BudgetPage', () => {
     const page = fixture.nativeElement as HTMLElement;
     const submit = page.querySelector('button[type="submit"]') as HTMLButtonElement;
 
-    type(page, 'category', 'Spesa alimentare');
+    choose(page, 'categoryId', 'Spesa alimentare');
     type(page, 'monthlyAmount', '10.123');
     submit.click();
     await fixture.whenStable();
@@ -173,9 +191,7 @@ describe('BudgetPage', () => {
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(updated).toEqual([
-      [1, { category: 'Spesa alimentare', currency: 'EUR', monthlyAmount: 450 }],
-    ]);
+    expect(updated).toEqual([[1, { categoryId: 1, currency: 'EUR', monthlyAmount: 450 }]]);
   });
 
   it('offers the currency only to those who have accounts in more than one', async () => {
@@ -195,7 +211,7 @@ describe('BudgetPage', () => {
     await fixture.whenStable();
     const options = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll(
-        '[formControlName="category"] option',
+        '[formControlName="categoryId"] option',
       ),
     ).map((o) => o.textContent?.trim());
 

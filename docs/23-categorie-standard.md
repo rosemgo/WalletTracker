@@ -16,6 +16,11 @@ auto...) che ognuno può **rinominare, ampliare e accorciare** dalla nuova pagin
 
 ---
 
+> **Aggiornamento (`docs/24`).** Movimenti, regole e budget ora salvano l'**id** della categoria, non più il
+> nome: è la soluzione "da manuale" descritta nella sezione 4 come alternativa. Le parti di questa guida su
+> `ON UPDATE CASCADE`, sulle chiavi esterne sul nome e su `resolve(...)` raccontano la versione V12; il
+> resto (l'elenco, i gruppi, i menu, la migrazione delle categorie già scritte) vale ancora.
+
 ## Parte A: i concetti
 
 ### 1. Perché un elenco
