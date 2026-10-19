@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { AccountsPage } from './accounts/accounts-page';
 import { BudgetPage } from './budget/budget-page';
 import { CategoriesPage } from './categories/categories-page';
+import { ImportPage } from './import/import-page';
 import { CallbackPage } from './link/callback-page';
 import { LinkPage } from './link/link-page';
 import { RulesPage } from './rules/rules-page';
@@ -22,6 +23,7 @@ export const routes: Routes = [
   { path: 'abbonamenti', component: SubscriptionsPage, title: 'Abbonamenti · WalletTracker' },
   { path: 'movimenti', component: TransactionsPage, title: 'Movimenti · WalletTracker' },
   { path: 'conti', component: AccountsPage, title: 'Conti · WalletTracker' },
+  { path: 'importa', component: ImportPage, title: 'Importa CSV · WalletTracker' },
   { path: 'regole', component: RulesPage, title: 'Regole · WalletTracker' },
   { path: 'categorie', component: CategoriesPage, title: 'Categorie · WalletTracker' },
   { path: 'collega', component: LinkPage, title: 'Collega una banca · WalletTracker' },

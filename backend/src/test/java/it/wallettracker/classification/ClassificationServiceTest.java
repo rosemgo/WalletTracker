@@ -258,6 +258,22 @@ class ClassificationServiceTest {
     }
 
     @Test
+    void theNameOfAManualAccountIsNotTakenAsTheOwnerName() {
+        // Il nome di un conto manuale lo sceglie l'utente (es. "Carta Esselunga", una carta prepagata): non è il
+        // nome dell'intestatario come quello che danno le banche. Se lo usassimo, ogni spesa con quelle parole
+        // sembrerebbe un trasferimento verso quel conto.
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        Account manual = accountRepository.save(Account.manual("Esselunga", "Carta Esselunga", null, "EUR",
+                AccountRole.SPENDING));
+        BankTransaction purchase = transaction(main, DAY, "-45.00", "ESSELUNGA SPA", "Pagamento carta Esselunga Milano");
+        transaction(manual, DAY, "45.00", null, null);  // senza testo, come in tanti CSV
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(purchase)).isEqualTo(TransactionType.EXPENSE);
+    }
+
+    @Test
     void transactionsTooFarApartAreNotPaired() {
         Account main = account("IT00MAIN", AccountRole.MAIN);
         Account spending = account("IT00SPEND", AccountRole.SPENDING);

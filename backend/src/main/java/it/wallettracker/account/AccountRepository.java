@@ -29,7 +29,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      *
      * <p>Un {@code JOIN FETCH} dice a Hibernate: "Fai una sola grande query SQL con una JOIN interna. Prendi tutti i dati degli Account e, nello stesso identico momento, riempi anche i dati delle Connection associate".
      */
-    @Query("SELECT a FROM Account a JOIN FETCH a.connection c ORDER BY c.aspspName, a.name")
+    @Query("SELECT a FROM Account a LEFT JOIN FETCH a.connection c ORDER BY COALESCE(c.aspspName, a.bankName), a.name")
+    // LEFT: anche i conti manuali (V14), che non hanno un collegamento; COALESCE ordina per banca o istituto.
     List<Account> findAllWithConnection();
 
     /**

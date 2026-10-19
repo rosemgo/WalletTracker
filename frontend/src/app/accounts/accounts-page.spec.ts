@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Account, AccountRole, SyncRound } from '../api/models';
+import { Account, AccountRole, ManualAccountRequest, SyncRound } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AccountsPage } from './accounts-page';
 
@@ -13,9 +13,24 @@ const CARD: Account = {
   iban: null,
   currency: 'EUR',
   role: 'SPENDING',
+  source: 'ENABLE_BANKING',
   consentValidUntil: '2027-01-05T14:35:51Z',
   lastSyncAt: null,
   lastSyncError: 'HTTP 429 troppe letture',
+};
+
+/** Un conto manuale: i movimenti arrivano da file CSV. */
+const BROKER: Account = {
+  id: 8,
+  bank: 'Trade Republic',
+  name: 'Conto titoli',
+  iban: null,
+  currency: 'EUR',
+  role: 'INVESTMENT',
+  source: 'MANUAL',
+  consentValidUntil: null,
+  lastSyncAt: null,
+  lastSyncError: null,
 };
 
 /**
@@ -25,13 +40,27 @@ const CARD: Account = {
  */
 describe('AccountsPage', () => {
   const changedRoles: [number, AccountRole][] = [];
+  const created: ManualAccountRequest[] = [];
+  const deleted: number[] = [];
   let syncCalls = 0;
+  let accounts: Account[];
 
   beforeEach(() => {
     changedRoles.length = 0;
+    created.length = 0;
+    deleted.length = 0;
     syncCalls = 0;
+    accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
-      accounts: () => of([CARD]),
+      accounts: () => of(accounts),
+      createManualAccount: (request: ManualAccountRequest) => {
+        created.push(request);
+        return of({ ...BROKER, bank: request.bankName, name: request.name });
+      },
+      deleteAccount: (id: number) => {
+        deleted.push(id);
+        return of(undefined);
+      },
       changeRole: (id: number, role: AccountRole) => {
         changedRoles.push([id, role]);
         return of({ ...CARD, role });
@@ -90,5 +119,93 @@ describe('AccountsPage', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'Aggiornati 2 conti, 1 con errori',
     );
+  });
+
+  it('a manual account has no consent date, links to the import and is deleted after confirming', async () => {
+    accounts = [CARD, BROKER];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const row = page.querySelectorAll('tbody tr')[1] as HTMLElement;
+
+    expect(row.textContent).toContain('conto manuale');
+    const link = row.querySelector('a') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/importa?conto=8');
+
+    // "elimina" chiede conferma; solo "Elimina" cancella davvero.
+    (
+      Array.from(row.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'elimina',
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+    expect(deleted).toEqual([]);
+    expect(row.textContent).toContain('verranno eliminati');
+    accounts = [CARD];
+    (
+      Array.from(row.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Elimina',
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+
+    expect(deleted).toEqual([8]);
+    expect(page.textContent).toContain('Conto "Conto titoli" eliminato');
+    expect(page.querySelector('tbody')?.textContent).not.toContain('Conto titoli'); // elenco ricaricato
+  });
+
+  it('a bank account has no delete button', async () => {
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const row = (fixture.nativeElement as HTMLElement).querySelector('tbody tr') as HTMLElement;
+
+    expect(row.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('creates a manual account from the form', async () => {
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const form = page.querySelector('form') as HTMLFormElement;
+    const type = (name: string, value: string) => {
+      const input = form.querySelector(`[formControlName="${name}"]`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    type('bankName', '  Trade Republic ');
+    type('name', 'Conto titoli');
+    type('currency', 'eur');
+    form.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    // Spazi tolti, valuta in maiuscolo, IBAN vuoto = null.
+    expect(created).toEqual([
+      {
+        bankName: 'Trade Republic',
+        name: 'Conto titoli',
+        iban: null,
+        currency: 'EUR',
+        role: 'UNASSIGNED',
+      },
+    ]);
+    expect(page.textContent).toContain('Conto "Conto titoli" creato');
+  });
+
+  it('does not send an incomplete manual account and says what is missing', async () => {
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const form = page.querySelector('form') as HTMLFormElement;
+    const iban = form.querySelector('[formControlName="iban"]') as HTMLInputElement;
+    iban.value = 'IT12';
+    iban.dispatchEvent(new Event('input'));
+
+    form.dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(created).toEqual([]);
+    expect(form.textContent).toContain('Scrivi il nome della banca.');
+    expect(form.textContent).toContain('Non sembra un IBAN');
   });
 });

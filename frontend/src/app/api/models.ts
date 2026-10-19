@@ -23,6 +23,9 @@ export type TransactionType =
   | 'IGNORED'
   | 'TO_REVIEW';
 
+/** Da dove arrivano i movimenti di un conto: dalla banca (Enable Banking) o da file CSV (conto manuale). */
+export type AccountSource = 'ENABLE_BANKING' | 'MANUAL';
+
 /** Un conto, come lo restituisce GET /api/accounts. */
 export interface Account {
   id: number;
@@ -31,9 +34,69 @@ export interface Account {
   iban: string | null;
   currency: string;
   role: AccountRole;
-  consentValidUntil: string; // data e ora in formato ISO, es. "2027-01-05T14:35:51Z"
+  source: AccountSource;
+  consentValidUntil: string | null; // data e ora ISO, es. "2027-01-05T14:35:51Z"; null nei conti manuali
   lastSyncAt: string | null;
   lastSyncError: string | null;
+}
+
+/** Il corpo di POST /api/accounts: un conto manuale, i cui movimenti si caricano da file CSV. */
+export interface ManualAccountRequest {
+  bankName: string;
+  name: string;
+  iban: string | null;
+  currency: string;
+  role: AccountRole;
+}
+
+/** Una colonna con l'importo con il segno, oppure due colonne (entrate e uscite). */
+export type AmountMode = 'SINGLE' | 'SPLIT';
+
+/** Il separatore dei decimali: virgola (12,50) o punto (12.50). */
+export type DecimalSeparator = 'COMMA' | 'DOT';
+
+/**
+ * Come leggere un file CSV (record ImportMapping nel backend). Le colonne sono numeri da 0 (la prima);
+ * null vuol dire "nessuna colonna".
+ */
+export interface ImportMapping {
+  delimiter: string; // ";" "," "\t" oppure "|"
+  dateColumn: number | null;
+  dateFormat: string; // es. "dd/MM/yyyy"
+  amountMode: AmountMode;
+  amountColumn: number | null;
+  incomeColumn: number | null;
+  expenseColumn: number | null;
+  decimalSeparator: DecimalSeparator;
+  descriptionColumn: number | null;
+  counterpartyColumn: number | null;
+  currencyColumn: number | null;
+}
+
+/** Una riga letta con la mappatura, nell'anteprima. */
+export interface ImportPreviewRow {
+  date: string; // "2026-10-03"
+  amount: number;
+  currency: string;
+  description: string | null;
+  counterparty: string | null;
+}
+
+/** La risposta di POST /api/imports/preview. */
+export interface ImportPreview {
+  headers: string[];
+  sampleRows: string[][]; // le prime righe così come sono nel file
+  totalRows: number;
+  mapping: ImportMapping; // quella proposta dal backend, o quella mandata
+  parsedRows: ImportPreviewRow[];
+  errorCount: number;
+  errors: string[];
+}
+
+/** La risposta di POST /api/imports. */
+export interface ImportResult {
+  imported: number;
+  duplicates: number; // righe già importate in passato, saltate
 }
 
 /** Un movimento, come lo restituisce GET /api/transactions. */

@@ -121,6 +121,82 @@ class AccountControllerTest {
                 .hasStatus(400);
     }
 
+    @Test
+    void aManualAccountIsCreatedWithItsBankNameAndNoConsent() {
+        assertThat(mvc.post().uri("/api/accounts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"bankName": "Trade Republic", "name": "Conto Trade Republic",
+                         "iban": "de12 3456 7890 1234 5678 90", "currency": "EUR", "role": "INVESTMENT"}
+                        """))
+                .hasStatus(201)
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.source").isEqualTo("MANUAL");
+                    json.assertThat().extractingPath("$.bank").isEqualTo("Trade Republic");
+                    json.assertThat().extractingPath("$.iban").isEqualTo("DE12345678901234567890"); // senza spazi
+                    json.assertThat().extractingPath("$.role").isEqualTo("INVESTMENT");
+                    json.assertThat().extractingPath("$.consentValidUntil").isNull(); // nessun consenso PSD2
+                });
+
+        // Nell'elenco, insieme ai conti collegati, in ordine di banca.
+        account("ING");
+        assertThat(mvc.get().uri("/api/accounts"))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$[0].bank").isEqualTo("ING");
+                    json.assertThat().extractingPath("$[0].source").isEqualTo("ENABLE_BANKING");
+                    json.assertThat().extractingPath("$[1].bank").isEqualTo("Trade Republic");
+                });
+    }
+
+    @Test
+    void anInvalidManualAccountIs400() {
+        // Banca mancante, valuta non ISO, IBAN troppo corto.
+        assertThat(mvc.post().uri("/api/accounts").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bankName\": \" \", \"name\": \"Conto\", \"currency\": \"EUR\"}"))
+                .hasStatus(400);
+        assertThat(mvc.post().uri("/api/accounts").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bankName\": \"TR\", \"name\": \"Conto\", \"currency\": \"euro\"}"))
+                .hasStatus(400);
+        assertThat(mvc.post().uri("/api/accounts").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bankName\": \"TR\", \"name\": \"Conto\", \"iban\": \"IT12\", \"currency\": \"EUR\"}"))
+                .hasStatus(400);
+        assertThat(accountRepository.count()).isZero();
+    }
+
+    @Test
+    void deletingAManualAccountDeletesItsTransactionsAndUnpairsTheTransfer() {
+        // Un trasferimento tra un conto collegato e un conto manuale.
+        Account main = account("ING");
+        Account manual = accountRepository.save(Account.manual("Trade Republic", "Conto TR", null, "EUR",
+                AccountRole.UNASSIGNED));
+        BankTransaction out = transaction(main, "-500.00");
+        transaction(manual, "500.00");
+        classificationService.classifyAll();
+        assertThat(typeOf(out)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+
+        assertThat(mvc.delete().uri("/api/accounts/{id}", manual.getId())).hasStatus(204);
+
+        assertThat(accountRepository.findById(manual.getId())).isEmpty();
+        assertThat(transactionRepository.count()).isEqualTo(1);
+        // Il movimento rimasto non ha più l'altra metà: viene riclassificato.
+        assertThat(typeOf(out)).isEqualTo(TransactionType.TO_REVIEW);
+    }
+
+    @Test
+    void aBankAccountCannotBeDeleted() {
+        // I suoi movimenti tornerebbero alla prossima sincronizzazione.
+        Account account = account("ING");
+
+        assertThat(mvc.delete().uri("/api/accounts/{id}", account.getId()))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail")
+                .isEqualTo("Si possono eliminare solo i conti manuali (caricati da file CSV).");
+        assertThat(accountRepository.findById(account.getId())).isPresent();
+    }
+
     private Account account(String bank) {
         counter++;
         BankConnection connection = connectionRepository.save(new BankConnection(bank, "IT", "session-" + counter,

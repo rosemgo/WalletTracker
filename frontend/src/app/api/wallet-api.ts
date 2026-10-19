@@ -11,7 +11,11 @@ import {
   BudgetRequest,
   Category,
   CategoryRequest,
+  ImportMapping,
+  ImportPreview,
+  ImportResult,
   LinkResult,
+  ManualAccountRequest,
   Rule,
   RulePreview,
   RuleRequest,
@@ -52,6 +56,34 @@ export class WalletApi {
   /** PUT /api/accounts/{id}/role */
   changeRole(accountId: number, role: AccountRole): Observable<Account> {
     return this.http.put<Account>(`/api/accounts/${accountId}/role`, { role });
+  }
+
+  /** POST /api/accounts: crea un conto manuale. */
+  createManualAccount(account: ManualAccountRequest): Observable<Account> {
+    return this.http.post<Account>('/api/accounts', account);
+  }
+
+  /** DELETE /api/accounts/{id}: elimina un conto manuale con i suoi movimenti. */
+  deleteAccount(accountId: number): Observable<void> {
+    return this.http.delete<void>(`/api/accounts/${accountId}`);
+  }
+
+  /** POST /api/imports/preview: l'anteprima di un file CSV; senza mappatura, il backend ne propone una. */
+  previewImport(
+    file: File,
+    accountId: number,
+    mapping: ImportMapping | null,
+  ): Observable<ImportPreview> {
+    return this.http.post<ImportPreview>('/api/imports/preview', importForm(file, mapping), {
+      params: { accountId },
+    });
+  }
+
+  /** POST /api/imports: importa il file nel conto manuale, con la mappatura confermata. */
+  importCsv(file: File, accountId: number, mapping: ImportMapping): Observable<ImportResult> {
+    return this.http.post<ImportResult>('/api/imports', importForm(file, mapping), {
+      params: { accountId },
+    });
   }
 
   /** GET /api/transactions?accountId=...&type=...&page=...&size=... (i filtri null non vengono mandati) */
@@ -210,4 +242,19 @@ export class WalletApi {
   deleteSubscription(id: number): Observable<void> {
     return this.http.delete<void>(`/api/subscriptions/${id}`);
   }
+}
+
+/**
+ * Il corpo "multipart" di un'importazione, come un modulo HTML con un file allegato: il pezzo `file` è il
+ * CSV, il pezzo `mapping` è il JSON della mappatura. Lo mettiamo in un Blob di tipo application/json,
+ * così il backend sa che deve leggerlo come JSON (@RequestPart). Il Content-Type della richiesta
+ * (multipart/form-data, con il "boundary" che separa i pezzi) lo scrive il browser: non va impostato a mano.
+ */
+function importForm(file: File, mapping: ImportMapping | null): FormData {
+  const form = new FormData();
+  form.append('file', file);
+  if (mapping) {
+    form.append('mapping', new Blob([JSON.stringify(mapping)], { type: 'application/json' }));
+  }
+  return form;
 }

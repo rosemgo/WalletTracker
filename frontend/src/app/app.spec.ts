@@ -37,6 +37,7 @@ describe('App', () => {
       'Abbonamenti',
       'Movimenti',
       'Conti',
+      'Importa CSV',
       'Regole',
       'Categorie',
       'Collega una banca',

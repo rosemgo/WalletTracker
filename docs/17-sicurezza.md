@@ -53,6 +53,7 @@ Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`S
 | 11 | **Dependabot**: aggiornamenti delle librerie ogni settimana | librerie vulnerabili | `.github/dependabot.yml` |
 | 12 | **CI**: tutti i test a ogni push | regressioni, anche di sicurezza | `.github/workflows/ci.yml` |
 | 13 | nessuna statistica d'uso inviata da Angular CLI | privacy di chi sviluppa | `"analytics": false` in `frontend/angular.json` |
+| 14 | **file caricati limitati**: al massimo 5 MB (413 oltre) e 50.000 righe; si importano solo nei conti manuali; il file non viene conservato sul server; importazione "tutto o niente" in una transazione | file enormi che occupano memoria e disco, dati a metà | `spring.servlet.multipart` in `application.yml`, `csvimport/CsvImportService`, `UploadLimitTest`, `docs/25` |
 
 ### Approfondimento: la cifratura dei segreti (n. 5)
 
@@ -112,7 +113,7 @@ Il principio guida: **nessun accesso da fuori dal PC finché non c'è il login.*
 | Fase 4 | **header di sicurezza** per la dashboard: `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy` |
 | Fase 3–4 | **backup cifrati** del database, con una procedura guidata |
 | Fase 3–4 | **rotazione** della chiave di cifratura (il prefisso `v1:` serve proprio a questo) |
-| Fase 3–4 | **minimizzazione dei dati**: oggi salviamo il JSON originale di ogni movimento (`raw_json`), che contiene nomi e IBAN delle controparti. Valutare cosa tenere e per quanto |
+| Fase 3–4 | **minimizzazione dei dati**: oggi salviamo il JSON originale di ogni movimento (`raw_json`, anche la riga dei file CSV), che contiene nomi e IBAN delle controparti. Valutare cosa tenere e per quanto |
 | CI | **analisi statica** del codice (CodeQL) a ogni push |
 
 ---

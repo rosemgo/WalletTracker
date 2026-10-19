@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import it.wallettracker.account.Account;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -16,6 +18,10 @@ import org.springframework.data.repository.query.Param;
 public interface BankTransactionRepository extends JpaRepository<BankTransaction, Long> {
 
     boolean existsByAccountAndDedupKey(Account account, String dedupKey);
+
+    /** Le impronte di tutti i movimenti di un conto, in una query (per l'importazione CSV). */
+    @Query("SELECT t.dedupKey FROM BankTransaction t WHERE t.account = :account")
+    Set<String> findDedupKeysByAccount(@Param("account") Account account);
 
     /** Cancella i movimenti di un conto in un certo stato; restituisce quanti ne ha cancellati. */
     long deleteByAccountAndStatus(Account account, TransactionStatus status);
@@ -30,6 +36,15 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     List<BankTransaction> findByTypeAndBookingDateGreaterThanEqual(TransactionType type, LocalDate from);
 
     long countByAccount(Account account);
+
+    /**
+     * Cancella tutti i movimenti di un conto (quando si elimina un conto manuale); restituisce quanti.
+     * È una query sola ({@code @Modifying}): un metodo derivato "deleteBy..." caricherebbe prima ogni
+     * movimento e poi lo cancellerebbe uno alla volta, migliaia di query per un file grande.
+     */
+    @Modifying
+    @Query("DELETE FROM BankTransaction t WHERE t.account = :account")
+    int deleteByAccount(@Param("account") Account account);
 
     /**
      * Quante volte è stata usata ogni regola: una riga per regola, con l'id della regola e il numero di movimenti.

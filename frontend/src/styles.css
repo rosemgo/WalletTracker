@@ -177,6 +177,12 @@ h2 {
   margin-bottom: 1.5rem;
 }
 
+/* Un riquadro subito dopo una tabella (es. il modulo sotto l'elenco dei conti): un po' di spazio. */
+table + .card,
+.table-scroll + .card {
+  margin-top: 1.5rem;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));

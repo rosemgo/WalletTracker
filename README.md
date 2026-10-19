@@ -88,6 +88,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 22. [Fase 3, passo 5: gli abbonamenti ricorrenti](docs/22-fase-3-passo-5-abbonamenti.md)
 23. [Fase 3, passo 5b: l'elenco delle categorie (menu a discesa, rinomina a cascata)](docs/23-categorie-standard.md)
 24. [Le categorie collegate per id: normalizzazione, `@ManyToOne`, `JOIN FETCH`](docs/24-categorie-per-id.md)
+25. [Fase 3, passo 6: l'import CSV e i conti manuali (es. Trade Republic)](docs/25-fase-3-passo-6-import-csv.md)
 
 ## Piano di lavoro
 
@@ -112,6 +113,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] abbonamenti ricorrenti: suggeriti dal programma, confermati dall'utente, con rincari e disdette
   - [x] elenco delle categorie: di partenza e modificabile, menu a discesa ordinati per tipo, integrità garantita dal database
   - [x] categorie collegate per id (soluzione normalizzata), senza query N+1
+  - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
   - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 

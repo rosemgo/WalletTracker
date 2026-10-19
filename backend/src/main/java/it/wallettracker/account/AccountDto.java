@@ -16,8 +16,9 @@ import java.time.Instant;
  * È lo stesso ruolo dei DTO di Enable Banking ({@code EnableBankingApi}), ma nella direzione opposta:
  * quelli traducono ciò che <b>riceviamo</b>, questo ciò che <b>mandiamo</b>.
  *
- * @param bank              il nome della banca (es. "ING")
- * @param consentValidUntil fino a quando vale il consenso dato alla banca
+ * @param bank              il nome della banca (es. "ING") o, per un conto manuale, dell'istituto
+ * @param source            da dove arrivano i movimenti: Enable Banking o file CSV (conto manuale)
+ * @param consentValidUntil fino a quando vale il consenso dato alla banca; null per un conto manuale
  * @param lastSyncError     il motivo dell'ultimo errore di importazione, null se è andata bene
  */
 public record AccountDto(
@@ -27,6 +28,7 @@ public record AccountDto(
         String iban,
         String currency,
         AccountRole role,
+        AccountSource source,
         Instant consentValidUntil,
         Instant lastSyncAt,
         String lastSyncError) {
@@ -35,12 +37,13 @@ public record AccountDto(
     static AccountDto from(Account account) {
         return new AccountDto(
                 account.getId(),
-                account.getConnection().getAspspName(),
+                account.getBankName(),
                 account.getName(),
                 account.getIban(),
                 account.getCurrency(),
                 account.getRole(),
-                account.getConnection().getValidUntil(),
+                account.getSource(),
+                account.getConnection() != null ? account.getConnection().getValidUntil() : null,
                 account.getLastSyncAt(),
                 account.getLastSyncError());
     }

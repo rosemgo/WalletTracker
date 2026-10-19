@@ -12,6 +12,13 @@ spring:
       - optional:file:.env[.properties]
       - optional:file:../.env[.properties]
 
+  # I file caricati dalla dashboard (importazione CSV): al massimo 5 MB, un estratto conto di anni.
+  # Un limite basso protegge il server da file enormi, per errore o apposta.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   # Connessione al database PostgreSQL avviato con Docker Compose (stessi valori del .env).
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:wallettracker}

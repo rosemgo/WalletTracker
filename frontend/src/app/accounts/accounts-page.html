@@ -5,6 +5,7 @@
     {{ syncing() ? 'Aggiornamento in corso...' : 'Aggiorna ora' }}
   </button>
   <a routerLink="/collega">Collega una banca</a>
+  <a routerLink="/importa">Importa CSV</a>
 </div>
 
 <p class="hint">
@@ -23,53 +24,129 @@
 @if (loading()) {
   <p>Caricamento...</p>
 } @else {
-  <table>
-    <thead>
-      <tr>
-        <th>Banca</th>
-        <th>Conto</th>
-        <th>Ruolo</th>
-        <th>Consenso valido fino al</th>
-        <th>Ultimo aggiornamento</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (account of accounts(); track account.id) {
+  <div class="table-scroll">
+    <table>
+      <thead>
         <tr>
-          <td>{{ account.bank }}</td>
-          <td>
-            {{ nameOf(account) }}
-            <div class="secondary">{{ account.iban ?? 'senza IBAN' }} · {{ account.currency }}</div>
-          </td>
-          <td>
-            <select
-              [attr.aria-label]="'Ruolo di ' + nameOf(account)"
-              (change)="onRoleChange(account, $event)"
-            >
-              @for (role of roles; track role) {
-                <option [value]="role" [selected]="role === account.role">
-                  {{ roleLabels[role] }}
-                </option>
-              }
-            </select>
-          </td>
-          <td>{{ account.consentValidUntil | date: 'dd/MM/yyyy' }}</td>
-          <td>
-            @if (account.lastSyncAt) {
-              {{ account.lastSyncAt | date: 'dd/MM/yyyy HH:mm' }}
+          <th>Banca</th>
+          <th>Conto</th>
+          <th>Ruolo</th>
+          <th>Consenso valido fino al</th>
+          <th>Ultimo aggiornamento</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (account of accounts(); track account.id) {
+          <tr>
+            <td>{{ account.bank }}</td>
+            <td>
+              {{ nameOf(account) }}
+              <div class="secondary">
+                {{ account.iban ?? 'senza IBAN' }} · {{ account.currency }}
+              </div>
+            </td>
+            <td>
+              <select
+                [attr.aria-label]="'Ruolo di ' + nameOf(account)"
+                (change)="onRoleChange(account, $event)"
+              >
+                @for (role of roles; track role) {
+                  <option [value]="role" [selected]="role === account.role">
+                    {{ roleLabels[role] }}
+                  </option>
+                }
+              </select>
+            </td>
+            @if (account.source === 'MANUAL') {
+              <!-- Conto manuale: niente consenso PSD2, i movimenti arrivano da file. -->
+              <td class="secondary">conto manuale</td>
+              <td>
+                @if (confirmingDelete() === account.id) {
+                  <!-- Eliminare chiede conferma: non si può annullare. -->
+                  <span class="secondary"
+                    >Il conto e tutti i suoi movimenti verranno eliminati.</span
+                  >
+                  <button type="button" (click)="remove(account)">Elimina</button>
+                  <button type="button" class="link" (click)="confirmingDelete.set(null)">
+                    annulla
+                  </button>
+                } @else {
+                  <a routerLink="/importa" [queryParams]="{ conto: account.id }">importa un file</a>
+                  ·
+                  <button type="button" class="link" (click)="confirmingDelete.set(account.id)">
+                    elimina
+                  </button>
+                }
+              </td>
             } @else {
-              mai
+              <td>{{ account.consentValidUntil | date: 'dd/MM/yyyy' }}</td>
+              <td>
+                @if (account.lastSyncAt) {
+                  {{ account.lastSyncAt | date: 'dd/MM/yyyy HH:mm' }}
+                } @else {
+                  mai
+                }
+                @if (account.lastSyncError) {
+                  <div class="error">{{ account.lastSyncError }}</div>
+                }
+              </td>
             }
-            @if (account.lastSyncError) {
-              <div class="error">{{ account.lastSyncError }}</div>
-            }
-          </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td colspan="5">Nessun conto collegato.</td>
-        </tr>
-      }
-    </tbody>
-  </table>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5">Nessun conto: collega una banca o aggiungi un conto manuale.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
 }
+
+<form class="card" [formGroup]="form" (ngSubmit)="addManual()">
+  <h2>Nuovo conto manuale</h2>
+  <p class="hint">
+    Per una banca o un broker che Enable Banking non copre (ad esempio Trade Republic): crei qui il
+    conto e ci carichi i movimenti esportati in un file CSV, dalla pagina Importa CSV. Un conto
+    manuale non si aggiorna da solo: quando vuoi, importi il file nuovo (i movimenti già presenti
+    vengono saltati).
+  </p>
+  <div class="form-grid">
+    <label>
+      Banca
+      <input formControlName="bankName" maxlength="100" placeholder="es. Trade Republic" />
+      @if (invalid('bankName')) {
+        <span class="error">Scrivi il nome della banca.</span>
+      }
+    </label>
+    <label>
+      Nome del conto
+      <input formControlName="name" maxlength="200" placeholder="es. Conto titoli" />
+      @if (invalid('name')) {
+        <span class="error">Scrivi un nome per il conto.</span>
+      }
+    </label>
+    <label>
+      IBAN (facoltativo)
+      <input formControlName="iban" maxlength="42" placeholder="es. DE12 3456 ..." />
+      @if (invalid('iban')) {
+        <span class="error">Non sembra un IBAN: due lettere e poi lettere e cifre.</span>
+      }
+    </label>
+    <label>
+      Valuta
+      <input formControlName="currency" maxlength="3" />
+      @if (invalid('currency')) {
+        <span class="error">Tre lettere, come EUR o USD.</span>
+      }
+    </label>
+    <label>
+      Ruolo
+      <select formControlName="role">
+        @for (role of roles; track role) {
+          <option [value]="role">{{ roleLabels[role] }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <button type="submit">Aggiungi il conto</button>
+</form>

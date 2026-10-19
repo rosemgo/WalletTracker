@@ -1,6 +1,7 @@
 package it.wallettracker.account;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import it.wallettracker.connection.BankConnection;
 import jakarta.persistence.Column;
@@ -39,14 +40,15 @@ public class Account {
      * Nella tabella è la colonna {@code connection_id}, che punta a {@code bank_connection.id}.
      * LAZY = il collegamento viene caricato dal database solo se lo si usa davvero.
      */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    /** Il collegamento con la banca; null per un conto manuale (V14). */
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "connection_id")
     private BankConnection connection;
 
     @Column(name = "external_key", nullable = false, unique = true)
     private String externalKey;
 
-    @Column(name = "provider_uid", nullable = false)
+    @Column(name = "provider_uid")
     private String providerUid;
 
     @Column(name = "iban")
@@ -74,6 +76,15 @@ public class Account {
     @Column(name = "last_sync_error")
     private String lastSyncError;
 
+    /** Da dove arrivano i movimenti: Enable Banking o file CSV (V14). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false)
+    private AccountSource source;
+
+    /** Il nome dell'istituto, solo per i conti manuali (es. "Trade Republic"). */
+    @Column(name = "bank_name")
+    private String bankName;
+
     protected Account() {
     }
 
@@ -87,6 +98,24 @@ public class Account {
         this.currency = currency;
         this.role = AccountRole.UNASSIGNED;
         this.createdAt = Instant.now();
+        this.source = AccountSource.ENABLE_BANKING;
+    }
+
+    /**
+     * Un conto manuale: i suoi movimenti arrivano da file CSV. La chiave stabile è casuale (non c'è niente
+     * della banca da cui ricavarla).
+     */
+    public static Account manual(String bankName, String name, String iban, String currency, AccountRole role) {
+        Account account = new Account();
+        account.externalKey = "manual:" + UUID.randomUUID();
+        account.bankName = bankName;
+        account.name = name;
+        account.iban = iban;
+        account.currency = currency;
+        account.role = role;
+        account.createdAt = Instant.now();
+        account.source = AccountSource.MANUAL;
+        return account;
     }
 
     /** Dopo un nuovo consenso lo stesso conto passa al nuovo collegamento e riceve un nuovo uid. */
@@ -142,5 +171,18 @@ public class Account {
 
     public String getLastSyncError() {
         return lastSyncError;
+    }
+
+    public AccountSource getSource() {
+        return source;
+    }
+
+    public boolean isManual() {
+        return source == AccountSource.MANUAL;
+    }
+
+    /** Il nome della banca o dell'istituto, per entrambi i tipi di conto. Va letto dentro una transazione. */
+    public String getBankName() {
+        return connection != null ? connection.getAspspName() : bankName;
     }
 }

@@ -75,7 +75,8 @@ public class AlertService {
         // 2. Le sincronizzazioni fallite. Non per i conti con il consenso scaduto: lì il motivo lo
         //    sappiamo già (avviso 1), e due avvisi per lo stesso problema confondono.
         for (Account account : accountRepository.findAllWithConnection()) {
-            if (account.getLastSyncError() != null && account.getConnection().getValidUntil().isAfter(now)) {
+            if (account.getConnection() != null && account.getLastSyncError() != null
+                    && account.getConnection().getValidUntil().isAfter(now)) {
                 alerts.add(new AlertDto(AlertKind.SYNC_FAILED, Severity.WARNING,
                         account.getConnection().getAspspName(), account.getConnection().getAspspCountry(),
                         account.getName(), null, null, List.of(), account.getLastSyncError()));

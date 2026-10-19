@@ -257,11 +257,14 @@ public class ClassificationService {
      * I nomi degli intestatari dei tuoi conti, come insiemi di parole: "ROSSI MARIO" e "Mario Rossi"
      * diventano lo stesso insieme {MARIO, ROSSI}, così l'ordine non conta. Si usano solo nomi di almeno
      * due parole, per non confondere un nome generico (es. "Conto") con un intestatario.
+     *
+     * <p>I conti manuali (V14) sono esclusi: il loro nome lo sceglie l'utente (es. "Trade Republic") e non è
+     * il nome di una persona. Usarlo farebbe sembrare un trasferimento ogni acquisto con quelle parole.
      */
     static List<Set<String>> ownerNames(List<Account> accounts) {
         List<Set<String>> names = new ArrayList<>();
         for (Account account : accounts) {
-            if (account.getName() == null) {
+            if (account.getName() == null || account.isManual()) {
                 continue;
             }
             Set<String> name = words(account.getName());
