@@ -219,9 +219,10 @@ class CsvImportControllerTest {
                 .hasStatus(400)
                 .bodyJson().extractingPath("$.detail")
                 .isEqualTo("Il file deve avere una riga di intestazione e almeno un movimento.");
-        // Una virgoletta mai chiusa.
+        // Una virgoletta mai chiusa: il messaggio della libreria (in inglese) arriva tradotto.
         assertThat(importCsv(account, "Data;Descrizione;Importo\n03/10/2026;\"NETFLIX;-1,00\n", ITALIAN_MAPPING))
-                .hasStatus(400);
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").asString().startsWith("Il file non è un CSV valido");
         assertThat(transactionRepository.count()).isZero();
     }
 

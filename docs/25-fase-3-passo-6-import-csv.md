@@ -100,14 +100,27 @@ CSV vuol dire "valori separati da virgole", ma ogni banca lo scrive a modo suo:
 
 **Libreria o codice nostro?** L'importazione legge i file con **Apache Commons CSV**
 (`CsvReader`): una libreria matura, usata da anni in migliaia di progetti, che conosce i casi strani meglio
-di qualsiasi codice scritto per l'occasione. Le chiediamo solo il formato standard
-(`CSVFormat.RFC4180`) con il nostro separatore. Se il file è malformato, la libreria lancia
-un'eccezione in inglese, che traduciamo per l'utente.
+di qualsiasi codice scritto per l'occasione. Le chiediamo il formato standard (`CSVFormat.RFC4180`) con
+il nostro separatore, più due opzioni:
+
+- `setIgnoreSurroundingSpaces(true)`: toglie gli spazi **attorno** ai valori. Senza, un file scritto con
+  "virgola e spazio" (`03/10/2026, "Rossi, Mario", -1.20`) si legge male: lo spazio prima della
+  virgoletta fa sì che `"Rossi, Mario"` non venga riconosciuto come un valore solo, e la virgola lo spezza
+  in due colonne. Gli spazi **dentro** le virgolette restano. Ce ne siamo accorti verificando il passaggio
+  alla libreria su casi limite, e c'è un test apposta;
+- `setIgnoreEmptyLines(true)`: salta le righe vuote.
+
+Se il file è malformato, la libreria lancia una `CSVException` (in inglese), che traduciamo per l'utente.
 
 Nel progetto resta anche `CsvParser`, una versione scritta a mano (un centinaio di righe) **solo da
 studiare**: mostra carattere per carattere come si gestiscono virgolette, separatori e a capo. Non è usata
-dall'importazione. `CsvReaderTest` e `CsvParserTest` provano gli stessi casi, e le due versioni danno lo
-stesso risultato.
+dall'importazione. Sui casi normali le due versioni danno lo stesso risultato (`CsvReaderTest` e
+`CsvParserTest` provano gli stessi), ma sui casi limite no, ed è proprio il motivo per usare la libreria:
+
+| Caso | Libreria (`CsvReader`) | Versione didattica (`CsvParser`) |
+|---|---|---|
+| virgoletta in mezzo a un valore: `PAGAMENTO "AMAZON"` | un valore normale, giusto | errore: la prende per l'inizio di un valore tra virgolette |
+| testo dopo la virgoletta di chiusura: `"ab"c` | errore: il file è malformato | `abc`, cioè indovina |
 
 ### 4. La mappatura: il programma propone, tu decidi
 
@@ -342,7 +355,7 @@ senza testo il motore non indovina.
 
 | Test | Che cosa verifica |
 |---|---|
-| `CsvReaderTest` (5) | il lettore usato dall'importazione (Commons CSV): separatore riconosciuto, virgolette e `""`, a capo dentro un campo, BOM e `\r\n`, file malformato |
+| `CsvReaderTest` (9) | il lettore usato dall'importazione (Commons CSV): separatore riconosciuto, virgolette e `""`, a capo dentro un campo, BOM e `\r\n`, file malformato, "virgola e spazio", spazi dentro le virgolette, virgolette e barre in mezzo a un valore, testo dopo la virgoletta di chiusura |
 | `CsvParserTest` (4) | gli stessi casi sulla versione didattica |
 | `RowReaderTest` (8) | importi all'italiana e all'inglese, importi sbagliati, date con e senza ora, date impossibili, entrate/uscite, valuta |
 | `ColumnGuesserTest` (4) | estratto italiano ("Data valuta" non è la valuta), entrate/uscite, file inglese, colonne sconosciute |

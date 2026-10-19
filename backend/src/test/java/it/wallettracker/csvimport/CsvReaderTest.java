@@ -56,4 +56,36 @@ class CsvReaderTest {
         // Le virgole dentro le virgolette non contano.
         assertThat(CsvReader.detectDelimiter("\"Data, ora\";\"Importo, EUR\";Note")).isEqualTo(';');
     }
+
+    @Test
+    void aFileWrittenWithCommaAndSpaceKeepsQuotedValuesTogether() {
+        String csv = "Data, Descrizione, Importo\n03/10/2026, \"Rossi, Mario\", -1.20\n";
+
+        assertThat(CsvReader.read(csv, ',')).containsExactly(
+                List.of("Data", "Descrizione", "Importo"),
+                List.of("03/10/2026", "Rossi, Mario", "-1.20"));
+    }
+
+    @Test
+    void spacesInsideQuotesAndTheTabSeparatorAreKept() {
+        assertThat(CsvReader.read("A;B\n\"  dentro  \";2\n", ';'))
+                .containsExactly(List.of("A", "B"), List.of("  dentro  ", "2"));
+        // Con la tabulazione come separatore, una cella vuota resta una cella (la tabulazione non è uno "spazio").
+        assertThat(CsvReader.read("A\tB\tC\n\t x \t2\n", '\t'))
+                .containsExactly(List.of("A", "B", "C"), List.of("", "x", "2"));
+    }
+
+    @Test
+    void quotesAndBackslashesInsideAnUnquotedValueAreOrdinaryCharacters() {
+        // Qui la versione didattica (CsvParser) sbaglia: prende la virgoletta per l'inizio di un valore.
+        assertThat(CsvReader.read("A;B\nPAGAMENTO \"AMAZON\";C:\\conti\n", ';'))
+                .containsExactly(List.of("A", "B"), List.of("PAGAMENTO \"AMAZON\"", "C:\\conti"));
+    }
+
+    @Test
+    void textAfterTheClosingQuoteIsAnError() {
+        assertThatThrownBy(() -> CsvReader.read("A;B\n\"ab\"c;2\n", ';'))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("non è un CSV valido");
+    }
 }
