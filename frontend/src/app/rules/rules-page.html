@@ -3,9 +3,10 @@
 <p class="hint">
   Una regola dice:
   <em>"se il testo del movimento contiene (o inizia con) queste parole, allora il tipo è..."</em>.
-  Le regole si provano in ordine di <strong>priorità</strong> (il numero più basso per primo) e la
-  prima che corrisponde vince. Prima delle regole vengono le correzioni manuali e i trasferimenti
-  tra i tuoi conti. Dopo ogni modifica tutti i movimenti vengono riclassificati.
+  Maiuscole, minuscole e il numero di spazi non contano. Le regole si provano in ordine di
+  <strong>priorità</strong> (il numero più basso per primo) e la prima che corrisponde vince. Prima
+  delle regole vengono le correzioni manuali e i trasferimenti tra i tuoi conti. Dopo ogni modifica
+  tutti i movimenti vengono riclassificati.
 </p>
 
 @if (message()) {
@@ -42,6 +43,20 @@
       <input formControlName="pattern" placeholder="es. ESSELUNGA" />
       @if (showError('pattern')) {
         <span class="error">Almeno 2 caratteri.</span>
+      }
+      <!-- Che cosa vuol dire la modalità scelta: la differenza tra le prime due non è ovvia. -->
+      @switch (form.controls.matchMode.value) {
+        @case ('CONTAINS') {
+          <span class="secondary">in quest'ordine e una dopo l'altra</span>
+        }
+        @case ('ALL_WORDS') {
+          <span class="secondary"
+            >parole intere, in qualsiasi ordine, anche con altre in mezzo</span
+          >
+        }
+        @case ('STARTS_WITH') {
+          <span class="secondary">all'inizio del testo</span>
+        }
       }
     </label>
 
@@ -104,7 +119,8 @@
   @if (preview(); as p) {
     <div class="preview">
       <p>
-        Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong> movimenti.
+        Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong>
+        {{ p.matches === 1 ? 'movimento' : 'movimenti' }}.
         @if (p.matches > 0) {
           Ecco i più recenti:
         }

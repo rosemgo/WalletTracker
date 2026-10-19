@@ -35,6 +35,7 @@ export const TYPES = Object.keys(TYPE_LABELS) as TransactionType[];
 
 export const MATCH_MODE_LABELS: Record<MatchMode, string> = {
   CONTAINS: 'contiene',
+  ALL_WORDS: 'contiene tutte le parole',
   STARTS_WITH: 'inizia con',
 };
 

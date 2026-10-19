@@ -134,6 +134,27 @@ describe('RulesPage', () => {
     expect(page.textContent).toContain('ora classifica 3 movimenti');
   });
 
+  it('offers "contiene tutte le parole" and explains each mode', async () => {
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const patternLabel = () =>
+      (page.querySelector('[formControlName="pattern"]') as HTMLElement).closest('label')!
+        .textContent;
+
+    expect(patternLabel()).toContain("in quest'ordine e una dopo l'altra");
+    type(page, 'name', 'Decò');
+    type(page, 'pattern', 'MAR GROUP FOGLIANISE');
+    choose(page, 'matchMode', 'contiene tutte le parole');
+    await fixture.whenStable();
+    expect(patternLabel()).toContain('parole intere, in qualsiasi ordine');
+
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(created[0].matchMode).toBe('ALL_WORDS');
+    expect(created[0].pattern).toBe('MAR GROUP FOGLIANISE');
+  });
+
   it('does not save or try an incomplete rule, and shows what is missing', async () => {
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();

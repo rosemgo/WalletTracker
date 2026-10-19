@@ -28,9 +28,18 @@ Come si confronta il testo:
   riempiti di spazi (`MAR GROUP SPA   FOGLIANISE    ITA`), ma il browser ne mostra uno solo. Una regola
   scritta copiando quello che si vede (`MAR GROUP SPA FOGLIANISE`) deve trovare il movimento. Anche
   tabulazioni, a capo e spazi "non separabili" contano come un solo spazio (`ClassificationRule.normalizeSpaces`);
-- **contiene** vuol dire *queste parole, in quest'ordine e una dopo l'altra*. `MAR GROUP FOGLIANISE`
-  **non** trova `MAR GROUP SPA FOGLIANISE ITA`, perché in mezzo c'è `SPA`. Meglio una parola o due che
-  distinguono il negozio: `FOGLIANISE`, oppure `MAR GROUP`.
+- le modalità sono tre:
+
+  | Modalità | Vuol dire | `MAR GROUP SPA FOGLIANISE ITA` è trovato da... |
+  |---|---|---|
+  | **contiene** | queste parole, in quest'ordine e una dopo l'altra (anche pezzi di parola) | `GROUP SPA`, `FOGLIAN`; **non** da `MAR GROUP FOGLIANISE` (in mezzo c'è `SPA`) |
+  | **contiene tutte le parole** | tutte queste parole, **intere**, in qualsiasi ordine, anche con altre in mezzo | `MAR GROUP FOGLIANISE`, `foglianise mar`; **non** da `FOGLIAN` (non è una parola intera) |
+  | **inizia con** | il testo comincia con queste parole | `MAR GROUP` |
+
+  Per "contiene tutte le parole" una parola è un gruppo di lettere e cifre: punteggiatura e simboli
+  separano (`PAYPAL *TEMU` ha le parole `paypal` e `temu`). Le parole intere evitano le sorprese: `SPA`
+  trova `MAR GROUP SPA`, ma non `SPAZIO GIOCHI`. Una regola senza nessuna parola (es. `***`) viene
+  rifiutata: "tutte le parole di un elenco vuoto" sarebbe vero per qualsiasi movimento.
 
 Nel motore di classificazione (`docs/03`, sezione 4) le regole sono il **sesto** controllo. Prima vengono:
 

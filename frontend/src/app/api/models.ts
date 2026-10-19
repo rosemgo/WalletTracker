@@ -158,7 +158,7 @@ export interface SyncRound {
 }
 
 /** Come una regola confronta il testo (enum MatchMode nel backend). */
-export type MatchMode = 'CONTAINS' | 'STARTS_WITH';
+export type MatchMode = 'CONTAINS' | 'STARTS_WITH' | 'ALL_WORDS';
 
 /** A quali importi si applica una regola (enum AmountSign nel backend). */
 export type AmountSign = 'ANY' | 'NEGATIVE' | 'POSITIVE';

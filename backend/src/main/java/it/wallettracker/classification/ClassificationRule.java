@@ -1,7 +1,10 @@
 package it.wallettracker.classification;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 import it.wallettracker.category.Category;
@@ -28,8 +31,16 @@ import jakarta.persistence.Table;
 @Table(name = "classification_rule")
 public class ClassificationRule {
 
-    /** Come confrontare il testo. */
-    public enum MatchMode { CONTAINS, STARTS_WITH }
+    /**
+     * Come confrontare il testo:
+     * <ul>
+     *   <li>CONTAINS: il testo contiene queste parole, in quest'ordine e una dopo l'altra;</li>
+     *   <li>STARTS_WITH: il testo inizia con queste parole;</li>
+     *   <li>ALL_WORDS: il testo contiene tutte queste parole, intere, in qualsiasi ordine e anche con altre
+     *       parole in mezzo ("MAR GROUP FOGLIANISE" trova "MAR GROUP SPA FOGLIANISE ITA").</li>
+     * </ul>
+     */
+    public enum MatchMode { CONTAINS, STARTS_WITH, ALL_WORDS }
 
     /** A quali importi si applica la regola. */
     public enum AmountSign { ANY, NEGATIVE, POSITIVE }
@@ -103,7 +114,16 @@ public class ClassificationRule {
         String haystack = normalizeSpaces(text).toLowerCase(Locale.ROOT); //testo del movimento
         String needle = normalizeSpaces(pattern).toLowerCase(Locale.ROOT);
         //se il matchMode della regola selezionata è STARTS_WITH allora verifica che il testo del movimento cominci con il valore del campo pattern della regola (vedere i valori di pattern nella tabella del database classification_rule) oppure che il testo del movimento contenga il pattern della regola.
-        return matchMode == MatchMode.STARTS_WITH ? haystack.startsWith(needle) : haystack.contains(needle);
+        return switch (matchMode) {
+            case STARTS_WITH -> haystack.startsWith(needle);
+            case CONTAINS -> haystack.contains(needle);
+            // Tutte le parole della regola tra le parole del testo. Una regola senza parole (es. "***") non
+            // trova niente: altrimenti "tutte le parole di un elenco vuoto" sarebbe vero per ogni movimento.
+            case ALL_WORDS -> {
+                Set<String> wanted = words(needle);
+                yield !wanted.isEmpty() && words(haystack).containsAll(wanted);
+            }
+        };
     }
 
     /** Uno o più "spazi" di qualsiasi tipo: spazio, tabulazione, a capo, spazio non separabile (U+00A0 e simili). */
@@ -119,6 +139,17 @@ public class ClassificationRule {
      */
     static String normalizeSpaces(String text) {
         return SPACES.matcher(text).replaceAll(" ").trim();
+    }
+
+    /**
+     * Le parole di un testo: i gruppi di lettere e cifre, separati da tutto il resto (spazi, punteggiatura,
+     * simboli). "PAYPAL *TEMU" → paypal, temu; "NETFLIX.COM" → netflix, com. {@code \p{L}} e
+     * {@code \p{N}} sono le lettere e le cifre di qualsiasi alfabeto, accentate comprese.
+     */
+    static Set<String> words(String text) {
+        return Arrays.stream(text.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+"))
+                .filter(word -> !word.isEmpty())
+                .collect(Collectors.toSet());
     }
 
     /** Modifica la regola (dalla dashboard). Anche le regole di partenza si possono modificare o disattivare. */

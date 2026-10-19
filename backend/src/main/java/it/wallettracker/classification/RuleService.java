@@ -57,6 +57,7 @@ public class RuleService {
 
     @Transactional
     public RuleDto create(RuleRequest request) {
+        checkPattern(request);
         ClassificationRule rule = new ClassificationRule(request.name().trim(), request.priority(),
                 request.matchMode(), request.pattern().trim(), request.amountSign(), request.resultType(),
                 categoryService.require(request.categoryId())); // la categoria deve essere nell'elenco
@@ -67,6 +68,7 @@ public class RuleService {
 
     @Transactional
     public RuleDto update(Long id, RuleRequest request) {
+        checkPattern(request);
         ClassificationRule rule = find(id);
         rule.update(request.name().trim(), request.priority(), request.enabled(), request.matchMode(),
                 request.pattern().trim(), request.amountSign(), request.resultType(),
@@ -97,6 +99,7 @@ public class RuleService {
      */
     @Transactional(readOnly = true)
     public RulePreview preview(RuleRequest request) {
+        checkPattern(request);
         ClassificationRule rule = new ClassificationRule(request.name(), request.priority(), request.matchMode(),
                 request.pattern().trim(), request.amountSign(), request.resultType(), null); // la categoria non conta
         List<BankTransaction> matching = transactionRepository.findAll().stream()
@@ -105,6 +108,14 @@ public class RuleService {
                 .toList();
         List<TransactionDto> examples = matching.stream().limit(PREVIEW_EXAMPLES).map(TransactionDto::from).toList();
         return new RulePreview(matching.size(), examples);
+    }
+
+    /** Con "tutte le parole" il testo deve avere almeno una parola: "***" non ne ha, e non troverebbe niente. */
+    private static void checkPattern(RuleRequest request) {
+        if (request.matchMode() == ClassificationRule.MatchMode.ALL_WORDS && ClassificationRule.words(request.pattern()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Con \"contiene tutte le parole\" scrivi almeno una parola (lettere o cifre).");
+        }
     }
 
     private ClassificationRule find(Long id) {

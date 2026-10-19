@@ -169,6 +169,31 @@ class RuleControllerTest {
     }
 
     @Test
+    void allWordsFindsTheWordsInAnyOrder() {
+        Account account = accountRepository.findAll().getFirst();
+        transaction(account, "t-4", "-6.56", "MAR GROUP SPA   FOGLIANISE    ITA");
+
+        assertThat(post("/api/rules/preview", """
+                {"name": "Decò", "priority": 100, "enabled": true, "matchMode": "ALL_WORDS",
+                 "pattern": "foglianise mar group", "amountSign": "NEGATIVE", "resultType": "EXPENSE"}
+                """))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.matches").isEqualTo(1);
+    }
+
+    @Test
+    void allWordsWithoutAnyWordIsRejected() {
+        String rule = """
+                {"name": "Simboli", "priority": 100, "enabled": true, "matchMode": "ALL_WORDS",
+                 "pattern": "***", "amountSign": "ANY", "resultType": "EXPENSE"}
+                """;
+        assertThat(post("/api/rules", rule))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").asString().contains("almeno una parola");
+        assertThat(post("/api/rules/preview", rule)).hasStatus(400);
+    }
+
+    @Test
     void anIncompleteRuleIsRejected() {
         assertThat(post("/api/rules", """
                 {"name": "", "priority": 100, "enabled": true, "matchMode": "CONTAINS",
