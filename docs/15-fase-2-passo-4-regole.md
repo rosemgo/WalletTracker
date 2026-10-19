@@ -21,6 +21,17 @@ Banking, prevista insieme alle regole, diventa il **passo 5**. Due passi più pi
 Una regola dice: *"se il testo del movimento (causale + controparte) **contiene** / **inizia con**
 queste parole, ed eventualmente è un'**uscita** / un'**entrata**, allora il tipo è X e la categoria è Y"*.
 
+Come si confronta il testo:
+
+- maiuscole e minuscole non contano;
+- **nemmeno il numero di spazi**: molte banche scrivono i pagamenti con carta in campi a larghezza fissa,
+  riempiti di spazi (`MAR GROUP SPA   FOGLIANISE    ITA`), ma il browser ne mostra uno solo. Una regola
+  scritta copiando quello che si vede (`MAR GROUP SPA FOGLIANISE`) deve trovare il movimento. Anche
+  tabulazioni, a capo e spazi "non separabili" contano come un solo spazio (`ClassificationRule.normalizeSpaces`);
+- **contiene** vuol dire *queste parole, in quest'ordine e una dopo l'altra*. `MAR GROUP FOGLIANISE`
+  **non** trova `MAR GROUP SPA FOGLIANISE ITA`, perché in mezzo c'è `SPA`. Meglio una parola o due che
+  distinguono il negozio: `FOGLIANISE`, oppure `MAR GROUP`.
+
 Nel motore di classificazione (`docs/03`, sezione 4) le regole sono il **sesto** controllo. Prima vengono:
 
 1. conto escluso;

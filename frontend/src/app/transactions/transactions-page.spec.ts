@@ -157,7 +157,7 @@ describe('TransactionsPage', () => {
         ...SETTLEMENT,
         id: 7,
         amount: -12.99,
-        counterparty: 'NETFLIX.COM',
+        counterparty: ' NETFLIX.COM   AMSTERDAM\u00a0 NLD ', // campi a larghezza fissa, come li mandano le banche
         description: 'Pagamento carta',
         type: 'EXPENSE',
         categoryId: 2,
@@ -174,7 +174,7 @@ describe('TransactionsPage', () => {
     const address = new URL(link.href);
     expect(address.pathname).toBe('/regole');
     expect(Object.fromEntries(address.searchParams)).toEqual({
-      pattern: 'NETFLIX.COM',
+      pattern: 'NETFLIX.COM AMSTERDAM NLD', // spazi ridotti a uno
       resultType: 'EXPENSE',
       amountSign: 'NEGATIVE',
       categoryId: '2',

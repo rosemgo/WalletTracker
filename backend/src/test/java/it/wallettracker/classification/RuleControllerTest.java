@@ -154,6 +154,21 @@ class RuleControllerTest {
     }
 
     @Test
+    void thePreviewFindsAMovementWhateverTheNumberOfSpaces() {
+        // Un pagamento con carta in campi a larghezza fissa, come lo mandano molte banche. In pagina si vede
+        // "MAR GROUP SPA FOGLIANISE ITA": la regola scritta così deve trovarlo.
+        Account account = accountRepository.findAll().getFirst();
+        transaction(account, "t-4", "-6.56", "MAR GROUP SPA   FOGLIANISE    ITA");
+
+        assertThat(post("/api/rules/preview", """
+                {"name": "Decò", "priority": 100, "enabled": true, "matchMode": "CONTAINS",
+                 "pattern": "MAR GROUP SPA FOGLIANISE", "amountSign": "NEGATIVE", "resultType": "EXPENSE"}
+                """))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.matches").isEqualTo(1);
+    }
+
+    @Test
     void anIncompleteRuleIsRejected() {
         assertThat(post("/api/rules", """
                 {"name": "", "priority": 100, "enabled": true, "matchMode": "CONTAINS",

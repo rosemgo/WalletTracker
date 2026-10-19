@@ -149,7 +149,10 @@ export class TransactionsPage implements OnInit {
    * Come testo da cercare proponiamo la controparte o, se manca, la causale: l'utente può accorciarlo.
    */
   protected ruleParams(transaction: Transaction): Record<string, string> {
+    // Spazi ridotti a uno, come li mostra la tabella: molte banche riempiono i campi di spazi
+    // ("MAR GROUP SPA   FOGLIANISE    ITA"). Il backend comunque non bada al numero di spazi.
     const pattern = (transaction.counterparty || transaction.description || '')
+      .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 200);
     return {
