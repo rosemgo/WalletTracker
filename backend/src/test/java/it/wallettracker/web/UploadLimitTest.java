@@ -31,12 +31,19 @@ class UploadLimitTest {
     @LocalServerPort
     int port;
 
+    /**
+     * Un file appena oltre i 5 MB. Non di più, di proposito: se la richiesta intera supera anche
+     * max-request-size (6 MB), Tomcat la rifiuta prima di leggerla, e dopo la risposta chiude la connessione
+     * senza leggere il resto (ne "inghiotte" al massimo 2 MB, maxSwallowSize). Il client allora a volte
+     * riesce a leggere la risposta e a volte no: un test che dipende dalla fortuna. Con 5,1 MB Tomcat legge
+     * il file fino al limite, scarta il poco che resta e risponde normalmente.
+     */
     @Test
     void aFileOverTheLimitIs413WithTheReason() throws Exception {
-        byte[] sixMegabytes = new byte[6 * 1024 * 1024];
-        Arrays.fill(sixMegabytes, (byte) 'a');
+        byte[] justOverTheLimit = new byte[5 * 1024 * 1024 + 100 * 1024];
+        Arrays.fill(justOverTheLimit, (byte) 'a');
 
-        HttpResponse<String> response = upload(sixMegabytes);
+        HttpResponse<String> response = upload(justOverTheLimit);
 
         assertThat(response.statusCode()).isEqualTo(413);
         assertThat(response.body()).contains("Il file è troppo grande: al massimo 5 MB.");

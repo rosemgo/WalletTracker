@@ -238,7 +238,16 @@ Il messaggio in italiano per il 413 ci ha insegnato due cose.
 (Tomcat), che è proprio chi controlla la dimensione mentre legge la richiesta. Provando con `curl` sul
 backend vero, la risposta era `"detail": "Maximum upload size exceeded"`: il nostro metodo non veniva
 chiamato. Per questo c'è `UploadLimitTest`, con `@SpringBootTest(webEnvironment = RANDOM_PORT)`: Spring
-avvia Tomcat su una porta libera e il test gli manda una richiesta HTTP vera di 6 MB.
+avvia Tomcat su una porta libera e il test gli manda una richiesta HTTP vera, con un file di 5,1 MB.
+
+Perché 5,1 e non, ad esempio, 6 MB? La prima versione del test mandava 6 MB: passava sul nostro PC e
+falliva su GitHub ("chunked transfer encoding"). Una richiesta che supera anche il limite totale
+(`max-request-size`, 6 MB) Tomcat la rifiuta **prima di leggerla**; dopo la risposta "inghiotte" al massimo
+2 MB del resto (`maxSwallowSize`) e poi **chiude la connessione**. Se il client sta ancora inviando, a volte
+riesce a leggere la risposta e a volte no. Con 5,1 MB Tomcat legge il file fino al limite, scarta il poco
+che resta e risponde normalmente. Per lo stesso motivo la pagina controlla la dimensione **prima** di
+mandare il file: con un file molto grande il browser potrebbe vedere solo una connessione interrotta,
+invece del messaggio.
 
 **2. Il perché.** Con `spring.mvc.problemdetails.enabled: true` Spring Boot registra un suo gestore degli
 errori standard (una sottoclasse di `ResponseEntityExceptionHandler`), che gestisce anche questa eccezione
