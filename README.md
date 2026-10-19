@@ -114,6 +114,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] elenco delle categorie: di partenza e modificabile, menu a discesa ordinati per tipo, integrità garantita dal database
   - [x] categorie collegate per id (soluzione normalizzata), senza query N+1
   - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
+  - [ ] **da fare**: estratto conto CSV anche per i conti collegati che non danno i dettagli dei movimenti (es. Trade Republic): completare causale e controparte dei movimenti già arrivati, in alternativa alla correzione a mano (vedi `docs/25`, "E Trade Republic?")
   - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 

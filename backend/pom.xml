@@ -57,6 +57,12 @@
         </dependency>
 
         <!-- Driver JDBC: la "spina" che permette a Java di parlare con PostgreSQL -->
+        <!-- Lettura dei file CSV (importazione degli estratti conto, docs/25). -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.14.1</version>
+        </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

@@ -7,7 +7,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-/** Test "puri" della lettura dei CSV: niente Spring, niente database. */
+/** Test della versione didattica del lettore CSV (vedi CsvReaderTest per quella usata dall'importazione). */
 class CsvParserTest {
 
     @Test
@@ -43,14 +43,5 @@ class CsvParserTest {
         assertThatThrownBy(() -> CsvParser.parse("a;b\n\"aperta;1\n", ';'))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("virgoletta aperta");
-    }
-
-    @Test
-    void theSeparatorIsRecognisedFromTheHeader() {
-        assertThat(CsvParser.detectDelimiter("Data;Descrizione;Importo\n1;2;3")).isEqualTo(';');
-        assertThat(CsvParser.detectDelimiter("Date,Description,Amount")).isEqualTo(',');
-        assertThat(CsvParser.detectDelimiter("Date\tAmount")).isEqualTo('\t');
-        // Le virgole dentro le virgolette non contano.
-        assertThat(CsvParser.detectDelimiter("\"Data, ora\";\"Importo, EUR\";Note")).isEqualTo(';');
     }
 }

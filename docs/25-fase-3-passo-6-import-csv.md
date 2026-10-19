@@ -90,17 +90,24 @@ togliendo la correzione, il test fallisce (la spesa diventa `INTERNAL_TRANSFER`)
 
 CSV vuol dire "valori separati da virgole", ma ogni banca lo scrive a modo suo:
 
-| Problema | Esempio | Come lo gestiamo (`CsvParser`, `TextDecoder`) |
+| Problema | Esempio | Come lo gestiamo (`CsvReader`, `TextDecoder`) |
 |---|---|---|
-| il **separatore** | in Italia di solito `;`, perché la virgola serve ai decimali | contiamo `;` `,` tabulazione `\|` nella prima riga (fuori dalle virgolette) e prendiamo il più frequente; l'utente può cambiarlo |
-| le **virgolette** | `"Rossi; Mario"` è un campo solo, con dentro un `;` | regole dello standard RFC 4180: `""` dentro un campo è una virgoletta, e un campo tra virgolette può contenere anche un a capo |
+| il **separatore** | in Italia di solito `;`, perché la virgola serve ai decimali | contiamo `;` `,` tabulazione `\|` nella prima riga (fuori dalle virgolette) e prendiamo il più frequente; l'utente può cambiarlo. Questo la libreria non lo fa: è codice nostro |
+| le **virgolette** | `"Rossi; Mario"` è un campo solo, con dentro un `;` | la libreria segue lo standard RFC 4180: `""` dentro un campo è una virgoletta, e un campo tra virgolette può contenere anche un a capo |
 | la **codifica** dei caratteri | Excel in italiano salva in Windows-1252: la "è" è un solo byte, `E8` | proviamo UTF-8 in modo **rigoroso**; se i byte non sono UTF-8 valido, leggiamo Windows-1252 |
 | il **BOM** | alcuni programmi mettono tre byte invisibili all'inizio del file | li togliamo |
 | fine riga | `\r\n` (Windows) o `\n` | accettiamo entrambi; le righe vuote si saltano |
 
-Esistono librerie per leggere i CSV (ad esempio Apache Commons CSV). Qui ne abbiamo scritto uno piccolo
-(un centinaio di righe, con i test) perché è un buon esercizio e il formato che ci serve è limitato. In un
-progetto più grande una libreria matura sarebbe la scelta più prudente.
+**Libreria o codice nostro?** L'importazione legge i file con **Apache Commons CSV**
+(`CsvReader`): una libreria matura, usata da anni in migliaia di progetti, che conosce i casi strani meglio
+di qualsiasi codice scritto per l'occasione. Le chiediamo solo il formato standard
+(`CSVFormat.RFC4180`) con il nostro separatore. Se il file è malformato, la libreria lancia
+un'eccezione in inglese, che traduciamo per l'utente.
+
+Nel progetto resta anche `CsvParser`, una versione scritta a mano (un centinaio di righe) **solo da
+studiare**: mostra carattere per carattere come si gestiscono virgolette, separatori e a capo. Non è usata
+dall'importazione. `CsvReaderTest` e `CsvParserTest` provano gli stessi casi, e le due versioni danno lo
+stesso risultato.
 
 ### 4. La mappatura: il programma propone, tu decidi
 
@@ -335,7 +342,8 @@ senza testo il motore non indovina.
 
 | Test | Che cosa verifica |
 |---|---|
-| `CsvParserTest` (5) | separatore, virgolette e `""`, a capo dentro un campo, BOM e `\r\n`, virgoletta mai chiusa |
+| `CsvReaderTest` (5) | il lettore usato dall'importazione (Commons CSV): separatore riconosciuto, virgolette e `""`, a capo dentro un campo, BOM e `\r\n`, file malformato |
+| `CsvParserTest` (4) | gli stessi casi sulla versione didattica |
 | `RowReaderTest` (8) | importi all'italiana e all'inglese, importi sbagliati, date con e senza ora, date impossibili, entrate/uscite, valuta |
 | `ColumnGuesserTest` (4) | estratto italiano ("Data valuta" non è la valuta), entrate/uscite, file inglese, colonne sconosciute |
 | `CsvImportControllerTest` (8) | anteprima con proposta (senza salvare), mappatura incompleta, importazione + reimportazione + file sovrapposto, due righe uguali, file rifiutato senza salvare niente, conto collegato rifiutato, mappature e file non validi, conto inesistente |
@@ -385,9 +393,14 @@ impossibile; pagina sul telefono senza scorrimento orizzontale; eliminazione del
 4. Togli `extends ResponseEntityExceptionHandler` da `ApiExceptionHandler` e rimetti un
    `@ExceptionHandler(MaxUploadSizeExceededException.class)`. Lancia `UploadLimitTest`: che cosa succede?
 
-### E Trade Republic?
+### E Trade Republic? (da fare)
 
-Non c'è (ancora) una mappatura già pronta per Trade Republic: non volevamo scriverla senza aver visto un
-file vero, perché il formato delle sue esportazioni può cambiare. La proposta automatica e i menu bastano
-per qualsiasi file con data e importo. Se vuoi una mappatura pronta, servono solo la **riga di
-intestazione** e una o due righe con i dati **inventati** (mai dati veri nel repository).
+Trade Republic si collega con Enable Banking, ma i suoi movimenti arrivano **senza causale né
+controparte**: restano "Da verificare" (salvo i trasferimenti, che si abbinano anche senza testo). Oggi
+il file CSV si può caricare solo in un conto manuale. Il passo successivo, **da fare**:
+
+- caricare l'estratto conto anche in un conto **collegato**, non per aggiungere movimenti (sarebbero
+  doppioni) ma per **completare** quelli già arrivati da Enable Banking con causale e controparte;
+- l'utente sceglie come completare i movimenti: a mano (come già si può) oppure dal file;
+- servono la **riga di intestazione** del CSV di Trade Republic e una o due righe con dati **inventati**
+  (mai dati veri nel repository), per capire come abbinare ogni riga al suo movimento.

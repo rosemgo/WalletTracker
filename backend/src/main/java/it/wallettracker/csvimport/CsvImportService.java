@@ -139,10 +139,10 @@ public class CsvImportService {
      */
     private static CsvFile read(byte[] content, ImportMapping mapping) {
         String text = TextDecoder.decode(content);
-        char delimiter = mapping != null ? mapping.delimiterChar() : CsvParser.detectDelimiter(text);
+        char delimiter = mapping != null ? mapping.delimiterChar() : CsvReader.detectDelimiter(text);
         List<List<String>> all;
         try {
-            all = CsvParser.parse(text, delimiter);
+            all = CsvReader.read(text, delimiter);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Legge un file CSV: da testo a righe e colonne.
+ * <b>Versione didattica, non usata dall'importazione</b> (che usa {@link CsvReader}, con Apache Commons
+ * CSV): mostra come si legge un CSV a mano, carattere per carattere. Resta nel progetto per studiarla, con
+ * i suoi test.
  *
  * <p>Sembra facile ("dividi ogni riga dove c'è la virgola"), ma un CSV vero ha delle insidie, gestite qui
  * secondo lo standard RFC 4180:
@@ -19,28 +21,7 @@ import java.util.List;
  */
 public final class CsvParser {
 
-    /** I separatori che proviamo a riconoscere, in ordine di preferenza a parità di conteggio. */
-    static final char[] DELIMITERS = {';', ',', '\t', '|'};
-
     private CsvParser() {
-    }
-
-    /**
-     * Il separatore più probabile: quello che compare più volte nella prima riga (fuori dalle virgolette).
-     * La prima riga è di solito l'intestazione, con un separatore tra ogni nome di colonna.
-     */
-    public static char detectDelimiter(String text) {
-        String firstLine = firstNonEmptyLine(text);
-        char best = ',';
-        int bestCount = 0;
-        for (char delimiter : DELIMITERS) {
-            int count = countOutsideQuotes(firstLine, delimiter);
-            if (count > bestCount) {
-                best = delimiter;
-                bestCount = count;
-            }
-        }
-        return best;
     }
 
     /**
@@ -99,27 +80,5 @@ public final class CsvParser {
         if (!empty) {
             rows.add(row);
         }
-    }
-
-    private static int countOutsideQuotes(String line, char delimiter) {
-        int count = 0;
-        boolean inQuotes = false;
-        for (char c : line.toCharArray()) {
-            if (c == '"') {
-                inQuotes = !inQuotes;
-            } else if (c == delimiter && !inQuotes) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private static String firstNonEmptyLine(String text) {
-        for (String line : text.split("\\r?\\n")) {
-            if (!line.isBlank()) {
-                return line;
-            }
-        }
-        return "";
     }
 }
