@@ -30,6 +30,7 @@ import {
   TransactionFilter,
   TransactionPage,
   TransactionType,
+  UsedCategory,
 } from './models';
 
 /**
@@ -227,6 +228,13 @@ export class WalletApi {
   /** GET /api/category-suggestions: i suggerimenti di categoria dalla tua storia. */
   categorySuggestions(): Observable<CategorySuggestion[]> {
     return this.http.get<CategorySuggestion[]>('/api/category-suggestions');
+  }
+
+  /** GET /api/category-suggestions/for-transaction/{id}: le categorie già usate per il suo esercente. */
+  usedCategories(transactionId: number): Observable<UsedCategory[]> {
+    return this.http.get<UsedCategory[]>(
+      `/api/category-suggestions/for-transaction/${transactionId}`,
+    );
   }
 
   /** POST /api/category-suggestions/accept: la categoria a tutti i movimenti senza categoria dell'esercente. */

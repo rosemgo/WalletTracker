@@ -14,9 +14,11 @@ import it.wallettracker.suggestion.HistorySuggester.Candidate;
 import it.wallettracker.suggestion.HistorySuggester.Dismissal;
 import it.wallettracker.suggestion.HistorySuggester.Example;
 import it.wallettracker.suggestion.HistorySuggester.Suggestion;
+import it.wallettracker.suggestion.HistorySuggester.UsedCategory;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionType;
+import it.wallettracker.web.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +65,21 @@ public class SuggestionService {
                 .map(d -> new Dismissal(d.getMerchantKey(), d.getCategory().getId()))
                 .collect(Collectors.toSet());
         return HistorySuggester.suggest(examples, candidates, dismissals);
+    }
+
+    /**
+     * Le categorie che hai già scelto a mano per gli <b>altri</b> movimenti dello stesso esercente: il menu
+     * della categoria di questo movimento le mette in cima. Due query: il movimento, e le tue scelte.
+     */
+    @Transactional(readOnly = true)
+    public List<UsedCategory> usedCategoriesFor(Long transactionId) {
+        BankTransaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new NotFoundException("Movimento", transactionId));
+        List<Example> examples = transactionRepository.findAllWithManualCategory().stream()
+                .filter(t -> !t.getId().equals(transactionId)) // la scelta di questo movimento non conta
+                .map(t -> new Example(merchantKeyOf(t), t.getManualCategory().getId(), t.getManualCategory().getName()))
+                .toList();
+        return HistorySuggester.usedCategories(examples, merchantKeyOf(transaction));
     }
 
     /**

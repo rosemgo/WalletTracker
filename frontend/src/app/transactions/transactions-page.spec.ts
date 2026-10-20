@@ -5,7 +5,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Category, Transaction, TransactionFilter, TransactionType } from '../api/models';
+import {
+  Category,
+  Transaction,
+  TransactionFilter,
+  TransactionType,
+  UsedCategory,
+} from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { TransactionsPage } from './transactions-page';
 
@@ -41,6 +47,7 @@ describe('TransactionsPage', () => {
   const categoryChanges: [number, number | null][] = [];
   let items: Transaction[];
   let suggestionLoads: number;
+  let used: UsedCategory[];
 
   beforeEach(() => {
     requests.length = 0;
@@ -48,6 +55,7 @@ describe('TransactionsPage', () => {
     categoryChanges.length = 0;
     items = [SETTLEMENT];
     suggestionLoads = 0;
+    used = [];
     registerLocaleData(localeIt);
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of([]),
@@ -64,6 +72,7 @@ describe('TransactionsPage', () => {
         return of({ ...SETTLEMENT, manualCategoryId: categoryId });
       },
       categories: () => of(CATEGORIES),
+      usedCategories: () => of(used),
       categorySuggestions: () => {
         suggestionLoads++;
         return of([]);
@@ -157,6 +166,38 @@ describe('TransactionsPage', () => {
     expect(categoryChanges[1]).toEqual([449, null]);
     // Una scelta a mano può far nascere un suggerimento: il pannello si ricarica (1 all'avvio + 2).
     expect(suggestionLoads).toBe(3);
+  });
+
+  it('the categories already used for the merchant come first in the menu', async () => {
+    used = [
+      { categoryId: 1, category: 'Shopping', times: 2 },
+      { categoryId: 2, category: 'Intrattenimento e tempo libero', times: 1 },
+    ];
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    (
+      Array.from(page.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'modifica',
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+    const select = page.querySelector('.category-edit select') as HTMLSelectElement;
+    const first = select.querySelector('optgroup') as HTMLOptGroupElement;
+
+    expect(first.label).toBe('Usate per questo esercente');
+    expect(Array.from(first.querySelectorAll('option')).map((o) => o.textContent?.trim())).toEqual([
+      'Shopping (2 volte)',
+      'Intrattenimento e tempo libero (1 volta)',
+    ]);
+    expect(select.value).toBe('4'); // si parte sempre dalla categoria attuale
+
+    select.selectedIndex = Array.from(select.options).findIndex((o) =>
+      o.textContent?.includes('Shopping (2 volte)'),
+    );
+    select.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(categoryChanges).toEqual([[449, 1]]);
   });
 
   it('after a correction, offers to create a rule prefilled with the movement data', async () => {

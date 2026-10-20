@@ -140,6 +140,30 @@ class SuggestionControllerTest {
     }
 
     @Test
+    void theCategoriesUsedForTheMerchantOfAMovementMostUsedFirst() {
+        Category shopping = categoryRepository.findByNameIgnoreCase("Shopping").orElseThrow();
+        chosen(expense("AMAZON MARKETPLACE 1"), shopping);
+        chosen(expense("AMAZON MARKETPLACE 2"), shopping);
+        chosen(expense("AMAZON MARKETPLACE 3"), bars);
+        BankTransaction itself = expense("AMAZON MARKETPLACE 4");
+        chosen(itself, bars);                          // la scelta del movimento stesso non conta
+        chosen(expense("PIZZERIA DA GINO"), bars);     // un altro esercente: non conta
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/category-suggestions/for-transaction/{id}", itself.getId()))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.length()").isEqualTo(2);
+                    json.assertThat().extractingPath("$[0].category").isEqualTo("Shopping");
+                    json.assertThat().extractingPath("$[0].times").isEqualTo(2);
+                    json.assertThat().extractingPath("$[1].category").isEqualTo("Bar e ristoranti");
+                    json.assertThat().extractingPath("$[1].times").isEqualTo(1);
+                });
+        assertThat(mvc.get().uri("/api/category-suggestions/for-transaction/999999")).hasStatus(404);
+    }
+
+    @Test
     void anUnknownCategoryOrAnEmptyMerchantIs400() {
         assertThat(post("/accept", "PIZZERIA DA GINO", 999999L)).hasStatus(400);
         assertThat(post("/dismissed", "PIZZERIA DA GINO", 999999L)).hasStatus(400);

@@ -10,6 +10,7 @@ import it.wallettracker.suggestion.HistorySuggester.Candidate;
 import it.wallettracker.suggestion.HistorySuggester.Dismissal;
 import it.wallettracker.suggestion.HistorySuggester.Example;
 import it.wallettracker.suggestion.HistorySuggester.Suggestion;
+import it.wallettracker.suggestion.HistorySuggester.UsedCategory;
 import org.junit.jupiter.api.Test;
 
 /** Test "puri" dei suggerimenti dalla storia: niente Spring, niente database. */
@@ -71,6 +72,25 @@ class HistorySuggesterTest {
 
         assertThat(HistorySuggester.suggest(examples, candidates, Set.of()))
                 .extracting(Suggestion::merchantKey).containsExactly("BAR CENTRALE", "PIZZERIA DA GINO");
+    }
+
+    @Test
+    void usedCategoriesListsEveryCategoryOfTheMerchantMostUsedFirst() {
+        // Per un movimento solo, anche le scelte diverse vanno bene: le mettiamo in cima al menu.
+        List<Example> examples = List.of(new Example("AMAZON", 1L, "Spesa alimentare"),
+                new Example("AMAZON", 2L, "Shopping"), new Example("AMAZON", 2L, "Shopping"),
+                new Example("AMAZON", 3L, "Casa"), PIZZA_IS_RESTAURANT);
+
+        assertThat(HistorySuggester.usedCategories(examples, "AMAZON")).containsExactly(
+                new UsedCategory(2L, "Shopping", 2),
+                new UsedCategory(3L, "Casa", 1),               // a parità, in ordine alfabetico
+                new UsedCategory(1L, "Spesa alimentare", 1));
+    }
+
+    @Test
+    void usedCategoriesIsEmptyForANewMerchantOrAMovementWithoutText() {
+        assertThat(HistorySuggester.usedCategories(List.of(PIZZA_IS_RESTAURANT), "BAR CENTRALE")).isEmpty();
+        assertThat(HistorySuggester.usedCategories(List.of(PIZZA_IS_RESTAURANT), null)).isEmpty();
     }
 
     private static Candidate candidate(String key, String text, String date) {

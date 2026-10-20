@@ -4,7 +4,14 @@ import { RouterLink } from '@angular/router';
 
 import { CategoryGroup, categoryGroups, kindOf } from '../api/category-groups';
 import { TYPES, TYPE_LABELS } from '../api/labels';
-import { Account, Category, Transaction, TransactionPage, TransactionType } from '../api/models';
+import {
+  Account,
+  Category,
+  Transaction,
+  TransactionPage,
+  TransactionType,
+  UsedCategory,
+} from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
 
@@ -43,6 +50,8 @@ export class TransactionsPage implements OnInit {
   protected readonly categories = signal<Category[]>([]);
   /** Il movimento di cui si sta modificando la categoria; null = nessuno. */
   protected readonly editingCategory = signal<number | null>(null);
+  /** Le categorie già usate per l'esercente del movimento che si sta modificando: in cima al menu. */
+  protected readonly usedCategories = signal<UsedCategory[]>([]);
 
   /**
    * Un signal "calcolato": il nome di ogni conto, per id. Si ricalcola da solo quando cambia
@@ -146,6 +155,24 @@ export class TransactionsPage implements OnInit {
       },
       error: (response) =>
         this.error.set(response.error?.detail ?? 'La categoria non è stata salvata.'),
+    });
+  }
+
+  /**
+   * "modifica" la categoria: apre il menu e chiede al backend le categorie già usate per l'esercente del
+   * movimento, che il menu mette in cima ("Usate per questo esercente"). Se la risposta arriva quando
+   * l'utente è già passato a un altro movimento, la ignoriamo: non è più quella giusta.
+   */
+  openCategory(transaction: Transaction): void {
+    this.usedCategories.set([]);
+    this.editingCategory.set(transaction.id);
+    this.api.usedCategories(transaction.id).subscribe({
+      next: (used) => {
+        if (this.editingCategory() === transaction.id) {
+          this.usedCategories.set(used);
+        }
+      },
+      // Senza le categorie usate il menu funziona lo stesso: non mostriamo errori.
     });
   }
 
