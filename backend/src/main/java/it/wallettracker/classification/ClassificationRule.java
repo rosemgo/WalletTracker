@@ -121,6 +121,7 @@ public class ClassificationRule {
             // trova niente: altrimenti "tutte le parole di un elenco vuoto" sarebbe vero per ogni movimento.
             case ALL_WORDS -> {
                 Set<String> wanted = words(needle);
+                //Nei switch introdotti nelle versioni più recenti di Java (a partire da Java 14), la parola chiave yield viene utilizzata per restituire un valore da un blocco di codice (tra parentesi graffe) all'interno di un case.
                 yield !wanted.isEmpty() && words(haystack).containsAll(wanted);
             }
         };
@@ -145,6 +146,7 @@ public class ClassificationRule {
      * Le parole di un testo: i gruppi di lettere e cifre, separati da tutto il resto (spazi, punteggiatura,
      * simboli). "PAYPAL *TEMU" → paypal, temu; "NETFLIX.COM" → netflix, com. {@code \p{L}} e
      * {@code \p{N}} sono le lettere e le cifre di qualsiasi alfabeto, accentate comprese.
+     * Il simbolo ^ all'inizio nega la selezione, quindi l'espressione significa: "dividi il testo ogni volta che trovi uno o più caratteri che non sono né lettere né numeri" (ovvero spazi, virgole, punti, punti esclamativi, ecc.).
      */
     static Set<String> words(String text) {
         return Arrays.stream(text.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+"))
