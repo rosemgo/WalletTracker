@@ -60,12 +60,12 @@ public final class HistorySuggester {
 
     public static List<Suggestion> suggest(List<Example> examples, List<Candidate> candidates,
             Set<Dismissal> dismissals) {
-        // 1. Per ogni esercente, le categorie che hai scelto (e quante volte).
-        Map<String, Map<Long, Integer>> choices = new HashMap<>();
+        // 1. Per ogni esercente, le categorie che hai scelto manualmente (e quante volte).
+        Map<String, Map<Long, Integer>> choices = new HashMap<>(); //mappa costituita da {commerciante, {categoria, numero di volte che quel commerciante ha avuto quella categoria nei movimenti}}
         Map<Long, String> categoryNames = new HashMap<>();
         for (Example example : examples) {
             choices.computeIfAbsent(example.merchantKey(), key -> new HashMap<>())
-                    .merge(example.categoryId(), 1, Integer::sum);
+                    .merge(example.categoryId(), 1, Integer::sum); //semplicemente somma 1 al valore della mappa, in pratica è un contatore del numero di volte che compare una categoria per quel commerciante
             categoryNames.put(example.categoryId(), example.category());
         }
 
@@ -86,6 +86,7 @@ public final class HistorySuggester {
             if (dismissals.contains(new Dismissal(entry.getKey(), only.getKey()))) {
                 continue;
             }
+            //prende il movimento senza categoria (Candidate) con data più recente
             Candidate latest = entry.getValue().stream().max(Comparator.comparing(Candidate::date)).orElseThrow();
             suggestions.add(new Suggestion(entry.getKey(), MerchantKey.displayName(latest.text()), only.getKey(),
                     categoryNames.get(only.getKey()), entry.getValue().size(), only.getValue()));
