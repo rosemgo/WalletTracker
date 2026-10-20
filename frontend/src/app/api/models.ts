@@ -133,6 +133,9 @@ export interface TransactionPage {
 export interface TransactionFilter {
   accountId: number | null;
   type: TransactionType | null;
+  uncategorized: boolean; // solo i movimenti senza categoria
+  from: string | null; // dal giorno, incluso: "2026-10-01"
+  to: string | null; // al giorno, incluso
   page: number;
   size: number;
 }

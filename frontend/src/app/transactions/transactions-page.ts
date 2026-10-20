@@ -14,6 +14,7 @@ import {
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
+import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
 
 /** Quanti movimenti per pagina. */
 const PAGE_SIZE = 50;
@@ -35,6 +36,8 @@ export class TransactionsPage implements OnInit {
 
   protected readonly types = TYPES;
   protected readonly typeLabels = TYPE_LABELS;
+  protected readonly periods = PERIODS;
+  protected readonly periodLabels = PERIOD_LABELS;
 
   protected readonly accounts = signal<Account[]>([]);
   protected readonly result = signal<TransactionPage | null>(null);
@@ -44,6 +47,10 @@ export class TransactionsPage implements OnInit {
   // I filtri scelti dall'utente (null = tutti) e la pagina corrente.
   protected readonly accountId = signal<number | null>(null);
   protected readonly type = signal<TransactionType | null>(null);
+  protected readonly uncategorized = signal(false);
+  protected readonly period = signal<Period>('ALL');
+  protected readonly from = signal<string | null>(null); // "2026-10-01"; null = nessun limite
+  protected readonly to = signal<string | null>(null);
   protected readonly page = signal(0);
 
   /** L'elenco delle categorie, per il menu a discesa. */
@@ -69,12 +76,22 @@ export class TransactionsPage implements OnInit {
 
   /** Carica la pagina corrente con i filtri correnti. */
   load(): void {
+    const from = this.from();
+    const to = this.to();
+    // Le date "2026-10-01" si confrontano anche come testo: l'ordine alfabetico è quello delle date.
+    if (from !== null && to !== null && from > to) {
+      this.error.set('La data di inizio è dopo quella di fine.');
+      return;
+    }
     this.loading.set(true);
     this.error.set(null);
     this.api
       .transactions({
         accountId: this.accountId(),
         type: this.type(),
+        uncategorized: this.uncategorized(),
+        from,
+        to,
         page: this.page(),
         size: PAGE_SIZE,
       })
@@ -100,6 +117,37 @@ export class TransactionsPage implements OnInit {
   onTypeFilter(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.type.set(value === '' ? null : (value as TransactionType));
+    this.page.set(0);
+    this.load();
+  }
+
+  onUncategorizedFilter(event: Event): void {
+    this.uncategorized.set((event.target as HTMLInputElement).checked);
+    this.page.set(0);
+    this.load();
+  }
+
+  /** Un periodo dal menu ("Questo mese"...): le date le calcoliamo noi; "Scegli le date" lascia quelle che ci sono. */
+  onPeriod(event: Event): void {
+    const period = (event.target as HTMLSelectElement).value as Period;
+    this.period.set(period);
+    if (period !== 'CUSTOM') {
+      const range = periodRange(period, new Date());
+      this.from.set(range.from);
+      this.to.set(range.to);
+    }
+    this.page.set(0);
+    this.load();
+  }
+
+  /**
+   * Una data scelta dal calendario (campo <input type="date">, che il browser mostra con il suo calendario).
+   * Cambiare una data a mano vuol dire "Scegli le date". Una data cancellata (vuota) toglie il limite.
+   */
+  onDate(which: 'from' | 'to', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    (which === 'from' ? this.from : this.to).set(value === '' ? null : value);
+    this.period.set('CUSTOM');
     this.page.set(0);
     this.load();
   }

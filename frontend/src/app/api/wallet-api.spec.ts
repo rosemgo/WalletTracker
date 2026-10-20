@@ -24,12 +24,25 @@ describe('WalletApi', () => {
   afterEach(() => http.verify()); // nessuna richiesta inattesa
 
   it('sends only the filters that are set', () => {
-    api.transactions({ accountId: 3, type: null, page: 1, size: 50 }).subscribe();
+    api
+      .transactions({
+        accountId: 3,
+        type: null,
+        uncategorized: false,
+        from: '2026-10-01',
+        to: null,
+        page: 1,
+        size: 50,
+      })
+      .subscribe();
 
     const request = http.expectOne((r) => r.url === '/api/transactions');
     expect(request.request.params.get('accountId')).toBe('3');
     expect(request.request.params.get('page')).toBe('1');
     expect(request.request.params.has('type')).toBe(false); // filtro spento: non va mandato
+    expect(request.request.params.has('uncategorized')).toBe(false);
+    expect(request.request.params.get('from')).toBe('2026-10-01');
+    expect(request.request.params.has('to')).toBe(false);
     request.flush({ items: [], page: 1, size: 50, totalItems: 0, totalPages: 0 });
   });
 

@@ -155,6 +155,48 @@ class TransactionControllerTest {
     }
 
     @Test
+    void transactionsCanBeFilteredByPeriodAndWithoutCategory() {
+        Account account = account();
+        BankTransaction september = transaction(account, LocalDate.of(2026, 9, 30), "-10.00", "PIZZERIA SETTEMBRE");
+        BankTransaction first = transaction(account, LocalDate.of(2026, 10, 1), "-20.00", "PIZZERIA PRIMO OTTOBRE");
+        BankTransaction last = transaction(account, LocalDate.of(2026, 10, 31), "-30.00", "PIZZERIA FINE OTTOBRE");
+        transaction(account, LocalDate.of(2026, 11, 1), "-40.00", "PIZZERIA NOVEMBRE");
+        classificationService.classifyAll();
+        last.setManualCategory(category("Bar e ristoranti"));
+        transactionRepository.save(last);
+        classificationService.classifyAll();
+
+        // Ottobre: il primo e l'ultimo giorno sono inclusi.
+        assertThat(mvc.get().uri("/api/transactions?from=2026-10-01&to=2026-10-31"))
+                .hasStatusOk().bodyJson().satisfies(json -> {
+                    json.assertThat().extractingPath("$.totalItems").isEqualTo(2);
+                    json.assertThat().extractingPath("$.items[0].id").isEqualTo(last.getId().intValue());
+                    json.assertThat().extractingPath("$.items[1].id").isEqualTo(first.getId().intValue());
+                });
+        // Solo l'inizio, o solo la fine.
+        assertThat(mvc.get().uri("/api/transactions?from=2026-10-31")).hasStatusOk().bodyJson()
+                .extractingPath("$.totalItems").isEqualTo(2);
+        assertThat(mvc.get().uri("/api/transactions?to=2026-09-30")).hasStatusOk().bodyJson()
+                .extractingPath("$.items[0].id").isEqualTo(september.getId().intValue());
+        // Senza categoria, anche insieme al periodo.
+        assertThat(mvc.get().uri("/api/transactions?uncategorized=true")).hasStatusOk().bodyJson()
+                .extractingPath("$.totalItems").isEqualTo(3);
+        assertThat(mvc.get().uri("/api/transactions?uncategorized=true&from=2026-10-01&to=2026-10-31"))
+                .hasStatusOk().bodyJson().satisfies(json -> {
+                    json.assertThat().extractingPath("$.totalItems").isEqualTo(1);
+                    json.assertThat().extractingPath("$.items[0].id").isEqualTo(first.getId().intValue());
+                });
+    }
+
+    @Test
+    void aPeriodThatEndsBeforeItStartsIs400() {
+        assertThat(mvc.get().uri("/api/transactions?from=2026-10-31&to=2026-10-01"))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").isEqualTo("La data di inizio è dopo quella di fine.");
+        assertThat(mvc.get().uri("/api/transactions?from=31/10/2026")).hasStatus(400); // non è una data ISO
+    }
+
+    @Test
     void wrongRequestsAreRejected() {
         assertThat(mvc.get().uri("/api/transactions?type=BOH")).hasStatus(400);
         assertThat(mvc.put().uri("/api/transactions/999999/manual-type")

@@ -90,7 +90,12 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
      *
      * <p>{@code LEFT JOIN FETCH}: carica le categorie insieme ai movimenti, nella stessa query, perché la
      * dashboard ne mostra il nome. Senza, Hibernate farebbe una query in più per ogni categoria (il problema
-     * N+1, docs/09). La query di conteggio delle pagine ({@code countQuery}) Spring Data saprebbe ricavarla
+     * N+1, docs/09).
+     *
+     * <p>{@code cast(:fromDate as LocalDate)}: con una data nulla, PostgreSQL non saprebbe di che tipo è il
+     * parametro di {@code ? IS NULL} ("could not determine data type of parameter"); il cast glielo dice.
+     *
+     * <p>La query di conteggio delle pagine ({@code countQuery}) Spring Data saprebbe ricavarla
      * da sola, ma la scriviamo noi: per contare i movimenti le categorie non servono, quindi niente join.
      */
     @Query(value = """
@@ -99,15 +104,22 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             LEFT JOIN FETCH t.manualCategory
             WHERE (:accountId IS NULL OR t.account.id = :accountId)
               AND (:type IS NULL OR t.type = :type)
+              AND (:uncategorized = false OR t.category IS NULL)
+              AND (cast(:fromDate as LocalDate) IS NULL OR t.bookingDate >= :fromDate)
+              AND (cast(:toDate as LocalDate) IS NULL OR t.bookingDate <= :toDate)
             ORDER BY t.bookingDate DESC, t.id DESC
             """,
             countQuery = """
             SELECT COUNT(t) FROM BankTransaction t
             WHERE (:accountId IS NULL OR t.account.id = :accountId)
               AND (:type IS NULL OR t.type = :type)
+              AND (:uncategorized = false OR t.category IS NULL)
+              AND (cast(:fromDate as LocalDate) IS NULL OR t.bookingDate >= :fromDate)
+              AND (cast(:toDate as LocalDate) IS NULL OR t.bookingDate <= :toDate)
             """)
     Page<BankTransaction> search(@Param("accountId") Long accountId, @Param("type") TransactionType type,
-            Pageable pageable);
+            @Param("uncategorized") boolean uncategorized, @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate, Pageable pageable);
 
     /**
      * I totali dei movimenti di un periodo, raggruppati per mese, valuta e tipo: una riga per ogni

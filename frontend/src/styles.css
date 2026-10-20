@@ -136,6 +136,15 @@ th {
   color: var(--muted);
 }
 
+/* La casella "Solo senza categoria": accanto al testo, allineata in basso con gli altri filtri. */
+.filters label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+  gap: 0.4rem;
+  min-height: 2rem;
+}
+
 select,
 button {
   font: inherit;

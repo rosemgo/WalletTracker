@@ -213,6 +213,21 @@ filtri vanno a capo.
 
 ---
 
+**I filtri dei Movimenti.** Per trovare i movimenti a cui dare una categoria ci sono due filtri nuovi,
+accanto a Conto e Tipo:
+
+- **Solo senza categoria** (`?uncategorized=true`);
+- **Periodo**: Tutto, Questo mese, Mese scorso, Ultimi 3 mesi, Quest'anno, oppure le date scelte dal
+  calendario (**Dal**, **Al**: il campo `<input type="date">`, con il calendario del browser). Le date sono
+  incluse e viaggiano nel formato ISO (`?from=2026-10-01&to=2026-10-31`). Le scorciatoie le calcola
+  `transactions/period.ts`, funzioni pure con i loro test (es. "ultimi 3 mesi" dal 31 maggio parte dal
+  28 febbraio, perché il 31 febbraio non esiste).
+
+Nel backend i filtri restano **una sola query**, con lo schema "parametro nullo = filtro spento". Per le
+date c'è un dettaglio: con una data nulla PostgreSQL non sa di che tipo è il parametro di `? IS NULL`
+("could not determine data type of parameter", l'errore l'ha trovato un test). Si risolve dicendoglielo nella
+query: `cast(:fromDate as LocalDate) IS NULL`.
+
 **Il nome dei conti (V17).** Nella colonna "Conto" dei Movimenti compariva il nome del conto che manda la
 banca, e molte banche ci mettono il nome del titolare: con più conti erano tutti uguali. Ora ogni conto ha
 un'**etichetta**, calcolata dal backend (`Account.label`) e usata ovunque (Movimenti, filtri, Importa CSV,

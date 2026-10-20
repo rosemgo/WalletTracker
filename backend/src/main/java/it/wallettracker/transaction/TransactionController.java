@@ -1,6 +1,9 @@
 package it.wallettracker.transaction;
 
+import java.time.LocalDate;
+
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,7 +24,9 @@ public class TransactionController {
     }
 
     /**
-     * {@code GET /api/transactions?accountId=3&type=TO_REVIEW&page=0&size=50}: una pagina di movimenti.
+     * {@code GET /api/transactions?accountId=3&type=TO_REVIEW&uncategorized=true&from=2026-10-01&to=2026-10-31&page=0&size=50}:
+     * una pagina di movimenti. Tutti i filtri sono facoltativi; {@code from} e {@code to} sono giorni inclusi,
+     * nel formato ISO ({@code @DateTimeFormat} trasforma "2026-10-01" in un LocalDate).
      *
      * <p>{@code @RequestParam} legge i parametri dopo il "?". Sono tutti facoltativi:
      * {@code required = false} significa "se manca, null"; {@code defaultValue} dà un valore predefinito.
@@ -32,9 +37,12 @@ public class TransactionController {
     public TransactionPageDto search(
             @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) TransactionType type,
+            @RequestParam(defaultValue = "false") boolean uncategorized,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return transactionService.search(accountId, type, page, size);
+        return transactionService.search(new TransactionFilter(accountId, type, uncategorized, from, to), page, size);
     }
 
     /**

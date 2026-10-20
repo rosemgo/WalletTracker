@@ -24,6 +24,32 @@
       }
     </select>
   </label>
+  <label>
+    Periodo
+    <select (change)="onPeriod($event)">
+      @for (p of periods; track p) {
+        <option [value]="p" [selected]="p === period()">{{ periodLabels[p] }}</option>
+      }
+    </select>
+  </label>
+  <!-- type="date": il browser mostra il suo calendario. Il valore è sempre "2026-10-01". -->
+  <label>
+    Dal
+    <input
+      type="date"
+      [value]="from() ?? ''"
+      [max]="to() ?? ''"
+      (change)="onDate('from', $event)"
+    />
+  </label>
+  <label>
+    Al
+    <input type="date" [value]="to() ?? ''" [min]="from() ?? ''" (change)="onDate('to', $event)" />
+  </label>
+  <label class="checkbox">
+    <input type="checkbox" [checked]="uncategorized()" (change)="onUncategorizedFilter($event)" />
+    Solo senza categoria
+  </label>
 </div>
 
 @if (error()) {

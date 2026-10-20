@@ -112,7 +112,79 @@ describe('TransactionsPage', () => {
     typeFilter.dispatchEvent(new Event('change'));
     await fixture.whenStable();
 
-    expect(requests.at(-1)).toEqual({ accountId: null, type: 'TO_REVIEW', page: 0, size: 50 });
+    expect(requests.at(-1)).toEqual({
+      accountId: null,
+      type: 'TO_REVIEW',
+      uncategorized: false,
+      from: null,
+      to: null,
+      page: 0,
+      size: 50,
+    });
+  });
+
+  it('"Solo senza categoria" asks only for the movements without a category', async () => {
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+    const box = (fixture.nativeElement as HTMLElement).querySelector(
+      '.filters input[type="checkbox"]',
+    ) as HTMLInputElement;
+
+    box.checked = true;
+    box.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(requests.at(-1)).toMatchObject({ uncategorized: true, page: 0 });
+  });
+
+  it('a period from the menu sets both dates, and a date from the calendar means custom', async () => {
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const period = Array.from(page.querySelectorAll('.filters select')).at(-1) as HTMLSelectElement;
+    const [from, to] = Array.from(
+      page.querySelectorAll('.filters input[type="date"]'),
+    ) as HTMLInputElement[];
+
+    period.value = 'THIS_YEAR';
+    period.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    const year = new Date().getFullYear();
+    expect(requests.at(-1)).toMatchObject({ from: `${year}-01-01`, to: `${year}-12-31` });
+    expect(from.value).toBe(`${year}-01-01`); // il calendario mostra le date del periodo
+
+    to.value = `${year}-03-31`;
+    to.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(requests.at(-1)).toMatchObject({ from: `${year}-01-01`, to: `${year}-03-31` });
+    expect(period.selectedOptions[0].textContent?.trim()).toBe('Scegli le date');
+
+    period.value = 'ALL';
+    period.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(requests.at(-1)).toMatchObject({ from: null, to: null });
+  });
+
+  it('a start date after the end date is not sent and is explained', async () => {
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const [from, to] = Array.from(
+      page.querySelectorAll('.filters input[type="date"]'),
+    ) as HTMLInputElement[];
+    to.value = '2026-10-01';
+    to.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    const sent = requests.length;
+
+    from.value = '2026-10-31';
+    from.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(requests.length).toBe(sent);
+    expect(page.querySelector('.error')?.textContent).toContain(
+      'La data di inizio è dopo quella di fine',
+    );
   });
 
   it('a correction is saved and the page is reloaded', async () => {

@@ -5,8 +5,10 @@ import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Le operazioni sui movimenti richieste dalla dashboard: elenco e correzione manuale. */
 @Service
@@ -33,11 +35,15 @@ public class TransactionService {
      * @param type      solo i movimenti di questo tipo (es. TO_REVIEW); null = tutti i tipi
      */
     @Transactional(readOnly = true)
-    public TransactionPageDto search(Long accountId, TransactionType type, int page, int size) {
+    public TransactionPageDto search(TransactionFilter filter, int page, int size) {
+        if (filter.from() != null && filter.to() != null && filter.from().isAfter(filter.to())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La data di inizio è dopo quella di fine.");
+        }
         // PageRequest dice a Spring Data quale pagina vogliamo; Spring aggiunge da solo LIMIT e OFFSET
         // alla query, e fa una seconda query (COUNT) per sapere quanti movimenti ci sono in tutto.
         PageRequest pageRequest = PageRequest.of( Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE) );
-        Page<BankTransaction> result = repository.search(accountId, type, pageRequest);
+        Page<BankTransaction> result = repository.search(filter.accountId(), filter.type(), filter.uncategorized(),
+                filter.from(), filter.to(), pageRequest);
         return new TransactionPageDto(
                 result.getContent().stream().map(TransactionDto::from).toList(),
                 result.getNumber(),

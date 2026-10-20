@@ -102,6 +102,15 @@ export class WalletApi {
     if (filter.type !== null) {
       params = params.set('type', filter.type);
     }
+    if (filter.uncategorized) {
+      params = params.set('uncategorized', true);
+    }
+    if (filter.from !== null) {
+      params = params.set('from', filter.from);
+    }
+    if (filter.to !== null) {
+      params = params.set('to', filter.to);
+    }
     return this.http.get<TransactionPage>('/api/transactions', { params });
   }
 
