@@ -340,3 +340,16 @@ export interface CategoryRequest {
   name: string;
   kind: CategoryKind;
 }
+
+/**
+ * Un suggerimento di categoria "dalla tua storia" (GET /api/category-suggestions): per questo esercente
+ * hai scelto a mano questa categoria, e ci sono altri suoi movimenti ancora senza.
+ */
+export interface CategorySuggestion {
+  merchantKey: string; // l'esercente, come lo riconosce il programma (es. "PIZZERIA DA GINO")
+  merchantName: string; // un nome leggibile, dal movimento più recente
+  categoryId: number;
+  category: string;
+  transactions: number; // quanti movimenti senza categoria la riceverebbero
+  examples: number; // su quante tue scelte si basa
+}

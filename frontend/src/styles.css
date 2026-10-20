@@ -119,8 +119,13 @@ th {
 
 .filters {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap; /* sul telefono i filtri vanno a capo invece di uscire dallo schermo */
+  gap: 0.75rem 1.5rem;
   margin-bottom: 1rem;
+}
+
+.filters select {
+  max-width: 100%;
 }
 
 .filters label {
@@ -135,6 +140,11 @@ select,
 button {
   font: inherit;
   padding: 0.3rem 0.5rem;
+}
+
+/* Due pulsanti vicini in una cella (es. "Accetta" e "no"): un po' di spazio tra loro. */
+td button + button {
+  margin-left: 0.75rem;
 }
 
 button.link {

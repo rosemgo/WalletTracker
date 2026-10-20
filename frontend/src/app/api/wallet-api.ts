@@ -11,6 +11,7 @@ import {
   BudgetRequest,
   Category,
   CategoryRequest,
+  CategorySuggestion,
   ImportMapping,
   ImportPreview,
   ImportResult,
@@ -221,6 +222,27 @@ export class WalletApi {
   /** GET /api/subscriptions: abbonamenti confermati, totali, esercenti ignorati. */
   subscriptions(): Observable<SubscriptionOverview> {
     return this.http.get<SubscriptionOverview>('/api/subscriptions');
+  }
+
+  /** GET /api/category-suggestions: i suggerimenti di categoria dalla tua storia. */
+  categorySuggestions(): Observable<CategorySuggestion[]> {
+    return this.http.get<CategorySuggestion[]>('/api/category-suggestions');
+  }
+
+  /** POST /api/category-suggestions/accept: la categoria a tutti i movimenti senza categoria dell'esercente. */
+  acceptCategorySuggestion(
+    merchantKey: string,
+    categoryId: number,
+  ): Observable<{ updated: number }> {
+    return this.http.post<{ updated: number }>('/api/category-suggestions/accept', {
+      merchantKey,
+      categoryId,
+    });
+  }
+
+  /** POST /api/category-suggestions/dismissed: "no, non suggerirlo più". */
+  dismissCategorySuggestion(merchantKey: string, categoryId: number): Observable<void> {
+    return this.http.post<void>('/api/category-suggestions/dismissed', { merchantKey, categoryId });
   }
 
   /** GET /api/subscriptions/suggestions */

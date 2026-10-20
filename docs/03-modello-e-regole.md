@@ -189,5 +189,9 @@ Decisioni prese:
    - *cloud* (es. Gemini): nessuna installazione, ma i movimenti escono di casa. Va attivata
      consapevolmente, dopo un avviso chiaro sulle condizioni d'uso dei dati del servizio scelto.
 4. L'IA **non decide mai**: il suggerimento va in un campo separato e l'utente lo accetta o lo corregge.
+5. Prima dell'IA, i suggerimenti **dalla storia** (passo 7a, `docs/26`): per un esercente a cui hai già dato
+   una categoria a mano, la stessa categoria per i suoi altri movimenti. Sono deterministici, locali e
+   gratuiti; l'IA (passi 7b e 7c) servirà solo per gli esercenti mai visti, e userà lo stesso riquadro
+   con "accetta" e "no".
    All'IA si manda il minimo indispensabile (testo dell'esercente e segno dell'importo), mai IBAN,
    nomi o saldi.

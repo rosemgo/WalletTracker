@@ -89,6 +89,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 23. [Fase 3, passo 5b: l'elenco delle categorie (menu a discesa, rinomina a cascata)](docs/23-categorie-standard.md)
 24. [Le categorie collegate per id: normalizzazione, `@ManyToOne`, `JOIN FETCH`](docs/24-categorie-per-id.md)
 25. [Fase 3, passo 6: l'import CSV e i conti manuali (es. Trade Republic)](docs/25-fase-3-passo-6-import-csv.md)
+26. [Fase 3, passo 7a: i suggerimenti di categoria dalla tua storia](docs/26-fase-3-passo-7a-suggerimenti.md)
 
 ## Piano di lavoro
 
@@ -115,7 +116,8 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] categorie collegate per id (soluzione normalizzata), senza query N+1
   - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
   - [ ] **da fare**: estratto conto CSV anche per i conti collegati che non danno i dettagli dei movimenti (es. Trade Republic): completare causale e controparte dei movimenti già arrivati, in alternativa alla correzione a mano (vedi `docs/25`, "E Trade Republic?")
-  - facoltativo: suggerimenti di categoria con l'intelligenza artificiale, con un modello locale (Ollama in Docker) o un servizio cloud (es. Gemini), vedi `docs/03`
+  - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
+  - facoltativo: suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con un modello locale (Ollama in Docker) o un servizio cloud (passi 7b e 7c, vedi `docs/03`)
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili

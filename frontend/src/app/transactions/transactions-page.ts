@@ -1,11 +1,12 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { CategoryGroup, categoryGroups, kindOf } from '../api/category-groups';
 import { TYPES, TYPE_LABELS } from '../api/labels';
 import { Account, Category, Transaction, TransactionPage, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { SuggestionsPanel } from '../suggestions/suggestions-panel';
 
 /** Quanti movimenti per pagina. */
 const PAGE_SIZE = 50;
@@ -16,11 +17,14 @@ const PAGE_SIZE = 50;
  */
 @Component({
   selector: 'app-transactions-page',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [CurrencyPipe, DatePipe, RouterLink, SuggestionsPanel],
   templateUrl: './transactions-page.html',
 })
 export class TransactionsPage implements OnInit {
   private readonly api = inject(WalletApi);
+
+  /** Il pannello dei suggerimenti nel template: viewChild() ci dà il componente, per chiamarne i metodi. */
+  private readonly suggestionsPanel = viewChild(SuggestionsPanel);
 
   protected readonly types = TYPES;
   protected readonly typeLabels = TYPE_LABELS;
@@ -137,6 +141,8 @@ export class TransactionsPage implements OnInit {
       next: () => {
         this.editingCategory.set(null);
         this.load();
+        // Una categoria scelta a mano può far nascere un suggerimento per gli altri movimenti dell'esercente.
+        this.suggestionsPanel()?.reload();
       },
       error: (response) =>
         this.error.set(response.error?.detail ?? 'La categoria non è stata salvata.'),

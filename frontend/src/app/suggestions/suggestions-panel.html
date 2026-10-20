@@ -1,0 +1,48 @@
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (suggestions().length > 0) {
+  <section class="card" aria-label="Suggerimenti di categoria">
+    <h2>Suggerimenti di categoria</h2>
+    <p class="hint">
+      Dalle categorie che hai già scelto a mano: per questi esercenti ci sono altri movimenti ancora
+      senza categoria. Finché non accetti, restano senza.
+    </p>
+    <div class="table-scroll">
+      <table>
+        <tbody>
+          @for (s of suggestions(); track s.merchantKey) {
+            <tr>
+              <td>
+                {{ s.merchantName }}
+                <div class="secondary">
+                  {{ s.transactions === 1 ? '1 movimento' : s.transactions + ' movimenti' }} senza
+                  categoria · l'hai scelta per
+                  {{ s.examples === 1 ? '1 movimento' : s.examples + ' movimenti' }}
+                </div>
+              </td>
+              <td>{{ s.category }}</td>
+              <td class="amount">
+                <button type="button" [disabled]="busy() !== null" (click)="accept(s)">
+                  Accetta
+                </button>
+                <button
+                  type="button"
+                  class="link"
+                  [disabled]="busy() !== null"
+                  (click)="dismiss(s)"
+                >
+                  no
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

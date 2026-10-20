@@ -1,5 +1,8 @@
 <h1>Movimenti</h1>
 
+<!-- Accettando un suggerimento alcuni movimenti ricevono la categoria: ricarichiamo l'elenco. -->
+<app-suggestions-panel (accepted)="load()" />
+
 <div class="filters">
   <label>
     Conto
@@ -28,102 +31,106 @@
 }
 
 @if (result(); as page) {
-  <table [class.loading]="loading()">
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Conto</th>
-        <th>Descrizione</th>
-        <th class="amount">Importo</th>
-        <th>Tipo</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (t of page.items; track t.id) {
+  <div class="table-scroll">
+    <table [class.loading]="loading()">
+      <thead>
         <tr>
-          <td>
-            {{ t.bookingDate | date: 'dd/MM/yyyy' }}
-            @if (t.status === 'PENDING') {
-              <div class="secondary">in attesa</div>
-            }
-          </td>
-          <td>{{ accountNames().get(t.accountId) }}</td>
-          <td>
-            {{ textOf(t) }}
-            @if (editingCategory() === t.id) {
-              <!--
-                Il menu delle categorie: per primo il gruppo che si addice al tipo del movimento (a una spesa
-                le categorie di spesa), poi gli altri. Scegliere una voce salva subito.
-              -->
-              <div class="category-edit">
-                <select
-                  [attr.aria-label]="'Categoria del movimento ' + t.id"
-                  (change)="saveCategory(t, $any($event.target).value)"
-                  (keydown.escape)="editingCategory.set(null)"
-                >
-                  <option value="" [selected]="t.categoryId === null">— nessuna categoria —</option>
-                  @for (group of groupsFor(t); track group.kind) {
-                    <optgroup [label]="group.label">
-                      @for (category of group.categories; track category.id) {
-                        <option [value]="category.id" [selected]="category.id === t.categoryId">
-                          {{ category.name }}
-                        </option>
-                      }
-                    </optgroup>
-                  }
-                </select>
-                <button type="button" class="link" (click)="editingCategory.set(null)">
-                  annulla
-                </button>
-              </div>
-            } @else {
-              <div class="secondary">
-                {{ t.category ?? 'senza categoria' }}
-                @if (t.manualCategoryId) {
-                  (scelta a mano)
-                }
-                ·
-                <button type="button" class="link" (click)="editingCategory.set(t.id)">
-                  modifica
-                </button>
-              </div>
-            }
-          </td>
-          <td class="amount" [class.negative]="t.amount < 0" [class.positive]="t.amount > 0">
-            {{ t.amount | currency: t.currency }}
-          </td>
-          <td>
-            <select
-              [attr.aria-label]="'Tipo del movimento ' + t.id"
-              (change)="onCorrect(t, $event)"
-            >
-              @for (type of types; track type) {
-                <option [value]="type" [selected]="type === t.type">
-                  {{ typeLabel(t, type) }}
-                </option>
+          <th>Data</th>
+          <th>Conto</th>
+          <th>Descrizione</th>
+          <th class="amount">Importo</th>
+          <th>Tipo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of page.items; track t.id) {
+          <tr>
+            <td>
+              {{ t.bookingDate | date: 'dd/MM/yyyy' }}
+              @if (t.status === 'PENDING') {
+                <div class="secondary">in attesa</div>
               }
-            </select>
-            @if (t.manualType) {
-              <div class="secondary">
-                corretto a mano ·
-                <button type="button" class="link" (click)="onResetCorrection(t)">annulla</button>
-              </div>
-            }
-            @if (t.manualType || t.manualCategoryId) {
-              <div class="secondary">
-                <a routerLink="/regole" [queryParams]="ruleParams(t)">crea una regola</a> per i
-                movimenti simili
-              </div>
-            }
-          </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td colspan="5">Nessun movimento con questi filtri.</td>
-        </tr>
-      }
-    </tbody>
-  </table>
+            </td>
+            <td>{{ accountNames().get(t.accountId) }}</td>
+            <td>
+              {{ textOf(t) }}
+              @if (editingCategory() === t.id) {
+                <!--
+                  Il menu delle categorie: per primo il gruppo che si addice al tipo del movimento (a una spesa
+                  le categorie di spesa), poi gli altri. Scegliere una voce salva subito.
+                -->
+                <div class="category-edit">
+                  <select
+                    [attr.aria-label]="'Categoria del movimento ' + t.id"
+                    (change)="saveCategory(t, $any($event.target).value)"
+                    (keydown.escape)="editingCategory.set(null)"
+                  >
+                    <option value="" [selected]="t.categoryId === null">
+                      — nessuna categoria —
+                    </option>
+                    @for (group of groupsFor(t); track group.kind) {
+                      <optgroup [label]="group.label">
+                        @for (category of group.categories; track category.id) {
+                          <option [value]="category.id" [selected]="category.id === t.categoryId">
+                            {{ category.name }}
+                          </option>
+                        }
+                      </optgroup>
+                    }
+                  </select>
+                  <button type="button" class="link" (click)="editingCategory.set(null)">
+                    annulla
+                  </button>
+                </div>
+              } @else {
+                <div class="secondary">
+                  {{ t.category ?? 'senza categoria' }}
+                  @if (t.manualCategoryId) {
+                    (scelta a mano)
+                  }
+                  ·
+                  <button type="button" class="link" (click)="editingCategory.set(t.id)">
+                    modifica
+                  </button>
+                </div>
+              }
+            </td>
+            <td class="amount" [class.negative]="t.amount < 0" [class.positive]="t.amount > 0">
+              {{ t.amount | currency: t.currency }}
+            </td>
+            <td>
+              <select
+                [attr.aria-label]="'Tipo del movimento ' + t.id"
+                (change)="onCorrect(t, $event)"
+              >
+                @for (type of types; track type) {
+                  <option [value]="type" [selected]="type === t.type">
+                    {{ typeLabel(t, type) }}
+                  </option>
+                }
+              </select>
+              @if (t.manualType) {
+                <div class="secondary">
+                  corretto a mano ·
+                  <button type="button" class="link" (click)="onResetCorrection(t)">annulla</button>
+                </div>
+              }
+              @if (t.manualType || t.manualCategoryId) {
+                <div class="secondary">
+                  <a routerLink="/regole" [queryParams]="ruleParams(t)">crea una regola</a> per i
+                  movimenti simili
+                </div>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5">Nessun movimento con questi filtri.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
 
   <div class="pager">
     <button type="button" [disabled]="page.page === 0" (click)="goToPage(page.page - 1)">

@@ -2,6 +2,7 @@ package it.wallettracker.transaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +23,17 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     /** Le impronte di tutti i movimenti di un conto, in una query (per l'importazione CSV). */
     @Query("SELECT t.dedupKey FROM BankTransaction t WHERE t.account = :account")
     Set<String> findDedupKeysByAccount(@Param("account") Account account);
+
+    /**
+     * I movimenti con una categoria scelta a mano, insieme alla categoria (JOIN FETCH: una query sola).
+     * Sono la "storia" da cui nascono i suggerimenti (passo 7a). Il JOIN, senza LEFT, salta quelli senza.
+     */
+    @Query("SELECT t FROM BankTransaction t JOIN FETCH t.manualCategory")
+    List<BankTransaction> findAllWithManualCategory();
+
+    /** I movimenti senza categoria, di questi tipi: quelli a cui si può suggerire una categoria. */
+    @Query("SELECT t FROM BankTransaction t WHERE t.category IS NULL AND t.type IN :types")
+    List<BankTransaction> findUncategorized(@Param("types") Collection<TransactionType> types);
 
     /** Cancella i movimenti di un conto in un certo stato; restituisce quanti ne ha cancellati. */
     long deleteByAccountAndStatus(Account account, TransactionStatus status);

@@ -40,12 +40,14 @@ describe('TransactionsPage', () => {
   const corrections: [number, TransactionType | null][] = [];
   const categoryChanges: [number, number | null][] = [];
   let items: Transaction[];
+  let suggestionLoads: number;
 
   beforeEach(() => {
     requests.length = 0;
     corrections.length = 0;
     categoryChanges.length = 0;
     items = [SETTLEMENT];
+    suggestionLoads = 0;
     registerLocaleData(localeIt);
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of([]),
@@ -62,6 +64,10 @@ describe('TransactionsPage', () => {
         return of({ ...SETTLEMENT, manualCategoryId: categoryId });
       },
       categories: () => of(CATEGORIES),
+      categorySuggestions: () => {
+        suggestionLoads++;
+        return of([]);
+      },
     };
     TestBed.configureTestingModule({
       imports: [TransactionsPage],
@@ -149,6 +155,8 @@ describe('TransactionsPage', () => {
     again.dispatchEvent(new Event('change'));
     await fixture.whenStable();
     expect(categoryChanges[1]).toEqual([449, null]);
+    // Una scelta a mano può far nascere un suggerimento: il pannello si ricarica (1 all'avvio + 2).
+    expect(suggestionLoads).toBe(3);
   });
 
   it('after a correction, offers to create a rule prefilled with the movement data', async () => {
