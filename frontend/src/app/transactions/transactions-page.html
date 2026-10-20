@@ -68,17 +68,19 @@
                     <option value="" [selected]="t.categoryId === null">
                       — nessuna categoria —
                     </option>
-                    @if (usedCategories().length > 0) {
-                      <!-- Prima le categorie che hai già scelto per questo esercente (scegli tu quale). -->
-                      <optgroup label="Usate per questo esercente">
-                        @for (used of usedCategories(); track used.categoryId) {
-                          <option [value]="used.categoryId">
-                            {{ used.category }} ({{
-                              used.times === 1 ? '1 volta' : used.times + ' volte'
-                            }})
-                          </option>
-                        }
-                      </optgroup>
+                    @if (usedCategories(); as used) {
+                      @if (used.categories.length > 0) {
+                        <!-- Prima le categorie già usate per esercenti simili: scegli tu quale. -->
+                        <optgroup [label]="'Usate per «' + used.word + '…»'">
+                          @for (u of used.categories; track u.categoryId) {
+                            <option [value]="u.categoryId">
+                              {{ u.category }} ({{
+                                u.times === 1 ? '1 volta' : u.times + ' volte'
+                              }})
+                            </option>
+                          }
+                        </optgroup>
+                      }
                     }
                     @for (group of groupsFor(t); track group.kind) {
                       <optgroup [label]="group.label">

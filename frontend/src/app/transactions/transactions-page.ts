@@ -10,7 +10,7 @@ import {
   Transaction,
   TransactionPage,
   TransactionType,
-  UsedCategory,
+  UsedCategories,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
@@ -50,8 +50,8 @@ export class TransactionsPage implements OnInit {
   protected readonly categories = signal<Category[]>([]);
   /** Il movimento di cui si sta modificando la categoria; null = nessuno. */
   protected readonly editingCategory = signal<number | null>(null);
-  /** Le categorie già usate per l'esercente del movimento che si sta modificando: in cima al menu. */
-  protected readonly usedCategories = signal<UsedCategory[]>([]);
+  /** Le categorie già usate per esercenti simili a quello del movimento in modifica: in cima al menu. */
+  protected readonly usedCategories = signal<UsedCategories | null>(null);
 
   /**
    * Un signal "calcolato": il nome di ogni conto, per id. Si ricalcola da solo quando cambia
@@ -159,12 +159,12 @@ export class TransactionsPage implements OnInit {
   }
 
   /**
-   * "modifica" la categoria: apre il menu e chiede al backend le categorie già usate per l'esercente del
-   * movimento, che il menu mette in cima ("Usate per questo esercente"). Se la risposta arriva quando
-   * l'utente è già passato a un altro movimento, la ignoriamo: non è più quella giusta.
+   * "modifica" la categoria: apre il menu e chiede al backend le categorie già usate per gli esercenti
+   * con la stessa prima parola (es. AMAZON), che il menu mette in cima ("Usate per «AMAZON…»"). Se la
+   * risposta arriva quando l'utente è già passato a un altro movimento, la ignoriamo: non è più quella giusta.
    */
   openCategory(transaction: Transaction): void {
-    this.usedCategories.set([]);
+    this.usedCategories.set(null);
     this.editingCategory.set(transaction.id);
     this.api.usedCategories(transaction.id).subscribe({
       next: (used) => {

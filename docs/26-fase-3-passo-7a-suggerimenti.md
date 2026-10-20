@@ -24,8 +24,9 @@ Suggerimento:                      PIZZERIA DA GINO → Bar e ristoranti, 2 movi
 ```
 
 "Lo stesso esercente" lo decide `MerchantKey`, la stessa chiave degli abbonamenti (`docs/22`): maiuscole,
-cifre e punteggiatura non contano, quindi "PIZZERIA DA GINO 05/10" e "Pizzeria da Gino 12/10" sono lo
-stesso esercente.
+punteggiatura e parole con cifre non contano, quindi "PIZZERIA DA GINO 05/10" e "Pizzeria da Gino 12/10"
+sono lo stesso esercente. Come si calcola la chiave, e perché è cambiata con i testi veri di Amazon, è nella
+sezione 6.
 
 Le regole di prudenza (il programma **suggerisce, non indovina**):
 
@@ -47,10 +48,10 @@ budget.
 Per un esercente come Amazon, dove hai scelto categorie diverse, un suggerimento "per tutti" sbaglierebbe
 per forza qualche movimento: per questo non c'è. Però le categorie probabili le conosciamo. Quando premi
 **modifica** sulla categoria di un movimento, il menu mette in cima un gruppo con le categorie che hai già
-scelto per gli **altri** movimenti dello stesso esercente, la più usata per prima:
+usato per gli **altri** movimenti di esercenti **con la stessa prima parola**, la più usata per prima:
 
 ```
-── Usate per questo esercente ──
+── Usate per «AMAZON…» ──
    Shopping (2 volte)
    Spesa alimentare (1 volta)
 ── Categorie di spesa ──
@@ -59,9 +60,23 @@ scelto per gli **altri** movimenti dello stesso esercente, la più usata per pri
 
 Il programma non decide: ti accorcia la scelta. Vale per tutti gli esercenti, anche per quelli "coerenti".
 
+Due differenze rispetto al suggerimento "per tutti", entrambe volute:
+
+- **il confronto è più largo**: basta la prima parola della chiave (`AMAZON`), così "Amazon.it LUXEMBOURG
+  LUX", "AMAZON* BT9YM4924 LUXEMBOURG LUX" e "Amazon.it" finiscono insieme, anche se le loro chiavi
+  precise sono diverse;
+- **contano anche le categorie messe dalle regole**, non solo quelle scelte a mano.
+
+Si può fare perché qui sbagliare costa poco: cambia solo l'**ordine** del menu, e scegli tu. Il suggerimento
+"per tutti" invece **assegna** categorie a molti movimenti in un clic, quindi usa la chiave precisa e solo
+le tue scelte a mano. Più un'azione pesa, più il confronto deve essere prudente.
+
+Il limite: la prima parola può essere generica ("PAGAMENTO", "BONIFICO"). L'etichetta del gruppo dice su
+quale parola si basa ("Usate per «PAGAMENTO…»"), così si vede subito quando non aiuta.
+
 Le categorie si chiedono al backend solo quando apri il menu
-(`GET /api/category-suggestions/for-transaction/{id}`, due query), non per ogni movimento dell'elenco. Se la
-risposta arriva quando sei già passato a un altro movimento, la pagina la ignora.
+(`GET /api/category-suggestions/for-transaction/{id}`, quattro query), non per ogni movimento dell'elenco.
+Se la risposta arriva quando sei già passato a un altro movimento, la pagina la ignora.
 
 ### 3. "Accetta" e "no"
 
@@ -99,19 +114,73 @@ CREATE TABLE category_suggestion_dismissal (
 Una tabella dei suggerimenti salvati servirà nel passo 7b: le risposte di un modello costano tempo e vanno
 ricordate.
 
-### 5. Quanto costa: tre query
+### 5. Quanto costa: quattro query
 
-`GET /api/category-suggestions` fa **tre query**, qualunque sia il numero di movimenti:
+`GET /api/category-suggestions` fa **quattro query**, qualunque sia il numero di movimenti:
 
-1. i movimenti con una categoria scelta a mano, **con** la categoria (`JOIN FETCH`, `docs/24`);
-2. i movimenti senza categoria (spese ed entrate);
-3. i "no".
+1. i conti, per i nomi dei titolari (sezione 6);
+2. i movimenti con una categoria scelta a mano, **con** la categoria (`JOIN FETCH`, `docs/24`);
+3. i movimenti senza categoria (spese ed entrate);
+4. i "no".
 
-Il resto (raggruppare per esercente, contare, scartare) lo fa `HistorySuggester` in memoria. Il conto è
-verificato accendendo il registro delle query (`--logging.level.org.hibernate.SQL=debug`): 3.
+Il resto (raggruppare per esercente, contare, scartare) lo fa `HistorySuggester` in memoria. Prima della
+sezione 6 erano tre, verificate accendendo il registro delle query
+(`--logging.level.org.hibernate.SQL=debug`); la quarta è quella dei conti.
 
 Un dettaglio: per i "no" ci serve l'id della categoria, e `d.getCategory().getId()` **non** carica la
 categoria. Hibernate l'id lo conosce già, perché è la colonna `category_id` della riga.
+
+### 6. La chiave dell'esercente, rivista con i testi veri (migrazione V16)
+
+Provando con i movimenti veri di Amazon, il gruppo del menu non compariva mai. Questa è la chiave che la
+regola di allora calcolava per alcuni testi reali (il nome del titolare è inventato):
+
+| Testo (controparte / causale) | Chiave di allora |
+|---|---|
+| — / `Amazon.it LUXEMBOURG LUX` | `AMAZON IT LUXEMBOURG LUX` |
+| — / `AMAZON* BT9YM4924 LUXEMBOURG LUX` | `AMAZON BT YM LUXEMBOURG LUX` |
+| — / `AMAZON* BT2BJ4CA4 LUXEMBOURG LUX` | `AMAZON BT BJ CA LUXEMBOURG LUX` |
+| `MARIO ROSSI` / `amazon.it` | `MARIO ROSSI` |
+| `MARIO ROSSI` / `ESSELUNGA MILANO` | `MARIO ROSSI` |
+
+Tre problemi:
+
+1. **i codici d'ordine**: togliendo le cifre, le **lettere** del codice restavano (`BT YM`, `BT BJ CA`), e
+   ogni movimento aveva una chiave sua;
+2. **il titolare come controparte**: alcune banche mettono come controparte il titolare del conto e il
+   negozio nella causale. Tutti quei movimenti, di negozi diversi, avevano la stessa chiave, il nome del
+   titolare: un "Accetta per tutti" avrebbe dato la stessa categoria ad Amazon e all'Esselunga. Era il
+   difetto più serio, e toccava anche gli abbonamenti;
+3. **città e paese in coda** (`LUXEMBOURG LUX`): lo stesso negozio scritto in due modi dà due chiavi. Questo
+   non lo correggiamo nella chiave precisa: capire quali parole sono una città vorrebbe dire indovinare. Ci
+   pensa il confronto largo del menu (sezione 2).
+
+La regola nuova (`MerchantKey`):
+
+- **quale testo**: la controparte, se c'è e **non è il titolare** di un conto (i nomi dei titolari sono quelli
+  che il motore usa già per i trasferimenti, `ClassificationService.ownerNames`); altrimenti la causale;
+- si tolgono le **parole che contengono cifre**, intere: `BT9YM4924` sparisce tutto, non solo le cifre.
+
+Con la regola nuova i due `AMAZON* …` diventano entrambi `AMAZON LUXEMBOURG LUX`, e i due movimenti con il
+titolare come controparte diventano `AMAZON IT` e `ESSELUNGA MILANO`.
+
+**Le chiavi già salvate.** La chiave è scritta nel database in due tabelle: gli abbonamenti confermati o
+rifiutati e i "no" ai suggerimenti. Cambiando la regola, quelle righe non corrisponderebbero più a niente.
+Per questo c'è la migrazione **V16**, scritta **in Java** (`db/migration/V16__chiavi_esercente.java`):
+Flyway le cerca nella stessa cartella delle migrazioni SQL, e in SQL sarebbe stato difficile riscrivere le
+due regole. Per ogni movimento calcola la chiave vecchia e quella nuova, così sa in quale chiave nuova si
+trasforma ogni chiave vecchia, e aggiorna le righe salvate:
+
+- una chiave vecchia che diventa **una sola** chiave nuova: la riga viene aggiornata;
+- che diventa **più** chiavi (il nome del titolare, che copriva negozi diversi): non si può sapere quale,
+  e la riga resta com'è;
+- due righe che finiscono sulla **stessa** chiave: ne resta una, e per gli abbonamenti vince quella
+  confermata, che ha nome, frequenza e importo.
+
+Le due regole sono **copiate dentro la migrazione**, non prese da `MerchantKey`: una migrazione deve fare
+sempre la stessa cosa, anche se un giorno `MerchantKey` cambierà di nuovo. Il test `V16ChiaviEsercenteTest`
+porta un database vero alla V15, scrive righe con le chiavi vecchie (compresi i conflitti), applica la V16 e
+controlla ogni riga.
 
 ---
 
@@ -122,7 +191,7 @@ categoria. Hibernate l'id lo conosce già, perché è la colonna `category_id` d
 | Classe | Che cosa fa |
 |---|---|
 | `HistorySuggester` | la logica, "pura" (niente database né Spring): esempi + movimenti senza categoria + "no" → suggerimenti |
-| `SuggestionService` | legge i dati (le tre query), applica "accetta" e "no" |
+| `SuggestionService` | legge i dati (le quattro query), applica "accetta" e "no" |
 | `SuggestionController` | `GET /api/category-suggestions`, `POST .../accept`, `POST .../dismissed`, `GET .../for-transaction/{id}` (le categorie già usate) |
 | `SuggestionDismissal` | l'entità del "no" (V15), con `@ManyToOne` verso la categoria |
 
@@ -149,7 +218,9 @@ filtri vanno a capo.
 | Test | Che cosa verifica |
 |---|---|
 | `HistorySuggesterTest` (8) | stesso esercente → suggerimento; scelte diverse → niente; esempi contati; un "no" non torna, ma un'altra categoria sì; esercenti mai categorizzati; ordine (prima chi ha più movimenti); categorie già usate (la più usata per prima, anche se diverse) |
-| `SuggestionControllerTest` (6) | l'elenco; "accetta" assegna la categoria a tutti i movimenti dell'esercente (e solo a quelli); "no" salvato una volta sola; scelte diverse; categoria inesistente o esercente vuoto → 400; categorie già usate per l'esercente di un movimento (senza contare il movimento stesso), 404 se il movimento non c'è |
+| `SuggestionControllerTest` (6) | l'elenco; "accetta" assegna la categoria a tutti i movimenti dell'esercente (e solo a quelli); "no" salvato una volta sola; scelte diverse; categoria inesistente o esercente vuoto → 400; i testi veri di Amazon: il menu di un movimento con il titolare come controparte mostra le categorie di tutti gli AMAZON… (a mano e dalle regole, senza il movimento stesso), i due codici d'ordine diversi danno un solo suggerimento, il titolare non accomuna negozi diversi; 404 se il movimento non c'è |
+| `MerchantKeyTest` (9) | anche: i codici d'ordine spariscono interi; con il titolare come controparte l'esercente è nella causale; la prima parola |
+| `V16ChiaviEsercenteTest` (2) | la migrazione su un database vero alla V15: chiavi aggiornate, conflitti (vince la conferma, i "no" doppi diventano uno), chiave ambigua lasciata com'è; le due regole congelate |
 | `suggestions-panel.spec.ts` (5) | il riquadro, accetta (con l'evento per la pagina), no (senza evento), niente da suggerire, errore |
 | `transactions-page.spec.ts` | dopo una scelta a mano il pannello si ricarica; il gruppo "Usate per questo esercente" in cima al menu |
 

@@ -1,15 +1,32 @@
 package it.wallettracker.subscription;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * La "chiave" di un esercente: il testo di un movimento ridotto all'essenziale, per riconoscere lo stesso
- * esercente in movimenti di mesi diversi.
+ * esercente in movimenti diversi (abbonamenti, suggerimenti di categoria).
  *
- * <p>Esempio: "Pagamento carta del 03/10/2026 alle 10:12 presso NETFLIX.COM 4521" e "Pagamento carta del
- * 03/11/2026 alle 09:58 presso NETFLIX.COM 4521" diventano entrambi
- * "PAGAMENTO CARTA DEL ALLE PRESSO NETFLIX COM": togliendo cifre e punteggiatura spariscono date, ore,
- * numeri di carta e di operazione, che cambiano ogni volta, e resta quello che non cambia.
+ * <p>Come si calcola:
+ * <ol>
+ *   <li><b>quale testo</b>: la controparte, se c'è e non è il titolare del conto; altrimenti la causale.
+ *       Alcune banche mettono come controparte il titolare stesso e il negozio nella causale: usare la
+ *       controparte darebbe a tutti quei movimenti, di negozi diversi, la stessa chiave (il tuo nome);</li>
+ *   <li><b>maiuscole</b>, e tutto ciò che non è una lettera o una cifra diventa uno spazio;</li>
+ *   <li>si tolgono le <b>parole che contengono cifre</b>: date, ore, numeri di carta e codici d'ordine
+ *       ({@code BT9YM4924}), che cambiano a ogni movimento. Togliere solo le cifre lascerebbe i pezzi di
+ *       lettere del codice ({@code BT YM}), diversi ogni volta.</li>
+ * </ol>
+ * Esempi: "Pagamento carta del 03/10/2026 alle 10:12 presso NETFLIX.COM 4521" →
+ * "PAGAMENTO CARTA DEL ALLE PRESSO NETFLIX COM"; "AMAZON* BT9YM4924 LUXEMBOURG LUX" →
+ * "AMAZON LUXEMBOURG LUX".
+ *
+ * <p>Attenzione: questa regola è "congelata" anche in {@code db.migration.V16__chiavi_esercente}, che ha
+ * ricalcolato le chiavi salvate. Cambiandola, serve una nuova migrazione che ricalcoli le chiavi salvate
+ * (abbonamenti, suggerimenti rifiutati), altrimenti non corrisponderebbero più ai movimenti.
  */
 public final class MerchantKey {
 
@@ -19,20 +36,51 @@ public final class MerchantKey {
     private MerchantKey() {
     }
 
-    /** La chiave di un movimento: dalla controparte se c'è, altrimenti dalla causale. Null se non c'è testo. */
-    public static String of(String counterparty, String description) {
-        String text = counterparty != null && !counterparty.isBlank() ? counterparty : description;
-        if (text == null) {
-            return null;
+    /**
+     * La chiave di un movimento; null se non c'è un testo utile.
+     *
+     * @param ownerNames i nomi dei titolari dei conti, come insiemi di parole maiuscole (vedi
+     *                   {@code ClassificationService.ownerNames})
+     */
+    public static String of(String counterparty, String description, List<Set<String>> ownerNames) {
+        String text = merchantText(counterparty, description, ownerNames);
+        return text == null ? null : keyOf(text);
+    }
+
+    /** Il testo che identifica l'esercente: la controparte, se c'è e non è un titolare; altrimenti la causale. */
+    public static String merchantText(String counterparty, String description, List<Set<String>> ownerNames) {
+        if (counterparty != null && !counterparty.isBlank() && !ownerNames.contains(words(counterparty))) {
+            return counterparty;
         }
-        String key = text.toUpperCase(Locale.ROOT)
-                .replaceAll("[^\\p{L} ]", " ")   // tutto quello che non è una lettera o uno spazio diventa spazio
-                .replaceAll("\\s+", " ")         // più spazi di fila diventano uno
+        return description != null && !description.isBlank() ? description : null;
+    }
+
+    /**
+     * La prima parola della chiave ("AMAZON" per "AMAZON LUXEMBOURG LUX"): un confronto più largo, usato dove
+     * sbagliare costa poco (l'ordine del menu della categoria), non dove si assegna qualcosa.
+     */
+    public static String firstWord(String key) {
+        return key == null ? null : key.split(" ")[0];
+    }
+
+    /** Dal testo alla chiave (passi 2 e 3 sopra). */
+    static String keyOf(String text) {
+        String[] tokens = text.toUpperCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim().split(" ");
+        String key = Arrays.stream(tokens)
+                .filter(token -> token.chars().noneMatch(Character::isDigit))
+                .collect(Collectors.joining(" "))
                 .trim();
         if (key.length() > MAX_LENGTH) {
             key = key.substring(0, MAX_LENGTH).trim();
         }
         return key.length() >= 2 ? key : null;
+    }
+
+    /** Le parole di un testo, in maiuscolo: lo stesso criterio dei nomi dei titolari. */
+    private static Set<String> words(String text) {
+        return Arrays.stream(text.toUpperCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+"))
+                .filter(word -> !word.isEmpty())
+                .collect(Collectors.toSet());
     }
 
     /**

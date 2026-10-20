@@ -3,7 +3,9 @@ package it.wallettracker.suggestion;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
@@ -11,10 +13,17 @@ import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryRepository;
+import it.wallettracker.classification.ClassificationRule;
+import it.wallettracker.classification.ClassificationRule.AmountSign;
+import it.wallettracker.classification.ClassificationRule.MatchMode;
+import it.wallettracker.classification.ClassificationRuleRepository;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.connection.BankConnection;
+import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
+import it.wallettracker.transaction.TransactionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +59,12 @@ class SuggestionControllerTest {
     @Autowired
     SuggestionDismissalRepository dismissalRepository;
 
+    @Autowired
+    BankConnectionRepository connectionRepository;
+
+    @Autowired
+    ClassificationRuleRepository ruleRepository;
+
     private Account account;
     private Category bars;
     private int counter;
@@ -65,6 +80,8 @@ class SuggestionControllerTest {
         dismissalRepository.deleteAll();
         transactionRepository.deleteAll();
         accountRepository.deleteAll();
+        connectionRepository.deleteAll();
+        ruleRepository.findAll().stream().filter(r -> !r.isBuiltin()).forEach(ruleRepository::delete);
     }
 
     @Test
@@ -140,25 +157,46 @@ class SuggestionControllerTest {
     }
 
     @Test
-    void theCategoriesUsedForTheMerchantOfAMovementMostUsedFirst() {
+    void amazonAsTheBankWritesIt() {
+        // I testi veri (anonimizzati) di un conto collegato, intestato a "MARIO ROSSI".
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca", "IT", "s-1",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account owned = accountRepository.save(new Account(connection, "k-1", "uid-1", null, "MARIO ROSSI", "EUR"));
         Category shopping = categoryRepository.findByNameIgnoreCase("Shopping").orElseThrow();
-        chosen(expense("AMAZON MARKETPLACE 1"), shopping);
-        chosen(expense("AMAZON MARKETPLACE 2"), shopping);
-        chosen(expense("AMAZON MARKETPLACE 3"), bars);
-        BankTransaction itself = expense("AMAZON MARKETPLACE 4");
-        chosen(itself, bars);                          // la scelta del movimento stesso non conta
-        chosen(expense("PIZZERIA DA GINO"), bars);     // un altro esercente: non conta
+        Category groceries = categoryRepository.findByNameIgnoreCase("Spesa alimentare").orElseThrow();
+        ruleRepository.save(new ClassificationRule("Amazon", 100, MatchMode.CONTAINS, "amazon.it", AmountSign.NEGATIVE,
+                TransactionType.EXPENSE, shopping));
+        chosen(expense(owned, null, "Amazon.it              LUXEMBOURG     LUX"), shopping);
+        chosen(expense(owned, null, "AMAZON* BT9YM4924      LUXEMBOURG     LUX"), groceries);
+        expense(owned, null, "AMAZON* BT2BJ4CA4      LUXEMBOURG     LUX");   // stesso esercente del precedente
+        expense(owned, "Amazon.it", "amazon.it");                         // categoria dalla regola
+        BankTransaction withOwnerName = expense(owned, "MARIO ROSSI", "amazon.it");
+        expense(owned, "MARIO ROSSI", "ESSELUNGA MILANO");                // altro negozio, stessa controparte
         classificationService.classifyAll();
 
-        assertThat(mvc.get().uri("/api/category-suggestions/for-transaction/{id}", itself.getId()))
+        // Il menu di un movimento con il titolare come controparte: l'esercente è nella causale (AMAZON),
+        // e contano le categorie degli altri movimenti AMAZON…, scelte a mano o messe dalla regola.
+        assertThat(mvc.get().uri("/api/category-suggestions/for-transaction/{id}", withOwnerName.getId()))
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
-                    json.assertThat().extractingPath("$.length()").isEqualTo(2);
-                    json.assertThat().extractingPath("$[0].category").isEqualTo("Shopping");
-                    json.assertThat().extractingPath("$[0].times").isEqualTo(2);
-                    json.assertThat().extractingPath("$[1].category").isEqualTo("Bar e ristoranti");
-                    json.assertThat().extractingPath("$[1].times").isEqualTo(1);
+                    json.assertThat().extractingPath("$.word").isEqualTo("AMAZON");
+                    json.assertThat().extractingPath("$.categories[0].category").isEqualTo("Shopping");
+                    json.assertThat().extractingPath("$.categories[0].times").isEqualTo(2); // a mano + regola
+                    json.assertThat().extractingPath("$.categories[1].category").isEqualTo("Spesa alimentare");
+                    json.assertThat().extractingPath("$.categories.length()").isEqualTo(2);
+                });
+
+        // Il suggerimento "per tutti" usa la chiave precisa: i due AMAZON* con codici diversi ora coincidono;
+        // i movimenti con il titolare come controparte non finiscono tutti insieme sotto il suo nome.
+        assertThat(mvc.get().uri("/api/category-suggestions"))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.length()").isEqualTo(1);
+                    json.assertThat().extractingPath("$[0].merchantKey").isEqualTo("AMAZON LUXEMBOURG LUX");
+                    json.assertThat().extractingPath("$[0].category").isEqualTo("Spesa alimentare");
+                    json.assertThat().extractingPath("$[0].transactions").isEqualTo(1);
                 });
         assertThat(mvc.get().uri("/api/category-suggestions/for-transaction/999999")).hasStatus(404);
     }
@@ -174,8 +212,13 @@ class SuggestionControllerTest {
     // --- Strumenti ---
 
     private BankTransaction expense(String counterparty) {
-        return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
-                LocalDate.of(2026, 10, counter), null, new BigDecimal("-25.00"), "EUR", counterparty, null, "{}"));
+        return expense(account, counterparty, null);
+    }
+
+    private BankTransaction expense(Account on, String counterparty, String description) {
+        return transactionRepository.save(new BankTransaction(on, "tx-" + (++counter), TransactionStatus.BOOKED,
+                LocalDate.of(2026, 10, counter), null, new BigDecimal("-25.00"), "EUR", counterparty, description,
+                "{}"));
     }
 
     /** La categoria scelta a mano, come dalla pagina Movimenti. */

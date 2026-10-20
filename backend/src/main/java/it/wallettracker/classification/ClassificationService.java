@@ -261,7 +261,7 @@ public class ClassificationService {
      * <p>I conti manuali (V14) sono esclusi: il loro nome lo sceglie l'utente (es. "Trade Republic") e non è
      * il nome di una persona. Usarlo farebbe sembrare un trasferimento ogni acquisto con quelle parole.
      */
-    static List<Set<String>> ownerNames(List<Account> accounts) {
+    public static List<Set<String>> ownerNames(List<Account> accounts) {
         List<Set<String>> names = new ArrayList<>();
         for (Account account : accounts) {
             if (account.getName() == null || account.isManual()) {

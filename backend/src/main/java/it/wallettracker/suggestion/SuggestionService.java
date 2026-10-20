@@ -2,10 +2,10 @@ package it.wallettracker.suggestion;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import it.wallettracker.account.AccountRepository;
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
@@ -14,7 +14,7 @@ import it.wallettracker.suggestion.HistorySuggester.Candidate;
 import it.wallettracker.suggestion.HistorySuggester.Dismissal;
 import it.wallettracker.suggestion.HistorySuggester.Example;
 import it.wallettracker.suggestion.HistorySuggester.Suggestion;
-import it.wallettracker.suggestion.HistorySuggester.UsedCategory;
+import it.wallettracker.suggestion.HistorySuggester.UsedCategories;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionType;
@@ -25,6 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * I suggerimenti di categoria dalla tua storia: li calcola {@link HistorySuggester}, qui leggiamo i dati e
  * applichiamo le tue decisioni ("accetta" e "no").
+ *
+ * <p>L'esercente di un movimento è la sua {@link MerchantKey}. Serve sapere chi sono i titolari dei conti:
+ * se la controparte è il titolare, l'esercente è nella causale.
  */
 @Service
 public class SuggestionService {
@@ -37,27 +40,32 @@ public class SuggestionService {
 
     private final BankTransactionRepository transactionRepository;
     private final SuggestionDismissalRepository dismissalRepository;
+    private final AccountRepository accountRepository;
     private final CategoryService categoryService;
     private final ClassificationService classificationService;
 
     public SuggestionService(BankTransactionRepository transactionRepository,
-            SuggestionDismissalRepository dismissalRepository, CategoryService categoryService,
-            ClassificationService classificationService) {
+            SuggestionDismissalRepository dismissalRepository, AccountRepository accountRepository,
+            CategoryService categoryService, ClassificationService classificationService) {
         this.transactionRepository = transactionRepository;
         this.dismissalRepository = dismissalRepository;
+        this.accountRepository = accountRepository;
         this.categoryService = categoryService;
         this.classificationService = classificationService;
     }
 
-    /** I suggerimenti di adesso. Tre query, qualunque sia il numero di movimenti. */
+    /** I suggerimenti di adesso. Quattro query, qualunque sia il numero di movimenti. */
     @Transactional(readOnly = true)
     public List<Suggestion> suggestions() {
+        List<Set<String>> owners = owners();
         List<Example> examples = transactionRepository.findAllWithManualCategory().stream()
-                .map(t -> new Example(merchantKeyOf(t), t.getManualCategory().getId(), t.getManualCategory().getName()))
+                .map(t -> new Example(MerchantKey.of(t.getCounterparty(), t.getDescription(), owners),
+                        t.getManualCategory().getId(), t.getManualCategory().getName()))
                 .filter(e -> e.merchantKey() != null) // un movimento senza testo non ha un esercente
                 .toList();
         List<Candidate> candidates = transactionRepository.findUncategorized(SUGGESTED_TYPES).stream()
-                .map(t -> new Candidate(merchantKeyOf(t), textOf(t), t.getBookingDate()))
+                .map(t -> new Candidate(MerchantKey.of(t.getCounterparty(), t.getDescription(), owners),
+                        MerchantKey.merchantText(t.getCounterparty(), t.getDescription(), owners), t.getBookingDate()))
                 .filter(c -> c.merchantKey() != null)
                 .toList();
         // getCategory().getId() non carica la categoria: l'id Hibernate lo conosce già (è nella colonna category_id).
@@ -68,18 +76,24 @@ public class SuggestionService {
     }
 
     /**
-     * Le categorie che hai già scelto a mano per gli <b>altri</b> movimenti dello stesso esercente: il menu
-     * della categoria di questo movimento le mette in cima. Due query: il movimento, e le tue scelte.
+     * Le categorie già usate per gli <b>altri</b> movimenti di esercenti con la stessa prima parola
+     * (AMAZON…): il menu della categoria di questo movimento le mette in cima. Contano sia quelle scelte a
+     * mano sia quelle messe dalle regole. Il confronto è largo (la prima parola) perché qui non si assegna
+     * niente: cambia solo l'ordine del menu. Quattro query.
      */
     @Transactional(readOnly = true)
-    public List<UsedCategory> usedCategoriesFor(Long transactionId) {
+    public UsedCategories usedCategoriesFor(Long transactionId) {
         BankTransaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new NotFoundException("Movimento", transactionId));
-        List<Example> examples = transactionRepository.findAllWithManualCategory().stream()
-                .filter(t -> !t.getId().equals(transactionId)) // la scelta di questo movimento non conta
-                .map(t -> new Example(merchantKeyOf(t), t.getManualCategory().getId(), t.getManualCategory().getName()))
+        List<Set<String>> owners = owners();
+        String word = MerchantKey.firstWord(
+                MerchantKey.of(transaction.getCounterparty(), transaction.getDescription(), owners));
+        List<Example> examples = transactionRepository.findAllWithCategory().stream()
+                .filter(t -> !t.getId().equals(transactionId)) // la categoria di questo movimento non conta
+                .map(t -> new Example(MerchantKey.firstWord(MerchantKey.of(t.getCounterparty(), t.getDescription(), owners)),
+                        t.getCategory().getId(), t.getCategory().getName()))
                 .toList();
-        return HistorySuggester.usedCategories(examples, merchantKeyOf(transaction));
+        return new UsedCategories(word, HistorySuggester.usedCategories(examples, word));
     }
 
     /**
@@ -91,8 +105,9 @@ public class SuggestionService {
     @Transactional
     public int accept(String merchantKey, Long categoryId) {
         Category category = categoryService.require(categoryId);
+        List<Set<String>> owners = owners();
         List<BankTransaction> toUpdate = transactionRepository.findUncategorized(SUGGESTED_TYPES).stream()
-                .filter(t -> merchantKey.equals(merchantKeyOf(t)))
+                .filter(t -> merchantKey.equals(MerchantKey.of(t.getCounterparty(), t.getDescription(), owners)))
                 .toList();
         toUpdate.forEach(t -> t.setManualCategory(category));
         if (!toUpdate.isEmpty()) {
@@ -110,14 +125,8 @@ public class SuggestionService {
         }
     }
 
-    private static String merchantKeyOf(BankTransaction transaction) {
-        return MerchantKey.of(transaction.getCounterparty(), transaction.getDescription());
-    }
-
-    /** Il testo da cui nasce la chiave (controparte, altrimenti causale): serve per il nome da mostrare. */
-    private static String textOf(BankTransaction transaction) {
-        String counterparty = transaction.getCounterparty();
-        return counterparty != null && !counterparty.isBlank() ? counterparty
-                : Objects.requireNonNullElse(transaction.getDescription(), "");
+    /** I nomi dei titolari dei conti (una query). */
+    private List<Set<String>> owners() {
+        return ClassificationService.ownerNames(accountRepository.findAll());
     }
 }

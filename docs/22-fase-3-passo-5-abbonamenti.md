@@ -42,14 +42,16 @@ Pagamento carta del 03/09/2026 alle 10:12 presso NETFLIX.COM 4521
 Pagamento carta del 03/10/2026 alle 09:58 presso NETFLIX.COM 4521
 ```
 
-La **chiave** (`MerchantKey`) tiene solo quello che non cambia: tutto in maiuscolo, e via cifre e
-punteggiatura. Così spariscono date, ore e numeri, e i due testi diventano uguali:
+La **chiave** (`MerchantKey`) tiene solo quello che non cambia: tutto in maiuscolo, e via punteggiatura e
+parole con cifre. Così spariscono date, ore, numeri e codici d'ordine, e i due testi diventano uguali
+(la regola è stata rivista nel passo 7a, migrazione V16: vedi `docs/26`, sezione 6):
 
 ```
 PAGAMENTO CARTA DEL ALLE PRESSO NETFLIX COM
 ```
 
-Se il movimento ha la **controparte** (ad esempio "Spotify AB"), si usa quella, che è più pulita. Le
+Se il movimento ha la **controparte** (ad esempio "Spotify AB"), si usa quella, che è più pulita, purché non
+sia il titolare del conto: alcune banche mettono lì il tuo nome e il negozio nella causale. Le
 lettere accentate restano ("CAFFÈ CITTÀ"): l'espressione regolare usa `\p{L}`, "qualsiasi lettera di
 qualsiasi alfabeto", e non `[A-Z]`, che conosce solo le 26 lettere inglesi.
 

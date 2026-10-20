@@ -10,7 +10,7 @@ import {
   Transaction,
   TransactionFilter,
   TransactionType,
-  UsedCategory,
+  UsedCategories,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { TransactionsPage } from './transactions-page';
@@ -47,7 +47,7 @@ describe('TransactionsPage', () => {
   const categoryChanges: [number, number | null][] = [];
   let items: Transaction[];
   let suggestionLoads: number;
-  let used: UsedCategory[];
+  let used: UsedCategories;
 
   beforeEach(() => {
     requests.length = 0;
@@ -55,7 +55,7 @@ describe('TransactionsPage', () => {
     categoryChanges.length = 0;
     items = [SETTLEMENT];
     suggestionLoads = 0;
-    used = [];
+    used = { word: null, categories: [] };
     registerLocaleData(localeIt);
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of([]),
@@ -169,10 +169,13 @@ describe('TransactionsPage', () => {
   });
 
   it('the categories already used for the merchant come first in the menu', async () => {
-    used = [
-      { categoryId: 1, category: 'Shopping', times: 2 },
-      { categoryId: 2, category: 'Intrattenimento e tempo libero', times: 1 },
-    ];
+    used = {
+      word: 'AMAZON',
+      categories: [
+        { categoryId: 1, category: 'Shopping', times: 2 },
+        { categoryId: 2, category: 'Intrattenimento e tempo libero', times: 1 },
+      ],
+    };
     const fixture = TestBed.createComponent(TransactionsPage);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
@@ -185,7 +188,7 @@ describe('TransactionsPage', () => {
     const select = page.querySelector('.category-edit select') as HTMLSelectElement;
     const first = select.querySelector('optgroup') as HTMLOptGroupElement;
 
-    expect(first.label).toBe('Usate per questo esercente');
+    expect(first.label).toBe('Usate per «AMAZON…»');
     expect(Array.from(first.querySelectorAll('option')).map((o) => o.textContent?.trim())).toEqual([
       'Shopping (2 volte)',
       'Intrattenimento e tempo libero (1 volta)',

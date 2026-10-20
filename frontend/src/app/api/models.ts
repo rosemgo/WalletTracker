@@ -354,9 +354,18 @@ export interface CategorySuggestion {
   examples: number; // su quante tue scelte si basa
 }
 
-/** Una categoria già scelta a mano per l'esercente di un movimento, e quante volte (per il suo menu). */
+/** Una categoria già usata per esercenti simili a quello di un movimento, e quante volte (per il suo menu). */
 export interface UsedCategory {
   categoryId: number;
   category: string;
   times: number;
+}
+
+/**
+ * La risposta di GET /api/category-suggestions/for-transaction/{id}: le categorie già usate (a mano o dalle
+ * regole) per gli esercenti che iniziano con la stessa parola del movimento (es. "AMAZON").
+ */
+export interface UsedCategories {
+  word: string | null; // null se il movimento non ha testo
+  categories: UsedCategory[];
 }

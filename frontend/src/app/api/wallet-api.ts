@@ -30,7 +30,7 @@ import {
   TransactionFilter,
   TransactionPage,
   TransactionType,
-  UsedCategory,
+  UsedCategories,
 } from './models';
 
 /**
@@ -230,9 +230,9 @@ export class WalletApi {
     return this.http.get<CategorySuggestion[]>('/api/category-suggestions');
   }
 
-  /** GET /api/category-suggestions/for-transaction/{id}: le categorie già usate per il suo esercente. */
-  usedCategories(transactionId: number): Observable<UsedCategory[]> {
-    return this.http.get<UsedCategory[]>(
+  /** GET /api/category-suggestions/for-transaction/{id}: le categorie già usate per esercenti simili. */
+  usedCategories(transactionId: number): Observable<UsedCategories> {
+    return this.http.get<UsedCategories>(
       `/api/category-suggestions/for-transaction/${transactionId}`,
     );
   }

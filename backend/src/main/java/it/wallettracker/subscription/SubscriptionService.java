@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import it.wallettracker.account.AccountRepository;
+import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.subscription.RecurringDetector.Payment;
 import it.wallettracker.subscription.SubscriptionDtos.ConfirmRequest;
 import it.wallettracker.subscription.SubscriptionDtos.Confirmed;
@@ -51,11 +53,13 @@ public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final BankTransactionRepository transactionRepository;
+    private final AccountRepository accountRepository;
 
     public SubscriptionService(SubscriptionRepository subscriptionRepository,
-            BankTransactionRepository transactionRepository) {
+            BankTransactionRepository transactionRepository, AccountRepository accountRepository) {
         this.subscriptionRepository = subscriptionRepository;
         this.transactionRepository = transactionRepository;
+        this.accountRepository = accountRepository;
     }
 
     /** I pagamenti a uno stesso esercente, nella stessa valuta, con il testo dell'ultimo (per proporre un nome). */
@@ -168,14 +172,15 @@ public class SubscriptionService {
                 TransactionType.EXPENSE, today.minusDays(LOOKBACK_DAYS)));
         expenses.sort(Comparator.comparing(BankTransaction::getBookingDate));
 
+        // I nomi dei titolari: se la controparte è il titolare, l'esercente è nella causale (vedi MerchantKey).
+        List<Set<String>> owners = ClassificationService.ownerNames(accountRepository.findAll());
         Map<String, Group> groups = new LinkedHashMap<>();
         for (BankTransaction transaction : expenses) {
-            String merchantKey = MerchantKey.of(transaction.getCounterparty(), transaction.getDescription());
+            String merchantKey = MerchantKey.of(transaction.getCounterparty(), transaction.getDescription(), owners);
             if (merchantKey == null || transaction.getAmount().signum() >= 0) {
                 continue;
             }
-            String text = transaction.getCounterparty() != null && !transaction.getCounterparty().isBlank()
-                    ? transaction.getCounterparty() : transaction.getDescription();
+            String text = MerchantKey.merchantText(transaction.getCounterparty(), transaction.getDescription(), owners);
             Group previous = groups.get(key(merchantKey, transaction.getCurrency()));
             List<Payment> payments = previous != null ? previous.payments() : new ArrayList<>();
             payments.add(new Payment(transaction.getBookingDate(), transaction.getAmount().negate()));

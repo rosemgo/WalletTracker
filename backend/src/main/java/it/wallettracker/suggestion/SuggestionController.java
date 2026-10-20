@@ -3,7 +3,7 @@ package it.wallettracker.suggestion;
 import java.util.List;
 
 import it.wallettracker.suggestion.HistorySuggester.Suggestion;
-import it.wallettracker.suggestion.HistorySuggester.UsedCategory;
+import it.wallettracker.suggestion.HistorySuggester.UsedCategories;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>{@code GET  /api/category-suggestions}           i suggerimenti di adesso;</li>
  *   <li>{@code POST /api/category-suggestions/accept}    "accetta": categoria a tutti i movimenti dell'esercente;</li>
  *   <li>{@code POST /api/category-suggestions/dismissed} "no, non suggerirlo più" (204);</li>
- *   <li>{@code GET  /api/category-suggestions/for-transaction/{id}} le categorie già usate per l'esercente
- *       di quel movimento, per il suo menu della categoria.</li>
+ *   <li>{@code GET  /api/category-suggestions/for-transaction/{id}} le categorie già usate per gli esercenti
+ *       con la stessa prima parola di quel movimento (AMAZON…), per il suo menu della categoria.</li>
  * </ul>
  */
 @RestController
@@ -43,7 +43,7 @@ public class SuggestionController {
     }
 
     @GetMapping("/for-transaction/{id}")
-    public List<UsedCategory> usedCategories(@PathVariable Long id) {
+    public UsedCategories usedCategories(@PathVariable Long id) {
         return suggestionService.usedCategoriesFor(id);
     }
 

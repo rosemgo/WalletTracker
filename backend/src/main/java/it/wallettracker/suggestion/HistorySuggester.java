@@ -62,13 +62,22 @@ public final class HistorySuggester {
     public record UsedCategory(Long categoryId, String category, int times) {
     }
 
+    /**
+     * Le categorie già usate per gli esercenti che iniziano con questa parola.
+     *
+     * @param word       la prima parola dell'esercente (es. "AMAZON"); null se il movimento non ha testo
+     * @param categories le categorie, la più usata per prima
+     */
+    public record UsedCategories(String word, List<UsedCategory> categories) {
+    }
+
     private HistorySuggester() {
     }
 
     /**
-     * Le categorie che hai scelto a mano per questo esercente, la più usata per prima (a parità, in ordine
+     * Le categorie usate per gli esempi con questa chiave, la più usata per prima (a parità, in ordine
      * alfabetico). Al contrario di {@link #suggest}, qui le categorie diverse non sono un problema: è per un
-     * movimento solo, e scegli tu quale.
+     * movimento solo, e scegli tu quale. Chi chiama decide quale chiave usare (per il menu: la prima parola).
      */
     public static List<UsedCategory> usedCategories(List<Example> examples, String merchantKey) {
         if (merchantKey == null) {

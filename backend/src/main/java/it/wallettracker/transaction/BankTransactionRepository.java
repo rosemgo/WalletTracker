@@ -31,6 +31,10 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     @Query("SELECT t FROM BankTransaction t JOIN FETCH t.manualCategory")
     List<BankTransaction> findAllWithManualCategory();
 
+    /** I movimenti con una categoria (scelta a mano o messa da una regola), insieme alla categoria. */
+    @Query("SELECT t FROM BankTransaction t JOIN FETCH t.category")
+    List<BankTransaction> findAllWithCategory();
+
     /** I movimenti senza categoria, di questi tipi: quelli a cui si può suggerire una categoria. */
     @Query("SELECT t FROM BankTransaction t WHERE t.category IS NULL AND t.type IN :types")
     List<BankTransaction> findUncategorized(@Param("types") Collection<TransactionType> types);
