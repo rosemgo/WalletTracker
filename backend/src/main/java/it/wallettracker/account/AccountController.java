@@ -66,6 +66,19 @@ public class AccountController {
     }
 
     /**
+     * {@code PUT /api/accounts/{id}/display-name} con corpo {@code {"displayName": "Conto spese"}}: il nome
+     * del conto scelto dall'utente. Vuoto o null lo toglie.
+     */
+    @PutMapping("/{id}/display-name")
+    public AccountDto rename(@PathVariable Long id, @Valid @RequestBody DisplayNameChange change) {
+        return accountService.rename(id, change.displayName());
+    }
+
+    /** Il corpo della richiesta di cambio nome. */
+    public record DisplayNameChange(@Size(max = 100) String displayName) {
+    }
+
+    /**
      * {@code POST /api/accounts}: crea un conto manuale, i cui movimenti arrivano da file CSV (es. Trade Republic).
      * Risponde 201 Created con il conto.
      */

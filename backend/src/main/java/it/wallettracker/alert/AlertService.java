@@ -79,7 +79,7 @@ public class AlertService {
                     && account.getConnection().getValidUntil().isAfter(now)) {
                 alerts.add(new AlertDto(AlertKind.SYNC_FAILED, Severity.WARNING,
                         account.getConnection().getAspspName(), account.getConnection().getAspspCountry(),
-                        account.getName(), null, null, List.of(), account.getLastSyncError()));
+                        account.label(), null, null, List.of(), account.getLastSyncError()));
             }
         }
 

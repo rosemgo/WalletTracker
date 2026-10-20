@@ -111,7 +111,7 @@ class AlertServiceTest {
 
         assertThat(alerts).extracting(AlertDto::kind)
                 .containsExactly(AlertKind.CONSENT_EXPIRED, AlertKind.SYNC_FAILED); // niente doppione per BBVA
-        assertThat(alerts.get(1).account()).isEqualTo(valid.getName());
+        assertThat(alerts.get(1).account()).isEqualTo(valid.label()); // come la dashboard mostra il conto
         assertThat(alerts.get(1).message()).isEqualTo("HTTP 429 troppe letture");
     }
 

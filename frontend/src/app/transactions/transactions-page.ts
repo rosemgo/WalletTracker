@@ -58,7 +58,7 @@ export class TransactionsPage implements OnInit {
    * accounts(), e solo allora (il risultato viene memorizzato).
    */
   protected readonly accountNames = computed(
-    () => new Map(this.accounts().map((a) => [a.id, a.name ?? a.bank])),
+    () => new Map(this.accounts().map((a) => [a.id, a.label])),
   );
 
   ngOnInit(): void {

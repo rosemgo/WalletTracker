@@ -47,6 +47,14 @@ public class AccountService {
         return AccountDto.from(account);
     }
 
+    /** Dà al conto un nome scelto dall'utente; vuoto lo toglie (torna l'etichetta automatica). */
+    @Transactional
+    public AccountDto rename(Long id, String displayName) {
+        Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
+        account.rename(displayName);
+        return AccountDto.from(account);
+    }
+
     /**
      * Crea un conto manuale, per i movimenti caricati da file CSV. L'IBAN è facoltativo, ma conviene
      * indicarlo: serve a riconoscere i trasferimenti verso questo conto dai tuoi conti collegati.

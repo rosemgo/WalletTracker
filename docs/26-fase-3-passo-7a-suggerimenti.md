@@ -213,6 +213,19 @@ filtri vanno a capo.
 
 ---
 
+**Il nome dei conti (V17).** Nella colonna "Conto" dei Movimenti compariva il nome del conto che manda la
+banca, e molte banche ci mettono il nome del titolare: con più conti erano tutti uguali. Ora ogni conto ha
+un'**etichetta**, calcolata dal backend (`Account.label`) e usata ovunque (Movimenti, filtri, Importa CSV,
+avvisi):
+
+1. il nome che hai scelto tu, se c'è (pagina Conti → **rinomina**, colonna `display_name` di V17);
+2. per un conto manuale, banca e nome ("Trade Republic · Conto titoli");
+3. banca e ultime 4 cifre dell'IBAN ("ING ··4521");
+4. senza IBAN (es. una carta), banca e nome dato dalla banca.
+
+Il nome dato dalla banca resta (lo aggiorna la sincronizzazione) e nella pagina Conti si vede sotto, "per la
+banca: …"; quello scelto da te non lo tocca nessuno. Un nome vuoto lo toglie e torna l'etichetta automatica.
+
 ## Parte C: i test
 
 | Test | Che cosa verifica |

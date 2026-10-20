@@ -29,6 +29,8 @@ export type AccountSource = 'ENABLE_BANKING' | 'MANUAL';
 /** Un conto, come lo restituisce GET /api/accounts. */
 export interface Account {
   id: number;
+  label: string; // come mostrarlo: il nome scelto, oppure banca e ultime cifre dell'IBAN (es. "ING ··4521")
+  displayName: string | null; // il nome scelto dall'utente
   bank: string;
   name: string | null;
   iban: string | null;

@@ -70,7 +70,7 @@ describe('AlertsPanel', () => {
         kind: 'SYNC_FAILED',
         severity: 'WARNING',
         bank: 'ING',
-        account: 'Conto corrente',
+        account: 'ING ··4521', // l'etichetta del conto, come la calcola il backend
         message: 'HTTP 429 troppe letture',
       },
       { ...NONE, kind: 'BUDGET_OVER', severity: 'WARNING', items: ['Ristoranti', 'Viaggi'] },
@@ -83,7 +83,7 @@ describe('AlertsPanel', () => {
     expect(rows[0].textContent).toContain('Il collegamento con BBVA è scaduto');
     expect(rows[0].textContent).toContain('14/10/2026');
     expect(rows[1].textContent).toContain('scade tra 5 giorni');
-    expect(rows[2].textContent).toContain('Aggiornamento non riuscito: Conto corrente (ING)');
+    expect(rows[2].textContent).toContain('Aggiornamento non riuscito: ING ··4521.');
     expect(rows[2].textContent).toContain('HTTP 429 troppe letture');
     expect(rows[3].textContent).toContain('Ristoranti, Viaggi');
 

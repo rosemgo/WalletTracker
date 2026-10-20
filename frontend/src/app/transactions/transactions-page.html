@@ -10,7 +10,7 @@
       <option value="">Tutti i conti</option>
       @for (account of accounts(); track account.id) {
         <option [value]="account.id">
-          {{ account.bank }} · {{ account.name ?? account.iban }}
+          {{ account.label }}
         </option>
       }
     </select>

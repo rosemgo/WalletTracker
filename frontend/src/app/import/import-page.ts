@@ -217,7 +217,7 @@ export class ImportPage implements OnInit {
   /** Il nome del conto, nel messaggio finale. */
   protected accountName(): string {
     const account = this.accounts().find((a) => a.id === this.account.value);
-    return account ? `${account.bank} · ${account.name ?? account.bank}` : '';
+    return account?.label ?? '';
   }
 
   private requestPreview(mapping: ImportMapping | null): void {

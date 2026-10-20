@@ -85,6 +85,10 @@ public class Account {
     @Column(name = "bank_name")
     private String bankName;
 
+    /** Il nome scelto dall'utente (V17); null = nessuno, si usa {@link #label()}. */
+    @Column(name = "display_name")
+    private String displayName;
+
     protected Account() {
     }
 
@@ -127,6 +131,36 @@ public class Account {
     /** Cambia il ruolo del conto (dalla dashboard, nella Fase 2). */
     public void changeRole(AccountRole newRole) {
         this.role = newRole;
+    }
+
+    /** Il nome scelto dall'utente; vuoto o null lo toglie (torna l'etichetta automatica). */
+    public void rename(String newDisplayName) {
+        this.displayName = newDisplayName == null || newDisplayName.isBlank() ? null : newDisplayName.trim();
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    /**
+     * Come mostrare il conto nella dashboard, in quest'ordine:
+     * <ol>
+     *   <li>il nome scelto dall'utente ("Conto spese");</li>
+     *   <li>per un conto manuale, banca e nome (il nome l'ha scelto l'utente creandolo: "Trade Republic · Conto titoli");</li>
+     *   <li>banca e ultime 4 cifre dell'IBAN ("ING ··4521"): il nome che manda la banca spesso è il titolare,
+     *       uguale per tutti i suoi conti;</li>
+     *   <li>senza IBAN (es. una carta), banca e nome della banca.</li>
+     * </ol>
+     */
+    public String label() {
+        if (displayName != null) {
+            return displayName;
+        }
+        String bank = getBankName();
+        if (!isManual() && iban != null && iban.length() >= 4) {
+            return bank + " ··" + iban.substring(iban.length() - 4);
+        }
+        return name != null && !name.isBlank() ? bank + " · " + name : bank;
     }
 
     public Long getId() {

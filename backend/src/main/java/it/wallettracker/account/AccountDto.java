@@ -16,6 +16,8 @@ import java.time.Instant;
  * È lo stesso ruolo dei DTO di Enable Banking ({@code EnableBankingApi}), ma nella direzione opposta:
  * quelli traducono ciò che <b>riceviamo</b>, questo ciò che <b>mandiamo</b>.
  *
+ * @param label             come mostrare il conto (vedi Account.label): il nome scelto, oppure banca e IBAN
+ * @param displayName       il nome scelto dall'utente, o null
  * @param bank              il nome della banca (es. "ING") o, per un conto manuale, dell'istituto
  * @param source            da dove arrivano i movimenti: Enable Banking o file CSV (conto manuale)
  * @param consentValidUntil fino a quando vale il consenso dato alla banca; null per un conto manuale
@@ -23,6 +25,8 @@ import java.time.Instant;
  */
 public record AccountDto(
         Long id,
+        String label,
+        String displayName,
         String bank,
         String name,
         String iban,
@@ -37,6 +41,8 @@ public record AccountDto(
     static AccountDto from(Account account) {
         return new AccountDto(
                 account.getId(),
+                account.label(),
+                account.getDisplayName(),
                 account.getBankName(),
                 account.getName(),
                 account.getIban(),

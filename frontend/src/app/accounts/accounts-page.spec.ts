@@ -8,6 +8,8 @@ import { AccountsPage } from './accounts-page';
 
 const CARD: Account = {
   id: 3,
+  label: 'ING · Carta di credito',
+  displayName: null,
   bank: 'ING',
   name: 'Carta di credito',
   iban: null,
@@ -22,6 +24,8 @@ const CARD: Account = {
 /** Un conto manuale: i movimenti arrivano da file CSV. */
 const BROKER: Account = {
   id: 8,
+  label: 'Trade Republic · Conto titoli',
+  displayName: null,
   bank: 'Trade Republic',
   name: 'Conto titoli',
   iban: null,
@@ -42,6 +46,7 @@ describe('AccountsPage', () => {
   const changedRoles: [number, AccountRole][] = [];
   const created: ManualAccountRequest[] = [];
   const deleted: number[] = [];
+  const renamed: [number, string][] = [];
   let syncCalls = 0;
   let accounts: Account[];
 
@@ -49,13 +54,27 @@ describe('AccountsPage', () => {
     changedRoles.length = 0;
     created.length = 0;
     deleted.length = 0;
+    renamed.length = 0;
     syncCalls = 0;
     accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of(accounts),
       createManualAccount: (request: ManualAccountRequest) => {
         created.push(request);
-        return of({ ...BROKER, bank: request.bankName, name: request.name });
+        return of({
+          ...BROKER,
+          bank: request.bankName,
+          name: request.name,
+          label: `${request.bankName} · ${request.name}`,
+        });
+      },
+      renameAccount: (id: number, displayName: string) => {
+        renamed.push([id, displayName]);
+        return of({
+          ...CARD,
+          displayName: displayName === '' ? null : displayName,
+          label: displayName === '' ? CARD.label : displayName,
+        });
       },
       deleteAccount: (id: number) => {
         deleted.push(id);
@@ -150,7 +169,7 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
 
     expect(deleted).toEqual([8]);
-    expect(page.textContent).toContain('Conto "Conto titoli" eliminato');
+    expect(page.textContent).toContain('Conto "Trade Republic · Conto titoli" eliminato');
     expect(page.querySelector('tbody')?.textContent).not.toContain('Conto titoli'); // elenco ricaricato
   });
 
@@ -159,7 +178,9 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
     const row = (fixture.nativeElement as HTMLElement).querySelector('tbody tr') as HTMLElement;
 
-    expect(row.querySelectorAll('button')).toHaveLength(0);
+    const buttons = Array.from(row.querySelectorAll('button')).map((b) => b.textContent?.trim());
+    expect(buttons).not.toContain('elimina');
+    expect(buttons).toEqual(['rinomina']); // il nome si può scegliere per ogni conto
   });
 
   it('creates a manual account from the form', async () => {
@@ -189,7 +210,7 @@ describe('AccountsPage', () => {
         role: 'UNASSIGNED',
       },
     ]);
-    expect(page.textContent).toContain('Conto "Conto titoli" creato');
+    expect(page.textContent).toContain('Conto "Trade Republic · Conto titoli" creato');
   });
 
   it('does not send an incomplete manual account and says what is missing', async () => {
@@ -207,5 +228,45 @@ describe('AccountsPage', () => {
     expect(created).toEqual([]);
     expect(form.textContent).toContain('Scrivi il nome della banca.');
     expect(form.textContent).toContain('Non sembra un IBAN');
+  });
+
+  it('a chosen name replaces the label, and an empty one removes it', async () => {
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const row = () => page.querySelector('tbody tr') as HTMLElement;
+    const button = (text: string) =>
+      Array.from(row().querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === text,
+      ) as HTMLButtonElement;
+
+    button('rinomina').click();
+    await fixture.whenStable();
+    const input = row().querySelector('input') as HTMLInputElement;
+    input.value = '  Carta Visa ';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await fixture.whenStable();
+
+    expect(renamed).toEqual([[3, 'Carta Visa']]);
+    expect(row().textContent).toContain('Carta Visa');
+    expect(page.textContent).toContain('Conto rinominato in "Carta Visa"');
+
+    button('rinomina').click();
+    await fixture.whenStable();
+    const again = row().querySelector('input') as HTMLInputElement;
+    again.value = '';
+    again.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await fixture.whenStable();
+    expect(renamed[1]).toEqual([3, '']);
+    expect(page.textContent).toContain('ora il conto si vede come "ING · Carta di credito"');
+  });
+
+  it('shows the name the bank gives, so the user knows which account it is', async () => {
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'per la banca: Carta di credito',
+    );
   });
 });

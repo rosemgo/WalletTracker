@@ -49,9 +49,7 @@
         Conto
         <select [formControl]="account">
           @for (a of accounts(); track a.id) {
-            <option [ngValue]="a.id">
-              {{ a.bank }} · {{ a.name ?? a.bank }} ({{ a.currency }})
-            </option>
+            <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
           }
         </select>
       </label>

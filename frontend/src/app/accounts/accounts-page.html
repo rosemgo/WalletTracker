@@ -40,9 +40,32 @@
           <tr>
             <td>{{ account.bank }}</td>
             <td>
-              {{ nameOf(account) }}
+              @if (renaming() === account.id) {
+                <!-- Invio salva, Esc annulla; vuoto toglie il nome (come per le categorie). -->
+                <div class="category-edit">
+                  <input
+                    #nameInput
+                    [value]="account.displayName ?? ''"
+                    maxlength="100"
+                    placeholder="es. Conto spese"
+                    [attr.aria-label]="'Nome del conto ' + account.label"
+                    (keydown.enter)="rename(account, nameInput.value)"
+                    (keydown.escape)="renaming.set(null)"
+                  />
+                  <button type="button" (click)="rename(account, nameInput.value)">Salva</button>
+                  <button type="button" class="link" (click)="renaming.set(null)">annulla</button>
+                </div>
+              } @else {
+                {{ account.label }}
+                <button type="button" class="link" (click)="renaming.set(account.id)">
+                  rinomina
+                </button>
+              }
               <div class="secondary">
                 {{ account.iban ?? 'senza IBAN' }} · {{ account.currency }}
+                @if (account.name && account.source !== 'MANUAL') {
+                  · per la banca: {{ account.name }}
+                }
               </div>
             </td>
             <td>

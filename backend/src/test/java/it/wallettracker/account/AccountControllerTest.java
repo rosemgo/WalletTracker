@@ -23,6 +23,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 /**
  * Test delle API dei conti.
@@ -96,6 +97,45 @@ class AccountControllerTest {
                 .bodyJson().extractingPath("$.role").isEqualTo("INVESTMENT");
 
         assertThat(typeOf(out)).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+    }
+
+    @Test
+    void theLabelUsesTheIbanInsteadOfTheOwnerNameAndAChosenNameWins() {
+        // Molte banche chiamano il conto con il nome del titolare: uguale per tutti i suoi conti.
+        BankConnection connection = connectionRepository.save(new BankConnection("ING", "IT", "session-label",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account withIban = accountRepository.save(new Account(connection, "key-l1", "uid-l1",
+                "IT60X0542811101000000123456", "MARIO ROSSI", "EUR"));
+        Account card = accountRepository.save(new Account(connection, "key-l2", "uid-l2", null, "MARIO ROSSI", "EUR"));
+        Account manual = accountRepository.save(Account.manual("Trade Republic", "Conto titoli", null, "EUR",
+                AccountRole.UNASSIGNED));
+
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[?(@.id == %d)].label".formatted(withIban.getId()))
+                    .asArray().containsExactly("ING ··3456");
+            json.assertThat().extractingPath("$[?(@.id == %d)].label".formatted(card.getId()))
+                    .asArray().containsExactly("ING · MARIO ROSSI"); // senza IBAN non c'è di meglio
+            json.assertThat().extractingPath("$[?(@.id == %d)].label".formatted(manual.getId()))
+                    .asArray().containsExactly("Trade Republic · Conto titoli");
+        });
+
+        // Un nome scelto vince; vuoto lo toglie.
+        assertThat(rename(card, "{\"displayName\": \"  Carta di credito \"}")).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.label").isEqualTo("Carta di credito");
+                    json.assertThat().extractingPath("$.displayName").isEqualTo("Carta di credito");
+                    json.assertThat().extractingPath("$.name").isEqualTo("MARIO ROSSI"); // quello della banca resta
+                });
+        assertThat(rename(card, "{\"displayName\": \"\"}")).hasStatusOk().bodyJson()
+                .extractingPath("$.label").isEqualTo("ING · MARIO ROSSI");
+        assertThat(rename(card, "{\"displayName\": \"%s\"}".formatted("x".repeat(101)))).hasStatus(400);
+        assertThat(mvc.put().uri("/api/accounts/999999/display-name").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\": \"x\"}")).hasStatus(404);
+    }
+
+    private MvcTestResult rename(Account account, String json) {
+        return mvc.put().uri("/api/accounts/{id}/display-name", account.getId())
+                .contentType(MediaType.APPLICATION_JSON).content(json).exchange();
     }
 
     @Test

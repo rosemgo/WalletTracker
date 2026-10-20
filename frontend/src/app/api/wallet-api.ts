@@ -60,6 +60,11 @@ export class WalletApi {
     return this.http.put<Account>(`/api/accounts/${accountId}/role`, { role });
   }
 
+  /** PUT /api/accounts/{id}/display-name: il nome del conto scelto dall'utente; vuoto lo toglie. */
+  renameAccount(accountId: number, displayName: string): Observable<Account> {
+    return this.http.put<Account>(`/api/accounts/${accountId}/display-name`, { displayName });
+  }
+
   /** POST /api/accounts: crea un conto manuale. */
   createManualAccount(account: ManualAccountRequest): Observable<Account> {
     return this.http.post<Account>('/api/accounts', account);

@@ -14,6 +14,8 @@ registerLocaleData(localeIt);
 function account(id: number, source: Account['source'], bank: string): Account {
   return {
     id,
+    label: `${bank} · Conto ${id}`,
+    displayName: null,
     bank,
     name: `Conto ${id}`,
     iban: null,

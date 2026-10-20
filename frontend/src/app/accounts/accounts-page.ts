@@ -37,7 +37,8 @@ export class AccountsPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly syncing = signal(false);
-  protected readonly confirmingDelete = signal<number | null>(null); // il conto da eliminare, in attesa di conferma
+  protected readonly confirmingDelete = signal<number | null>(null);
+  protected readonly renaming = signal<number | null>(null); // il conto di cui si sta cambiando il nome // il conto da eliminare, in attesa di conferma
 
   /**
    * Il modulo del conto manuale. Gli stessi controlli del backend (ManualAccountRequest): qui servono a
@@ -163,6 +164,31 @@ export class AccountsPage implements OnInit {
   }
 
   protected nameOf(account: Account): string {
-    return account.name ?? account.bank;
+    return account.label;
+  }
+
+  /**
+   * Salva il nome scelto per il conto. Vuoto lo toglie: torna l'etichetta automatica (banca e IBAN).
+   * Uguale a prima: non fa niente.
+   */
+  rename(account: Account, value: string): void {
+    const name = value.trim();
+    if (name === (account.displayName ?? '')) {
+      this.renaming.set(null);
+      return;
+    }
+    this.api.renameAccount(account.id, name).subscribe({
+      next: (updated) => {
+        this.renaming.set(null);
+        this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
+        this.message.set(
+          name === ''
+            ? `Nome tolto: ora il conto si vede come "${updated.label}".`
+            : `Conto rinominato in "${name}".`,
+        );
+        this.error.set(null);
+      },
+      error: (response) => this.error.set(response.error?.detail ?? 'Il nome non è stato salvato.'),
+    });
   }
 }
