@@ -353,3 +353,10 @@ export interface CategorySuggestion {
   transactions: number; // quanti movimenti senza categoria la riceverebbero
   examples: number; // su quante tue scelte si basa
 }
+
+/** Una categoria già scelta a mano per l'esercente di un movimento, e quante volte (per il suo menu). */
+export interface UsedCategory {
+  categoryId: number;
+  category: string;
+  times: number;
+}

@@ -42,7 +42,28 @@ non ne hanno bisogno, e quelli "da verificare" prima devono avere un tipo.
 Finché non accetti, un suggerimento **non conta**: il movimento resta senza categoria nel riepilogo e nei
 budget.
 
-### 2. "Accetta" e "no"
+### 2. Esercenti "misti": le categorie già usate in cima al menu
+
+Per un esercente come Amazon, dove hai scelto categorie diverse, un suggerimento "per tutti" sbaglierebbe
+per forza qualche movimento: per questo non c'è. Però le categorie probabili le conosciamo. Quando premi
+**modifica** sulla categoria di un movimento, il menu mette in cima un gruppo con le categorie che hai già
+scelto per gli **altri** movimenti dello stesso esercente, la più usata per prima:
+
+```
+── Usate per questo esercente ──
+   Shopping (2 volte)
+   Spesa alimentare (1 volta)
+── Categorie di spesa ──
+   ...
+```
+
+Il programma non decide: ti accorcia la scelta. Vale per tutti gli esercenti, anche per quelli "coerenti".
+
+Le categorie si chiedono al backend solo quando apri il menu
+(`GET /api/category-suggestions/for-transaction/{id}`, due query), non per ogni movimento dell'elenco. Se la
+risposta arriva quando sei già passato a un altro movimento, la pagina la ignora.
+
+### 3. "Accetta" e "no"
 
 - **Accetta** assegna la categoria a tutti i movimenti senza categoria di quell'esercente, come se
   l'avessi scelta a mano uno per uno (diventa la loro "categoria scelta a mano"). Poi il motore riclassifica.
@@ -52,7 +73,7 @@ Un suggerimento accettato vale per i movimenti **di adesso**. Per quelli futuri 
 arriverà di nuovo un suggerimento; se preferisci che vengano categorizzati da soli, crea una regola dal
 movimento ("crea una regola", `docs/19`).
 
-### 3. Calcolati al momento, non salvati
+### 4. Calcolati al momento, non salvati
 
 Nel ragionamento del passo 7 avevamo previsto una tabella dei suggerimenti. Per quelli "dalla storia" non
 serve: si **calcolano a ogni richiesta** dalle tue scelte. Il vantaggio: sono sempre aggiornati. Se cambi la
@@ -78,7 +99,7 @@ CREATE TABLE category_suggestion_dismissal (
 Una tabella dei suggerimenti salvati servirà nel passo 7b: le risposte di un modello costano tempo e vanno
 ricordate.
 
-### 4. Quanto costa: tre query
+### 5. Quanto costa: tre query
 
 `GET /api/category-suggestions` fa **tre query**, qualunque sia il numero di movimenti:
 
@@ -102,7 +123,7 @@ categoria. Hibernate l'id lo conosce già, perché è la colonna `category_id` d
 |---|---|
 | `HistorySuggester` | la logica, "pura" (niente database né Spring): esempi + movimenti senza categoria + "no" → suggerimenti |
 | `SuggestionService` | legge i dati (le tre query), applica "accetta" e "no" |
-| `SuggestionController` | `GET /api/category-suggestions`, `POST .../accept`, `POST .../dismissed` |
+| `SuggestionController` | `GET /api/category-suggestions`, `POST .../accept`, `POST .../dismissed`, `GET .../for-transaction/{id}` (le categorie già usate) |
 | `SuggestionDismissal` | l'entità del "no" (V15), con `@ManyToOne` verso la categoria |
 
 **Frontend**
@@ -127,10 +148,10 @@ filtri vanno a capo.
 
 | Test | Che cosa verifica |
 |---|---|
-| `HistorySuggesterTest` (6) | stesso esercente → suggerimento; scelte diverse → niente; esempi contati; un "no" non torna, ma un'altra categoria sì; esercenti mai categorizzati; ordine (prima chi ha più movimenti) |
-| `SuggestionControllerTest` (5) | l'elenco; "accetta" assegna la categoria a tutti i movimenti dell'esercente (e solo a quelli); "no" salvato una volta sola; scelte diverse; categoria inesistente o esercente vuoto → 400 |
+| `HistorySuggesterTest` (8) | stesso esercente → suggerimento; scelte diverse → niente; esempi contati; un "no" non torna, ma un'altra categoria sì; esercenti mai categorizzati; ordine (prima chi ha più movimenti); categorie già usate (la più usata per prima, anche se diverse) |
+| `SuggestionControllerTest` (6) | l'elenco; "accetta" assegna la categoria a tutti i movimenti dell'esercente (e solo a quelli); "no" salvato una volta sola; scelte diverse; categoria inesistente o esercente vuoto → 400; categorie già usate per l'esercente di un movimento (senza contare il movimento stesso), 404 se il movimento non c'è |
 | `suggestions-panel.spec.ts` (5) | il riquadro, accetta (con l'evento per la pagina), no (senza evento), niente da suggerire, errore |
-| `transactions-page.spec.ts` | dopo una scelta a mano il pannello si ricarica |
+| `transactions-page.spec.ts` | dopo una scelta a mano il pannello si ricarica; il gruppo "Usate per questo esercente" in cima al menu |
 
 Nel browser: una scelta a mano fa comparire il suggerimento senza ricaricare la pagina; "accetta" assegna la
 categoria ai due movimenti rimasti; "no" non torna nemmeno ricaricando; la pagina sul telefono non scorre

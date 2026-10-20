@@ -55,7 +55,38 @@ public final class HistorySuggester {
             int transactions, int examples) {
     }
 
+    /**
+     * Una categoria che hai già usato per un esercente, e quante volte. Serve nel menu della categoria di un
+     * movimento: in cima le categorie già usate per il suo esercente, la più usata per prima.
+     */
+    public record UsedCategory(Long categoryId, String category, int times) {
+    }
+
     private HistorySuggester() {
+    }
+
+    /**
+     * Le categorie che hai scelto a mano per questo esercente, la più usata per prima (a parità, in ordine
+     * alfabetico). Al contrario di {@link #suggest}, qui le categorie diverse non sono un problema: è per un
+     * movimento solo, e scegli tu quale.
+     */
+    public static List<UsedCategory> usedCategories(List<Example> examples, String merchantKey) {
+        if (merchantKey == null) {
+            return List.of(); // un movimento senza testo non ha un esercente
+        }
+        Map<Long, Integer> times = new HashMap<>();
+        Map<Long, String> names = new HashMap<>();
+        for (Example example : examples) {
+            if (merchantKey.equals(example.merchantKey())) {
+                times.merge(example.categoryId(), 1, Integer::sum);
+                names.put(example.categoryId(), example.category());
+            }
+        }
+        return times.entrySet().stream()
+                .map(e -> new UsedCategory(e.getKey(), names.get(e.getKey()), e.getValue()))
+                .sorted(Comparator.comparingInt(UsedCategory::times).reversed()
+                        .thenComparing(UsedCategory::category))
+                .toList();
     }
 
     public static List<Suggestion> suggest(List<Example> examples, List<Candidate> candidates,
