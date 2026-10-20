@@ -90,6 +90,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 24. [Le categorie collegate per id: normalizzazione, `@ManyToOne`, `JOIN FETCH`](docs/24-categorie-per-id.md)
 25. [Fase 3, passo 6: l'import CSV e i conti manuali (es. Trade Republic)](docs/25-fase-3-passo-6-import-csv.md)
 26. [Fase 3, passo 7a: i suggerimenti di categoria dalla tua storia](docs/26-fase-3-passo-7a-suggerimenti.md)
+27. [Fase 3, passo 7b: l'intelligenza artificiale con Spring AI e Ollama](docs/27-fase-3-passo-7b-ia-spring-ai.md)
 
 ## Piano di lavoro
 
@@ -117,7 +118,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
   - [ ] **da fare**: estratto conto CSV anche per i conti collegati che non danno i dettagli dei movimenti (es. Trade Republic): completare causale e controparte dei movimenti già arrivati, in alternativa alla correzione a mano (vedi `docs/25`, "E Trade Republic?")
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
-  - facoltativo: suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con un modello locale (Ollama in Docker) o un servizio cloud (passi 7b e 7c, vedi `docs/03`)
+  - [ ] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello) e servizio cloud (passo 7c)
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili

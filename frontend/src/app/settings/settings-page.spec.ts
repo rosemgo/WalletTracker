@@ -24,6 +24,16 @@ describe('SettingsPage', () => {
     saved.length = 0;
     rejected = false;
     const fakeApi: Partial<WalletApi> = {
+      // Il pannello dell'IA in fondo alla pagina: qui spento (lo prova ai-settings-panel.spec.ts).
+      aiStatus: () =>
+        of({
+          provider: 'NONE' as const,
+          ollamaModel: 'qwen2.5:3b',
+          ollamaReachable: false,
+          installedModels: [],
+          modelInstalled: false,
+          download: null,
+        }),
       saveEnableBanking: (applicationId: string, pem: string) => {
         saved.push([applicationId, pem]);
         return rejected

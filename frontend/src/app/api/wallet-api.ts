@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 
 import {
   Account,
+  AiProvider,
+  AiStatus,
   AccountRole,
   Alert,
   Bank,
@@ -237,6 +239,21 @@ export class WalletApi {
   /** GET /api/subscriptions: abbonamenti confermati, totali, esercenti ignorati. */
   subscriptions(): Observable<SubscriptionOverview> {
     return this.http.get<SubscriptionOverview>('/api/subscriptions');
+  }
+
+  /** GET /api/ai: le impostazioni dell'IA e lo stato di Ollama. */
+  aiStatus(): Observable<AiStatus> {
+    return this.http.get<AiStatus>('/api/ai');
+  }
+
+  /** PUT /api/ai: accende o spegne l'IA e sceglie il modello. */
+  changeAi(provider: AiProvider, ollamaModel: string): Observable<AiStatus> {
+    return this.http.put<AiStatus>('/api/ai', { provider, ollamaModel });
+  }
+
+  /** POST /api/ai/model/download: fa partire lo scaricamento del modello (in background). */
+  downloadAiModel(): Observable<AiStatus> {
+    return this.http.post<AiStatus>('/api/ai/model/download', {});
   }
 
   /** GET /api/category-suggestions: i suggerimenti di categoria dalla tua storia. */

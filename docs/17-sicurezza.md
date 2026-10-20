@@ -54,6 +54,7 @@ Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`S
 | 12 | **CI**: tutti i test a ogni push | regressioni, anche di sicurezza | `.github/workflows/ci.yml` |
 | 13 | nessuna statistica d'uso inviata da Angular CLI | privacy di chi sviluppa | `"analytics": false` in `frontend/angular.json` |
 | 14 | **file caricati limitati**: al massimo 5 MB (413 oltre) e 50.000 righe; si importano solo nei conti manuali; il file non viene conservato sul server; importazione "tutto o niente" in una transazione | file enormi che occupano memoria e disco, dati a metà | `spring.servlet.multipart` in `application.yml`, `csvimport/CsvImportService`, `UploadLimitTest`, `docs/25` |
+| 15 | **IA spenta di serie**; Ollama ascolta solo su `127.0.0.1`; l'app **non** controlla Docker (non avvia Ollama da sola); nome del modello validato | dati che escono senza consenso, un difetto dell'app che diventa controllo del computer | `ai/AiService`, `ai/AiController`, `docs/27` |
 
 ### Approfondimento: la cifratura dei segreti (n. 5)
 

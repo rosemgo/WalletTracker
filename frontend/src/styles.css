@@ -624,3 +624,27 @@ app-monthly-chart {
   margin-top: 1.5rem;
   color: var(--muted);
 }
+
+/* Lo stato dell'IA nelle Impostazioni: sempre simbolo + testo, mai solo il colore. */
+.ai-status {
+  list-style: none;
+  padding: 0;
+}
+
+.ai-status li {
+  margin-bottom: 0.5rem;
+}
+
+.status-good {
+  color: #0ca30c;
+}
+
+.status-bad {
+  color: #d03b3b;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+}

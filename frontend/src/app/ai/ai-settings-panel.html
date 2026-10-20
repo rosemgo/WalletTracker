@@ -1,0 +1,99 @@
+<section class="card" aria-label="Suggerimenti con l'intelligenza artificiale">
+  <h2>Suggerimenti con l'intelligenza artificiale</h2>
+  <p class="hint">
+    Un modello di intelligenza artificiale può suggerire la categoria dei movimenti degli esercenti
+    che non hai mai categorizzato. Suggerisce soltanto: decidi sempre tu. È spento di serie.
+  </p>
+
+  @if (message()) {
+    <p class="message">{{ message() }}</p>
+  }
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <div class="form-grid">
+    <label>
+      Suggerimenti
+      <select
+        [value]="provider()"
+        (change)="provider.set($any($event.target).value)"
+        aria-label="Suggerimenti con l'IA"
+      >
+        <option value="NONE">Spenti</option>
+        <option value="OLLAMA">Sul mio computer (Ollama)</option>
+      </select>
+    </label>
+    @if (provider() === 'OLLAMA') {
+      <label>
+        Modello
+        <input
+          [value]="model()"
+          (input)="model.set($any($event.target).value)"
+          maxlength="100"
+          placeholder="es. qwen2.5:3b"
+        />
+      </label>
+    }
+  </div>
+  @if (provider() === 'OLLAMA') {
+    <p class="hint">
+      Con Ollama il modello lavora sul tuo computer: i movimenti non escono di casa. Mentre lavora
+      usa qualche GB di memoria; quando è inattivo, quasi niente.
+    </p>
+  }
+  <button type="button" [disabled]="saving()" (click)="save()">Salva</button>
+
+  @if (status(); as s) {
+    @if (s.provider === 'OLLAMA' || provider() === 'OLLAMA') {
+      <h3>Stato</h3>
+      <ul class="ai-status">
+        <li>
+          @if (s.ollamaReachable) {
+            <span class="status-good">✓ Ollama risponde</span>
+          } @else {
+            <span class="status-bad">✗ Ollama non risponde</span>
+            <div class="secondary">
+              Avvialo, ad esempio con Docker:
+              <code
+                >docker run -d -p 127.0.0.1:11434:11434 -v ollama:/root/.ollama ollama/ollama</code
+              >
+            </div>
+          }
+        </li>
+        @if (s.ollamaReachable) {
+          <li>
+            @if (s.modelInstalled) {
+              <span class="status-good">✓ Il modello {{ s.ollamaModel }} è scaricato</span>
+            } @else if (s.download?.running) {
+              <span>
+                Scaricamento di {{ s.download!.model }}: {{ s.download!.status }}
+                @if (percent() !== null) {
+                  {{ percent() }}% ({{ size(s.download!.completed) }} di
+                  {{ size(s.download!.total) }})
+                }
+              </span>
+              @if (percent() !== null) {
+                <progress [value]="percent()" max="100" aria-label="Avanzamento"></progress>
+              }
+            } @else {
+              <span class="status-bad">✗ Il modello {{ s.ollamaModel }} non è scaricato</span>
+              <div>
+                <button type="button" (click)="download()">Scarica il modello</button>
+                <span class="secondary">
+                  Un modello piccolo pesa un paio di GB: ci vuole qualche minuto.</span
+                >
+              </div>
+            }
+            @if (s.download?.error) {
+              <p class="error">
+                Lo scaricamento non è riuscito: {{ s.download!.error }}. Controlla il nome del
+                modello e la connessione a internet.
+              </p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

@@ -374,3 +374,26 @@ export interface UsedCategories {
   word: string | null; // null se il movimento non ha testo
   categories: UsedCategory[];
 }
+
+/** Chi suggerisce le categorie: nessuno (spento) o un modello sul proprio computer (Ollama). */
+export type AiProvider = 'NONE' | 'OLLAMA';
+
+/** Lo scaricamento di un modello in Ollama. */
+export interface ModelDownload {
+  model: string;
+  running: boolean;
+  status: string; // l'ultimo messaggio di Ollama, es. "downloading", "success"
+  completed: number | null; // byte scaricati della parte in corso
+  total: number | null;
+  error: string | null;
+}
+
+/** La risposta di GET /api/ai: la scelta dell'utente e lo stato di Ollama. */
+export interface AiStatus {
+  provider: AiProvider;
+  ollamaModel: string;
+  ollamaReachable: boolean;
+  installedModels: string[];
+  modelInstalled: boolean;
+  download: ModelDownload | null;
+}

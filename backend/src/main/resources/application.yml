@@ -12,6 +12,13 @@ spring:
       - optional:file:.env[.properties]
       - optional:file:../.env[.properties]
 
+  # Spring AI (passo 7b): dove trovare Ollama. È configurazione dell'installazione (con Docker Compose sarà
+  # l'indirizzo del container); se l'IA usarla o no lo decide l'utente dalle Impostazioni (tabella ai_settings).
+  # Il modello scelto dall'utente lo passiamo a ogni richiesta, quindi qui non serve.
+  ai:
+    ollama:
+      base-url: ${OLLAMA_URL:http://localhost:11434}
+
   # I file caricati dalla dashboard (importazione CSV): al massimo 5 MB, un estratto conto di anni.
   # Un limite basso protegge il server da file enormi, per errore o apposta.
   servlet:
