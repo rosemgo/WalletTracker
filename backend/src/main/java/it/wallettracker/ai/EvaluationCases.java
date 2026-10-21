@@ -46,7 +46,7 @@ public final class EvaluationCases {
         Map<String, BankTransaction> byMerchant = new LinkedHashMap<>();
         manual.stream()
                 .filter(t -> t.getType() == TransactionType.EXPENSE || t.getType() == TransactionType.INCOME)
-                .filter(t -> t.getManualCategory().getKind() == kindOf(t))
+                .filter(t -> t.getManualCategory().getKind() == kindOf(t)) //filtra solo le transazioni che hanno una categoria manuale la cui tipologia di categoria sia INCOME o EXPANSE
                 .sorted(Comparator.comparing(BankTransaction::getBookingDate).reversed())
                 .forEach(t -> {
                     String key = MerchantKey.of(t.getCounterparty(), t.getDescription(), ownerNames);
