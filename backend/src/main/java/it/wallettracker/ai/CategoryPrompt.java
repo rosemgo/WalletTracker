@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * sia nell'elenco ({@link #validated}).
  *
  * <p>"Non so" è una voce dell'elenco, la numero 0. Le strade più ovvie non funzionano con i modelli piccoli
- * (misurato con gemma3:4b, docs/27): se lo schema permette {@code null}, il modello non lo usa mai; se il campo
+ * (misurato con gemma3:4b, docs/28): se lo schema permette {@code null}, il modello non lo usa mai; se il campo
  * è facoltativo, risponde sempre {@code {}}, anche per Esselunga. Una voce in più nell'elenco invece la capisce.
  * Gli id delle categorie partono da 1 (li assegna il database), quindi lo 0 non è mai una categoria vera.
  */
@@ -27,7 +27,7 @@ public final class CategoryPrompt {
     /**
      * Le regole. In inglese, anche se l'app è in italiano: i modelli piccoli sono addestrati soprattutto in
      * inglese e seguono meglio istruzioni inglesi (misurato: con llama3.2:3b dal 43% al 67% di risposte giuste,
-     * docs/27). Categorie ed esercenti restano in italiano, come sono. "Meglio non sapere che sbagliare": un
+     * docs/28). Categorie ed esercenti restano in italiano, come sono. "Meglio non sapere che sbagliare": un
      * suggerimento sbagliato costa più di nessun suggerimento.
      */
     public static final String SYSTEM = """

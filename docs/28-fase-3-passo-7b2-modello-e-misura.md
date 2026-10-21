@@ -111,12 +111,22 @@ Pezzo per pezzo:
 | `messages[0]`, `system` | le regole, uguali per ogni domanda (Parte C) |
 | `messages[1]`, `user` | la domanda di questo movimento |
 
-La risposta (vera, abbreviata):
+La risposta vera (con un prompt più corto e tre categorie):
 
 ```json
-{"model":"gemma3:4b","created_at":"...","message":{"role":"assistant","content":"{ \"categoryId\": 1 }"},
- "done":true,"done_reason":"stop","total_duration":4212345678,"prompt_eval_count":231,"eval_count":9}
+{"model":"gemma3:4b","created_at":"2026-10-21T11:45:17.718647165Z",
+ "message":{"role":"assistant","content":"{ \"categoryId\": 1 }"},
+ "done":true,"done_reason":"stop",
+ "total_duration":38633691394,"load_duration":36025288897,
+ "prompt_eval_count":81,"prompt_eval_duration":1494409000,
+ "eval_count":8,"eval_duration":1108510000}
 ```
+
+I tempi sono in **nanosecondi** (miliardesimi di secondo): 38,6 secondi in tutto, di cui **36 per caricare il
+modello** in memoria (`load_duration`: era la prima domanda dopo qualche minuto di pausa, `docs/27` A2), 1,5 per
+leggere la domanda (81 "token", pezzi di parola) e 1,1 per scrivere la risposta (8 token). Le domande seguenti,
+con il modello già caricato, durano pochi secondi. È per questo che la versione `RestClient` ha un tempo massimo
+generoso (Parte E2).
 
 Attenzione a `message.content`: è un **testo** che contiene JSON. Va letto **due volte**: prima la risposta di
 Ollama, poi il testo del modello. Con Spring AI la seconda lettura la fa la libreria; con `RestClient` la
@@ -154,7 +164,7 @@ public static final String SYSTEM = """
 ```
 
 - Perché in **inglese**, in un'app italiana? I modelli piccoli sono addestrati soprattutto su testi inglesi e
-  seguono meglio istruzioni inglesi. Non è un'opinione: misurato (Parte H2), con `llama3.2:3b` si passa dal 43%
+  seguono meglio istruzioni inglesi. Non è un'opinione: misurato (Parte H3), con `llama3.2:3b` si passa dal 43%
   al 67% di risposte giuste. Categorie ed esercenti restano in italiano, come sono.
 - `"""` è un **text block** di Java: un testo su più righe. La `\` a fine riga unisce la riga alla successiva
   (sono frasi lunghe, spezzate solo per leggerle nel codice).
@@ -386,7 +396,7 @@ public Optional<Long> suggest(CategoryQuestion question, String model) {
 | passare a un servizio cloud (7c) | cambi starter e opzioni | riscrivi richiesta, risposta, autenticazione |
 | che cosa vedi | quello che la libreria ti mostra | tutto quello che hai scritto |
 | risposte, nei test | uguali | uguali |
-| risposte, dal vivo (gemma3:4b, 49 esercenti) | (misura in corso) | |
+| risposte, dal vivo (49 esercenti, gemma3:4b e llama3.2:3b, con e senza esempi) | uguali: 49 su 49 in tutte e quattro le prove | |
 
 ### F2. Che cosa nascondeva Spring AI
 
@@ -416,6 +426,9 @@ non lo mette più tra gli obbligatori (provato). Ma la misura della Parte H3 ha 
 facoltativo funzionano con questi modelli. La soluzione finale, lo 0 nell'elenco, va bene a tutte e due le
 versioni con lo **stesso** schema: quello che Spring AI genera da `Answer`, e che `ANSWER_SCHEMA` ricopia. Le
 differenze rimaste (`$schema`, `"format": "int64"`) sono annotazioni che Ollama non usa per i numeri.
+
+La prova del nove: rifatta la misura con lo schema uguale, le due versioni danno la **stessa risposta in 49 casi
+su 49**, in tutte le prove (due modelli, con e senza esempi). La differenza di prima era davvero lo schema.
 
 ### F3. Quale useremo
 
@@ -591,13 +604,13 @@ aiutano**: un modello piccolo si confonde con più testo.
 
 **2. Il prompt in inglese.** Stesso schema (`enum`), istruzioni in inglese:
 
-| modello | italiano | inglese | memoria mentre lavora |
-|---|---|---|---|
-| `qwen2.5:1.5b` | 14% | 22% | ~1,5 GB |
-| `qwen2.5:3b` | 51% | 53% | ~2,5 GB |
-| `llama3.2:3b` | 43% | **67%** | ~2,5 GB |
-| `gemma3:4b` | 76% | **78%** | ~3 GB |
-| `qwen2.5:7b` | — | 73% | ~5 GB |
+| modello | italiano | inglese |
+|---|---|---|
+| `qwen2.5:1.5b` | 14% | 22% |
+| `qwen2.5:3b` | 51% | 53% |
+| `llama3.2:3b` | 43% | **67%** |
+| `gemma3:4b` | 76% | **78%** |
+| `qwen2.5:7b` (4,8 GB di memoria mentre lavora) | — | 73% |
 
 - `qwen2.5:1.5b` è inutilizzabile;
 - `qwen2.5:7b`, il doppio della memoria, **non** è più preciso di `gemma3:4b`: più grande non vuol dire migliore
@@ -621,21 +634,43 @@ quello che vuoi deve stare nell'elenco delle scelte**, non in una regola del pro
 
 **4. Il risultato finale, con il codice Java** (numero della categoria, 0 = non so, inglese):
 
-_(Tabella in aggiornamento: la misura finale con gemma3:4b e llama3.2:3b è in corso.)_
+| modello | da scaricare | memoria mentre lavora | senza esempi | con 8 esempi | s/domanda |
+|---|---|---|---|---|---|
+| **`gemma3:4b`** | 3,3 GB | 2,9 GB | **76%** | **82%** | 5–7 |
+| `llama3.2:3b` | 2,0 GB | 2,9 GB | 57% | 47% | 1–1,5 |
+| `qwen2.5:3b` | 1,9 GB | 2,5 GB | 45% | 47% | 1,5–2 |
+| `gemma3:1b` | 0,8 GB | 1,2 GB | 12% | 14% | 2,5 |
 
-### H4. La scelta: `gemma3:4b`, e `llama3.2:3b` per chi ha poca memoria
+(La memoria è quella che dice `ollama ps` mentre il modello lavora: il modello più il "contesto", lo spazio per
+la conversazione. "Giuste" comprende i "non so" giusti, per le sigle senza senso.)
+
+Che cosa dicono questi numeri:
+
+- **`gemma3:4b` è il migliore**, e anche quello che usa meglio gli esempi: dal 76% all'82%. Con lo "0 = non so"
+  è anche salito (era 73%): riconosce `XYZ 12345 ABC` come "non so", e indovina l'Agenzia delle Entrate;
+- **`llama3.2:3b` è circa tre volte più veloce**, ma sbaglia di più. Con il numero della categoria fa peggio che
+  con il nome (57% contro 67%), e gli esempi lo **peggiorano** (47%): un modello piccolo si confonde con un
+  prompt più lungo. Stessa memoria di Gemma: è un'alternativa per i computer **lenti**, non per quelli con poca
+  memoria;
+- **sotto i 3 GB non c'è un modello che funzioni**: `gemma3:1b` sta in 1,2 GB, ma indovina una volta su otto.
+  Con meno di 8 GB di RAM conviene lasciare i suggerimenti spenti (o, nel passo 7c, usare un servizio cloud).
+
+### H4. La scelta: `gemma3:4b`, e `llama3.2:3b` per i computer lenti
 
 | modello | da scaricare | memoria mentre lavora | per chi |
 |---|---|---|---|
 | **`gemma3:4b`** | 3,3 GB | circa 3 GB | consigliato: computer con almeno 8 GB di RAM (come il tuo) |
-| `llama3.2:3b` | 2,0 GB | circa 2,5 GB | computer con poca memoria |
+| `llama3.2:3b` | 2,0 GB | circa 3 GB | computer lenti: circa tre volte più veloce, ma meno preciso |
+| nessuno | | | meno di 8 GB di RAM: suggerimenti spenti (o cloud, passo 7c) |
 
 Con 8 GB di RAM, `gemma3:4b` mentre lavora ne usa circa 3: restano 5 GB per il sistema, il browser, il backend
 e PostgreSQL. E quando è inattivo, dopo 5 minuti Ollama lo toglie dalla memoria (`docs/27`, A2). Un utente con
 un computer più potente può scegliere un modello più grande (il campo del modello è libero), ma la misura dice
 che non serve.
 
-La migrazione **V19** fa di `gemma3:4b` il modello predefinito:
+La migrazione **V19** fa di `gemma3:4b` il modello predefinito (il suo commento riporta i numeri della prima
+misura, 73-82%: è stata scritta prima della misura finale, e una migrazione già pubblicata non si cambia,
+nemmeno nei commenti, perché Flyway ne controlla il checksum):
 
 ```sql
 ALTER TABLE ai_settings ALTER COLUMN ollama_model SET DEFAULT 'gemma3:4b';
@@ -794,6 +829,11 @@ if (status.download?.running || status.evaluation?.running) {
   con cui è stato chiamato il finto) e che sia stato usato il client scelto e non l'altro; i tre 409; i 400;
 - `ai-settings-panel.spec.ts` (4 test in più): i modelli consigliati; la misura con il polling e i timer finti
   (`docs/27`, G2); l'errore se non parte; niente misura senza modelli scaricati.
+- **la prova dal vivo**, nel browser, con Ollama vero: un conto con 10 spese categorizzate a mano (Esselunga,
+  Conad, Trenitalia, Eni, Netflix, Enel...), "Misura la precisione" con `gemma3:4b` e Spring AI. Risultato: 80%,
+  7,4 secondi a domanda; errori: Trenitalia in "Viaggi e vacanze" (discutibile) ed `ENI STATION` in "Bar e
+  ristoranti" (le stazioni di servizio hanno spesso un bar). Si vede anche la Parte A4 all'opera: il movimento era
+  `ENI STATION 4521`, al modello è arrivato `ENI STATION`.
 
 ---
 

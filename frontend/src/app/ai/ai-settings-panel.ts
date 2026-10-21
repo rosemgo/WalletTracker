@@ -6,7 +6,7 @@ import { WalletApi } from '../api/wallet-api';
 /** Ogni quanto chiedere lo stato mentre il modello si scarica o la misura è in corso. */
 const POLL_MS = 1000;
 
-/** Un modello consigliato, con i numeri misurati (docs/27, parte M). */
+/** Un modello consigliato, con i numeri misurati (docs/28, Parte H). */
 export interface RecommendedModel {
   name: string;
   note: string;
@@ -16,8 +16,9 @@ export interface RecommendedModel {
 }
 
 /**
- * I modelli consigliati: scelti misurando, non a occhio. Chi ha poca memoria prende il secondo.
- * I modelli più grandi (es. qwen2.5:7b) non sono risultati più precisi, solo più pesanti.
+ * I modelli consigliati: scelti misurando, non a occhio (docs/28, Parte H). Usano la stessa memoria; il secondo
+ * è circa tre volte più veloce ma sbaglia di più. Più piccoli non conviene: gemma3:1b ha indovinato il 12%.
+ * Più grandi nemmeno: qwen2.5:7b, con il doppio della memoria, non è stato più preciso di gemma3:4b.
  */
 export const RECOMMENDED_MODELS: RecommendedModel[] = [
   {
@@ -25,18 +26,18 @@ export const RECOMMENDED_MODELS: RecommendedModel[] = [
     note: 'consigliato, per computer con almeno 8 GB di memoria',
     download: '3,3 GB',
     memory: 'circa 3 GB',
-    precision: '73%, 82% con le tue scelte come esempi',
+    precision: '76%, 82% con le tue scelte come esempi',
   },
   {
     name: 'llama3.2:3b',
-    note: 'più leggero, per computer con poca memoria',
+    note: 'circa tre volte più veloce, ma sbaglia di più: per computer lenti',
     download: '2,0 GB',
-    memory: 'circa 2,5 GB',
-    precision: '67%',
+    memory: 'circa 3 GB',
+    precision: '57%',
   },
 ];
 
-/** I client con cui il backend può parlare con Ollama (docs/27): devono dare le stesse risposte. */
+/** I client con cui il backend può parlare con Ollama (docs/28): devono dare le stesse risposte. */
 export const AI_CLIENTS: { value: AiClient; label: string }[] = [
   { value: 'SPRING_AI', label: 'Spring AI' },
   { value: 'REST_CLIENT', label: 'RestClient (HTTP scritto a mano)' },

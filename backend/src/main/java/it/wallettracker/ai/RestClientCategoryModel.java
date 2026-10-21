@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * La categoria con <b>RestClient</b>: la richiesta HTTP a Ollama la scriviamo noi, come per Enable Banking.
- * Fa la stessa cosa di {@link SpringAiCategoryModel}: confrontale riga per riga (docs/27).
+ * Fa la stessa cosa di {@link SpringAiCategoryModel}: confrontale riga per riga (docs/28).
  *
  * <p>La chiamata è {@code POST /api/chat} (vedi la Parte B della guida):
  * <pre>

@@ -29,7 +29,7 @@ import org.springframework.core.io.ClassPathResource;
  * OLLAMA_LIVE=true OLLAMA_MODELS=qwen2.5:3b,qwen2.5:1.5b ./mvnw test -Dtest=CategoryModelLiveTest
  * </pre>
  * Per ogni modello, ogni client (Spring AI e RestClient) e ogni variante del prompt (senza e con esempi)
- * stampa quante risposte sono giuste, sbagliate o "non so", e il tempo medio. Vedi docs/27, Parte M.
+ * stampa quante risposte sono giuste, sbagliate o "non so", e il tempo medio. Vedi docs/28, Parte H.
  */
 @SpringBootTest
 @Import(IntegrationTestConfiguration.class)
