@@ -31,7 +31,7 @@
           [value]="model()"
           (input)="model.set($any($event.target).value)"
           maxlength="100"
-          placeholder="es. qwen2.5:3b"
+          placeholder="es. gemma3:4b"
         />
       </label>
     }
@@ -40,6 +40,46 @@
     <p class="hint">
       Con Ollama il modello lavora sul tuo computer: i movimenti non escono di casa. Mentre lavora
       usa qualche GB di memoria; quando è inattivo, quasi niente.
+    </p>
+    <div class="table-scroll">
+      <table aria-label="Modelli consigliati">
+        <thead>
+          <tr>
+            <th>Modello consigliato</th>
+            <th>Da scaricare</th>
+            <th>Memoria mentre lavora</th>
+            <th>Risposte giuste (prova)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of recommended; track m.name) {
+            <tr>
+              <td>
+                <code>{{ m.name }}</code>
+                <div class="secondary">{{ m.note }}</div>
+              </td>
+              <td>{{ m.download }}</td>
+              <td>{{ m.memory }}</td>
+              <td>{{ m.precision }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="link"
+                  [disabled]="model().trim() === m.name"
+                  (click)="choose(m.name)"
+                >
+                  Usa questo
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="hint">
+      Le percentuali vengono da 49 esercenti di prova: con i tuoi movimenti possono essere diverse.
+      Per saperlo, usa "Misura la precisione" qui sotto.
     </p>
   }
   <button type="button" [disabled]="saving()" (click)="save()">Salva</button>
@@ -94,6 +134,114 @@
           </li>
         }
       </ul>
+    }
+
+    @if (s.ollamaReachable && s.installedModels.length > 0) {
+      <h3>Misura la precisione</h3>
+      <p class="hint">
+        Il programma prende alcuni esercenti che hai già categorizzato a mano, chiede al modello la
+        categoria senza dirgli la tua scelta e conta quante volte indovina. Come esempi gli mostra
+        le tue scelte su altri esercenti, come farà con i suggerimenti. Ogni domanda richiede
+        qualche secondo.
+      </p>
+      @if (evaluationError()) {
+        <p class="error">{{ evaluationError() }}</p>
+      }
+      <div class="form-grid">
+        <label>
+          Modello da misurare
+          <select
+            [value]="evaluationModel()"
+            (change)="evaluationModel.set($any($event.target).value)"
+          >
+            @for (m of s.installedModels; track m) {
+              <option [value]="m" [selected]="m === evaluationModel()">{{ m }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Client
+          <select
+            [value]="evaluationClient()"
+            (change)="evaluationClient.set($any($event.target).value)"
+          >
+            @for (c of clients; track c.value) {
+              <option [value]="c.value">{{ c.label }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Quanti esercenti
+          <input
+            type="number"
+            min="1"
+            max="100"
+            [value]="samples()"
+            (input)="samples.set(+$any($event.target).value)"
+          />
+        </label>
+      </div>
+      <button
+        type="button"
+        [disabled]="s.evaluation?.running || samples() < 1 || samples() > 100"
+        (click)="evaluate()"
+      >
+        Misura
+      </button>
+
+      @if (s.evaluation; as e) {
+        <div class="evaluation" aria-label="Risultato della misura">
+          <p>
+            @if (e.running) {
+              Misura di {{ e.model }} in corso: {{ e.done }} di {{ e.total }}.
+            } @else {
+              Misura di {{ e.model }} ({{ e.client === 'SPRING_AI' ? 'Spring AI' : 'RestClient' }}):
+              {{ e.done }} esercenti.
+            }
+            @if (precision() !== null) {
+              <strong>{{ precision() }}% giuste</strong>
+              ({{ e.right }} giuste, {{ e.wrong }} sbagliate, {{ e.unsure }} "non so"), in media
+              {{ e.seconds.toFixed(1).replace('.', ',') }} secondi a domanda.
+            }
+          </p>
+          @if (e.running) {
+            <progress
+              [value]="e.done"
+              [max]="e.total"
+              aria-label="Avanzamento della misura"
+            ></progress>
+          }
+          @if (e.error) {
+            <p class="error">{{ e.error }}</p>
+          }
+          @if (e.mistakes.length > 0) {
+            <div class="table-scroll">
+              <table aria-label="Errori del modello">
+                <thead>
+                  <tr>
+                    <th>Esercente</th>
+                    <th>La tua scelta</th>
+                    <th>Il modello</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of e.mistakes; track $index) {
+                    <tr>
+                      <td>{{ m.merchant }}</td>
+                      <td>{{ m.expected }}</td>
+                      <td>{{ m.answer }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <p class="hint">
+              Guarda gli errori: alcuni sono sbagli veri, altri scelte discutibili (Netflix è
+              "Intrattenimento" o "Multimedia"?). Il modello suggerisce soltanto: decidi sempre tu.
+            </p>
+          }
+        </div>
+      }
     }
   }
 </section>

@@ -11,7 +11,7 @@ vero del progetto, spiega perché, e dice come verificare che funziona prima di 
 | Parte | Cosa | Stato |
 |---|---|---|
 | **7b.1** | Ollama a mano; Spring AI nel progetto; IA accesa/spenta; scaricare il modello dall'app | fatta: questa guida |
-| 7b.2 | il modello che sceglie la categoria (`ChatClient`, prompt, risposta strutturata) e la misura della precisione | da fare |
+| 7b.2 | il modello che sceglie la categoria (`ChatClient`, prompt, risposta strutturata) e la misura della precisione | fatta: `docs/28` |
 | 7b.3 | i suggerimenti dell'IA nei Movimenti, "Chiedi all'IA", accetta / no | da fare |
 
 > Prerequisiti: passo 7a (`docs/26`), Docker avviato, e `git pull`. Al primo avvio Flyway applica la **V18**.
@@ -67,7 +67,8 @@ Senza variante (`llama3.2`), Ollama usa `:latest`.
 Due cose da sapere sulle risorse:
 
 - **mentre lavora**, il modello sta in memoria: un modello piccolo come `qwen2.5:3b` (circa 2 GB scaricato)
-  vuole qualche GB di RAM. Funziona anche senza scheda video, solo più lentamente;
+  vuole qualche GB di RAM. Funziona anche senza scheda video, solo più lentamente. (Questa guida usa
+  `qwen2.5:3b` negli esempi; dopo le misure del passo 7b.2 il modello consigliato è `gemma3:4b`, `docs/28`);
 - **quando è inattivo** consuma quasi niente: Ollama carica il modello alla prima richiesta e lo toglie dalla
   memoria dopo qualche minuto senza richieste (di serie 5 minuti; si cambia con il parametro `keep_alive`).
 
@@ -149,8 +150,8 @@ Answer answer = chatClient.prompt()
         .entity(Answer.class, spec -> spec.useProviderStructuredOutput()); // lo schema lo genera dal record
 ```
 
-Nel 7b.2 li scriveremo **tutti e due davvero**, con gli stessi test, così il confronto lo vedi sul codice e
-non solo nella tabella.
+Nel 7b.2 (`docs/28`) li abbiamo scritti **tutti e due davvero**, con gli stessi test, così il confronto lo vedi
+sul codice e non solo nella tabella.
 
 ---
 

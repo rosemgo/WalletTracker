@@ -1,6 +1,8 @@
 package it.wallettracker.ai;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
@@ -17,7 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <ul>
  *   <li>{@code GET  /api/ai}                lo stato: scelta dell'utente, Ollama acceso?, modello scaricato?;</li>
  *   <li>{@code PUT  /api/ai}                cambia la scelta (spento / Ollama) e il modello;</li>
- *   <li>{@code POST /api/ai/model/download} fa partire lo scaricamento del modello (202: è in background).</li>
+ *   <li>{@code POST /api/ai/model/download} fa partire lo scaricamento del modello (202: è in background);</li>
+ *   <li>{@code POST /api/ai/evaluation}     fa partire la misura della precisione sulle tue scelte (202).</li>
  * </ul>
  */
 @RestController
@@ -46,12 +49,31 @@ public class AiController {
         return aiService.downloadModel();
     }
 
+    @PostMapping("/evaluation")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public AiService.Status evaluate(@Valid @RequestBody EvaluationRequest request) {
+        return aiService.evaluate(request.model(), request.client(), request.samples());
+    }
+
+    /**
+     * Il corpo di {@code POST /api/ai/evaluation}: quale modello, con quale client, su quanti esercenti (al
+     * massimo 100: con un modello da qualche secondo a domanda sono già alcuni minuti).
+     */
+    public record EvaluationRequest(
+            @NotNull @Pattern(regexp = MODEL_NAME) String model,
+            @NotNull AiClient client,
+            @Min(1) @Max(100) int samples) {
+    }
+
+    /** I nomi dei modelli di Ollama ("qwen2.5:3b", "hf.co/utente/modello:Q4_K_M"): lettere, cifre e . _ : / - soltanto. */
+    static final String MODEL_NAME = "[A-Za-z0-9._:/-]{1,100}";
+
     /**
      * Il corpo di {@code PUT /api/ai}. Il nome del modello ha la forma di Ollama ("qwen2.5:3b",
      * "hf.co/utente/modello:Q4_K_M"): lettere, cifre e . _ : / - soltanto.
      */
     public record SettingsChange(
             @NotNull AiProvider provider,
-            @NotNull @Pattern(regexp = "[A-Za-z0-9._:/-]{1,100}") String ollamaModel) {
+            @NotNull @Pattern(regexp = MODEL_NAME) String ollamaModel) {
     }
 }

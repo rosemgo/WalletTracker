@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import {
   Account,
+  AiClient,
   AiProvider,
   AiStatus,
   AccountRole,
@@ -254,6 +255,11 @@ export class WalletApi {
   /** POST /api/ai/model/download: fa partire lo scaricamento del modello (in background). */
   downloadAiModel(): Observable<AiStatus> {
     return this.http.post<AiStatus>('/api/ai/model/download', {});
+  }
+
+  /** POST /api/ai/evaluation: fa partire la misura della precisione di un modello (in background). */
+  evaluateAi(model: string, client: AiClient, samples: number): Observable<AiStatus> {
+    return this.http.post<AiStatus>('/api/ai/evaluation', { model, client, samples });
   }
 
   /** GET /api/category-suggestions: i suggerimenti di categoria dalla tua storia. */

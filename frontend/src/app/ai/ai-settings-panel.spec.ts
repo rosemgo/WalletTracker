@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 
-import { AiProvider, AiStatus } from '../api/models';
+import { AiClient, AiProvider, AiStatus, ModelEvaluation } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AiSettingsPanel } from './ai-settings-panel';
 
@@ -12,7 +12,30 @@ const OFF: AiStatus = {
   installedModels: [],
   modelInstalled: false,
   download: null,
+  evaluation: null,
 };
+
+/** Una misura: 5 esercenti, `done` fatti. */
+function evaluation(
+  done: number,
+  right: number,
+  extra: Partial<ModelEvaluation> = {},
+): ModelEvaluation {
+  return {
+    model: 'llama3.2:3b',
+    client: 'REST_CLIENT',
+    running: done < 5,
+    done,
+    total: 5,
+    right,
+    wrong: done - right,
+    unsure: 0,
+    seconds: 4.25,
+    mistakes: [],
+    error: null,
+    ...extra,
+  };
+}
 
 /** Test del pannello con un WalletApi finto (vedi accounts-page.spec.ts). */
 describe('AiSettingsPanel', () => {
@@ -20,12 +43,16 @@ describe('AiSettingsPanel', () => {
   let changes: [AiProvider, string][];
   let downloads: number;
   let afterDownload: AiStatus[];
+  let evaluations: [string, AiClient, number][];
+  let evaluationResponse: () => Observable<AiStatus>;
 
   beforeEach(() => {
     status = OFF;
     changes = [];
     downloads = 0;
     afterDownload = [];
+    evaluations = [];
+    evaluationResponse = () => of({ ...status, evaluation: evaluation(0, 0) });
     const fakeApi: Partial<WalletApi> = {
       aiStatus: () => of(afterDownload.length > 0 ? afterDownload.shift()! : status),
       changeAi: (provider: AiProvider, model: string): Observable<AiStatus> => {
@@ -46,6 +73,10 @@ describe('AiSettingsPanel', () => {
             error: null,
           },
         });
+      },
+      evaluateAi: (model: string, client: AiClient, samples: number) => {
+        evaluations.push([model, client, samples]);
+        return evaluationResponse();
       },
     };
     TestBed.configureTestingModule({
@@ -163,5 +194,106 @@ describe('AiSettingsPanel', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.error')?.textContent).toContain(
       'pull model manifest: Forbidden',
     );
+  });
+
+  it('a recommended model fills the model field', async () => {
+    status = { ...OFF, provider: 'OLLAMA' };
+    const fixture = TestBed.createComponent(AiSettingsPanel);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('gemma3:4b');
+    expect(page.textContent).toContain('llama3.2:3b');
+
+    // La prima riga della tabella è gemma3:4b: "Usa questo" lo scrive nel campo.
+    const row = page.querySelector('table[aria-label="Modelli consigliati"] tbody tr')!;
+    (row.querySelector('button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect((page.querySelector('input') as HTMLInputElement).value).toBe('gemma3:4b');
+    expect((row.querySelector('button') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('measures the chosen model and follows the progress until it is done', async () => {
+    vi.useFakeTimers();
+    status = {
+      ...OFF,
+      provider: 'OLLAMA',
+      ollamaModel: 'gemma3:4b',
+      installedModels: ['gemma3:4b', 'llama3.2:3b'],
+      modelInstalled: true,
+    };
+    const fixture = TestBed.createComponent(AiSettingsPanel);
+    const page = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+
+    // Il modello proposto per la misura è quello scelto; ne scegliamo un altro, con RestClient, su 5.
+    const selects = Array.from(page.querySelectorAll('select'));
+    const [modelSelect, clientSelect] = selects.slice(-2);
+    expect(modelSelect.value).toBe('gemma3:4b');
+    modelSelect.value = 'llama3.2:3b';
+    modelSelect.dispatchEvent(new Event('change'));
+    clientSelect.value = 'REST_CLIENT';
+    clientSelect.dispatchEvent(new Event('change'));
+    const samples = page.querySelector('input[type="number"]') as HTMLInputElement;
+    samples.value = '5';
+    samples.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    afterDownload = [
+      { ...status, evaluation: evaluation(2, 2) },
+      {
+        ...status,
+        evaluation: evaluation(5, 4, {
+          mistakes: [
+            { merchant: 'NETFLIX.COM', expected: 'Intrattenimento', answer: 'Multimedia' },
+          ],
+        }),
+      },
+    ];
+    button(page, 'Misura').click();
+    fixture.detectChanges();
+    expect(evaluations).toEqual([['llama3.2:3b', 'REST_CLIENT', 5]]);
+    expect(page.textContent).toContain('in corso: 0 di 5');
+    expect(button(page, 'Misura').disabled).toBe(true);
+
+    vi.advanceTimersByTime(1000); // il polling: ancora in corso
+    fixture.detectChanges();
+    expect(page.textContent).toContain('in corso: 2 di 5');
+    expect(page.textContent).toContain('100% giuste');
+
+    vi.advanceTimersByTime(1000); // finita: il polling si ferma
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Misura di llama3.2:3b (RestClient): 5 esercenti.');
+    expect(page.textContent).toContain('80% giuste');
+    expect(page.textContent).toContain('4,3 secondi a domanda');
+    const mistake = page.querySelector('table[aria-label="Errori del modello"] tbody tr')!;
+    expect(mistake.textContent).toContain('NETFLIX.COM');
+    expect(mistake.textContent).toContain('Multimedia');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('says why the measurement did not start', async () => {
+    status = { ...OFF, provider: 'OLLAMA', installedModels: ['gemma3:4b'], modelInstalled: true };
+    evaluationResponse = () =>
+      throwError(() => ({ error: { detail: "Non c'è niente da misurare: ..." } }));
+    const fixture = TestBed.createComponent(AiSettingsPanel);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    button(page, 'Misura').click();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.error')?.textContent).toContain("Non c'è niente da misurare");
+  });
+
+  it('without downloaded models there is nothing to measure', async () => {
+    status = { ...OFF, provider: 'OLLAMA' };
+    const fixture = TestBed.createComponent(AiSettingsPanel);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    const headings = Array.from(page.querySelectorAll('h3')).map((h) => h.textContent?.trim());
+    expect(headings).toEqual(['Stato']);
+    expect(button(page, 'Misura')).toBeUndefined();
   });
 });

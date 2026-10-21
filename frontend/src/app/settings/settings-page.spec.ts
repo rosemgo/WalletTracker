@@ -33,6 +33,7 @@ describe('SettingsPage', () => {
           installedModels: [],
           modelInstalled: false,
           download: null,
+          evaluation: null,
         }),
       saveEnableBanking: (applicationId: string, pem: string) => {
         saved.push([applicationId, pem]);

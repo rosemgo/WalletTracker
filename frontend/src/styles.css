@@ -648,3 +648,8 @@ progress {
   width: 100%;
   max-width: 24rem;
 }
+
+/* Il risultato della misura della precisione, sotto il pulsante "Misura". */
+.evaluation {
+  margin-top: 0.75rem;
+}
