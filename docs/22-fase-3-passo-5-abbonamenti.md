@@ -87,7 +87,7 @@ ignorato (in fondo alla pagina).
 
 Il database garantisce due cose:
 - `UNIQUE (merchant_key, currency)`: una sola decisione per esercente. Decidere due volte → **409
-  Conflict**;
+  Conflict**. Dalla V21 la decisione è per esercente **e importo** (sezione 6);
 - `CHECK (status = 'DISMISSED' OR (name IS NOT NULL AND frequency IS NOT NULL AND expected_amount > 0))`:
   un abbonamento confermato ha sempre nome, frequenza e importo. È un vincolo "condizionale": vale solo
   per le righe `CONFIRMED`.
@@ -105,6 +105,57 @@ Per ogni abbonamento confermato il backend cerca l'**ultimo pagamento** tra i mo
 "Forse disdetto" può avere anche un'altra causa: hai cambiato la carta con cui paghi, e il nuovo conto
 non è collegato. Oppure la banca ha cambiato il testo dei movimenti, e la chiave non coincide più. In quel
 caso togli l'abbonamento: tornerà tra i suggerimenti con la chiave nuova.
+
+### 6. Più abbonamenti dallo stesso esercente (V21)
+
+**Il caso vero.** Un abbonamento Fastweb mobile da 7,99 € al mese non veniva suggerito. Gli addebiti, con
+il conto ING:
+
+| Data | Importo | Che cos'è |
+|---|---|---|
+| 30/07 | 7,99 € | la SIM |
+| 31/08 | 7,99 € | la SIM |
+| 04/09 | 23,95 € | l'ultima bolletta della linea di casa (pagata una volta) |
+| 30/09 | 7,99 € | la SIM |
+
+La causale è un addebito SDD: "Addebito SDD CORE Scad. 30/09/2026 Imp. 7.99 Creditor id. ... FASTWEB S.p.A.
+Id Mandato ...". La chiave (sezione 2) toglie date, importi e codici con cifre, e si ferma a 60 caratteri: tutti
+gli addebiti Fastweb hanno **la stessa chiave**. Per il programma erano una serie sola, con un intervallo di 4
+giorni tra il 31/08 e il 04/09: 2 intervalli regolari su 3, meno dei 3 su 4 richiesti. Niente abbonamento.
+
+**La soluzione, in due parti.**
+
+1. **Riconoscere** (`RecurringDetector.detectAll`): prima la serie intera, come sempre (così un rincaro da 12,99 a
+   13,99 resta un abbonamento solo). Se non lo è, la serie si divide in **gruppi di importi simili**
+   (`amountGroups`: in ordine di importo, un pagamento entra nel gruppo se è entro il 20% del più piccolo) e ogni
+   gruppo si guarda da solo. {7,99 7,99 7,99} è un abbonamento; {23,95} no.
+2. **Decidere** per esercente **e importo**. Prima un abbonamento era "esercente + valuta": uno solo per
+   esercente. Con due contratti dallo stesso creditore (SIM e linea di casa) se ne poteva confermare uno solo. La
+   **V21** cambia il vincolo:
+
+   ```sql
+   ALTER TABLE subscription DROP CONSTRAINT uq_subscription_key_currency;
+   ALTER TABLE subscription ADD CONSTRAINT uq_subscription_key_currency_amount
+       UNIQUE (merchant_key, currency, expected_amount);
+   ```
+
+   e anche un "no" ora salva l'importo: "no" alla bolletta non nasconde la SIM.
+
+**Quando un importo è "della stessa serie" di una decisione?** Entro il 50% (`SubscriptionService.SAME_SERIES`).
+È più largo del 20% con cui si riconosce una serie, per un motivo: un abbonamento confermato può rincarare
+(12,99 → 15,99 è il 23%) e deve restare lui, con l'avviso del rincaro. Due contratti diversi di solito
+differiscono molto di più (7,99 e 23,95: il triplo). Una regola così ("entro il 50%") non si scrive con un vincolo
+del database: la controlla il codice (`Subscription.covers`), e il vincolo nuovo impedisce solo i doppioni esatti.
+
+**I pagamenti di ogni abbonamento** (`SubscriptionService.paymentsOf`): quelli dell'esercente con un importo della
+stessa serie; se l'esercente ha più abbonamenti confermati, ogni pagamento va a quello con l'importo più vicino.
+Così l'"ultimo pagamento" della SIM è 7,99 €, non la bolletta da 23,95 €.
+
+**E i "no" di prima?** Le righe `DISMISSED` salvate prima della V21 non hanno l'importo (`expected_amount` è
+NULL): valgono per **tutti** gli importi, come prima. Nella pagina compaiono come "tutti gli importi".
+
+Un dettaglio sul rimborso: Fastweb ha anche restituito 1,22 € con un bonifico. Non disturba: gli abbonamenti
+guardano solo le **uscite**, e il bonifico ha comunque un'altra chiave ("BONIFICO N BIC ORDINANTE...").
 
 ---
 
@@ -207,7 +258,8 @@ Alcuni dettagli da notare:
    nome) oppure "no, non suggerirlo più".
 3. Guarda il totale: è quello che ti aspettavi? Spesso è più alto di quanto si pensi.
 4. Se un abbonamento che hai non viene suggerito, controlla nei Movimenti: forse ha meno di 3 pagamenti
-   negli ultimi 13 mesi, oppure gli importi cambiano troppo (oltre il 20%).
+   negli ultimi 13 mesi, oppure gli importi cambiano troppo (oltre il 20%). Due addebiti diversi dallo stesso
+   creditore non sono più un problema (sezione 6).
 
 Test:
 

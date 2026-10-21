@@ -54,7 +54,7 @@ const SPOTIFY: SubscriptionSuggestion = {
 
 describe('SubscriptionsPage', () => {
   const confirmed: SubscriptionConfirmation[] = [];
-  const dismissed: string[] = [];
+  const dismissed: [string, number][] = [];
   const deleted: number[] = [];
   let loads: number;
 
@@ -67,7 +67,10 @@ describe('SubscriptionsPage', () => {
     const overview: SubscriptionOverview = {
       subscriptions: [NETFLIX, GYM],
       totals: [{ currency: 'EUR', monthly: 13.99, yearly: 167.88 }],
-      dismissed: [{ id: 9, merchantKey: 'ASSICURAZIONE AUTO', currency: 'EUR' }],
+      dismissed: [
+        { id: 9, merchantKey: 'ASSICURAZIONE AUTO', currency: 'EUR', amount: null }, // prima della V21
+        { id: 10, merchantKey: 'FASTWEB S P A', currency: 'EUR', amount: 23.95 },
+      ],
     };
     const fakeApi: Partial<WalletApi> = {
       subscriptions: () => {
@@ -79,8 +82,8 @@ describe('SubscriptionsPage', () => {
         confirmed.push(c);
         return of(undefined);
       },
-      dismissSubscription: (key: string) => {
-        dismissed.push(key);
+      dismissSubscription: (key: string, _currency: string, amount: number) => {
+        dismissed.push([key, amount]);
         return of(undefined);
       },
       deleteSubscription: (id: number) => {
@@ -152,9 +155,11 @@ describe('SubscriptionsPage', () => {
     const page = await render();
 
     button(page, 'no, non suggerirlo più').click();
-    expect(dismissed).toEqual(['SPOTIFY AB']);
+    expect(dismissed).toEqual([['SPOTIFY AB', SPOTIFY.typicalAmount]]); // con l'importo della serie
 
-    expect(page.querySelector('.dismissed')?.textContent).toContain('ASSICURAZIONE AUTO');
+    const list = page.querySelector('.dismissed')!.textContent!.replace(/\s+/g, ' ');
+    expect(list).toContain('ASSICURAZIONE AUTO · tutti gli importi (EUR)');
+    expect(list).toContain('FASTWEB S P A · circa 23,95 €');
     button(page, 'suggeriscilo di nuovo').click();
     expect(deleted).toEqual([9]);
   });

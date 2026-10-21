@@ -83,7 +83,10 @@
     ripetono ogni mese (almeno 3 volte) o ogni anno, con importi simili. Sono solo suggerimenti:
     conferma quelli giusti, ignora gli altri.
   </p>
-  @for (suggestion of suggestions(); track suggestion.merchantKey + suggestion.currency) {
+  @for (
+    suggestion of suggestions();
+    track suggestion.merchantKey + suggestion.currency + suggestion.typicalAmount
+  ) {
     <div class="card suggestion">
       <label class="suggestion-name">
         Nome
@@ -115,11 +118,17 @@
 
   @if (o.dismissed.length > 0) {
     <details class="dismissed">
-      <summary>Esercenti che hai detto di non suggerire più ({{ o.dismissed.length }})</summary>
+      <summary>Pagamenti che hai detto di non suggerire più ({{ o.dismissed.length }})</summary>
       <ul>
         @for (d of o.dismissed; track d.id) {
           <li>
-            {{ d.merchantKey }} ({{ d.currency }}) ·
+            {{ d.merchantKey }} ·
+            @if (d.amount !== null) {
+              circa {{ d.amount | currency: d.currency }}
+            } @else {
+              tutti gli importi ({{ d.currency }})
+            }
+            ·
             <button
               type="button"
               class="link"

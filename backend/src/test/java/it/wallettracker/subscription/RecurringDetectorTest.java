@@ -33,6 +33,45 @@ class RecurringDetectorTest {
     }
 
     @Test
+    void anotherBillFromTheSameCreditorDoesNotHideTheSubscription() {
+        // I dati veri di Fastweb: la SIM ogni mese, e una bolletta di casa (l'ultima) pochi giorni dopo.
+        List<Payment> fastweb = payments("2026-07-30:7.99", "2026-08-31:7.99", "2026-09-04:23.95", "2026-09-30:7.99");
+
+        assertThat(RecurringDetector.detect(fastweb, TODAY)).isEmpty(); // mescolati: 4 giorni tra due addebiti
+        List<Pattern> found = RecurringDetector.detectAll(fastweb, TODAY);
+        assertThat(found).hasSize(1);
+        assertThat(found.getFirst().typicalAmount()).isEqualByComparingTo("7.99");
+        assertThat(found.getFirst().occurrences()).isEqualTo(3);
+    }
+
+    @Test
+    void twoSubscriptionsFromTheSameCreditorAreBothFound() {
+        List<Pattern> found = RecurringDetector.detectAll(payments(
+                "2026-07-30:7.99", "2026-08-31:7.99", "2026-09-30:7.99",
+                "2026-07-15:23.95", "2026-08-15:23.95", "2026-09-15:23.95"), TODAY);
+
+        assertThat(found).extracting(Pattern::typicalAmount)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(new BigDecimal("7.99"), new BigDecimal("23.95"));
+    }
+
+    @Test
+    void aSmallPriceRiseStaysOneSubscription() {
+        // 12,99 → 13,99: la serie intera è già un abbonamento, non la dividiamo.
+        assertThat(RecurringDetector.detectAll(
+                payments("2026-07-03:12.99", "2026-08-03:12.99", "2026-09-03:13.99", "2026-10-03:13.99"), TODAY))
+                .hasSize(1);
+    }
+
+    @Test
+    void amountsAreGroupedWithinTwentyPercentOfTheSmallest() {
+        assertThat(RecurringDetector.amountGroups(payments(
+                "2026-07-01:7.99", "2026-08-01:23.95", "2026-09-01:9.50", "2026-10-01:7.99")))
+                .extracting(List::size)
+                .containsExactly(3, 1); // {7,99 7,99 9,50} e {23,95}
+    }
+
+    @Test
     void theOrderOfThePaymentsDoesNotMatter() {
         assertThat(RecurringDetector.detect(
                 payments("2026-10-03:9.99", "2026-08-03:9.99", "2026-09-03:9.99"), TODAY)).isPresent();

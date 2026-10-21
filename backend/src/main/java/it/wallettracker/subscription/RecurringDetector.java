@@ -28,6 +28,10 @@ import java.util.Optional;
  * </ol>
  * In caso di dubbio la risposta è "no": un suggerimento sbagliato fa perdere fiducia nel programma, uno
  * mancato si recupera (l'utente lo vede nei movimenti).
+ *
+ * <p><b>Più abbonamenti dallo stesso esercente</b> ({@link #detectAll}): lo stesso creditore può addebitare
+ * cose diverse (Fastweb: la SIM da 7,99 € e una bolletta da 23,95 €). Mescolati, gli addebiti non sono più
+ * regolari. Se la serie intera non è un abbonamento, la dividiamo per importo e guardiamo ogni gruppo da solo.
  */
 public final class RecurringDetector {
 
@@ -47,6 +51,58 @@ public final class RecurringDetector {
     /** Il risultato: ogni quanto, quanto di solito, quante volte, l'ultimo e il prossimo previsto. */
     public record Pattern(Frequency frequency, BigDecimal typicalAmount, int occurrences, LocalDate lastDate,
             BigDecimal lastAmount, LocalDate nextDate) {
+    }
+
+    /**
+     * Gli abbonamenti in una serie di pagamenti allo stesso esercente: di solito uno (o nessuno), ma possono
+     * essere di più se l'esercente addebita importi diversi (vedi la descrizione della classe).
+     * <ol>
+     *   <li>prima la serie intera, come {@link #detect}: così un rincaro piccolo (12,99 → 13,99) resta lo stesso
+     *       abbonamento;</li>
+     *   <li>se non lo è, i gruppi di importi simili ({@link #amountGroups}), ognuno da solo.</li>
+     * </ol>
+     */
+    public static List<Pattern> detectAll(List<Payment> payments, LocalDate today) {
+        Optional<Pattern> whole = detect(payments, today);
+        if (whole.isPresent()) {
+            return List.of(whole.get());
+        }
+        List<List<Payment>> groups = amountGroups(payments);
+        if (groups.size() < 2) {
+            return List.of(); // un gruppo solo è la serie intera: già vista
+        }
+        return groups.stream()
+                .map(group -> detect(group, today))
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    /**
+     * I pagamenti divisi in gruppi di importi simili: in ordine di importo, un pagamento entra nel gruppo se è
+     * entro il 20% del primo (il più piccolo) del gruppo, altrimenti ne apre uno nuovo. 7,99 7,99 7,99 23,95 →
+     * {7,99 7,99 7,99} e {23,95}.
+     */
+    static List<List<Payment>> amountGroups(List<Payment> payments) {
+        List<Payment> byAmount = new ArrayList<>(payments);
+        byAmount.sort(Comparator.comparing(Payment::amount));
+        List<List<Payment>> groups = new ArrayList<>();
+        List<Payment> current = new ArrayList<>();
+        for (Payment payment : byAmount) {
+            if (!current.isEmpty() && !similar(payment.amount(), current.getFirst().amount())) {
+                groups.add(current);
+                current = new ArrayList<>();
+            }
+            current.add(payment);
+        }
+        if (!current.isEmpty()) {
+            groups.add(current);
+        }
+        return groups;
+    }
+
+    /** Due importi sono "simili" se la differenza è al massimo il 20% del riferimento. */
+    public static boolean similar(BigDecimal amount, BigDecimal reference) {
+        return amount.subtract(reference).abs().compareTo(reference.multiply(AMOUNT_TOLERANCE)) <= 0;
     }
 
     /** La serie è un abbonamento? Se sì, come si ripete. */
@@ -75,9 +131,8 @@ public final class RecurringDetector {
             }
 
             BigDecimal typicalAmount = medianAmount(sorted);
-            BigDecimal tolerance = typicalAmount.multiply(AMOUNT_TOLERANCE);
             long similarAmounts = sorted.stream()
-                    .filter(p -> p.amount().subtract(typicalAmount).abs().compareTo(tolerance) <= 0)
+                    .filter(p -> similar(p.amount(), typicalAmount))
                     .count();
             if (similarAmounts < REGULAR_SHARE * sorted.size()) {
                 continue;

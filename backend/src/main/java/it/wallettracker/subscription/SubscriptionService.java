@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.classification.ClassificationService;
@@ -40,9 +39,11 @@ import org.springframework.web.server.ResponseStatusException;
  *   <li>le spese degli ultimi 13 mesi vengono raggruppate per esercente ({@link MerchantKey}) e valuta;</li>
  *   <li>ogni gruppo passa da {@link RecurringDetector}: se ha l'aspetto di un abbonamento, diventa un
  *       <b>suggerimento</b>;</li>
- *   <li>l'utente decide: "sì" (CONFIRMED) o "no" (DISMISSED). La decisione resta salvata e quell'esercente
- *       non viene più suggerito.</li>
+ *   <li>l'utente decide: "sì" (CONFIRMED) o "no" (DISMISSED). La decisione resta salvata e quella serie
+ *       non viene più suggerita.</li>
  * </ol>
+ * Una "serie" è esercente + valuta + <b>importo</b> (V21): lo stesso esercente può avere più abbonamenti
+ * (Fastweb: la SIM da 7,99 € e la linea di casa da 23,95 €), ognuno con i suoi pagamenti.
  * Gli abbonamenti non cambiano la classificazione dei movimenti: sono solo un modo diverso di guardarli.
  */
 @Service
@@ -50,6 +51,18 @@ public class SubscriptionService {
 
     /** Quanto indietro guardare: 13 mesi, così un abbonamento annuale si vede due volte. */
     static final int LOOKBACK_DAYS = 400;
+
+    /**
+     * Quando un importo è "della stessa serie" di una decisione: entro il 50%. Più largo del 20% con cui
+     * RecurringDetector riconosce una serie, perché un abbonamento confermato può rincarare (12,99 → 15,99 è il
+     * 23%) e deve restare lui, con l'avviso del rincaro. Due contratti diversi dello stesso esercente di solito
+     * differiscono molto di più (7,99 e 23,95: il triplo).
+     */
+    static final BigDecimal SAME_SERIES = new BigDecimal("0.50");
+
+    static boolean sameSeries(BigDecimal amount, BigDecimal reference) {
+        return amount.subtract(reference).abs().compareTo(reference.multiply(SAME_SERIES)) <= 0;
+    }
 
     private final SubscriptionRepository subscriptionRepository;
     private final BankTransactionRepository transactionRepository;
@@ -63,23 +76,24 @@ public class SubscriptionService {
     }
 
     /** I pagamenti a uno stesso esercente, nella stessa valuta, con il testo dell'ultimo (per proporre un nome). */
-    private record Group(String merchantKey, String currency, List<Payment> payments, String lastText) {
+    record Group(String merchantKey, String currency, List<Payment> payments, String lastText) {
     }
 
-    /** I suggerimenti: gli esercenti che sembrano abbonamenti e su cui l'utente non ha ancora deciso. */
+    /** I suggerimenti: le serie che sembrano abbonamenti e su cui l'utente non ha ancora deciso. */
     @Transactional(readOnly = true)
     public List<Suggestion> suggestions(LocalDate today) {
-        Set<String> decided = subscriptionRepository.findAll().stream()
-                .map(s -> key(s.getMerchantKey(), s.getCurrency()))
-                .collect(Collectors.toSet());
+        List<Subscription> decisions = subscriptionRepository.findAll();
         List<Suggestion> suggestions = new ArrayList<>();
         for (Group group : groups(today).values()) {
-            if (decided.contains(key(group.merchantKey(), group.currency()))) {
-                continue;
+            for (RecurringDetector.Pattern pattern : RecurringDetector.detectAll(group.payments(), today)) {
+                boolean decided = decisions.stream().anyMatch(
+                        d -> d.covers(group.merchantKey(), group.currency(), pattern.typicalAmount()));
+                if (!decided) {
+                    suggestions.add(new Suggestion(group.merchantKey(), group.currency(), group.lastText(),
+                            pattern.frequency(), pattern.typicalAmount(), pattern.occurrences(), pattern.lastDate(),
+                            pattern.nextDate()));
+                }
             }
-            RecurringDetector.detect(group.payments(), today).ifPresent(pattern -> suggestions.add(new Suggestion(
-                    group.merchantKey(), group.currency(), group.lastText(), pattern.frequency(),
-                    pattern.typicalAmount(), pattern.occurrences(), pattern.lastDate(), pattern.nextDate())));
         }
         // Prima i più costosi (al mese): sono quelli che conviene controllare per primi.
         suggestions.sort(Comparator.comparing(
@@ -94,10 +108,11 @@ public class SubscriptionService {
         List<Confirmed> confirmed = new ArrayList<>();
         Map<String, BigDecimal[]> totals = new TreeMap<>(); // valuta -> {mensile, annuale}
 
-        for (Subscription subscription : subscriptionRepository.findByStatus(Subscription.Status.CONFIRMED)) {
+        List<Subscription> allConfirmed = subscriptionRepository.findByStatus(Subscription.Status.CONFIRMED);
+        for (Subscription subscription : allConfirmed) {
             Group group = groups.get(key(subscription.getMerchantKey(), subscription.getCurrency()));
             Optional<Payment> last = group == null ? Optional.empty()
-                    : group.payments().stream().max(Comparator.comparing(Payment::date));
+                    : paymentsOf(subscription, group, allConfirmed).stream().max(Comparator.comparing(Payment::date));
             BigDecimal currentAmount = last.map(Payment::amount).orElse(subscription.getExpectedAmount());
             Frequency frequency = subscription.getFrequency();
             LocalDate nextDate = last.map(p -> frequency == Frequency.MONTHLY
@@ -126,7 +141,7 @@ public class SubscriptionService {
                 .map(e -> new Total(e.getKey(), e.getValue()[0], e.getValue()[1]))
                 .toList();
         List<Dismissed> dismissed = subscriptionRepository.findByStatus(Subscription.Status.DISMISSED).stream()
-                .map(s -> new Dismissed(s.getId(), s.getMerchantKey(), s.getCurrency()))
+                .map(s -> new Dismissed(s.getId(), s.getMerchantKey(), s.getCurrency(), s.getExpectedAmount()))
                 .toList();
         return new Overview(confirmed, totalList, dismissed);
     }
@@ -134,16 +149,17 @@ public class SubscriptionService {
     /** "Sì, è un abbonamento". */
     @Transactional
     public void confirm(ConfirmRequest request) {
-        checkUndecided(request.merchantKey(), request.currency());
+        checkUndecided(request.merchantKey(), request.currency(), request.expectedAmount());
         subscriptionRepository.save(Subscription.confirmed(request.merchantKey(), request.currency(),
                 request.name().trim(), request.frequency(), request.expectedAmount()));
     }
 
-    /** "No, non è un abbonamento": non verrà più suggerito. */
+    /** "No, non è un abbonamento": quella serie non verrà più suggerita. */
     @Transactional
     public void dismiss(DismissRequest request) {
-        checkUndecided(request.merchantKey(), request.currency());
-        subscriptionRepository.save(Subscription.dismissed(request.merchantKey(), request.currency()));
+        checkUndecided(request.merchantKey(), request.currency(), request.typicalAmount());
+        subscriptionRepository.save(
+                Subscription.dismissed(request.merchantKey(), request.currency(), request.typicalAmount()));
     }
 
     /**
@@ -156,11 +172,32 @@ public class SubscriptionService {
                 .orElseThrow(() -> new NotFoundException("Abbonamento", id)));
     }
 
-    private void checkUndecided(String merchantKey, String currency) {
-        if (subscriptionRepository.existsByMerchantKeyAndCurrency(merchantKey, currency)) {
+    private void checkUndecided(String merchantKey, String currency, BigDecimal amount) {
+        boolean decided = subscriptionRepository.findByMerchantKeyAndCurrency(merchantKey, currency).stream()
+                .anyMatch(d -> d.covers(merchantKey, currency, amount));
+        if (decided) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Hai già deciso per questo esercente: lo trovi nella pagina Abbonamenti.");
+                    "Hai già deciso per questo esercente e questo importo: lo trovi nella pagina Abbonamenti.");
         }
+    }
+
+    /**
+     * I pagamenti di un abbonamento confermato: quelli dello stesso esercente e valuta con un importo della stessa
+     * serie ({@link #SAME_SERIES}). Se l'esercente ha più abbonamenti confermati, ogni pagamento va a quello con
+     * l'importo più vicino: la SIM da 7,99 € non si prende la bolletta da 23,95 €.
+     */
+    static List<Payment> paymentsOf(Subscription subscription, Group group, List<Subscription> confirmed) {
+        List<Subscription> sameMerchant = confirmed.stream()
+                .filter(s -> s.getMerchantKey().equals(subscription.getMerchantKey())
+                        && s.getCurrency().equals(subscription.getCurrency()))
+                .toList();
+        return group.payments().stream()
+                .filter(p -> sameSeries(p.amount(), subscription.getExpectedAmount()))
+                .filter(p -> sameMerchant.stream()
+                        .min(Comparator.comparing((Subscription s) -> p.amount().subtract(s.getExpectedAmount()).abs())
+                                .thenComparing(Subscription::getId))
+                        .orElseThrow() == subscription)
+                .toList();
     }
 
     /**

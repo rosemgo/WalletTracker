@@ -46,8 +46,12 @@ public final class SubscriptionDtos {
     public record Total(String currency, BigDecimal monthly, BigDecimal yearly) {
     }
 
-    /** Un esercente che l'utente ha detto di non suggerire più (si può annullare). */
-    public record Dismissed(Long id, String merchantKey, String currency) {
+    /**
+     * Una serie che l'utente ha detto di non suggerire più (si può annullare).
+     *
+     * @param amount l'importo della serie; null per i rifiuti di prima della V21, che valgono per tutti gli importi
+     */
+    public record Dismissed(Long id, String merchantKey, String currency, BigDecimal amount) {
     }
 
     /** La risposta di {@code GET /api/subscriptions}. */
@@ -63,9 +67,13 @@ public final class SubscriptionDtos {
             @NotNull @DecimalMin("0.01") @Digits(integer = 10, fraction = 2) BigDecimal expectedAmount) {
     }
 
-    /** Il corpo di {@code POST /api/subscriptions/dismissed}: "no, non suggerirlo più". */
+    /**
+     * Il corpo di {@code POST /api/subscriptions/dismissed}: "no, non suggerirlo più", per la serie con questo
+     * importo (l'importo tipico del suggerimento).
+     */
     public record DismissRequest(
             @NotNull @Pattern(regexp = "[\\p{L} ]{2,60}") String merchantKey,
-            @NotNull @Pattern(regexp = "[A-Z]{3}") String currency) {
+            @NotNull @Pattern(regexp = "[A-Z]{3}") String currency,
+            @NotNull @DecimalMin("0.01") @Digits(integer = 10, fraction = 2) BigDecimal typicalAmount) {
     }
 }

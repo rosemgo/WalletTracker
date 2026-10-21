@@ -50,12 +50,17 @@ export class SubscriptionsPage implements OnInit {
       });
   }
 
-  /** "No": l'esercente non verrà più suggerito. */
+  /**
+   * "No": questa serie non verrà più suggerita. Con l'importo: lo stesso esercente può avere un altro
+   * abbonamento con un importo diverso (Fastweb: SIM e linea di casa), che resta suggeribile.
+   */
   dismiss(suggestion: SubscriptionSuggestion): void {
-    this.api.dismissSubscription(suggestion.merchantKey, suggestion.currency).subscribe({
-      next: () => this.done(`"${suggestion.name}" non verrà più suggerito.`),
-      error: (response) => this.fail(response),
-    });
+    this.api
+      .dismissSubscription(suggestion.merchantKey, suggestion.currency, suggestion.typicalAmount)
+      .subscribe({
+        next: () => this.done(`"${suggestion.name}" non verrà più suggerito.`),
+        error: (response) => this.fail(response),
+      });
   }
 
   /** Toglie un abbonamento dall'elenco, o annulla un "non suggerire più". */

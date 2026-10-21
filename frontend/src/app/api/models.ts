@@ -313,7 +313,8 @@ export interface Subscription {
 export interface SubscriptionOverview {
   subscriptions: Subscription[];
   totals: { currency: string; monthly: number; yearly: number }[];
-  dismissed: { id: number; merchantKey: string; currency: string }[];
+  // amount: l'importo della serie rifiutata; null per i rifiuti di prima della V21 (valgono per tutti gli importi)
+  dismissed: { id: number; merchantKey: string; currency: string; amount: number | null }[];
 }
 
 /** Il corpo di POST /api/subscriptions. */

@@ -138,7 +138,8 @@ class SubscriptionControllerTest {
         classificationService.classifyAll();
 
         assertThat(mvc.post().uri("/api/subscriptions/dismissed").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"merchantKey\": \"ASSICURAZIONE AUTO\", \"currency\": \"EUR\"}")).hasStatus(201);
+                .content("{\"merchantKey\": \"ASSICURAZIONE AUTO\", \"currency\": \"EUR\", \"typicalAmount\": 40.00}"))
+                .hasStatus(201);
         assertThat(mvc.get().uri("/api/subscriptions/suggestions")).bodyJson()
                 .extractingPath("$.length()").isEqualTo(0);
 
@@ -154,11 +155,92 @@ class SubscriptionControllerTest {
     }
 
     @Test
+    void theMobileIsFoundEvenWithAnotherBillFromTheSameCreditor() {
+        // Il caso vero: la SIM ogni mese, e una bolletta di casa una volta sola, pochi giorni dopo la seconda.
+        // Stessa causale SDD, stessa chiave: prima della V21 la serie mescolata non era regolare.
+        monthly("FASTWEB SPA", "-7.99", "-7.99", "-7.99");
+        payment("FASTWEB SPA", TODAY.minusDays(2).minusMonths(1).plusDays(4), "-23.95");
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/subscriptions/suggestions")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.length()").isEqualTo(1);
+            amount(json, "$[0].typicalAmount", "7.99");
+            json.assertThat().extractingPath("$[0].occurrences").isEqualTo(3);
+        });
+    }
+
+    @Test
+    void twoSubscriptionsFromTheSameMerchantAreKeptApart() {
+        monthly("FASTWEB SPA", "-7.99", "-7.99", "-7.99");                   // la SIM
+        for (int i = 0; i < 3; i++) {                                          // la linea di casa, a metà mese
+            payment("FASTWEB SPA", TODAY.minusDays(15).minusMonths(i), "-23.95");
+        }
+        classificationService.classifyAll();
+        assertThat(mvc.get().uri("/api/subscriptions/suggestions")).bodyJson()
+                .extractingPath("$.length()").isEqualTo(2);
+
+        // "Sì" alla SIM: la linea di casa resta tra i suggerimenti.
+        assertThat(confirm("FASTWEB SPA", "Fastweb mobile", "MONTHLY", "7.99")).hasStatus(201);
+        assertThat(mvc.get().uri("/api/subscriptions/suggestions")).bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.length()").isEqualTo(1);
+            amount(json, "$[0].typicalAmount", "23.95");
+        });
+        // E poi anche la linea di casa: due abbonamenti, ognuno con i suoi pagamenti.
+        assertThat(confirm("FASTWEB SPA", "Fastweb casa", "MONTHLY", "23.95")).hasStatus(201);
+        assertThat(mvc.get().uri("/api/subscriptions")).bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.subscriptions.length()").isEqualTo(2);
+            json.assertThat().extractingPath("$.subscriptions[0].name").isEqualTo("Fastweb casa"); // costa di più
+            amount(json, "$.subscriptions[0].lastAmount", "23.95");
+            json.assertThat().extractingPath("$.subscriptions[0].lastDate").isEqualTo(TODAY.minusDays(15).toString());
+            json.assertThat().extractingPath("$.subscriptions[0].priceChanged").isEqualTo(false);
+            amount(json, "$.subscriptions[1].lastAmount", "7.99");
+            json.assertThat().extractingPath("$.subscriptions[1].lastDate").isEqualTo(TODAY.minusDays(2).toString());
+            json.assertThat().extractingPath("$.subscriptions[1].priceChanged").isEqualTo(false);
+            amount(json, "$.totals[0].monthly", "31.94");
+        });
+        // Confermare di nuovo la stessa serie no.
+        assertThat(confirm("FASTWEB SPA", "Ancora", "MONTHLY", "8.49")).hasStatus(409);
+    }
+
+    @Test
+    void sayingNoToOneSeriesDoesNotHideTheOther() {
+        monthly("FASTWEB SPA", "-7.99", "-7.99", "-7.99");
+        for (int i = 0; i < 3; i++) {
+            payment("FASTWEB SPA", TODAY.minusDays(15).minusMonths(i), "-23.95");
+        }
+        classificationService.classifyAll();
+
+        assertThat(mvc.post().uri("/api/subscriptions/dismissed").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"merchantKey\": \"FASTWEB SPA\", \"currency\": \"EUR\", \"typicalAmount\": 23.95}"))
+                .hasStatus(201);
+
+        assertThat(mvc.get().uri("/api/subscriptions/suggestions")).bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.length()").isEqualTo(1);
+            amount(json, "$[0].typicalAmount", "7.99");
+        });
+        assertThat(mvc.get().uri("/api/subscriptions")).bodyJson().satisfies(json ->
+                amount(json, "$.dismissed[0].amount", "23.95"));
+    }
+
+    @Test
+    void aNoSavedBeforeV21StillHidesEveryAmount() {
+        // I rifiuti di prima non hanno l'importo: valgono per tutto l'esercente, come prima.
+        monthly("FASTWEB SPA", "-7.99", "-7.99", "-7.99");
+        classificationService.classifyAll();
+        subscriptionRepository.save(Subscription.dismissed("FASTWEB SPA", "EUR", null));
+
+        assertThat(mvc.get().uri("/api/subscriptions/suggestions")).bodyJson()
+                .extractingPath("$.length()").isEqualTo(0);
+    }
+
+    @Test
     void invalidRequestsAreRejected() {
         assertThat(confirm("NETFLIX COM", " ", "MONTHLY", "12.99")).hasStatus(400);         // nome vuoto
         assertThat(confirm("NETFLIX COM", "Netflix", "WEEKLY", "12.99")).hasStatus(400);    // frequenza sconosciuta
         assertThat(confirm("NETFLIX COM", "Netflix", "MONTHLY", "0")).hasStatus(400);       // importo zero
         assertThat(confirm("<script>", "Netflix", "MONTHLY", "12.99")).hasStatus(400);      // chiave non valida
+        assertThat(mvc.post().uri("/api/subscriptions/dismissed").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"merchantKey\": \"NETFLIX COM\", \"currency\": \"EUR\"}")).hasStatus(400); // senza importo
         assertThat(subscriptionRepository.count()).isZero();
     }
 

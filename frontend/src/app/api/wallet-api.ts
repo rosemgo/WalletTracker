@@ -311,8 +311,16 @@ export class WalletApi {
   }
 
   /** POST /api/subscriptions/dismissed: "no, non suggerirlo più". */
-  dismissSubscription(merchantKey: string, currency: string): Observable<void> {
-    return this.http.post<void>('/api/subscriptions/dismissed', { merchantKey, currency });
+  dismissSubscription(
+    merchantKey: string,
+    currency: string,
+    typicalAmount: number,
+  ): Observable<void> {
+    return this.http.post<void>('/api/subscriptions/dismissed', {
+      merchantKey,
+      currency,
+      typicalAmount,
+    });
   }
 
   /** DELETE /api/subscriptions/{id}: cancella una decisione. */

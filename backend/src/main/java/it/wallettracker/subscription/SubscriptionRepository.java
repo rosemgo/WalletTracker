@@ -9,5 +9,5 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     List<Subscription> findByStatus(Subscription.Status status);
 
-    boolean existsByMerchantKeyAndCurrency(String merchantKey, String currency);
+    List<Subscription> findByMerchantKeyAndCurrency(String merchantKey, String currency);
 }
