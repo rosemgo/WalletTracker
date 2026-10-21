@@ -22,7 +22,7 @@ scaricamento del modello. Qui, nell'ordine in cui le cose sono state fatte davve
 > Prerequisiti: `docs/27`, Ollama avviato con un modello scaricato, `git pull`. Al primo avvio Flyway applica la
 > **V19** (il modello predefinito diventa `gemma3:4b`, Parte G).
 
-I suggerimenti dell'IA nella pagina Movimenti ("Chiedi all'IA", accetta / no) sono il passo 7b.3.
+I suggerimenti dell'IA nella pagina Movimenti ("Chiedi all'IA", accetta / no) sono il passo 7b.3 (`docs/29`).
 
 ---
 

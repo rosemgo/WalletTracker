@@ -6,10 +6,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import it.wallettracker.account.AccountRepository;
+import it.wallettracker.ai.AiCategoryAnswerRepository;
+import it.wallettracker.ai.AiService;
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.subscription.MerchantKey;
+import it.wallettracker.suggestion.HistorySuggester.AiAnswer;
 import it.wallettracker.suggestion.HistorySuggester.Candidate;
 import it.wallettracker.suggestion.HistorySuggester.Dismissal;
 import it.wallettracker.suggestion.HistorySuggester.Example;
@@ -43,18 +46,26 @@ public class SuggestionService {
     private final AccountRepository accountRepository;
     private final CategoryService categoryService;
     private final ClassificationService classificationService;
+    private final AiService aiService;
+    private final AiCategoryAnswerRepository aiAnswerRepository;
 
     public SuggestionService(BankTransactionRepository transactionRepository,
             SuggestionDismissalRepository dismissalRepository, AccountRepository accountRepository,
-            CategoryService categoryService, ClassificationService classificationService) {
+            CategoryService categoryService, ClassificationService classificationService, AiService aiService,
+            AiCategoryAnswerRepository aiAnswerRepository) {
         this.transactionRepository = transactionRepository;
         this.dismissalRepository = dismissalRepository;
         this.accountRepository = accountRepository;
         this.categoryService = categoryService;
         this.classificationService = classificationService;
+        this.aiService = aiService;
+        this.aiAnswerRepository = aiAnswerRepository;
     }
 
-    /** I suggerimenti di adesso. Quattro query, qualunque sia il numero di movimenti. */
+    /**
+     * I suggerimenti di adesso: dalla tua storia e, se l'IA è accesa, dalle risposte salvate di "Chiedi all'IA".
+     * Quattro query, più due con l'IA accesa, qualunque sia il numero di movimenti.
+     */
     @Transactional(readOnly = true)
     public List<Suggestion> suggestions() {
         List<Set<String>> owners = owners();
@@ -72,7 +83,14 @@ public class SuggestionService {
         Set<Dismissal> dismissals = dismissalRepository.findAll().stream()
                 .map(d -> new Dismissal(d.getMerchantKey(), d.getCategory().getId()))
                 .collect(Collectors.toSet());
-        return HistorySuggester.suggest(examples, candidates, dismissals);
+        // IA spenta: le risposte salvate restano nel database, ma non si mostrano.
+        List<AiAnswer> aiAnswers = aiService.enabled()
+                ? aiAnswerRepository.findAllWithCategory().stream()
+                        .map(a -> new AiAnswer(a.getMerchantKey(), a.getCategory().getId(), a.getCategory().getName(),
+                                a.getModel()))
+                        .toList()
+                : List.of();
+        return HistorySuggester.suggest(examples, candidates, dismissals, aiAnswers);
     }
 
     /**

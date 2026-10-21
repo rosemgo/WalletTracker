@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  *
  * <p>Attenzione: questa regola è "congelata" anche in {@code db.migration.V16__chiavi_esercente}, che ha
  * ricalcolato le chiavi salvate. Cambiandola, serve una nuova migrazione che ricalcoli le chiavi salvate
- * (abbonamenti, suggerimenti rifiutati), altrimenti non corrisponderebbero più ai movimenti.
+ * (abbonamenti, suggerimenti rifiutati, risposte dell'IA), altrimenti non corrisponderebbero più ai movimenti.
  */
 public final class MerchantKey {
 
