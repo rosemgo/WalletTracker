@@ -1,12 +1,19 @@
 package it.wallettracker.ai;
 
 import java.util.List;
+import java.util.Set;
 
+import it.wallettracker.account.AccountRepository;
+import it.wallettracker.category.CategoryRepository;
+import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.transaction.BankTransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.ollama.api.OllamaApi;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Le impostazioni dell'IA e lo stato di Ollama.
@@ -29,19 +36,30 @@ public class AiService {
      * @param installedModels i modelli già scaricati in Ollama
      * @param modelInstalled  se il modello scelto è tra quelli scaricati
      * @param download        lo scaricamento in corso o l'ultimo fatto, o null
+     * @param evaluation      la misura della precisione in corso o l'ultima fatta, o null
      */
     public record Status(AiProvider provider, String ollamaModel, boolean ollamaReachable, List<String> installedModels,
-            boolean modelInstalled, ModelDownload.State download) {
+            boolean modelInstalled, ModelDownload.State download, ModelEvaluation.State evaluation) {
     }
 
     private final AiSettingsRepository settingsRepository;
     private final OllamaApi ollamaApi;
     private final ModelDownload modelDownload;
+    private final ModelEvaluation modelEvaluation;
+    private final BankTransactionRepository transactionRepository;
+    private final CategoryRepository categoryRepository;
+    private final AccountRepository accountRepository;
 
-    public AiService(AiSettingsRepository settingsRepository, OllamaApi ollamaApi, ModelDownload modelDownload) {
+    public AiService(AiSettingsRepository settingsRepository, OllamaApi ollamaApi, ModelDownload modelDownload,
+            ModelEvaluation modelEvaluation, BankTransactionRepository transactionRepository,
+            CategoryRepository categoryRepository, AccountRepository accountRepository) {
         this.settingsRepository = settingsRepository;
         this.ollamaApi = ollamaApi;
         this.modelDownload = modelDownload;
+        this.modelEvaluation = modelEvaluation;
+        this.transactionRepository = transactionRepository;
+        this.categoryRepository = categoryRepository;
+        this.accountRepository = accountRepository;
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +69,7 @@ public class AiService {
         boolean reachable = installed != null;
         List<String> models = reachable ? installed : List.of();
         return new Status(settings.getProvider(), settings.getOllamaModel(), reachable, models,
-                isInstalled(models, settings.getOllamaModel()), modelDownload.state());
+                isInstalled(models, settings.getOllamaModel()), modelDownload.state(), modelEvaluation.state());
     }
 
     @Transactional
@@ -64,6 +82,35 @@ public class AiService {
     @Transactional(readOnly = true)
     public Status downloadModel() {
         modelDownload.start(settings().getOllamaModel());
+        return status();
+    }
+
+    /**
+     * Fa partire la misura della precisione di un modello sulle tue scelte (in background, come lo
+     * scaricamento). Funziona anche con l'IA spenta: serve proprio a decidere se accenderla, e con quale modello.
+     *
+     * @param model   un modello già scaricato in Ollama
+     * @param client  con quale dei due client chiedere (Spring AI o RestClient: devono dare le stesse risposte)
+     * @param samples quanti esercenti provare
+     */
+    @Transactional(readOnly = true)
+    public Status evaluate(String model, AiClient client, int samples) {
+        List<String> installed = installedModels();
+        if (installed == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ollama non risponde: è avviato?");
+        }
+        if (!isInstalled(installed, model)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Il modello " + model + " non è scaricato.");
+        }
+        List<Set<String>> owners = ClassificationService.ownerNames(accountRepository.findAll());
+        List<ModelEvaluation.Case> cases = EvaluationCases.build(transactionRepository.findAllWithManualCategory(),
+                categoryRepository.findAll(), owners, samples);
+        if (cases.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Non c'è niente da misurare: la misura confronta il modello con le categorie che hai scelto a mano"
+                            + " per spese ed entrate, e non ne hai ancora scelta nessuna.");
+        }
+        modelEvaluation.start(model, client, cases);
         return status();
     }
 

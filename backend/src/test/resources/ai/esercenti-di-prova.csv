@@ -1,0 +1,52 @@
+# Insieme di prova per misurare i modelli (CategoryModelLiveTest). Esercenti tipici italiani, scelti per non
+# essere ambigui, con la categoria attesa (dall'elenco di partenza, V12). Attesa vuota = "non so" è giusto.
+# esercente;S=spesa/E=entrata;categoria attesa
+ESSELUNGA MILANO;S;Spesa alimentare
+CONAD SUPERSTORE ROMA;S;Spesa alimentare
+LIDL ITALIA 1234;S;Spesa alimentare
+PAM PANORAMA;S;Spesa alimentare
+CARREFOUR EXPRESS TORINO;S;Spesa alimentare
+MAR GROUP SPA DECO FOGLIANISE ITA;S;Spesa alimentare
+MCDONALD'S 0453 NAPOLI;S;Bar e ristoranti
+BAR CENTRALE DI ROSSI;S;Bar e ristoranti
+PIZZERIA DA GINO;S;Bar e ristoranti
+JUST EAT ITALY;S;Bar e ristoranti
+DELIVEROO;S;Bar e ristoranti
+ENEL ENERGIA SPA;S;Spese fisse e utenze
+TIM SPA ADDEBITO SDD;S;Spese fisse e utenze
+FASTWEB SPA;S;Spese fisse e utenze
+A2A ENERGIA;S;Spese fisse e utenze
+ENI STATION 1234 ROMA;S;Trasporti e auto
+Q8 EASY 0098;S;Trasporti e auto
+TELEPASS SPA;S;Trasporti e auto
+ATM MILANO;S;Trasporti e auto
+RYANAIR;S;Viaggi e vacanze
+BOOKING.COM HOTEL;S;Viaggi e vacanze
+AIRBNB;S;Viaggi e vacanze
+ZARA ITALIA;S;Shopping
+H&M HENNES MAURITZ;S;Shopping
+ZALANDO SE;S;Shopping
+MEDIAWORLD;S;Multimedia ed elettronica
+UNIEURO;S;Multimedia ed elettronica
+NETFLIX.COM AMSTERDAM;S;Intrattenimento e tempo libero
+SPOTIFY AB;S;Intrattenimento e tempo libero
+CINEMA UCI;S;Intrattenimento e tempo libero
+STEAM PURCHASE;S;Intrattenimento e tempo libero
+VIRGIN ACTIVE PALESTRA;S;Salute e benessere
+FARMACIA COMUNALE 3;S;Cure sanitarie e farmacia
+STUDIO DENTISTICO BIANCHI;S;Cure sanitarie e farmacia
+UDEMY;S;Istruzione e formazione
+UNIPOL ASSICURAZIONI;S;Assicurazioni e finanza
+GENERALI ITALIA SPA;S;Assicurazioni e finanza
+AGENZIA ENTRATE F24;S;Tasse e multe
+COMUNE DI ROMA MULTA;S;Tasse e multe
+PRELIEVO BANCOMAT ATM;S;Contanti e prelievi
+COMMISSIONE BONIFICO;S;Costi bancari
+CANONE MENSILE CONTO;S;Costi bancari
+XYZ 12345 ABC;S;
+PAG 0099887766;S;
+STIPENDIO OTTOBRE ACME SRL;E;Stipendio e pensione
+INPS PENSIONE;E;Stipendio e pensione
+RIMBORSO IRPEF 730;E;Rimborsi fiscali e bonus
+BONIFICO DA MARIO BIANCHI REGALO COMPLEANNO;E;Regali e altre persone
+QWERTY 998;E;

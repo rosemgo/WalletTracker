@@ -1,10 +1,47 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 
-import { AiProvider, AiStatus } from '../api/models';
+import { AiClient, AiProvider, AiStatus } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
-/** Ogni quanto chiedere lo stato mentre il modello si scarica. */
+/** Ogni quanto chiedere lo stato mentre il modello si scarica o la misura è in corso. */
 const POLL_MS = 1000;
+
+/** Un modello consigliato, con i numeri misurati (docs/28, Parte H). */
+export interface RecommendedModel {
+  name: string;
+  note: string;
+  download: string; // quanto pesa da scaricare
+  memory: string; // quanta memoria usa mentre lavora
+  precision: string; // risposte giuste sui 49 esercenti di prova
+}
+
+/**
+ * I modelli consigliati: scelti misurando, non a occhio (docs/28, Parte H). Usano la stessa memoria; il secondo
+ * è circa tre volte più veloce ma sbaglia di più. Più piccoli non conviene: gemma3:1b ha indovinato il 12%.
+ * Più grandi nemmeno: qwen2.5:7b, con il doppio della memoria, non è stato più preciso di gemma3:4b.
+ */
+export const RECOMMENDED_MODELS: RecommendedModel[] = [
+  {
+    name: 'gemma3:4b',
+    note: 'consigliato, per computer con almeno 8 GB di memoria',
+    download: '3,3 GB',
+    memory: 'circa 3 GB',
+    precision: '76%, 82% con le tue scelte come esempi',
+  },
+  {
+    name: 'llama3.2:3b',
+    note: 'circa tre volte più veloce, ma sbaglia di più: per computer lenti',
+    download: '2,0 GB',
+    memory: 'circa 3 GB',
+    precision: '57%',
+  },
+];
+
+/** I client con cui il backend può parlare con Ollama (docs/28): devono dare le stesse risposte. */
+export const AI_CLIENTS: { value: AiClient; label: string }[] = [
+  { value: 'SPRING_AI', label: 'Spring AI' },
+  { value: 'REST_CLIENT', label: 'RestClient (HTTP scritto a mano)' },
+];
 
 /**
  * Impostazioni → Suggerimenti con l'intelligenza artificiale (Fase 3, passo 7b).
@@ -14,6 +51,10 @@ const POLL_MS = 1000;
  *
  * Lo scaricamento dura minuti e avviene nel backend: questa pagina chiede lo stato ogni secondo finché
  * non è finito (polling). Il timer si ferma anche se si lascia la pagina (DestroyRef).
+ *
+ * "Misura la precisione" (passo 7b.2): il backend chiede al modello la categoria di alcuni esercenti che hai
+ * già categorizzato a mano, senza dirgli la risposta, e conta quante volte indovina. Anche questa è in
+ * background, con lo stesso polling.
  */
 @Component({
   selector: 'app-ai-settings-panel',
@@ -29,6 +70,22 @@ export class AiSettingsPanel implements OnInit {
   protected readonly saving = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
+
+  protected readonly recommended = RECOMMENDED_MODELS;
+  protected readonly clients = AI_CLIENTS;
+  /** Le scelte della misura: modello (tra quelli scaricati), client, quanti esercenti. */
+  protected readonly evaluationModel = signal('');
+  protected readonly evaluationClient = signal<AiClient>('SPRING_AI');
+  protected readonly samples = signal(20);
+  protected readonly evaluationError = signal<string | null>(null);
+
+  /** La percentuale di risposte giuste della misura, su quelle fatte finora. */
+  protected readonly precision = computed(() => {
+    const evaluation = this.status()?.evaluation;
+    return evaluation && evaluation.done > 0
+      ? Math.round((evaluation.right / evaluation.done) * 100)
+      : null;
+  });
 
   /** La percentuale della parte che si sta scaricando, o null se Ollama non la dice. */
   protected readonly percent = computed(() => {
@@ -65,7 +122,7 @@ export class AiSettingsPanel implements OnInit {
         this.saving.set(false);
         this.error.set(
           response.error?.detail ??
-            'Impostazioni non salvate: controlla il nome del modello (es. qwen2.5:3b).',
+            'Impostazioni non salvate: controlla il nome del modello (es. gemma3:4b).',
         );
       },
     });
@@ -77,6 +134,20 @@ export class AiSettingsPanel implements OnInit {
       next: (status) => this.show(status, false),
       error: (response) =>
         this.error.set(response.error?.detail ?? 'Lo scaricamento non è partito.'),
+    });
+  }
+
+  /** "Usa questo" accanto a un modello consigliato: lo scrive nel campo (poi si salva). */
+  choose(model: string): void {
+    this.model.set(model);
+  }
+
+  evaluate(): void {
+    this.evaluationError.set(null);
+    this.api.evaluateAi(this.evaluationModel(), this.evaluationClient(), this.samples()).subscribe({
+      next: (status) => this.show(status, false),
+      error: (response) =>
+        this.evaluationError.set(response.error?.detail ?? 'La misura non è partita.'),
     });
   }
 
@@ -101,8 +172,16 @@ export class AiSettingsPanel implements OnInit {
       this.provider.set(status.provider);
       this.model.set(status.ollamaModel);
     }
+    // Il modello da misurare: quello scelto, se è scaricato, altrimenti il primo scaricato.
+    if (!status.installedModels.includes(this.evaluationModel())) {
+      this.evaluationModel.set(
+        status.installedModels.find((m) => m === status.ollamaModel) ??
+          status.installedModels[0] ??
+          '',
+      );
+    }
     clearTimeout(this.timer);
-    if (status.download?.running) {
+    if (status.download?.running || status.evaluation?.running) {
       this.timer = setTimeout(() => this.load(false), POLL_MS);
     }
   }

@@ -2,15 +2,32 @@ package it.wallettracker.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import it.wallettracker.IntegrationTestConfiguration;
+import it.wallettracker.account.Account;
+import it.wallettracker.account.AccountRepository;
+import it.wallettracker.account.AccountRole;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
+import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.transaction.BankTransaction;
+import it.wallettracker.transaction.BankTransactionRepository;
+import it.wallettracker.transaction.TransactionStatus;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaApi.ListModelResponse;
 import org.springframework.ai.ollama.api.OllamaApi.Model;
@@ -29,7 +46,8 @@ import reactor.core.publisher.Flux;
 
 /**
  * Test delle impostazioni dell'IA. Ollama è finto ({@code @MockitoBean}): decidiamo noi se "risponde" e che
- * cosa. Così i test (e la CI) non hanno bisogno di Ollama né di un modello scaricato.
+ * cosa. Così i test (e la CI) non hanno bisogno di Ollama né di un modello scaricato. Per la misura della
+ * precisione sono finti anche i due client (le loro prove sono in CategoryModelContractTest).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,14 +63,45 @@ class AiControllerTest {
     @Autowired
     ModelDownload modelDownload;
 
+    @Autowired
+    ModelEvaluation modelEvaluation;
+
+    @Autowired
+    ClassificationService classificationService;
+
+    @Autowired
+    BankTransactionRepository transactionRepository;
+
+    @Autowired
+    AccountRepository accountRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
+
     @MockitoBean
     OllamaApi ollamaApi;
+
+    @MockitoBean
+    SpringAiCategoryModel springAiModel;
+
+    @MockitoBean
+    RestClientCategoryModel restClientModel;
+
+    private int counter;
+
+    @BeforeEach
+    void clients() {
+        when(springAiModel.client()).thenReturn(AiClient.SPRING_AI);
+        when(restClientModel.client()).thenReturn(AiClient.REST_CLIENT);
+    }
 
     @AfterEach
     void backToDefaults() {
         AiSettings settings = settingsRepository.findById(AiSettings.ID).orElseThrow();
-        settings.change(AiProvider.NONE, "qwen2.5:3b");
+        settings.change(AiProvider.NONE, "gemma3:4b");
         settingsRepository.save(settings);
+        transactionRepository.deleteAll();
+        accountRepository.deleteAll();
     }
 
     @Test
@@ -61,7 +110,7 @@ class AiControllerTest {
 
         assertThat(mvc.get().uri("/api/ai")).hasStatusOk().bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.provider").isEqualTo("NONE");
-            json.assertThat().extractingPath("$.ollamaModel").isEqualTo("qwen2.5:3b");
+            json.assertThat().extractingPath("$.ollamaModel").isEqualTo("gemma3:4b"); // V19
             json.assertThat().extractingPath("$.ollamaReachable").isEqualTo(false);
             json.assertThat().extractingPath("$.modelInstalled").isEqualTo(false);
         });
@@ -93,7 +142,7 @@ class AiControllerTest {
     @Test
     void theDownloadRunsInTheBackgroundAndItsProgressIsVisible() throws InterruptedException {
         // Prima dello scaricamento il modello non c'è, alla fine sì (Ollama lo dice a chi chiede).
-        when(ollamaApi.listModels()).thenReturn(models(), models(), models("qwen2.5:3b"));
+        when(ollamaApi.listModels()).thenReturn(models(), models(), models("gemma3:4b"));
         // Ollama manda l'avanzamento a pezzi: qui tre messaggi, con una pausa per vedere lo stato "in corso".
         when(ollamaApi.pullModel(any(PullModelRequest.class))).thenReturn(Flux.just(
                         new ProgressResponse("pulling manifest", null, null, null),
@@ -112,7 +161,7 @@ class AiControllerTest {
         }
         assertThat(modelDownload.state().status()).isEqualTo("success");
         assertThat(mvc.get().uri("/api/ai")).bodyJson().satisfies(json -> {
-            json.assertThat().extractingPath("$.download.model").isEqualTo("qwen2.5:3b");
+            json.assertThat().extractingPath("$.download.model").isEqualTo("gemma3:4b");
             json.assertThat().extractingPath("$.download.running").isEqualTo(false);
         });
     }
@@ -148,6 +197,84 @@ class AiControllerTest {
             json.assertThat().extractingPath("$.download.running").isEqualTo(false);
             json.assertThat().extractingPath("$.download.error").asString().contains("file does not exist");
         });
+    }
+
+    @Test
+    void theEvaluationAsksTheModelAboutYourChoicesWithoutTellingItTheAnswer() throws InterruptedException {
+        Category groceries = categoryRepository.findByNameIgnoreCase("Spesa alimentare").orElseThrow();
+        Category bars = categoryRepository.findByNameIgnoreCase("Bar e ristoranti").orElseThrow();
+        chosen(expense("ESSELUNGA"), groceries);
+        chosen(expense("PIZZERIA DA GINO"), bars);
+        classificationService.classifyAll();
+        when(ollamaApi.listModels()).thenReturn(models("gemma3:4b"));
+        // Il modello finto indovina Esselunga e sbaglia la pizzeria.
+        when(restClientModel.suggest(any(CategoryQuestion.class), eq("gemma3:4b")))
+                .thenReturn(Optional.of(groceries.getId()));
+
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"REST_CLIENT\", \"samples\": 10}"))
+                .hasStatus(202);
+        for (int i = 0; i < 50 && modelEvaluation.state().running(); i++) {
+            Thread.sleep(100);
+        }
+
+        assertThat(mvc.get().uri("/api/ai")).bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.evaluation.running").isEqualTo(false);
+            json.assertThat().extractingPath("$.evaluation.client").isEqualTo("REST_CLIENT");
+            json.assertThat().extractingPath("$.evaluation.done").isEqualTo(2);
+            json.assertThat().extractingPath("$.evaluation.right").isEqualTo(1);
+            json.assertThat().extractingPath("$.evaluation.wrong").isEqualTo(1);
+            json.assertThat().extractingPath("$.evaluation.mistakes[0].merchant").isEqualTo("PIZZERIA DA GINO");
+            json.assertThat().extractingPath("$.evaluation.mistakes[0].expected").isEqualTo("Bar e ristoranti");
+            json.assertThat().extractingPath("$.evaluation.mistakes[0].answer").isEqualTo("Spesa alimentare");
+        });
+        // Le domande: mai la risposta tra gli esempi; e con il client scelto, non con l'altro.
+        ArgumentCaptor<CategoryQuestion> questions = ArgumentCaptor.forClass(CategoryQuestion.class);
+        verify(restClientModel, times(2)).suggest(questions.capture(), eq("gemma3:4b"));
+        assertThat(questions.getAllValues()).allSatisfy(question -> assertThat(question.examples())
+                .noneMatch(example -> example.merchant().equals(question.merchant())));
+        verify(springAiModel, never()).suggest(any(), any());
+    }
+
+    @Test
+    void withoutChoicesMadeByHandThereIsNothingToMeasure() {
+        when(ollamaApi.listModels()).thenReturn(models("gemma3:4b"));
+
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 10}"))
+                .hasStatus(409).bodyJson().extractingPath("$.detail").asString()
+                .contains("Non c'è niente da misurare");
+    }
+
+    @Test
+    void onlyADownloadedModelCanBeMeasured() {
+        when(ollamaApi.listModels()).thenReturn(models("llama3.2:3b"));
+
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 10}"))
+                .hasStatus(409).bodyJson().extractingPath("$.detail").asString()
+                .contains("non è scaricato");
+    }
+
+    @Test
+    void wrongEvaluationRequestsAre400() {
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"BOH\", \"samples\": 10}")).hasStatus(400);
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 0}")).hasStatus(400);
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 101}")).hasStatus(400);
+        assertThat(evaluate("{\"model\": \"x; rm\", \"client\": \"SPRING_AI\", \"samples\": 10}")).hasStatus(400);
+    }
+
+    private MvcTestResult evaluate(String json) {
+        return mvc.post().uri("/api/ai/evaluation").contentType(MediaType.APPLICATION_JSON).content(json).exchange();
+    }
+
+    private BankTransaction expense(String counterparty) {
+        Account account = accountRepository.findAll().stream().findFirst().orElseGet(() ->
+                accountRepository.save(Account.manual("Banca", "Conto", null, "EUR", AccountRole.MAIN)));
+        return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
+                LocalDate.of(2026, 10, counter), null, new BigDecimal("-25.00"), "EUR", counterparty, null, "{}"));
+    }
+
+    private void chosen(BankTransaction transaction, Category category) {
+        transaction.setManualCategory(category);
+        transactionRepository.save(transaction);
     }
 
     private MvcTestResult put(String json) {
