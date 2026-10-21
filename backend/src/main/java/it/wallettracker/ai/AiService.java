@@ -46,7 +46,7 @@ public class AiService {
 
     @Transactional(readOnly = true)
     public Status status() {
-        AiSettings settings = settings();
+        AiSettings settings = settings(); //legge l'unica riga (ID=1) dalla tabella ai_settings del database
         List<String> installed = installedModels();
         boolean reachable = installed != null;
         List<String> models = reachable ? installed : List.of();

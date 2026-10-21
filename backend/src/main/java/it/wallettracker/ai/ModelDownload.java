@@ -74,7 +74,7 @@ public class ModelDownload {
                     log.warn("Scaricamento di {} non riuscito: {}", model, error.getMessage());
                     state.set(new State(model, false, "errore", null, null, error.getMessage()));
                 },
-                () -> state.set(finished(model)));
+                () -> state.set(finished(model))); //il segnale di completamento è un evento "puro": avvisa che l'azione è finita, ma non sta passando un nuovo dato. Non essendoci parametri in ingresso, si usano le parentesi tonde vuote ().
     }
 
     /** Lo stream è finito: il modello adesso c'è davvero? */
@@ -88,11 +88,13 @@ public class ModelDownload {
             log.warn("Dopo lo scaricamento di {} Ollama non risponde: {}", model, e.getMessage());
         }
         log.warn("Ollama ha finito senza scaricare {}", model);
+        //State è un record, quindi oggetto immutabile: ogni volta n creo uno nuovo che sostituisce il vecchio (non modifico il vecchio)
         return new State(model, false, "errore", null, null, "Ollama ha finito senza scaricare il modello. Di solito "
                 + "il nome è sbagliato, oppure Ollama non riesce a raggiungere internet (registry.ollama.ai)");
     }
 
     private static State progressOf(String model, ProgressResponse progress) {
+        //State è un record, quindi oggetto immutabile: ogni volta n creo uno nuovo che sostituisce il vecchio (non modifico il vecchio)
         return new State(model, true, progress.status(), progress.completed(), progress.total(), null);
     }
 }
