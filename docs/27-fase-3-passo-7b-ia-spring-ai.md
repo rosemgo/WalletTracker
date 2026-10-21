@@ -592,7 +592,60 @@ Due lezioni, valide ben oltre l'IA:
 
 C'è un test che riproduce il comportamento vero (`aStreamThatEndsWithoutTheModelIsAFailureNotASuccess`).
 
-### E5. Verifica
+### E5. Un secondo difetto, trovato usando l'app
+
+Scaricando `gemma3:4b` dalla pagina, la pagina mostrava insieme "✓ Il modello gemma3:4b è scaricato" e, in
+rosso, "Lo scaricamento non è riuscito: Ollama ha finito senza scaricare il modello". Due messaggi
+contraddittori, e veri tutti e due, perché vengono da due momenti diversi:
+
+- "✓ scaricato" è **adesso**: a ogni apertura della pagina il backend chiede a Ollama i modelli;
+- il messaggio rosso è lo **stato salvato** alla fine dello scaricamento, quando `finished()` ha controllato.
+
+Allora perché, alla fine dello scaricamento, il controllo diceva "non c'è"? Per scoprirlo abbiamo stampato i
+messaggi dello stream uno per uno: arrivavano tutti, fino a "success". Il problema era dopo, nel log:
+
+```
+WARN ModelDownload -- Dopo lo scaricamento di gemma3:1b Ollama non risponde: I/O error on GET request for
+"http://127.0.0.1:11434/api/tags": block()/blockFirst()/blockLast() are blocking, which is not supported in
+thread reactor-http-epoll-2
+```
+
+**Il thread sbagliato.** Spring AI legge gli stream con **Reactor Netty**: pochi thread (`reactor-http-epoll-N`)
+servono tutte le connessioni, passando da una all'altra appena arrivano dati. Si chiama **event loop**, e funziona
+solo se nessuno lo ferma: un thread che aspetta blocca tutte le altre connessioni. Per questo Reactor **vieta** le
+chiamate bloccanti su quei thread, e lancia un'eccezione.
+
+Le callback di `subscribe` (avanzamento, errore, fine) girano proprio lì. E `finished()` chiamava
+`ollamaApi.listModels()`, che è bloccante: aspetta la risposta. L'eccezione finiva nel `catch`, e da lì nello
+stesso messaggio di "modello non trovato". Risultato: **ogni scaricamento riuscito finiva in errore**.
+
+**La correzione** è una riga:
+
+```java
+ollamaApi.pullModel(new PullModelRequest(model))
+        .publishOn(Schedulers.boundedElastic())   // da qui in poi, i messaggi arrivano su un altro thread
+        .subscribe(...);
+```
+
+`publishOn` fa arrivare i messaggi su un altro gruppo di thread. `Schedulers.boundedElastic()` è quello fatto
+apposta per il lavoro che aspetta (chiamate HTTP bloccanti, file, database): lì `listModels()` è permesso.
+
+In più:
+- il `catch` ora ha un messaggio suo ("Lo scaricamento è finito, ma non sono riuscito a controllare se il modello
+  c'è: ..."): un errore diverso deve dire una cosa diversa, altrimenti porta fuori strada (ci ha portati a pensare
+  a internet, mentre il problema era un thread);
+- la pagina non mostra un errore di scaricamento quando il modello c'è (è uno stato vecchio).
+
+**Perché i test non l'avevano visto?** In `AiControllerTest` `OllamaApi` è finto (`@MockitoBean`): lo stream è un
+`Flux.just(...)` e `listModels()` restituisce subito una risposta preparata, senza rete e senza bloccare niente. Il
+difetto c'era solo con la rete vera. Il nuovo `ModelDownloadTest` usa un `OllamaApi` **vero** contro un Ollama
+finto fatto con il piccolo server HTTP del JDK (`com.sun.net.httpserver.HttpServer`): risponde a `/api/pull` e
+`/api/tags` come Ollama, e il test passa per gli stessi thread dell'app. Prima della correzione falliva, dopo passa.
+
+La lezione: **un finto troppo semplice nasconde i problemi di "come" (thread, tempi, rete)**. Per le parti che
+dipendono da come lavora una libreria, serve almeno un test con la libreria vera.
+
+### E6. Verifica
 
 ```bash
 curl -X POST http://localhost:8080/api/ai/model/download     # 202, subito

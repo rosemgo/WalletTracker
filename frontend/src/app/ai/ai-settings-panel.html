@@ -126,7 +126,8 @@
                 >
               </div>
             }
-            @if (s.download?.error) {
+            <!-- Un errore vecchio non conta se il modello adesso c'è (ad esempio scaricato in un altro modo). -->
+            @if (s.download?.error && !s.modelInstalled) {
               <p class="error">
                 Lo scaricamento non è riuscito: {{ s.download!.error }}. Controlla il nome del
                 modello e la connessione a internet.

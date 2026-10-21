@@ -9,6 +9,7 @@ import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaApi.ProgressResponse;
 import org.springframework.ai.ollama.api.OllamaApi.PullModelRequest;
 import org.springframework.stereotype.Component;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Lo scaricamento di un modello in Ollama, che dura minuti (un modello piccolo pesa un paio di GB).
@@ -30,6 +31,13 @@ import org.springframework.stereotype.Component;
  * {@code {"error": "pull model manifest: ..."}}, e poi chiude. Il record di Spring AI per l'avanzamento
  * ({@link ProgressResponse}) non ha il campo {@code error}: il messaggio arriva vuoto e lo stream finisce
  * "regolarmente". Per questo, alla fine, non ci fidiamo: chiediamo a Ollama se il modello adesso c'è.
+ *
+ * <p><b>E un secondo difetto, trovato usando l'app:</b> i messaggi dello stream arrivano su un thread di Reactor
+ * Netty (la libreria di rete di Spring AI). È un "event loop": pochi thread che servono tutte le connessioni, e che
+ * non devono mai fermarsi ad aspettare. La verifica finale (l'elenco dei modelli) è invece una chiamata che
+ * aspetta la risposta: lì è vietata, e Reactor la rifiuta con un'eccezione. {@code publishOn} sposta i messaggi
+ * su un thread dove aspettare si può ({@code boundedElastic}, fatto apposta per il lavoro bloccante). Lo prova
+ * ModelDownloadTest, con la rete vera.
  */
 @Component
 public class ModelDownload {
@@ -68,7 +76,9 @@ public class ModelDownload {
             return; // ce n'è già uno: non ne facciamo partire un secondo
         }
         state.set(new State(model, true, "avvio", null, null, null));
-        ollamaApi.pullModel(new PullModelRequest(model)).subscribe(
+        ollamaApi.pullModel(new PullModelRequest(model))
+                .publishOn(Schedulers.boundedElastic()) // vedi la descrizione della classe
+                .subscribe(
                 progress -> state.set(progressOf(model, progress)),
                 error -> {
                     log.warn("Scaricamento di {} non riuscito: {}", model, error.getMessage());
@@ -85,7 +95,10 @@ public class ModelDownload {
                 return new State(model, false, "success", null, null, null);
             }
         } catch (RuntimeException e) {
-            log.warn("Dopo lo scaricamento di {} Ollama non risponde: {}", model, e.getMessage());
+            // Un motivo diverso, e un messaggio diverso: prima finivano tutti in "Ollama ha finito senza scaricare".
+            log.warn("Dopo lo scaricamento di {} non riesco a chiedere a Ollama i modelli: {}", model, e.getMessage());
+            return new State(model, false, "errore", null, null,
+                    "Lo scaricamento è finito, ma non sono riuscito a controllare se il modello c'è: " + e.getMessage());
         }
         log.warn("Ollama ha finito senza scaricare {}", model);
         //State è un record, quindi oggetto immutabile: ogni volta n creo uno nuovo che sostituisce il vecchio (non modifico il vecchio)

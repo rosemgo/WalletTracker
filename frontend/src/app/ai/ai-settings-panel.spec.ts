@@ -174,6 +174,29 @@ describe('AiSettingsPanel', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('an old download error is not shown when the model is there', async () => {
+    status = {
+      ...OFF,
+      provider: 'OLLAMA',
+      installedModels: ['qwen2.5:3b'],
+      modelInstalled: true,
+      download: {
+        model: 'qwen2.5:3b',
+        running: false,
+        status: 'errore',
+        completed: null,
+        total: null,
+        error: 'Ollama ha finito senza scaricare il modello.',
+      },
+    };
+    const fixture = TestBed.createComponent(AiSettingsPanel);
+    await fixture.whenStable();
+    const text = (fixture.nativeElement as HTMLElement).textContent!;
+
+    expect(text).toContain('✓ Il modello qwen2.5:3b è scaricato');
+    expect(text).not.toContain('Lo scaricamento non è riuscito');
+  });
+
   it('explains a failed download', async () => {
     status = {
       ...OFF,
