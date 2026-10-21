@@ -56,6 +56,7 @@ Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`S
 | 14 | **file caricati limitati**: al massimo 5 MB (413 oltre) e 50.000 righe; si importano solo nei conti manuali; il file non viene conservato sul server; importazione "tutto o niente" in una transazione | file enormi che occupano memoria e disco, dati a metà | `spring.servlet.multipart` in `application.yml`, `csvimport/CsvImportService`, `UploadLimitTest`, `docs/25` |
 | 15 | **IA spenta di serie**; Ollama ascolta solo su `127.0.0.1`; l'app **non** controlla Docker (non avvia Ollama da sola); nome del modello validato | dati che escono senza consenso, un difetto dell'app che diventa controllo del computer | `ai/AiService`, `ai/AiController`, `docs/27` |
 | 16 | Al modello solo il **testo dell'esercente senza cifre** (niente importi, IBAN, carte, date, nome del titolare); risponde con un **numero** imposto dallo schema e controllato dal backend; misura limitata (100 esercenti, una alla volta) | dati personali al modello, categorie inventate, richieste senza fine | `ai/EvaluationCases`, `ai/CategoryPrompt`, `docs/28` |
+| 17 | "Chiedi all'IA" parte **solo con un clic**, al massimo 20 esercenti, un giro alla volta; i suggerimenti dell'IA hanno il segno "IA", non cambiano niente finché non li accetti e spariscono con l'IA spenta | lavoro pesante a sorpresa, suggerimenti sbagliati presi per buoni | `ai/AiSuggestionService`, `ai/AiQuestions`, `docs/29` |
 
 ### Approfondimento: la cifratura dei segreti (n. 5)
 

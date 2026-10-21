@@ -5,44 +5,93 @@
   <p class="error">{{ error() }}</p>
 }
 
-@if (suggestions().length > 0) {
+@if (visible()) {
   <section class="card" aria-label="Suggerimenti di categoria">
     <h2>Suggerimenti di categoria</h2>
     <p class="hint">
-      Dalle categorie che hai già scelto a mano: per questi esercenti ci sono altri movimenti ancora
-      senza categoria. Finché non accetti, restano senza.
+      Dalle categorie che hai già scelto a mano e, se l'hai accesa, dall'intelligenza artificiale
+      (segno "IA"). Finché non accetti, i movimenti restano senza categoria.
     </p>
-    <div class="table-scroll">
-      <table>
-        <tbody>
-          @for (s of suggestions(); track s.merchantKey) {
-            <tr>
-              <td>
-                {{ s.merchantName }}
-                <div class="secondary">
-                  {{ s.transactions === 1 ? '1 movimento' : s.transactions + ' movimenti' }} senza
-                  categoria · l'hai scelta per
-                  {{ s.examples === 1 ? '1 movimento' : s.examples + ' movimenti' }}
-                </div>
-              </td>
-              <td>{{ s.category }}</td>
-              <td class="amount">
-                <button type="button" [disabled]="busy() !== null" (click)="accept(s)">
-                  Accetta
-                </button>
-                <button
-                  type="button"
-                  class="link"
-                  [disabled]="busy() !== null"
-                  (click)="dismiss(s)"
-                >
-                  no
-                </button>
-              </td>
-            </tr>
+    @if (suggestions().length > 0) {
+      <div class="table-scroll">
+        <table>
+          <tbody>
+            @for (s of suggestions(); track s.merchantKey) {
+              <tr>
+                <td>
+                  {{ s.merchantName }}
+                  @if (s.model) {
+                    <span class="ai-tag" title="Suggerito dall'intelligenza artificiale">IA</span>
+                  }
+                  <div class="secondary">
+                    {{ s.transactions === 1 ? '1 movimento' : s.transactions + ' movimenti' }} senza
+                    categoria ·
+                    @if (s.model) {
+                      suggerita dall'IA ({{ s.model }}): controlla prima di accettare
+                    } @else {
+                      l'hai scelta per
+                      {{ s.examples === 1 ? '1 movimento' : s.examples + ' movimenti' }}
+                    }
+                  </div>
+                </td>
+                <td>{{ s.category }}</td>
+                <td class="amount">
+                  <button type="button" [disabled]="busy() !== null" (click)="accept(s)">
+                    Accetta
+                  </button>
+                  <button
+                    type="button"
+                    class="link"
+                    [disabled]="busy() !== null"
+                    (click)="dismiss(s)"
+                  >
+                    no
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (ai(); as a) {
+      @if (a.enabled) {
+        @if (a.job?.running) {
+          <p>
+            L'IA ({{ a.job!.model }}) sta guardando gli esercenti: {{ a.job!.done }} di
+            {{ a.job!.total }}...
+          </p>
+          <progress
+            [value]="a.job!.done"
+            [max]="a.job!.total"
+            aria-label="Avanzamento dell'IA"
+          ></progress>
+          @if (a.job!.done === 0) {
+            <p class="hint">
+              La prima risposta può richiedere di più: Ollama carica il modello in memoria (qualche
+              secondo, o qualche minuto se il computer è appena stato acceso). Le altre sono più
+              veloci.
+            </p>
           }
-        </tbody>
-      </table>
-    </div>
+        } @else if (a.toAsk > 0) {
+          <p class="hint">
+            {{
+              a.toAsk === 1
+                ? "1 esercente senza categoria non è ancora stato chiesto all'IA"
+                : a.toAsk + " esercenti senza categoria non sono ancora stati chiesti all'IA"
+            }}
+            ({{ a.model }}). Ogni risposta richiede qualche secondo: ne chiede al massimo 20 alla
+            volta.
+          </p>
+          <button type="button" [disabled]="busy() !== null" (click)="askAi()">
+            Chiedi all'IA
+          </button>
+        }
+        @if (a.job?.error) {
+          <p class="error">{{ a.job!.error }}</p>
+        }
+      }
+    }
   </section>
 }

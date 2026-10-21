@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>{@code GET  /api/ai}                lo stato: scelta dell'utente, Ollama acceso?, modello scaricato?;</li>
  *   <li>{@code PUT  /api/ai}                cambia la scelta (spento / Ollama) e il modello;</li>
  *   <li>{@code POST /api/ai/model/download} fa partire lo scaricamento del modello (202: è in background);</li>
- *   <li>{@code POST /api/ai/evaluation}     fa partire la misura della precisione sulle tue scelte (202).</li>
+ *   <li>{@code POST /api/ai/evaluation}     fa partire la misura della precisione sulle tue scelte (202);</li>
+ *   <li>{@code GET  /api/ai/suggestions}    "Chiedi all'IA": quanti esercenti si possono chiedere, e a che punto è;</li>
+ *   <li>{@code POST /api/ai/suggestions}    "Chiedi all'IA": fa partire le domande (202).</li>
  * </ul>
  */
 @RestController
@@ -28,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiController {
 
     private final AiService aiService;
+    private final AiSuggestionService suggestionService;
 
-    public AiController(AiService aiService) {
+    public AiController(AiService aiService, AiSuggestionService suggestionService) {
         this.aiService = aiService;
+        this.suggestionService = suggestionService;
     }
 
     @GetMapping
@@ -53,6 +57,17 @@ public class AiController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public AiService.Status evaluate(@Valid @RequestBody EvaluationRequest request) {
         return aiService.evaluate(request.model(), request.samples());
+    }
+
+    @GetMapping("/suggestions")
+    public AiSuggestionService.Status suggestions() {
+        return suggestionService.status();
+    }
+
+    @PostMapping("/suggestions")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public AiSuggestionService.Status askForSuggestions() {
+        return suggestionService.start();
     }
 
     /**

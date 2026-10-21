@@ -77,6 +77,7 @@ describe('TransactionsPage', () => {
         suggestionLoads++;
         return of([]);
       },
+      aiSuggestionsStatus: () => of({ enabled: false, model: 'gemma3:4b', toAsk: 0, job: null }),
     };
     TestBed.configureTestingModule({
       imports: [TransactionsPage],

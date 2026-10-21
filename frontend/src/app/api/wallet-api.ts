@@ -6,6 +6,7 @@ import {
   Account,
   AiProvider,
   AiStatus,
+  AiSuggestionsStatus,
   AccountRole,
   Alert,
   Bank,
@@ -259,6 +260,16 @@ export class WalletApi {
   /** POST /api/ai/evaluation: fa partire la misura della precisione di un modello (in background). */
   evaluateAi(model: string, samples: number): Observable<AiStatus> {
     return this.http.post<AiStatus>('/api/ai/evaluation', { model, samples });
+  }
+
+  /** GET /api/ai/suggestions: "Chiedi all'IA", quanti esercenti si possono chiedere e a che punto è. */
+  aiSuggestionsStatus(): Observable<AiSuggestionsStatus> {
+    return this.http.get<AiSuggestionsStatus>('/api/ai/suggestions');
+  }
+
+  /** POST /api/ai/suggestions: "Chiedi all'IA", fa partire le domande (in background). */
+  askAi(): Observable<AiSuggestionsStatus> {
+    return this.http.post<AiSuggestionsStatus>('/api/ai/suggestions', {});
   }
 
   /** GET /api/category-suggestions: i suggerimenti di categoria dalla tua storia. */

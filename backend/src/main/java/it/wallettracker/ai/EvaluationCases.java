@@ -42,20 +42,7 @@ public final class EvaluationCases {
      */
     public static List<ModelEvaluation.Case> build(List<BankTransaction> manual, List<Category> categories,
             List<Set<String>> ownerNames, int limit) {
-        // Un movimento per esercente, il più recente; solo spese ed entrate con una categoria del gruppo giusto.
-        Map<String, BankTransaction> byMerchant = new LinkedHashMap<>();
-        manual.stream()
-                .filter(t -> t.getType() == TransactionType.EXPENSE || t.getType() == TransactionType.INCOME)
-                .filter(t -> t.getManualCategory().getKind() == kindOf(t)) //filtra solo le transazioni che hanno una categoria manuale la cui tipologia di categoria sia INCOME o EXPANSE
-                .sorted(Comparator.comparing(BankTransaction::getBookingDate).reversed())
-                .forEach(t -> {
-                    String key = MerchantKey.of(t.getCounterparty(), t.getDescription(), ownerNames);
-                    if (key != null) {
-                        byMerchant.putIfAbsent(key, t);
-                    }
-                });
-
-        List<Map.Entry<String, BankTransaction>> entries = new ArrayList<>(byMerchant.entrySet());
+        List<Map.Entry<String, BankTransaction>> entries = new ArrayList<>(latestChoices(manual, ownerNames).entrySet());
         List<ModelEvaluation.Case> cases = new ArrayList<>();
         for (Map.Entry<String, BankTransaction> entry : entries.subList(0, Math.min(limit, entries.size()))) {
             BankTransaction t = entry.getValue();
@@ -70,6 +57,26 @@ public final class EvaluationCases {
             cases.add(new ModelEvaluation.Case(question, t.getManualCategory().getId(), t.getManualCategory().getName()));
         }
         return cases;
+    }
+
+    /**
+     * Le tue scelte, una per esercente: il movimento più recente, solo spese ed entrate con una categoria del
+     * gruppo giusto (una spesa in una categoria di spesa). In ordine dal più recente. Le usano la misura (come
+     * casi ed esempi) e i suggerimenti dell'IA (come esempi, {@link AiQuestions}).
+     */
+    static Map<String, BankTransaction> latestChoices(List<BankTransaction> manual, List<Set<String>> ownerNames) {
+        Map<String, BankTransaction> byMerchant = new LinkedHashMap<>();
+        manual.stream()
+                .filter(t -> t.getType() == TransactionType.EXPENSE || t.getType() == TransactionType.INCOME)
+                .filter(t -> t.getManualCategory().getKind() == kindOf(t))
+                .sorted(Comparator.comparing(BankTransaction::getBookingDate).reversed())
+                .forEach(t -> {
+                    String key = MerchantKey.of(t.getCounterparty(), t.getDescription(), ownerNames);
+                    if (key != null) {
+                        byMerchant.putIfAbsent(key, t);
+                    }
+                });
+        return byMerchant;
     }
 
     /** Le categorie tra cui scegliere: quelle del gruppo, nell'ordine dei menu. */
@@ -90,7 +97,7 @@ public final class EvaluationCases {
         return MerchantKey.displayName(MerchantKey.merchantText(t.getCounterparty(), t.getDescription(), ownerNames));
     }
 
-    private static CategoryKind kindOf(BankTransaction t) {
+    static CategoryKind kindOf(BankTransaction t) {
         return t.getType() == TransactionType.INCOME ? CategoryKind.INCOME : CategoryKind.EXPENSE;
     }
 }

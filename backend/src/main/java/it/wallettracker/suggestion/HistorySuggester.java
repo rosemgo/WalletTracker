@@ -26,6 +26,10 @@ import it.wallettracker.subscription.MerchantKey;
  *   <li>è solo un suggerimento: finché non lo accetti, il movimento resta senza categoria.</li>
  * </ul>
  * È una classe "pura" (niente database, niente Spring), provata da HistorySuggesterTest.
+ *
+ * <p>Dal passo 7b.3 ci sono anche i suggerimenti dell'<b>IA</b>, per gli esercenti che non hai mai scelto: le
+ * risposte salvate di "Chiedi all'IA" ({@link AiAnswer}). Valgono le stesse regole (il "no" non torna, decidi
+ * tu), e la tua storia ha sempre la precedenza: se scegli a mano un esercente, la risposta dell'IA non conta più.
  */
 public final class HistorySuggester {
 
@@ -41,6 +45,10 @@ public final class HistorySuggester {
     public record Dismissal(String merchantKey, Long categoryId) {
     }
 
+    /** La risposta dell'IA per un esercente: questa categoria, data da questo modello. */
+    public record AiAnswer(String merchantKey, Long categoryId, String category, String model) {
+    }
+
     /**
      * Un suggerimento, per esercente.
      *
@@ -49,10 +57,11 @@ public final class HistorySuggester {
      * @param categoryId   la categoria suggerita
      * @param category     il suo nome
      * @param transactions quanti movimenti senza categoria la riceverebbero
-     * @param examples     su quante tue scelte si basa
+     * @param examples     su quante tue scelte si basa (0 per un suggerimento dell'IA)
+     * @param model        il modello che l'ha suggerito, o null se viene dalla tua storia
      */
     public record Suggestion(String merchantKey, String merchantName, Long categoryId, String category,
-            int transactions, int examples) {
+            int transactions, int examples, String model) {
     }
 
     /**
@@ -98,8 +107,15 @@ public final class HistorySuggester {
                 .toList();
     }
 
+    /** I suggerimenti dalla tua storia soltanto (senza IA). */
     public static List<Suggestion> suggest(List<Example> examples, List<Candidate> candidates,
             Set<Dismissal> dismissals) {
+        return suggest(examples, candidates, dismissals, List.of());
+    }
+
+    /** I suggerimenti dalla tua storia e, per gli esercenti che non hai mai scelto, quelli dell'IA. */
+    public static List<Suggestion> suggest(List<Example> examples, List<Candidate> candidates,
+            Set<Dismissal> dismissals, List<AiAnswer> aiAnswers) {
         // 1. Per ogni esercente, le categorie che hai scelto manualmente (e quante volte).
         Map<String, Map<Long, Integer>> choices = new HashMap<>(); //mappa costituita da {commerciante, {categoria, numero di volte che quel commerciante ha avuto quella categoria nei movimenti}}
         Map<Long, String> categoryNames = new HashMap<>();
@@ -115,25 +131,45 @@ public final class HistorySuggester {
             byMerchant.computeIfAbsent(candidate.merchantKey(), key -> new ArrayList<>()).add(candidate);
         }
 
+        Map<String, AiAnswer> aiByMerchant = new HashMap<>();
+        for (AiAnswer answer : aiAnswers) {
+            aiByMerchant.put(answer.merchantKey(), answer);
+        }
+
         // 3. Un suggerimento per ogni esercente con una sola categoria scelta, se non l'hai già rifiutata.
         List<Suggestion> suggestions = new ArrayList<>();
         for (Map.Entry<String, List<Candidate>> entry : byMerchant.entrySet()) {
             Map<Long, Integer> chosen = choices.get(entry.getKey());
-            if (chosen == null || chosen.size() != 1) {
-                continue; // mai scelta, oppure scelte diverse: nessun suggerimento
+            if (chosen == null) {
+                // Mai scelto a mano: c'è forse una risposta dell'IA.
+                AiAnswer answer = aiByMerchant.get(entry.getKey());
+                if (answer != null && !dismissals.contains(new Dismissal(entry.getKey(), answer.categoryId()))) {
+                    suggestions.add(new Suggestion(entry.getKey(), nameOf(entry.getValue()), answer.categoryId(),
+                            answer.category(), entry.getValue().size(), 0, answer.model()));
+                }
+                continue;
+            }
+            if (chosen.size() != 1) {
+                continue; // scelte diverse: nessun suggerimento, nemmeno dall'IA
             }
             Map.Entry<Long, Integer> only = chosen.entrySet().iterator().next();
             if (dismissals.contains(new Dismissal(entry.getKey(), only.getKey()))) {
                 continue;
             }
-            //prende il movimento senza categoria (Candidate) con data più recente
-            Candidate latest = entry.getValue().stream().max(Comparator.comparing(Candidate::date)).orElseThrow();
-            suggestions.add(new Suggestion(entry.getKey(), MerchantKey.displayName(latest.text()), only.getKey(),
-                    categoryNames.get(only.getKey()), entry.getValue().size(), only.getValue()));
+            suggestions.add(new Suggestion(entry.getKey(), nameOf(entry.getValue()), only.getKey(),
+                    categoryNames.get(only.getKey()), entry.getValue().size(), only.getValue(), null));
         }
-        // Prima gli esercenti con più movimenti: accettandoli si sistema di più con un clic.
-        suggestions.sort(Comparator.comparingInt(Suggestion::transactions).reversed()
+        // Prima quelli dalla tua storia (più affidabili), poi quelli dell'IA; in ogni gruppo prima gli esercenti
+        // con più movimenti: accettandoli si sistema di più con un clic.
+        suggestions.sort(Comparator.comparing((Suggestion s) -> s.model() != null)
+                .thenComparing(Comparator.comparingInt(Suggestion::transactions).reversed())
                 .thenComparing(Suggestion::merchantName));
         return suggestions;
+    }
+
+    /** Il nome da mostrare: dal movimento senza categoria (Candidate) con la data più recente. */
+    private static String nameOf(List<Candidate> candidates) {
+        Candidate latest = candidates.stream().max(Comparator.comparing(Candidate::date)).orElseThrow();
+        return MerchantKey.displayName(latest.text());
     }
 }

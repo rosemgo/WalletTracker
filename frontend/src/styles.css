@@ -653,3 +653,15 @@ progress {
 .evaluation {
   margin-top: 0.75rem;
 }
+
+/* Il segno "IA" accanto a un suggerimento dell'intelligenza artificiale: sempre con la scritta, mai solo colore. */
+.ai-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.25rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  vertical-align: middle;
+}

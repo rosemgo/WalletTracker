@@ -356,7 +356,26 @@ export interface CategorySuggestion {
   categoryId: number;
   category: string;
   transactions: number; // quanti movimenti senza categoria la riceverebbero
-  examples: number; // su quante tue scelte si basa
+  examples: number; // su quante tue scelte si basa (0 per un suggerimento dell'IA)
+  model: string | null; // il modello che l'ha suggerito, o null se viene dalla tua storia
+}
+
+/** "Chiedi all'IA": il giro di domande in corso o l'ultimo fatto. */
+export interface AiAnswerJob {
+  model: string;
+  running: boolean;
+  done: number; // esercenti chiesti
+  total: number;
+  found: number; // risposte con una categoria (le altre sono "non so")
+  error: string | null;
+}
+
+/** La risposta di GET /api/ai/suggestions. */
+export interface AiSuggestionsStatus {
+  enabled: boolean; // l'IA è accesa?
+  model: string;
+  toAsk: number; // quanti esercenti si possono chiedere adesso
+  job: AiAnswerJob | null;
 }
 
 /** Una categoria già usata per esercenti simili a quello di un movimento, e quante volte (per il suo menu). */
