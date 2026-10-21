@@ -22,6 +22,8 @@
       >
         <option value="NONE">Spenti</option>
         <option value="OLLAMA">Sul mio computer (Ollama)</option>
+        <option value="MISTRAL">Nel cloud: Mistral AI</option>
+        <option value="GEMINI">Nel cloud: Google Gemini</option>
       </select>
     </label>
     @if (provider() === 'OLLAMA') {
@@ -83,6 +85,25 @@
       lasciare i suggerimenti spenti: i modelli più piccoli sbagliano quasi sempre.
     </p>
   }
+  @if (status(); as s) {
+    @if (provider() === 'MISTRAL') {
+      <app-cloud-ai-section
+        provider="MISTRAL"
+        [cloud]="s.mistral"
+        [(aiModel)]="mistralModel"
+        [(consent)]="consent"
+        (statusChange)="show($event, false)"
+      />
+    } @else if (provider() === 'GEMINI') {
+      <app-cloud-ai-section
+        provider="GEMINI"
+        [cloud]="s.gemini"
+        [(aiModel)]="geminiModel"
+        [(consent)]="consent"
+        (statusChange)="show($event, false)"
+      />
+    }
+  }
   <button type="button" [disabled]="saving()" (click)="save()">Salva</button>
 
   @if (status(); as s) {
@@ -138,7 +159,7 @@
       </ul>
     }
 
-    @if (s.ollamaReachable && s.installedModels.length > 0) {
+    @if (evaluationTargets().length > 0) {
       <h3>Misura la precisione</h3>
       <p class="hint">
         Il programma prende alcuni esercenti che hai già categorizzato a mano, chiede al modello la
@@ -153,11 +174,13 @@
         <label>
           Modello da misurare
           <select
-            [value]="evaluationModel()"
-            (change)="evaluationModel.set($any($event.target).value)"
+            [value]="evaluationTarget()"
+            (change)="evaluationTarget.set($any($event.target).value)"
           >
-            @for (m of s.installedModels; track m) {
-              <option [value]="m" [selected]="m === evaluationModel()">{{ m }}</option>
+            @for (t of evaluationTargets(); track t.value) {
+              <option [value]="t.value" [selected]="t.value === evaluationTarget()">
+                {{ t.label }}
+              </option>
             }
           </select>
         </label>

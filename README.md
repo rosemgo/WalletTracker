@@ -93,6 +93,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 27. [Fase 3, passo 7b: l'intelligenza artificiale con Spring AI e Ollama](docs/27-fase-3-passo-7b-ia-spring-ai.md)
 28. [Fase 3, passo 7b.2: il modello che sceglie la categoria con Spring AI, e la misura](docs/28-fase-3-passo-7b2-modello-e-misura.md)
 29. [Fase 3, passo 7b.3: "Chiedi all'IA", i suggerimenti dell'intelligenza artificiale nei Movimenti](docs/29-fase-3-passo-7b3-chiedi-all-ia.md)
+30. [Fase 3, passo 7c: l'IA nel cloud, con Mistral AI e Google Gemini (chiave cifrata, consenso)](docs/30-fase-3-passo-7c-ia-nel-cloud.md)
 
 ## Piano di lavoro
 
@@ -120,7 +121,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
   - [ ] **da fare**: estratto conto CSV anche per i conti collegati che non danno i dettagli dei movimenti (es. Trade Republic): completare causale e controparte dei movimenti già arrivati, in alternativa alla correzione a mano (vedi `docs/25`, "E Trade Republic?")
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
-  - [ ] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c)
+  - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Mistral AI e Google Gemini)
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili

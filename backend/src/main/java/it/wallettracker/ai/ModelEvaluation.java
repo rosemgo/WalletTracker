@@ -60,16 +60,17 @@ public class ModelEvaluation {
     }
 
     /** Fa partire la misura in background, se non ce n'è già una in corso. */
-    public synchronized void start(String model, List<Case> cases) {
+    public synchronized void start(AiTarget target, List<Case> cases) {
         State current = state.get();
         if (current != null && current.running()) {
             return;
         }
-        state.set(new State(model, true, 0, cases.size(), 0, 0, 0, 0, List.of(), null));
-        executor.submit(() -> run(model, cases));
+        state.set(new State(target.label(), true, 0, cases.size(), 0, 0, 0, 0, List.of(), null));
+        executor.submit(() -> run(target, cases));
     }
 
-    private void run(String model, List<Case> cases) {
+    private void run(AiTarget target, List<Case> cases) {
+        String model = target.label();
         int right = 0;
         int wrong = 0;
         int unsure = 0;
@@ -78,7 +79,7 @@ public class ModelEvaluation {
         try {
             for (int i = 0; i < cases.size(); i++) {
                 Case c = cases.get(i);
-                Optional<Long> answer = categoryModel.suggest(c.question(), model);
+                Optional<Long> answer = categoryModel.suggest(c.question(), target);
                 if (answer.isEmpty()) {
                     unsure++;
                 } else if (answer.get().equals(c.expectedId())) {
@@ -95,7 +96,7 @@ public class ModelEvaluation {
             log.warn("Misura di {} non riuscita: {}", model, e.getMessage());
             State last = state.get();
             state.set(new State(model, false, last.done(), last.total(), right, wrong, unsure, last.seconds(),
-                    List.copyOf(mistakes), "Il modello non ha risposto: " + e.getMessage()));
+                    List.copyOf(mistakes), AiErrors.describe(e, target.provider())));
         }
     }
 

@@ -67,7 +67,7 @@ class CategoryModelLiveTest {
                 int unsure = 0;
                 long start = System.nanoTime();
                 for (Case c : cases) {
-                    Optional<Long> answer = model.suggest(question(c, withExamples), ollamaModel);
+                    Optional<Long> answer = model.suggest(question(c, withExamples), AiTarget.ollama(ollamaModel));
                     asked++;
                     Optional<Long> expected = c.expected().isEmpty() ? Optional.empty()
                             : Optional.of(category(c.expected()).getId());

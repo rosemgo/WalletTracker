@@ -76,3 +76,10 @@ wallettracker:
     # Ogni 30 minuti si controlla se c'è un conto da aggiornare (costa solo una lettura del database).
     check-every: 30m
     initial-delay: 10s
+  ai:
+    # Gli indirizzi dei servizi cloud (passo 7c, docs/30). Si cambiano solo per i test, che li puntano a un
+    # server finto. Per Gemini, vuoto = l'indirizzo di Google (lo sceglie la libreria di Google).
+    mistral:
+      base-url: https://api.mistral.ai
+    gemini:
+      base-url:

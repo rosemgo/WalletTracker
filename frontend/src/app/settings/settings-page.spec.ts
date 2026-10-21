@@ -34,6 +34,8 @@ describe('SettingsPage', () => {
           modelInstalled: false,
           download: null,
           evaluation: null,
+          mistral: { model: 'mistral-small-latest', keySet: false, keyHint: null, consent: false },
+          gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
         }),
       saveEnableBanking: (applicationId: string, pem: string) => {
         saved.push([applicationId, pem]);

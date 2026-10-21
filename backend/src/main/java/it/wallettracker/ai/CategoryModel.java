@@ -3,15 +3,16 @@ package it.wallettracker.ai;
 import java.util.Optional;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.stereotype.Component;
 
 /**
  * Chiede al modello la categoria di un movimento, con <b>Spring AI</b>: tutto il lavoro HTTP e JSON lo fa la
- * libreria. Il prompt è in {@link CategoryPrompt}.
+ * libreria. Il prompt è in {@link CategoryPrompt}. La stessa domanda va a qualunque fornitore (Ollama, Mistral,
+ * Gemini): il {@link ChatClient} giusto lo dà {@link AiChatClients}.
  *
  * <ul>
- *   <li>{@code ChatClient.Builder} lo crea Spring (configurazione automatica dello starter di Ollama);</li>
+ *   <li>{@code ChatClient}: per Ollama lo crea Spring all'avvio, per i servizi cloud AiChatClients;</li>
  *   <li>{@code .options(...)}: il modello scelto dall'utente e la temperatura 0. La temperatura dice quanto il
  *       modello può "variare": a 0 sceglie sempre la risposta più probabile, quindi la stessa domanda dà la
  *       stessa risposta (quello che vogliamo per classificare, non per scrivere poesie);</li>
@@ -23,20 +24,25 @@ import org.springframework.stereotype.Component;
 @Component
 public class CategoryModel {
 
-    private final ChatClient chatClient;
+    private final AiChatClients chatClients;
 
-    public CategoryModel(ChatClient.Builder chatClientBuilder) {
-        this.chatClient = chatClientBuilder.build();
+    public CategoryModel(AiChatClients chatClients) {
+        this.chatClients = chatClients;
     }
 
     /**
      * La categoria suggerita: l'id di una delle categorie della domanda, oppure vuoto se il modello non lo sa.
      *
-     * @param model il modello di Ollama da usare (es. "gemma3:4b")
+     * @param target il fornitore e il modello (es. Ollama, "gemma3:4b")
      */
-    public Optional<Long> suggest(CategoryQuestion question, String model) {
+    public Optional<Long> suggest(CategoryQuestion question, AiTarget target) {
+        return ask(chatClients.client(target.provider()), AiChatClients.options(target), question);
+    }
+
+    /** La domanda vera, uguale per tutti i fornitori. Statica: i test la chiamano con un ChatClient loro. */
+    static Optional<Long> ask(ChatClient chatClient, ChatOptions.Builder<?> options, CategoryQuestion question) {
         CategoryPrompt.Answer answer = chatClient.prompt()
-                .options(OllamaChatOptions.builder().model(model).temperature(0.0))
+                .options(options)
                 .system(CategoryPrompt.SYSTEM)
                 .user(CategoryPrompt.user(question))
                 .call()

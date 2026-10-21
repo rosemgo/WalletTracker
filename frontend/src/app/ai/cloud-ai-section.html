@@ -1,0 +1,107 @@
+<div class="cloud-section" [attr.aria-label]="info().label">
+  <p class="hint">
+    {{ info().about }} Il modello lavora sui suoi server: per ogni domanda, i dati qui sotto escono
+    dal tuo computer.
+  </p>
+
+  <details>
+    <summary>Come avere la chiave di {{ info().label }}</summary>
+    <ol>
+      @for (step of info().keySteps; track $index) {
+        <li>{{ step }}</li>
+      }
+    </ol>
+    <a [href]="info().keyUrl" target="_blank" rel="noopener noreferrer">{{ info().keyUrl }}</a>
+  </details>
+
+  <h4>La chiave</h4>
+  @if (cloud().keySet && !editing()) {
+    <p>
+      <span class="status-good">✓ Chiave salvata ({{ cloud().keyHint }})</span>
+      <button type="button" class="link" [disabled]="busy()" (click)="editing.set(true)">
+        cambia
+      </button>
+      <button type="button" class="link" [disabled]="busy()" (click)="deleteKey()">togli</button>
+    </p>
+  } @else {
+    <div class="form-grid">
+      <label>
+        Chiave di {{ info().label }}
+        <input
+          type="password"
+          autocomplete="off"
+          maxlength="300"
+          [value]="key()"
+          (input)="key.set($any($event.target).value)"
+        />
+      </label>
+    </div>
+    <button type="button" [disabled]="busy() || key().trim().length < 10" (click)="saveKey()">
+      Salva la chiave
+    </button>
+    <p class="hint">
+      La chiave viene salvata cifrata e non viene più mostrata: per riconoscerla vedrai solo le
+      ultime 4 lettere. È come una password: non darla a nessuno.
+    </p>
+  }
+
+  <div class="form-grid">
+    <label>
+      Modello
+      <input [value]="aiModel()" (input)="aiModel.set($any($event.target).value)" maxlength="100" />
+    </label>
+  </div>
+
+  <h4>Che cosa viene inviato</h4>
+  <ul class="hint">
+    <li>
+      il testo dell'esercente, senza le parole con cifre (es. "PAGAMENTO CARTA DEL NETFLIX.COM");
+    </li>
+    <li>se è una spesa o un'entrata, e i nomi delle tue categorie;</li>
+    <li>come esempi, alcune tue scelte su altri esercenti.</li>
+  </ul>
+  <p class="hint">
+    <strong>Non</strong> vengono inviati importi, date, IBAN, numeri di carta, il tuo nome.
+    {{ info().dataNote }}
+  </p>
+  @if (cloud().consent) {
+    <p class="secondary">✓ Hai accettato l'invio di questi dati a {{ info().label }}.</p>
+  } @else {
+    <label class="consent">
+      <input
+        type="checkbox"
+        [checked]="consent()"
+        (change)="consent.set($any($event.target).checked)"
+      />
+      Accetto che i dati qui sopra siano inviati a {{ info().label }} per suggerire le categorie.
+    </label>
+  }
+
+  <div>
+    <button
+      type="button"
+      [disabled]="busy() || !cloud().keySet || !cloud().consent"
+      (click)="testConnection()"
+    >
+      Prova la connessione
+    </button>
+    @if (!cloud().keySet || !cloud().consent) {
+      <span class="secondary"> Per provare: salva la chiave, dai il consenso e premi "Salva".</span>
+    }
+  </div>
+  @if (busy() && cloud().keySet) {
+    <p class="secondary">Prova in corso...</p>
+  }
+  @if (test(); as t) {
+    @if (t.ok) {
+      <p class="status-good">
+        ✓ {{ info().label }} risponde: ESSELUNGA → {{ t.answer }} ({{ seconds(t.seconds) }})
+      </p>
+    } @else {
+      <p class="error">{{ t.error }}</p>
+    }
+  }
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+</div>

@@ -665,3 +665,28 @@ progress {
   font-size: 0.75rem;
   vertical-align: middle;
 }
+
+/* Un servizio cloud nelle Impostazioni (passo 7c): un riquadro dentro il riquadro dell'IA. */
+.cloud-section {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.cloud-section h4 {
+  margin: 0.75rem 0 0.25rem;
+}
+
+/* La casella del consenso: il testo accanto alla casella, non sotto. */
+label.consent {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0.5rem 0;
+}
+
+/* "cambia" e "togli" accanto alla chiave salvata: un po' di spazio tra le parole. */
+.cloud-section button.link {
+  margin-left: 0.75rem;
+}

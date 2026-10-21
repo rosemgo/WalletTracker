@@ -53,29 +53,29 @@ public class AiAnswerJob {
     }
 
     /** Fa partire le domande in background, se non ce n'è già un giro in corso. */
-    public synchronized void start(String model, List<AiQuestions.Ask> asks) {
+    public synchronized void start(AiTarget target, List<AiQuestions.Ask> asks) {
         State current = state.get();
         if (current != null && current.running()) {
             return;
         }
-        state.set(new State(model, true, 0, asks.size(), 0, null));
-        executor.submit(() -> run(model, asks));
+        state.set(new State(target.label(), true, 0, asks.size(), 0, null));
+        executor.submit(() -> run(target, asks));
     }
 
-    private void run(String model, List<AiQuestions.Ask> asks) {
+    private void run(AiTarget target, List<AiQuestions.Ask> asks) {
+        String model = target.label();
         int found = 0;
         for (int i = 0; i < asks.size(); i++) {
             AiQuestions.Ask ask = asks.get(i);
             try {
-                Optional<Long> answer = categoryModel.suggest(ask.question(), model);
+                Optional<Long> answer = categoryModel.suggest(ask.question(), target);
                 // L'id è già controllato (è una delle categorie della domanda): qui prendiamo l'entità da salvare.
                 Category category = answer.flatMap(categoryRepository::findById).orElse(null);
                 answerRepository.save(new AiCategoryAnswer(ask.merchantKey(), category, model));
                 found += category != null ? 1 : 0;
             } catch (RuntimeException e) {
                 log.warn("Domanda all'IA non riuscita ({}): {}", ask.merchantKey(), e.getMessage());
-                state.set(new State(model, false, i, asks.size(), found,
-                        "Il modello non ha risposto: " + e.getMessage()));
+                state.set(new State(model, false, i, asks.size(), found, AiErrors.describe(e, target.provider())));
                 return;
             }
             state.set(new State(model, i + 1 < asks.size(), i + 1, asks.size(), found, null));

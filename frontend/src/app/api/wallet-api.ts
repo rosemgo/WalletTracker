@@ -4,7 +4,10 @@ import { Observable } from 'rxjs';
 
 import {
   Account,
+  AiCloudProvider,
+  AiConnectionTest,
   AiProvider,
+  AiSettingsChange,
   AiStatus,
   AiSuggestionsStatus,
   AccountRole,
@@ -247,9 +250,24 @@ export class WalletApi {
     return this.http.get<AiStatus>('/api/ai');
   }
 
-  /** PUT /api/ai: accende o spegne l'IA e sceglie il modello. */
-  changeAi(provider: AiProvider, ollamaModel: string): Observable<AiStatus> {
-    return this.http.put<AiStatus>('/api/ai', { provider, ollamaModel });
+  /** PUT /api/ai: accende o spegne l'IA, sceglie il fornitore e i modelli. */
+  changeAi(change: AiSettingsChange): Observable<AiStatus> {
+    return this.http.put<AiStatus>('/api/ai', change);
+  }
+
+  /** PUT /api/ai/keys/{provider}: salva la chiave di un servizio cloud (il backend la cifra). */
+  saveAiKey(provider: AiCloudProvider, apiKey: string): Observable<AiStatus> {
+    return this.http.put<AiStatus>(`/api/ai/keys/${provider}`, { apiKey });
+  }
+
+  /** DELETE /api/ai/keys/{provider}: toglie la chiave di un servizio cloud. */
+  deleteAiKey(provider: AiCloudProvider): Observable<AiStatus> {
+    return this.http.delete<AiStatus>(`/api/ai/keys/${provider}`);
+  }
+
+  /** POST /api/ai/connection-test/{provider}: una domanda di prova. */
+  testAiConnection(provider: AiCloudProvider): Observable<AiConnectionTest> {
+    return this.http.post<AiConnectionTest>(`/api/ai/connection-test/${provider}`, {});
   }
 
   /** POST /api/ai/model/download: fa partire lo scaricamento del modello (in background). */
@@ -258,8 +276,8 @@ export class WalletApi {
   }
 
   /** POST /api/ai/evaluation: fa partire la misura della precisione di un modello (in background). */
-  evaluateAi(model: string, samples: number): Observable<AiStatus> {
-    return this.http.post<AiStatus>('/api/ai/evaluation', { model, samples });
+  evaluateAi(provider: AiProvider, model: string, samples: number): Observable<AiStatus> {
+    return this.http.post<AiStatus>('/api/ai/evaluation', { provider, model, samples });
   }
 
   /** GET /api/ai/suggestions: "Chiedi all'IA", quanti esercenti si possono chiedere e a che punto è. */

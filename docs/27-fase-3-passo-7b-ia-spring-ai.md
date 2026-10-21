@@ -13,6 +13,7 @@ vero del progetto, spiega perché, e dice come verificare che funziona prima di 
 | **7b.1** | Ollama a mano; Spring AI nel progetto; IA accesa/spenta; scaricare il modello dall'app | fatta: questa guida |
 | 7b.2 | il modello che sceglie la categoria (`ChatClient`, prompt, risposta strutturata) e la misura della precisione | fatta: `docs/28` |
 | 7b.3 | i suggerimenti dell'IA nei Movimenti, "Chiedi all'IA", accetta / no | fatta: `docs/29` |
+| 7c | lo stesso con un servizio cloud (Mistral AI, Google Gemini), chiave cifrata e consenso | fatta: `docs/30` |
 
 > Prerequisiti: passo 7a (`docs/26`), Docker avviato, e `git pull`. Al primo avvio Flyway applica la **V18**.
 

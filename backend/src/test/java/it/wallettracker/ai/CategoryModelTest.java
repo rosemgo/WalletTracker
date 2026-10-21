@@ -38,7 +38,7 @@ class CategoryModelTest {
             List.of(new CategoryQuestion.Example("ROSSI PIZZERIA", "Ristoranti")));
 
     MockRestServiceServer server;
-    CategoryModel model;
+    ChatClient chatClient;
 
     /**
      * Nell'app i pezzi di Spring AI li crea la configurazione automatica; qui li montiamo a mano, con OllamaApi
@@ -51,7 +51,12 @@ class CategoryModelTest {
         server = MockRestServiceServer.bindTo(builder).build();
         OllamaApi ollamaApi = OllamaApi.builder().baseUrl(OLLAMA).restClientBuilder(builder).build();
         OllamaChatModel chatModel = OllamaChatModel.builder().ollamaApi(ollamaApi).build();
-        model = new CategoryModel(ChatClient.builder(chatModel));
+        chatClient = ChatClient.builder(chatModel).build();
+    }
+
+    /** La domanda di CategoryModel, con il ChatClient collegato al server finto. */
+    Optional<Long> ask() {
+        return CategoryModel.ask(chatClient, AiChatClients.options(AiTarget.ollama("gemma3:4b")), QUESTION);
     }
 
     /** La risposta di /api/chat, con il testo del modello in message.content (a sua volta JSON). */
@@ -87,7 +92,7 @@ class CategoryModelTest {
                 .andExpect(jsonPath("$.format.additionalProperties").value(false))
                 .andRespond(withSuccess(ollamaAnswer("{\"categoryId\": 12}"), MediaType.APPLICATION_JSON));
 
-        assertThat(model.suggest(QUESTION, "gemma3:4b")).isEqualTo(Optional.of(12L));
+        assertThat(ask()).isEqualTo(Optional.of(12L));
         server.verify();
     }
 
@@ -96,7 +101,7 @@ class CategoryModelTest {
         server.expect(requestTo(OLLAMA + "/api/chat"))
                 .andRespond(withSuccess(ollamaAnswer("{\"categoryId\": 0}"), MediaType.APPLICATION_JSON));
 
-        assertThat(model.suggest(QUESTION, "gemma3:4b")).isEmpty();
+        assertThat(ask()).isEmpty();
     }
 
     @Test
@@ -105,7 +110,7 @@ class CategoryModelTest {
         server.expect(requestTo(OLLAMA + "/api/chat"))
                 .andRespond(withSuccess(ollamaAnswer("{\"categoryId\": null}"), MediaType.APPLICATION_JSON));
 
-        assertThat(model.suggest(QUESTION, "gemma3:4b")).isEmpty();
+        assertThat(ask()).isEmpty();
     }
 
     @Test
@@ -113,7 +118,7 @@ class CategoryModelTest {
         server.expect(requestTo(OLLAMA + "/api/chat"))
                 .andRespond(withSuccess(ollamaAnswer("{\"categoryId\": 99}"), MediaType.APPLICATION_JSON));
 
-        assertThat(model.suggest(QUESTION, "gemma3:4b")).isEmpty();
+        assertThat(ask()).isEmpty();
     }
 
     @Test
@@ -122,6 +127,6 @@ class CategoryModelTest {
                 .andRespond(withResourceNotFound().contentType(MediaType.APPLICATION_JSON)
                         .body("{\"error\": \"model 'gemma3:4b' not found\"}"));
 
-        assertThatThrownBy(() -> model.suggest(QUESTION, "gemma3:4b")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> ask()).isInstanceOf(RuntimeException.class);
     }
 }

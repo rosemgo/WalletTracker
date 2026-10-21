@@ -197,7 +197,7 @@ class AiControllerTest {
         classificationService.classifyAll();
         when(ollamaApi.listModels()).thenReturn(models("gemma3:4b"));
         // Il modello finto indovina Esselunga e sbaglia la pizzeria.
-        when(categoryModel.suggest(any(CategoryQuestion.class), eq("gemma3:4b")))
+        when(categoryModel.suggest(any(CategoryQuestion.class), eq(AiTarget.ollama("gemma3:4b"))))
                 .thenReturn(Optional.of(groceries.getId()));
 
         assertThat(evaluate("{\"model\": \"gemma3:4b\", \"samples\": 10}"))
@@ -217,7 +217,7 @@ class AiControllerTest {
         });
         // Le domande: mai la risposta tra gli esempi.
         ArgumentCaptor<CategoryQuestion> questions = ArgumentCaptor.forClass(CategoryQuestion.class);
-        verify(categoryModel, times(2)).suggest(questions.capture(), eq("gemma3:4b"));
+        verify(categoryModel, times(2)).suggest(questions.capture(), eq(AiTarget.ollama("gemma3:4b")));
         assertThat(questions.getAllValues()).allSatisfy(question -> assertThat(question.examples())
                 .noneMatch(example -> example.merchant().equals(question.merchant())));
     }

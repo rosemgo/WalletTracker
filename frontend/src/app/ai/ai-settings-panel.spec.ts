@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 
-import { AiProvider, AiStatus, ModelEvaluation } from '../api/models';
+import { AiProvider, AiSettingsChange, AiStatus, ModelEvaluation } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AiSettingsPanel } from './ai-settings-panel';
 
@@ -13,6 +13,8 @@ const OFF: AiStatus = {
   modelInstalled: false,
   download: null,
   evaluation: null,
+  mistral: { model: 'mistral-small-latest', keySet: false, keyHint: null, consent: false },
+  gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
 };
 
 /** Una misura: 5 esercenti, `done` fatti. */
@@ -42,7 +44,7 @@ describe('AiSettingsPanel', () => {
   let changes: [AiProvider, string][];
   let downloads: number;
   let afterDownload: AiStatus[];
-  let evaluations: [string, number][];
+  let evaluations: [AiProvider, string, number][];
   let evaluationResponse: () => Observable<AiStatus>;
 
   beforeEach(() => {
@@ -54,9 +56,9 @@ describe('AiSettingsPanel', () => {
     evaluationResponse = () => of({ ...status, evaluation: evaluation(0, 0) });
     const fakeApi: Partial<WalletApi> = {
       aiStatus: () => of(afterDownload.length > 0 ? afterDownload.shift()! : status),
-      changeAi: (provider: AiProvider, model: string): Observable<AiStatus> => {
-        changes.push([provider, model]);
-        status = { ...status, provider, ollamaModel: model };
+      changeAi: (change: AiSettingsChange): Observable<AiStatus> => {
+        changes.push([change.provider, change.ollamaModel]);
+        status = { ...status, provider: change.provider, ollamaModel: change.ollamaModel };
         return of(status);
       },
       downloadAiModel: () => {
@@ -73,8 +75,8 @@ describe('AiSettingsPanel', () => {
           },
         });
       },
-      evaluateAi: (model: string, samples: number) => {
-        evaluations.push([model, samples]);
+      evaluateAi: (provider: AiProvider, model: string, samples: number) => {
+        evaluations.push([provider, model, samples]);
         return evaluationResponse();
       },
     };
@@ -251,8 +253,8 @@ describe('AiSettingsPanel', () => {
     // Il modello proposto per la misura è quello scelto; ne scegliamo un altro, su 5 esercenti.
     const selects = Array.from(page.querySelectorAll('select'));
     const modelSelect = selects[selects.length - 1];
-    expect(modelSelect.value).toBe('gemma3:4b');
-    modelSelect.value = 'llama3.2:3b';
+    expect(modelSelect.value).toBe('OLLAMA|gemma3:4b');
+    modelSelect.value = 'OLLAMA|llama3.2:3b';
     modelSelect.dispatchEvent(new Event('change'));
     const samples = page.querySelector('input[type="number"]') as HTMLInputElement;
     samples.value = '5';
@@ -272,7 +274,7 @@ describe('AiSettingsPanel', () => {
     ];
     button(page, 'Misura').click();
     fixture.detectChanges();
-    expect(evaluations).toEqual([['llama3.2:3b', 5]]);
+    expect(evaluations).toEqual([['OLLAMA', 'llama3.2:3b', 5]]);
     expect(page.textContent).toContain('in corso: 0 di 5');
     expect(button(page, 'Misura').disabled).toBe(true);
 
@@ -315,5 +317,73 @@ describe('AiSettingsPanel', () => {
     const headings = Array.from(page.querySelectorAll('h3')).map((h) => h.textContent?.trim());
     expect(headings).toEqual(['Stato']);
     expect(button(page, 'Misura')).toBeUndefined();
+  });
+
+  describe('with a cloud service', () => {
+    it('choosing Mistral shows its section, and saving sends models and consent', async () => {
+      status = { ...OFF, mistral: { ...OFF.mistral, keySet: true, keyHint: '…XYZ9' } };
+      let sent: AiSettingsChange | null = null;
+      TestBed.overrideProvider(WalletApi, {
+        useValue: {
+          aiStatus: () => of(status),
+          changeAi: (change: AiSettingsChange) => {
+            sent = change;
+            return of({
+              ...status,
+              provider: change.provider,
+              mistral: { ...status.mistral, consent: true },
+            });
+          },
+        },
+      });
+      const fixture = TestBed.createComponent(AiSettingsPanel);
+      await fixture.whenStable();
+      const page = fixture.nativeElement as HTMLElement;
+      const select = page.querySelector('select') as HTMLSelectElement;
+
+      select.value = 'MISTRAL';
+      select.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      expect(page.querySelector('app-cloud-ai-section')?.textContent).toContain('Mistral AI');
+      const box = page.querySelector(
+        'app-cloud-ai-section input[type="checkbox"]',
+      ) as HTMLInputElement;
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+      button(page, 'Salva').click();
+      await fixture.whenStable();
+
+      expect(sent).toEqual({
+        provider: 'MISTRAL',
+        ollamaModel: 'qwen2.5:3b',
+        mistralModel: 'mistral-small-latest',
+        geminiModel: 'gemini-flash-latest',
+        consent: true,
+      });
+      expect(page.textContent).toContain(
+        "Suggerimenti con l'IA accesi: Mistral AI, modello mistral-small-latest.",
+      );
+    });
+
+    it('a ready cloud service can be measured', async () => {
+      status = {
+        ...OFF,
+        provider: 'GEMINI',
+        ollamaReachable: false,
+        gemini: { model: 'gemini-flash-latest', keySet: true, keyHint: '…1234', consent: true },
+      };
+      const fixture = TestBed.createComponent(AiSettingsPanel);
+      await fixture.whenStable();
+      const page = fixture.nativeElement as HTMLElement;
+      const selects = Array.from(page.querySelectorAll('select'));
+      const target = selects[selects.length - 1];
+
+      expect(Array.from(target.options).map((o) => o.textContent?.trim())).toEqual([
+        'Google Gemini · gemini-flash-latest',
+      ]);
+      button(page, 'Misura').click();
+      await fixture.whenStable();
+      expect(evaluations).toEqual([['GEMINI', 'gemini-flash-latest', 20]]);
+    });
   });
 });

@@ -125,7 +125,7 @@ class AiSuggestionControllerTest {
         expense("XYZ 12345");
         classificationService.classifyAll();
         // Il modello finto: Conad è spesa alimentare, XYZ "non so".
-        when(categoryModel.suggest(any(CategoryQuestion.class), eq("gemma3:4b"))).thenAnswer(call -> {
+        when(categoryModel.suggest(any(CategoryQuestion.class), eq(AiTarget.ollama("gemma3:4b")))).thenAnswer(call -> {
             CategoryQuestion question = call.getArgument(0);
             return question.merchant().contains("CONAD") ? Optional.of(groceries.getId()) : Optional.empty();
         });

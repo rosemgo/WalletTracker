@@ -2,6 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 
 import { AiProvider, AiStatus } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { CLOUD_INFO, CloudAiSection } from './cloud-ai-section';
 
 /** Ogni quanto chiedere lo stato mentre il modello si scarica o la misura è in corso. */
 const POLL_MS = 1000;
@@ -49,9 +50,13 @@ export const RECOMMENDED_MODELS: RecommendedModel[] = [
  * "Misura la precisione" (passo 7b.2): il backend chiede al modello la categoria di alcuni esercenti che hai
  * già categorizzato a mano, senza dirgli la risposta, e conta quante volte indovina. Anche questa è in
  * background, con lo stesso polling.
+ *
+ * I servizi cloud (passo 7c): ognuno ha la sua sezione ({@link CloudAiSection}) con chiave, modello, consenso e
+ * prova. Il pannello tiene i modelli scelti e il consenso, e li manda al backend con "Salva".
  */
 @Component({
   selector: 'app-ai-settings-panel',
+  imports: [CloudAiSection],
   templateUrl: './ai-settings-panel.html',
 })
 export class AiSettingsPanel implements OnInit {
@@ -65,11 +70,43 @@ export class AiSettingsPanel implements OnInit {
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
+  /** I modelli dei servizi cloud e il consenso: li cambia CloudAiSection (two-way binding), li salva save(). */
+  protected readonly mistralModel = signal('');
+  protected readonly geminiModel = signal('');
+  protected readonly consent = signal(false);
+
   protected readonly recommended = RECOMMENDED_MODELS;
-  /** Le scelte della misura: modello (tra quelli scaricati) e quanti esercenti. */
-  protected readonly evaluationModel = signal('');
+  /**
+   * Le scelte della misura: che cosa misurare ("OLLAMA|gemma3:4b", "MISTRAL|mistral-small-latest") e quanti
+   * esercenti. Fornitore e modello stanno in un valore solo perché un menu ha un valore solo.
+   */
+  protected readonly evaluationTarget = signal('');
   protected readonly samples = signal(20);
   protected readonly evaluationError = signal<string | null>(null);
+
+  /**
+   * Che cosa si può misurare: i modelli scaricati in Ollama e i servizi cloud pronti (chiave e consenso salvati).
+   */
+  protected readonly evaluationTargets = computed(() => {
+    const s = this.status();
+    if (!s) {
+      return [];
+    }
+    const targets = (s.ollamaReachable ? s.installedModels : []).map((m) => ({
+      value: `OLLAMA|${m}`,
+      label: `${m} (sul tuo computer)`,
+    }));
+    for (const cloud of ['MISTRAL', 'GEMINI'] as const) {
+      const c = cloud === 'MISTRAL' ? s.mistral : s.gemini;
+      if (c.keySet && c.consent) {
+        targets.push({
+          value: `${cloud}|${c.model}`,
+          label: `${CLOUD_INFO[cloud].label} · ${c.model}`,
+        });
+      }
+    }
+    return targets;
+  });
 
   /** La percentuale di risposte giuste della misura, su quelle fatte finora. */
   protected readonly precision = computed(() => {
@@ -100,24 +137,28 @@ export class AiSettingsPanel implements OnInit {
     this.saving.set(true);
     this.message.set(null);
     this.error.set(null);
-    this.api.changeAi(this.provider(), this.model().trim()).subscribe({
-      next: (status) => {
-        this.saving.set(false);
-        this.show(status, true);
-        this.message.set(
-          status.provider === 'NONE'
-            ? "Suggerimenti con l'IA spenti."
-            : `Suggerimenti con l'IA accesi, con il modello ${status.ollamaModel}.`,
-        );
-      },
-      error: (response) => {
-        this.saving.set(false);
-        this.error.set(
-          response.error?.detail ??
-            'Impostazioni non salvate: controlla il nome del modello (es. gemma3:4b).',
-        );
-      },
-    });
+    this.api
+      .changeAi({
+        provider: this.provider(),
+        ollamaModel: this.model().trim(),
+        mistralModel: this.mistralModel().trim(),
+        geminiModel: this.geminiModel().trim(),
+        consent: this.consent(),
+      })
+      .subscribe({
+        next: (status) => {
+          this.saving.set(false);
+          this.show(status, true);
+          this.message.set(savedMessage(status));
+        },
+        error: (response) => {
+          this.saving.set(false);
+          this.error.set(
+            response.error?.detail ??
+              'Impostazioni non salvate: controlla il nome del modello (es. gemma3:4b).',
+          );
+        },
+      });
   }
 
   download(): void {
@@ -136,7 +177,8 @@ export class AiSettingsPanel implements OnInit {
 
   evaluate(): void {
     this.evaluationError.set(null);
-    this.api.evaluateAi(this.evaluationModel(), this.samples()).subscribe({
+    const [provider, model] = this.evaluationTarget().split('|') as [AiProvider, string];
+    this.api.evaluateAi(provider, model, this.samples()).subscribe({
       next: (status) => this.show(status, false),
       error: (response) =>
         this.evaluationError.set(response.error?.detail ?? 'La misura non è partita.'),
@@ -158,19 +200,25 @@ export class AiSettingsPanel implements OnInit {
    * Mostra lo stato. Con `form` = true aggiorna anche il modulo (scelta e modello): lo facciamo all'apertura
    * e dopo il salvataggio, non durante il polling, per non cancellare quello che l'utente sta scrivendo.
    */
-  private show(status: AiStatus, form: boolean): void {
+  protected show(status: AiStatus, form: boolean): void {
     this.status.set(status);
     if (form) {
       this.provider.set(status.provider);
       this.model.set(status.ollamaModel);
+      this.mistralModel.set(status.mistral.model);
+      this.geminiModel.set(status.gemini.model);
+      this.consent.set(false);
     }
-    // Il modello da misurare: quello scelto, se è scaricato, altrimenti il primo scaricato.
-    if (!status.installedModels.includes(this.evaluationModel())) {
-      this.evaluationModel.set(
-        status.installedModels.find((m) => m === status.ollamaModel) ??
-          status.installedModels[0] ??
-          '',
-      );
+    // Che cosa misurare: quello in uso, se si può, altrimenti il primo della lista.
+    const targets = this.evaluationTargets().map((t) => t.value);
+    if (!targets.includes(this.evaluationTarget())) {
+      const current =
+        status.provider === 'OLLAMA'
+          ? `OLLAMA|${status.ollamaModel}`
+          : status.provider === 'MISTRAL'
+            ? `MISTRAL|${status.mistral.model}`
+            : `GEMINI|${status.gemini.model}`;
+      this.evaluationTarget.set(targets.includes(current) ? current : (targets[0] ?? ''));
     }
     clearTimeout(this.timer);
     if (status.download?.running || status.evaluation?.running) {
@@ -184,5 +232,19 @@ export class AiSettingsPanel implements OnInit {
       error: () =>
         this.error.set("Impossibile leggere le impostazioni dell'IA: il backend è avviato?"),
     });
+  }
+}
+
+/** Il messaggio dopo "Salva": che cosa è acceso adesso. */
+function savedMessage(status: AiStatus): string {
+  switch (status.provider) {
+    case 'NONE':
+      return "Suggerimenti con l'IA spenti.";
+    case 'OLLAMA':
+      return `Suggerimenti con l'IA accesi, con il modello ${status.ollamaModel}.`;
+    default: {
+      const cloud = status.provider === 'MISTRAL' ? status.mistral : status.gemini;
+      return `Suggerimenti con l'IA accesi: ${CLOUD_INFO[status.provider].label}, modello ${cloud.model}.`;
+    }
   }
 }

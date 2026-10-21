@@ -44,7 +44,7 @@ public class AiCategoryAnswer {
     public AiCategoryAnswer(String merchantKey, Category category, String model) {
         this.merchantKey = merchantKey;
         this.category = category;
-        this.model = model;
+        this.model = model.length() > 100 ? model.substring(0, 100) : model; // la colonna è VARCHAR(100)
         this.createdAt = Instant.now();
     }
 

@@ -55,7 +55,7 @@ public class AiSuggestionService {
     public Status status() {
         boolean enabled = aiService.enabled();
         int toAsk = enabled ? asks(Integer.MAX_VALUE).size() : 0;
-        return new Status(enabled, aiService.settings().getOllamaModel(), toAsk, answerJob.state());
+        return new Status(enabled, aiService.settings().target().label(), toAsk, answerJob.state());
     }
 
     /**
@@ -64,25 +64,15 @@ public class AiSuggestionService {
      */
     @Transactional(readOnly = true)
     public Status start() {
-        if (!aiService.enabled()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "I suggerimenti con l'IA sono spenti: accendili in Impostazioni.");
-        }
-        AiService.Status ai = aiService.status();
-        if (!ai.ollamaReachable()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ollama non risponde: è avviato?");
-        }
-        if (!ai.modelInstalled()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Il modello " + ai.ollamaModel() + " non è scaricato: scaricalo in Impostazioni.");
-        }
+        AiTarget target = aiService.settings().target();
+        aiService.check(target); // IA accesa? Ollama pronto, o servizio cloud con chiave e consenso?
         List<AiQuestions.Ask> asks = asks(AiQuestions.MAX_PER_RUN);
         if (asks.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Non ci sono esercenti da chiedere: quelli senza categoria sono già stati chiesti all'IA,"
                             + " o hanno già un suggerimento dalla tua storia.");
         }
-        answerJob.start(ai.ollamaModel(), asks);
+        answerJob.start(target, asks);
         return status();
     }
 
