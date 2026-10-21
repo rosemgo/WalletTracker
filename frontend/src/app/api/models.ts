@@ -388,9 +388,6 @@ export interface ModelDownload {
   error: string | null;
 }
 
-/** Con quale client il backend parla con Ollama: le due versioni del passo 7b.2 (docs/28). */
-export type AiClient = 'SPRING_AI' | 'REST_CLIENT';
-
 /** Un errore della misura: l'esercente, la tua scelta e la risposta del modello. */
 export interface EvaluationMistake {
   merchant: string;
@@ -401,7 +398,6 @@ export interface EvaluationMistake {
 /** La misura della precisione di un modello sulle tue scelte (in corso o l'ultima fatta). */
 export interface ModelEvaluation {
   model: string;
-  client: AiClient;
   running: boolean;
   done: number; // domande fatte
   total: number;

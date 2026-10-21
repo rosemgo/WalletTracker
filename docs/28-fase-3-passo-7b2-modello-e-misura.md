@@ -1,8 +1,6 @@
-# 28. Fase 3, passo 7b.2: il modello che sceglie la categoria, in due versioni, e la misura
+# 28. Fase 3, passo 7b.2: il modello che sceglie la categoria, e la misura
 
-**Obiettivo:** chiedere a un modello di IA "di che categoria è questo movimento?", con **due versioni** del
-client che fanno la stessa cosa, una con **Spring AI** e una con **`RestClient`** scritto a mano, per vederle a
-confronto. Poi **misurare** quanto spesso il modello indovina, prima su esercenti di prova e poi, dall'app, sulle
+**Obiettivo:** chiedere a un modello di IA "di che categoria è questo movimento?", con **Spring AI**. Poi **misurare** quanto spesso il modello indovina, prima su esercenti di prova e poi, dall'app, sulle
 **tue** scelte. La misura serve a scegliere il modello: lo sceglie un numero, non l'intuito.
 
 Continua la guida del passo 7b.1 (`docs/27`): lì Ollama, Spring AI nel progetto, IA accesa/spenta e lo
@@ -12,18 +10,17 @@ scaricamento del modello. Qui, nell'ordine in cui le cose sono state fatte davve
 |---|---|
 | A | il problema: che cosa entra, che cosa esce, quali dati partono |
 | B | la domanda a mano, con `curl` |
-| C | il prompt, scritto una volta per tutte e due le versioni |
-| D | versione 1: Spring AI |
-| E | versione 2: `RestClient` |
-| F | il confronto, riga per riga, e che cosa nascondeva Spring AI |
-| G | i test: le stesse prove per le due versioni |
-| H | la misura: quale modello, quale prompt (tutti i numeri) |
-| I | la misura dentro l'app, sulle tue scelte |
-| J | sicurezza |
-| K | esercizi guidati, con le soluzioni |
+| C | il prompt |
+| D | la domanda con Spring AI |
+| E | che cosa nascondeva Spring AI (e come l'abbiamo scoperto) |
+| F | i test, con un Ollama finto |
+| G | la misura: quale modello, quale prompt (tutti i numeri) |
+| H | la misura dentro l'app, sulle tue scelte |
+| I | sicurezza |
+| J | esercizi guidati, con le soluzioni |
 
 > Prerequisiti: `docs/27`, Ollama avviato con un modello scaricato, `git pull`. Al primo avvio Flyway applica la
-> **V19** (il modello predefinito diventa `gemma3:4b`, Parte H).
+> **V19** (il modello predefinito diventa `gemma3:4b`, Parte G).
 
 I suggerimenti dell'IA nella pagina Movimenti ("Chiedi all'IA", accetta / no) sono il passo 7b.3.
 
@@ -58,7 +55,7 @@ database, non dal testo del modello.
 ### A3. Perché "non so" è importante
 
 Un suggerimento sbagliato costa più di nessun suggerimento: l'utente deve accorgersene e correggerlo. Per
-questo il modello deve poter dire "non lo so" per `PAG 0099887766`. Sembra facile: nella Parte H vedremo che
+questo il modello deve poter dire "non lo so" per `PAG 0099887766`. Sembra facile: nella Parte G vedremo che
 le due strade ovvie **non funzionano** con i modelli piccoli, e quella che funziona.
 
 ### A4. Quali dati partono
@@ -125,19 +122,17 @@ La risposta vera (con un prompt più corto e tre categorie):
 I tempi sono in **nanosecondi** (miliardesimi di secondo): 38,6 secondi in tutto, di cui **36 per caricare il
 modello** in memoria (`load_duration`: era la prima domanda dopo qualche minuto di pausa, `docs/27` A2), 1,5 per
 leggere la domanda (81 "token", pezzi di parola) e 1,1 per scrivere la risposta (8 token). Le domande seguenti,
-con il modello già caricato, durano pochi secondi. È per questo che la versione `RestClient` ha un tempo massimo
-generoso (Parte E2).
+con il modello già caricato, durano pochi secondi.
 
 Attenzione a `message.content`: è un **testo** che contiene JSON. Va letto **due volte**: prima la risposta di
-Ollama, poi il testo del modello. Con Spring AI la seconda lettura la fa la libreria; con `RestClient` la
-scriviamo noi (Parte E).
+Ollama, poi il testo del modello. Con Spring AI tutte e due le letture le fa la libreria (Parte D).
 
 ---
 
 ## Parte C: il prompt
 
-`backend/src/main/java/it/wallettracker/ai/CategoryPrompt.java`. Sta in una classe sola, usata da tutte e due
-le versioni: per confrontarle devono mandare **esattamente** la stessa domanda.
+`backend/src/main/java/it/wallettracker/ai/CategoryPrompt.java`. Sta in una classe a parte, senza Spring: è solo
+testo, e si legge e si prova meglio da solo.
 
 ### C1. La domanda come dati
 
@@ -164,7 +159,7 @@ public static final String SYSTEM = """
 ```
 
 - Perché in **inglese**, in un'app italiana? I modelli piccoli sono addestrati soprattutto su testi inglesi e
-  seguono meglio istruzioni inglesi. Non è un'opinione: misurato (Parte H3), con `llama3.2:3b` si passa dal 43%
+  seguono meglio istruzioni inglesi. Non è un'opinione: misurato (Parte G3), con `llama3.2:3b` si passa dal 43%
   al 67% di risposte giuste. Categorie ed esercenti restano in italiano, come sono.
 - `"""` è un **text block** di Java: un testo su più righe. La `\` a fine riga unisce la riga alla successiva
   (sono frasi lunghe, spezzate solo per leggerle nel codice).
@@ -209,7 +204,7 @@ Transaction: expense
 Merchant: ESSELUNGA MILANO
 ```
 
-"0 I don't know" è una **voce dell'elenco**: è la soluzione al problema di A3, spiegata nella Parte H3. Gli id
+"0 I don't know" è una **voce dell'elenco**: è la soluzione al problema di A3, spiegata nella Parte G3. Gli id
 delle categorie li assegna il database partendo da 1, quindi lo 0 non è mai una categoria vera.
 
 ### C4. La risposta e il controllo
@@ -231,38 +226,22 @@ public static Optional<Long> validated(Answer answer, CategoryQuestion question)
 `Optional<Long>`: "forse un id". Vuoto se il modello dice 0, o un numero che non è nell'elenco, o (non dovrebbe
 succedere, lo schema lo vieta) null. Chi usa il risultato non deve ricordarsi questi casi: c'è o non c'è.
 
-### C5. Un'interfaccia, due versioni
-
-`CategoryModel.java`:
-
-```java
-public interface CategoryModel {
-    Optional<Long> suggest(CategoryQuestion question, String model);
-    AiClient client(); // SPRING_AI o REST_CLIENT: quale versione sono
-}
-```
-
-Le due classi delle Parti D ed E sono due `@Component` che implementano questa interfaccia. Chi le usa (la
-misura, Parte I) chiede a Spring **tutte** le implementazioni con un `List<CategoryModel>` nel costruttore, e
-sceglie quella con il `client()` richiesto.
-
 ---
 
-## Parte D: versione 1, Spring AI
+## Parte D: la domanda con Spring AI
 
-`SpringAiCategoryModel.java`, tutto il codice:
+`CategoryModel.java`, tutto il codice:
 
 ```java
 @Component
-public class SpringAiCategoryModel implements CategoryModel {
+public class CategoryModel {
 
     private final ChatClient chatClient;
 
-    public SpringAiCategoryModel(ChatClient.Builder chatClientBuilder) {
+    public CategoryModel(ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder.build();
     }
 
-    @Override
     public Optional<Long> suggest(CategoryQuestion question, String model) {
         CategoryPrompt.Answer answer = chatClient.prompt()
                 .options(OllamaChatOptions.builder().model(model).temperature(0.0))
@@ -271,11 +250,6 @@ public class SpringAiCategoryModel implements CategoryModel {
                 .call()
                 .entity(CategoryPrompt.Answer.class, spec -> spec.useProviderStructuredOutput());
         return CategoryPrompt.validated(answer, question);
-    }
-
-    @Override
-    public AiClient client() {
-        return AiClient.SPRING_AI;
     }
 }
 ```
@@ -287,8 +261,8 @@ Riga per riga:
    `spring.ai.ollama.base-url`. Noi chiamiamo solo `build()`.
 2. **`prompt()`** inizia una domanda. Il resto è una catena di metodi ("fluent API"), come `RestClient`.
 3. **`.options(...)`**: il modello scelto dall'utente (cambia a runtime, quindi lo passiamo a ogni domanda) e la
-   temperatura. `OllamaChatOptions` è la parte **specifica di Ollama**: con un fornitore cloud ci sarebbero le
-   sue opzioni.
+   temperatura. `OllamaChatOptions` è la parte **specifica di Ollama**: con un fornitore cloud (passo 7c) ci
+   saranno le sue opzioni.
 4. **`.system(...)` e `.user(...)`**: i due messaggi della Parte C.
 5. **`.call()`**: qui parte la richiesta HTTP, e si aspetta la risposta (con `.stream()` arriverebbe a pezzi).
 6. **`.entity(Answer.class, spec -> spec.useProviderStructuredOutput())`**: la parte più interessante.
@@ -296,117 +270,30 @@ Riga per riga:
    - `useProviderStructuredOutput()` gli dice di passarlo **al fornitore** (per Ollama: nel campo `format`), che
      lo impone al modello. Senza, Spring AI aggiungerebbe in fondo al prompt una frase del tipo "rispondi in
      JSON con questo schema", e il modello potrebbe non ubbidire;
-   - legge `message.content` e lo trasforma in un `Answer` con Jackson.
+   - legge `message.content` (la "seconda lettura" della Parte B) e lo trasforma in un `Answer` con Jackson.
 
-21 righe in tutto, senza commenti. Tutto l'HTTP e il JSON li fa la libreria.
-
----
-
-## Parte E: versione 2, `RestClient`
-
-`RestClientCategoryModel.java`. La stessa cosa, scritta a mano come per Enable Banking (`docs/09`).
-
-### E1. Le classi della richiesta e della risposta
-
-```java
-static final Map<String, Object> ANSWER_SCHEMA = Map.of(
-        "type", "object",
-        "properties", Map.of("categoryId", Map.of("type", "integer")),
-        "required", List.of("categoryId"),
-        "additionalProperties", false);
-
-record ChatRequest(String model, List<Message> messages, boolean stream, Object format,
-        Map<String, Object> options) {}
-
-record Message(String role, String content) {}
-
-record ChatResponse(Message message) {}
-```
-
-- `ANSWER_SCHEMA`: lo schema della Parte B, **scritto da noi**. Con Spring AI lo genera la libreria.
-- `ChatRequest`: i campi con i nomi esatti che vuole Ollama. Jackson trasforma il record in JSON usando i nomi
-  dei componenti (`model`, `messages`, `stream`...).
-- `ChatResponse`: della risposta ci serve solo `message`. Gli altri campi (`done`, `total_duration`...)
-  Jackson li ignora (con Jackson 3, quello di Spring Boot 4, i campi sconosciuti non sono un errore di serie).
-
-### E2. Il client, con un tempo massimo
-
-```java
-@Autowired
-public RestClientCategoryModel(RestClient.Builder builder, JsonMapper jsonMapper,
-        @Value("${spring.ai.ollama.base-url}") String ollamaUrl) {
-    this(builder.baseUrl(ollamaUrl).requestFactory(requestFactory(Duration.ofMinutes(3))).build(), jsonMapper);
-}
-
-/** Per i test: un RestClient già pronto (collegato a un server finto, vedi RestClientCategoryModelTest). */
-RestClientCategoryModel(RestClient restClient, JsonMapper jsonMapper) {
-    this.restClient = restClient;
-    this.jsonMapper = jsonMapper;
-}
-```
-
-- **Due costruttori.** Spring usa quello con `@Autowired` (con due costruttori deve sapere quale); il test
-  usa l'altro (Parte G). Il primo **delega** al secondo con `this(...)`.
-- Lo stesso indirizzo di Spring AI (`spring.ai.ollama.base-url`): le due versioni parlano allo stesso Ollama.
-- **Il tempo massimo di lettura**, 3 minuti: un modello sulla CPU può metterci decine di secondi, soprattutto alla
-  prima domanda (quando si carica in memoria). Senza un limite, un Ollama bloccato bloccherebbe per sempre il
-  thread che aspetta. Spring AI ha i suoi tempi, configurabili: qui li decidiamo noi.
-
-### E3. La chiamata
-
-```java
-public Optional<Long> suggest(CategoryQuestion question, String model) {
-    ChatRequest request = new ChatRequest(model,
-            List.of(new Message("system", CategoryPrompt.SYSTEM),
-                    new Message("user", CategoryPrompt.user(question))),
-            false, ANSWER_SCHEMA, Map.of("temperature", 0));
-    ChatResponse response = restClient.post()
-            .uri("/api/chat")
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(request)
-            .retrieve()        // un errore HTTP (es. 404 "model not found") diventa un'eccezione
-            .body(ChatResponse.class);
-    if (response == null || response.message() == null) {
-        throw new IllegalStateException("Ollama ha risposto senza un messaggio");
-    }
-    CategoryPrompt.Answer answer = jsonMapper.readValue(response.message().content(), CategoryPrompt.Answer.class);
-    return CategoryPrompt.validated(answer, question);
-}
-```
-
-1. costruiamo la richiesta della Parte B;
-2. `post()...retrieve().body(ChatResponse.class)`: la **prima lettura**, la risposta di Ollama;
-3. il controllo che il messaggio ci sia: con Spring AI lo fa la libreria;
-4. `jsonMapper.readValue(...)`: la **seconda lettura**, il testo del modello come `Answer`;
-5. lo stesso `validated` della versione 1.
+Tutto l'HTTP e il JSON li fa la libreria: la richiesta della Parte B, scritta a mano, sarebbero un paio di
+record, uno schema come `Map` e due letture del JSON. È il vantaggio di Spring AI. Lo svantaggio è nella
+prossima parte.
 
 ---
 
-## Parte F: il confronto
+## Parte E: che cosa nascondeva Spring AI
 
-### F1. Fianco a fianco
+### E1. Il sintomo
 
-| | Spring AI | `RestClient` |
-|---|---|---|
-| righe di codice (senza commenti e import) | 21 | 53 |
-| lo schema JSON | generato dal record `Answer` | scritto a mano (`ANSWER_SCHEMA`) |
-| le classi della richiesta e della risposta | della libreria (`OllamaApi.ChatRequest`...) | nostre (`ChatRequest`, `Message`, `ChatResponse`) |
-| la doppia lettura del JSON | la libreria | noi |
-| tempo massimo, tentativi in caso di errore | della libreria, configurabili | noi (tempo massimo sì, tentativi no) |
-| passare a un servizio cloud (7c) | cambi starter e opzioni | riscrivi richiesta, risposta, autenticazione |
-| che cosa vedi | quello che la libreria ti mostra | tutto quello che hai scritto |
-| risposte, nei test | uguali | uguali |
-| risposte, dal vivo (49 esercenti, gemma3:4b e llama3.2:3b, con e senza esempi) | uguali: 49 su 49 in tutte e quattro le prove | |
+Durante lo sviluppo avevamo scritto, per confronto, anche una seconda versione con `RestClient`: la richiesta
+della Parte B fatta a mano, come per Enable Banking (`docs/09`). Poi l'abbiamo tolta (si usa solo Spring AI), ma
+il confronto ci ha insegnato una cosa che vale la pena raccontare.
 
-### F2. Che cosa nascondeva Spring AI
+Nella versione a mano lo schema era scritto così: `"categoryId": {"type": ["integer", "null"]}`, cioè "un intero,
+**oppure null** per dire non so", e il prompt diceva "answer null". Le due versioni mandavano (così credevamo) la
+stessa domanda, con temperatura 0. Eppure, dal vivo, in 2 casi su 49 rispondevano in modo diverso. Perché?
 
-La prima versione aveva lo schema scritto a mano così: `"categoryId": {"type": ["integer", "null"]}`, cioè
-"un intero, **oppure null** per dire non so". Il prompt diceva "answer null". Tutto sembrava a posto, e la
-prima misura dal vivo dava le **stesse** risposte con i due client senza esempi (49 su 49). Con gli esempi,
-invece, 47 su 49: perché due versioni "uguali" rispondono in modo diverso?
+### E2. La causa: guardare che cosa parte davvero
 
-Per scoprirlo, nel test (Parte G) abbiamo stampato il **corpo della richiesta** che parte davvero. Spring AI
-mandava:
+Nel test di `CategoryModel` (Parte F) abbiamo stampato il **corpo della richiesta** che Spring AI manda davvero.
+Lo schema era:
 
 ```json
 "format": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object",
@@ -415,71 +302,56 @@ mandava:
 ```
 
 Lo schema generato dal record dice "un intero, **obbligatorio**": null **non** è permesso. Con Spring AI il
-modello non poteva dire "non so", qualunque cosa chiedesse il prompt. Le due versioni non erano uguali.
+modello non poteva dire "non so", qualunque cosa chiedesse il prompt. Prompt e schema si contraddicevano, e
+nessun errore lo segnalava.
 
-È l'ultima riga della tabella di `docs/27`, A4, vista dal vivo: "dettagli nascosti dalla libreria". E la
-lezione è sempre la stessa (la stessa di `docs/27`, E4): **guarda che cosa parte davvero**. Un test con un
-server finto lo mostra in un attimo.
+È l'ultima riga della tabella di `docs/27`, A4, vista dal vivo: "dettagli nascosti dalla libreria". E la lezione
+è la stessa di `docs/27`, E4: **guarda che cosa parte davvero**. Un test con un server finto lo mostra in un
+attimo.
 
-Si poteva rendere il campo facoltativo anche in Spring AI: con `@Nullable` sul componente del record lo schema
-non lo mette più tra gli obbligatori (provato). Ma la misura della Parte H3 ha mostrato che né null né un campo
-facoltativo funzionano con questi modelli. La soluzione finale, lo 0 nell'elenco, va bene a tutte e due le
-versioni con lo **stesso** schema: quello che Spring AI genera da `Answer`, e che `ANSWER_SCHEMA` ricopia. Le
-differenze rimaste (`$schema`, `"format": "int64"`) sono annotazioni che Ollama non usa per i numeri.
+### E3. La soluzione
 
-La prova del nove: rifatta la misura con lo schema uguale, le due versioni danno la **stessa risposta in 49 casi
-su 49**, in tutte le prove (due modelli, con e senza esempi). La differenza di prima era davvero lo schema.
+Si può rendere il campo facoltativo anche con Spring AI: con `@Nullable` sul componente del record lo schema non
+lo mette più tra gli obbligatori (provato). Ma la misura (Parte G3) ha mostrato che né null né un campo
+facoltativo funzionano con questi modelli. La soluzione finale, lo **0 nell'elenco** (Parte C3), funziona con lo
+schema che Spring AI genera da solo: un intero obbligatorio. Il prompt ora dice "answer 0", e prompt e schema
+vanno d'accordo.
 
-### F3. Quale useremo
-
-Spring AI, come avevi deciso, per allinearci a quello che si fa in azienda: nel passo 7c lo stesso codice
-userà un servizio cloud cambiando solo configurazione. `RestClientCategoryModel` resta: costa poco, è provata
-dagli stessi test, ed è la "versione trasparente" con cui confrontare quando qualcosa non torna. Nella misura
-dentro l'app (Parte I) puoi scegliere quale usare.
+La prova del nove: con lo stesso schema, le due versioni (finché c'erano tutte e due) davano la **stessa
+risposta in 49 casi su 49**, in tutte le prove. La differenza era davvero lo schema.
 
 ---
 
-## Parte G: i test, le stesse prove per le due versioni
+## Parte F: i test, con un Ollama finto
 
-### G1. Una classe astratta, due sottoclassi
+### F1. Un Ollama finto
 
-`backend/src/test/java/it/wallettracker/ai/CategoryModelContractTest.java` contiene le prove; le sottoclassi
-dicono solo **come costruire** la versione da provare:
+`backend/src/test/java/it/wallettracker/ai/CategoryModelTest.java`. `MockRestServiceServer` (lo stesso di
+`EnableBankingClientTest`) si attacca a un `RestClient.Builder`: ogni richiesta fatta con un `RestClient`
+costruito da quel builder non va in rete, ma al server finto, che **controlla** che sia quella attesa e risponde
+con il JSON che decidiamo noi.
+
+### F2. Come si collega Spring AI al server finto
+
+Nell'app i pezzi di Spring AI li crea la configurazione automatica. Nel test li montiamo a mano, e così si vede
+com'è fatto Spring AI dentro:
 
 ```java
-abstract class CategoryModelContractTest {
-    abstract CategoryModel create(RestClient.Builder builder);
-
-    @BeforeEach
-    void setUp() {
-        RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
-        model = create(builder);
-    }
-
-    @Test
-    void sendsTheQuestionAndReadsTheCategoryNumber() { ... }
-    @Test
-    void zeroMeansTheModelDoesNotKnow() { ... }
-    @Test
-    void nullAlsoMeansTheModelDoesNotKnow() { ... }
-    @Test
-    void aNumberThatIsNotInTheListCountsAsDoesNotKnow() { ... }
-    @Test
-    void aMissingModelIsAnError() { ... }
+@BeforeEach
+void setUp() {
+    RestClient.Builder builder = RestClient.builder();
+    server = MockRestServiceServer.bindTo(builder).build();
+    OllamaApi ollamaApi = OllamaApi.builder().baseUrl(OLLAMA).restClientBuilder(builder).build();
+    OllamaChatModel chatModel = OllamaChatModel.builder().ollamaApi(ollamaApi).build();
+    model = new CategoryModel(ChatClient.builder(chatModel));
 }
 ```
 
-JUnit esegue i `@Test` della classe astratta **per ogni sottoclasse**: 5 prove × 2 versioni = 10 test. Si
-chiama "contract test": il contratto è l'interfaccia `CategoryModel`, e ogni implementazione lo deve
-rispettare. Se un giorno aggiungi una terza versione (un fornitore cloud), scrivi una sottoclasse di 5 righe e
-hai già tutte le prove.
+Tre strati: `OllamaApi` (l'HTTP, fatto con un `RestClient`: per questo accetta il nostro builder) →
+`OllamaChatModel` (il "modello di chat" di Spring AI, uguale per tutti i fornitori) → `ChatClient`
+(l'interfaccia comoda).
 
-### G2. Un Ollama finto
-
-`MockRestServiceServer` (lo stesso di `EnableBankingClientTest`) si attacca a un `RestClient.Builder`: ogni
-richiesta fatta con un `RestClient` costruito da quel builder non va in rete, ma al server finto, che
-**controlla** che sia quella attesa e risponde con il JSON che decidiamo noi:
+### F3. Che cosa controlla
 
 ```java
 server.expect(requestTo(OLLAMA + "/api/chat"))
@@ -499,53 +371,33 @@ server.verify(); // e la richiesta attesa è arrivata davvero
 ```
 
 `jsonPath("$.format.required[0]")` è un percorso nel JSON della richiesta: `$` è la radice, `.format` un campo,
-`[0]` il primo elemento di un array.
+`[0]` il primo elemento di un array. Le ultime due righe di `andExpect` fissano lo schema della Parte E: se una
+nuova versione di Spring AI lo cambiasse, il test se ne accorgerebbe.
 
-### G3. Come si collega Spring AI al server finto
+Le altre prove: `0` vale "non so"; anche `null` vale "non so" (lo schema non lo permette, ma non deve rompersi
+nulla); un numero che non è nell'elenco vale "non so"; un modello che non c'è (404 da Ollama) è un errore.
 
-Nell'app i pezzi di Spring AI li crea la configurazione automatica. Nel test li montiamo a mano, e così si vede
-com'è fatto Spring AI dentro:
+### F4. Un test che passa al primo colpo: prova a romperlo
 
-```java
-class SpringAiCategoryModelTest extends CategoryModelContractTest {
-    @Override
-    CategoryModel create(RestClient.Builder builder) {
-        OllamaApi ollamaApi = OllamaApi.builder().baseUrl(OLLAMA).restClientBuilder(builder).build();
-        OllamaChatModel chatModel = OllamaChatModel.builder().ollamaApi(ollamaApi).build();
-        return new SpringAiCategoryModel(ChatClient.builder(chatModel));
-    }
-}
-```
-
-Tre strati: `OllamaApi` (l'HTTP, fatto con un `RestClient`: per questo accetta il nostro builder) →
-`OllamaChatModel` (il "modello di chat" di Spring AI, uguale per tutti i fornitori) → `ChatClient`
-(l'interfaccia comoda). La versione `RestClient`, invece, usa il costruttore per i test della Parte E2:
-
-```java
-return new RestClientCategoryModel(builder.baseUrl(OLLAMA).build(), new JsonMapper());
-```
-
-### G4. Un test che passa al primo colpo: prova a romperlo
-
-I 10 test sono passati subito. Un test che passa al primo colpo potrebbe anche non controllare niente. Prova:
-cambia `.value(0.0)` della temperatura in `.value(0.5)` ed esegui:
+I test sono passati subito. Un test che passa al primo colpo potrebbe anche non controllare niente. Prova: cambia
+`.value(0.0)` della temperatura in `.value(0.5)` ed esegui:
 
 ```bash
-./mvnw test -Dtest='RestClientCategoryModelTest,SpringAiCategoryModelTest'
+./mvnw test -Dtest=CategoryModelTest
 ```
 ```
 JSON path "$.options.temperature" expected:<0.5> but was:<0.0>
 ```
 
-Falliscono tutti e due: il controllo funziona. Rimetti `0.0`. (È così che abbiamo stampato il corpo della
-richiesta della Parte F2: aggiungendo per un momento
+Il controllo funziona. Rimetti `0.0`. (È così che abbiamo stampato il corpo della richiesta della Parte E2:
+aggiungendo per un momento
 `.andExpect(request -> System.out.println(((MockClientHttpRequest) request).getBodyAsString()))`.)
 
 ---
 
-## Parte H: la misura, quale modello e quale prompt
+## Parte G: la misura, quale modello e quale prompt
 
-### H1. Gli esercenti di prova
+### G1. Gli esercenti di prova
 
 `backend/src/test/resources/ai/esercenti-di-prova.csv`: 49 esercenti scritti come li scrivono le banche, con la
 categoria giusta. Un **dataset di riferimento** ("golden dataset", in azienda): domande con la risposta nota,
@@ -564,9 +416,9 @@ Ci sono esercenti facili (Esselunga), difficili (MAR GROUP SPA DECO = un superme
 capisce), ambigui (ATM MILANO: i trasporti di Milano o un bancomat?) e tre sigle senza senso, per cui la
 risposta giusta è "non so".
 
-### H2. La prova, con il codice vero
+### G2. La prova, con il codice vero
 
-`CategoryModelLiveTest.java` fa le 49 domande con il codice dell'app (le due versioni, con e senza esempi) e
+`CategoryModelLiveTest.java` fa le 49 domande con il codice dell'app (con e senza esempi) e
 stampa una tabella. Non parte con gli altri test, che non hanno Ollama: solo se lo chiedi.
 
 ```bash
@@ -577,12 +429,11 @@ OLLAMA_LIVE=true OLLAMA_MODELS=gemma3:4b ./mvnw test -Dtest=CategoryModelLiveTes
 - `@EnabledIfEnvironmentVariable(named = "OLLAMA_LIVE", matches = "true")`: JUnit esegue la classe solo se la
   variabile d'ambiente vale `true`. Senza, il test risulta "saltato" (anche nella CI);
 - `OLLAMA_MODELS`: i modelli da provare, separati da virgole (devono essere scaricati);
-- `OLLAMA_CLIENTS`: facoltativo, `SPRING_AI`, `REST_CLIENT` o tutti e due (predefinito).
 
 Gli esempi della prova "con esempi" sono 8 scelte fisse (`COOP ALLEANZA → Spesa alimentare`,
 `AUTOGRILL → Bar e ristoranti`...), su esercenti **diversi** da quelli da indovinare.
 
-### H3. Tutte le prove fatte, in ordine
+### G3. Tutte le prove fatte, in ordine
 
 Le prime prove le abbiamo fatte con un piccolo script Python (più veloce da cambiare), poi con il codice Java.
 I secondi sono quelli del computer su cui è stata scritta la guida, dove Ollama metteva parte del modello su una
@@ -655,7 +506,7 @@ Che cosa dicono questi numeri:
 - **sotto i 3 GB non c'è un modello che funzioni**: `gemma3:1b` sta in 1,2 GB, ma indovina una volta su otto.
   Con meno di 8 GB di RAM conviene lasciare i suggerimenti spenti (o, nel passo 7c, usare un servizio cloud).
 
-### H4. La scelta: `gemma3:4b`, e `llama3.2:3b` per i computer lenti
+### G4. La scelta: `gemma3:4b`, e `llama3.2:3b` per i computer lenti
 
 | modello | da scaricare | memoria mentre lavora | per chi |
 |---|---|---|---|
@@ -684,7 +535,7 @@ WHERE provider = 'NONE' AND ollama_model = 'qwen2.5:3b';
 - l'`UPDATE` cambia la riga solo se è ancora quella iniziale (IA spenta e modello mai toccato). Se hai già
   scelto un modello, la tua scelta resta.
 
-### H5. Gli errori che restano
+### G5. Gli errori che restano
 
 Gli errori di `gemma3:4b` (dalla tabella stampata dal test) sono di tre tipi:
 
@@ -701,13 +552,13 @@ mostriamo sempre le tue scelte su altri esercenti.
 
 ---
 
-## Parte I: la misura dentro l'app, sulle tue scelte
+## Parte H: la misura dentro l'app, sulle tue scelte
 
 I 49 esercenti di prova non sono i tuoi. La misura vera è sui movimenti che hai **già categorizzato a mano**:
 si chiede al modello la categoria **senza dirgli la tua scelta**, e si confronta. Si fa da Impostazioni →
 "Misura la precisione".
 
-### I1. Dai movimenti ai casi: `EvaluationCases`
+### H1. Dai movimenti ai casi: `EvaluationCases`
 
 `EvaluationCases.build(manual, categories, ownerNames, limit)`, una funzione "pura" (riceve dati, restituisce
 dati, niente database): per questo si prova con test semplici, senza Spring (`EvaluationCasesTest`). Le regole:
@@ -731,7 +582,7 @@ Se tra gli esempi ci fosse `ESSELUNGA → Spesa alimentare` e la domanda fosse s
 devono "trapelare" negli esempi (*data leakage*). Lo prova
 `EvaluationCasesTest.theExamplesNeverContainTheMerchantToGuess`.
 
-### I2. Il lavoro in background: `ModelEvaluation`
+### H2. Il lavoro in background: `ModelEvaluation`
 
 20 domande da ~5 secondi = quasi 2 minuti. Come lo scaricamento (`docs/27`, Parte E), la richiesta HTTP fa
 partire il lavoro e risponde subito (202); la pagina chiede lo stato ogni secondo.
@@ -742,14 +593,13 @@ lavoro è **nostro**, un ciclo di domande, e ci serve un thread su cui farlo gir
 ```java
 private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-public synchronized void start(String model, AiClient client, List<Case> cases) {
+public synchronized void start(String model, List<Case> cases) {
     State current = state.get();
     if (current != null && current.running()) {
         return;                                   // una misura alla volta
     }
-    CategoryModel categoryModel = models.stream().filter(m -> m.client() == client).findFirst().orElseThrow();
-    state.set(new State(model, client, true, 0, cases.size(), 0, 0, 0, 0, List.of(), null));
-    executor.submit(() -> run(categoryModel, model, client, cases));
+    state.set(new State(model, true, 0, cases.size(), 0, 0, 0, 0, List.of(), null));
+    executor.submit(() -> run(model, cases));
 }
 
 @PreDestroy
@@ -772,14 +622,13 @@ void shutdown() {
 Il ciclo conta giuste, sbagliate e "non so", calcola il tempo medio e tiene l'elenco degli errori; se il
 modello non risponde (Ollama spento a metà, tempo massimo superato) si ferma e lo scrive nello stato.
 
-### I3. L'API
+### H3. L'API
 
-`POST /api/ai/evaluation` con `{"model": "gemma3:4b", "client": "SPRING_AI", "samples": 20}`:
+`POST /api/ai/evaluation` con `{"model": "gemma3:4b", "samples": 20}`:
 
 ```java
 public record EvaluationRequest(
         @NotNull @Pattern(regexp = MODEL_NAME) String model,
-        @NotNull AiClient client,
         @Min(1) @Max(100) int samples) {}
 ```
 
@@ -797,18 +646,18 @@ Prova a mano (con il backend avviato e qualche categoria scelta a mano):
 
 ```bash
 curl -k -X POST https://localhost:8443/api/ai/evaluation -H 'Content-Type: application/json' \
-     -d '{"model": "gemma3:4b", "client": "SPRING_AI", "samples": 5}'
+     -d '{"model": "gemma3:4b", "samples": 5}'
 curl -k https://localhost:8443/api/ai    # ripetilo: "done" sale fino a 5
 ```
 
-### I4. La pagina
+### H4. La pagina
 
 In Impostazioni, nel riquadro dell'IA:
 
 - la tabella dei **modelli consigliati** (`RECOMMENDED_MODELS` in `ai-settings-panel.ts`), con "Usa questo" che
   scrive il nome nel campo del modello;
 - **"Misura la precisione"**, visibile quando Ollama risponde e c'è almeno un modello scaricato: il modello
-  (tra quelli scaricati), il client, quanti esercenti, e il pulsante "Misura";
+  (tra quelli scaricati), quanti esercenti, e il pulsante "Misura";
 - durante la misura, l'avanzamento ("Misura di gemma3:4b in corso: 12 di 20", con la barra) e la percentuale
   fin lì; alla fine il risultato e la tabella degli errori: esercente, la tua scelta, il modello.
 
@@ -820,13 +669,13 @@ if (status.download?.running || status.evaluation?.running) {
 }
 ```
 
-### I5. I test
+### H5. I test
 
 - `EvaluationCasesTest` (6 test, senza Spring): un caso per esercente, mai la risposta negli esempi, i gruppi
   giusti, che cosa si salta, niente nome del titolare né numeri, il limite;
-- `AiControllerTest` (4 test in più): i due client sono `@MockitoBean` (finti); il test controlla risultato,
+- `AiControllerTest` (4 test in più): `CategoryModel` è `@MockitoBean` (finto); il test controlla risultato,
   errori, che le domande non contengano mai la risposta tra gli esempi (`ArgumentCaptor` "cattura" gli argomenti
-  con cui è stato chiamato il finto) e che sia stato usato il client scelto e non l'altro; i tre 409; i 400;
+  con cui è stato chiamato il finto); i tre 409; i 400;
 - `ai-settings-panel.spec.ts` (4 test in più): i modelli consigliati; la misura con il polling e i timer finti
   (`docs/27`, G2); l'errore se non parte; niente misura senza modelli scaricati.
 - **la prova dal vivo**, nel browser, con Ollama vero: un conto con 10 spese categorizzate a mano (Esselunga,
@@ -837,7 +686,7 @@ if (status.download?.running || status.evaluation?.running) {
 
 ---
 
-## Parte J: sicurezza
+## Parte I: sicurezza
 
 | Rischio | Difesa |
 |---|---|
@@ -845,17 +694,17 @@ if (status.download?.running || status.evaluation?.running) {
 | il modello "inventa" una categoria | risponde con un numero imposto dallo schema, controllato dal backend (`validated`) |
 | un suggerimento sbagliato preso per buono | il modello suggerisce soltanto (7b.3); la misura mostra quanto sbaglia, errori compresi |
 | un nome di modello costruito per fare danni | `@Pattern` anche sulla richiesta della misura |
-| richieste enormi o infinite | al massimo 100 esercenti; una misura alla volta; tempo massimo di 3 minuti a domanda con `RestClient` |
+| richieste enormi o infinite | al massimo 100 esercenti; una misura alla volta; Ollama toglie il modello dalla memoria dopo 5 minuti di pausa |
 | una misura che tiene il computer occupato | parte solo con un clic; Ollama toglie il modello dalla memoria dopo 5 minuti |
 
 ---
 
-## Parte K: esercizi guidati
+## Parte J: esercizi guidati
 
 ### Esercizio 1: scopri lo schema da solo
 
-Senza guardare la Parte F2: nel test `sendsTheQuestionAndReadsTheCategoryNumber` aggiungi la riga che stampa il
-corpo della richiesta (G4), esegui solo `SpringAiCategoryModelTest`, e trova nel corpo lo schema generato da
+Senza guardare la Parte E2: nel test `sendsTheQuestionAndReadsTheCategoryNumber` aggiungi la riga che stampa il
+corpo della richiesta (F4), esegui solo `CategoryModelTest`, e trova nel corpo lo schema generato da
 Spring AI. Poi aggiungi `@Nullable` (di `org.jspecify.annotations`) al componente di `Answer`: che cosa cambia
 nello schema?
 
@@ -870,7 +719,7 @@ facoltativo (il tipo resta `integer`). Il test `sendsTheQuestion...` allora fall
 ### Esercizio 2: misura un modello in più
 
 Scarica `qwen2.5:3b` dalla pagina Impostazioni (scrivi il nome, Salva, "Scarica il modello") e misuralo con
-"Misura la precisione" sulle tue scelte, poi con `gemma3:4b`. I numeri sono simili a quelli della Parte H3? Se
+"Misura la precisione" sulle tue scelte, poi con `gemma3:4b`. I numeri sono simili a quelli della Parte G3? Se
 no, perché potrebbero essere diversi?
 
 <details>

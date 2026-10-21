@@ -161,17 +161,6 @@
           </select>
         </label>
         <label>
-          Client
-          <select
-            [value]="evaluationClient()"
-            (change)="evaluationClient.set($any($event.target).value)"
-          >
-            @for (c of clients; track c.value) {
-              <option [value]="c.value">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
           Quanti esercenti
           <input
             type="number"
@@ -196,8 +185,7 @@
             @if (e.running) {
               Misura di {{ e.model }} in corso: {{ e.done }} di {{ e.total }}.
             } @else {
-              Misura di {{ e.model }} ({{ e.client === 'SPRING_AI' ? 'Spring AI' : 'RestClient' }}):
-              {{ e.done }} esercenti.
+              Misura di {{ e.model }}: {{ e.done }} esercenti.
             }
             @if (precision() !== null) {
               <strong>{{ precision() }}% giuste</strong>

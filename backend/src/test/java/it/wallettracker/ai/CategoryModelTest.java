@@ -14,20 +14,21 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 /**
- * Le stesse prove per le due versioni del client di Ollama (Spring AI e RestClient): le sottoclassi dicono solo
- * come costruirlo. Così il confronto è onesto: stessa domanda, stesse richieste HTTP attese, stesse risposte.
- *
- * <p>Ollama qui è finto: {@link MockRestServiceServer} (come in EnableBankingClientTest) intercetta le richieste
- * HTTP, controlla che siano quelle attese e risponde con il JSON che darebbe Ollama. Si vede così cosa parte
- * davvero, anche con Spring AI che lo nasconde.
+ * Test di {@link CategoryModel} con un Ollama finto: {@link MockRestServiceServer} (come in EnableBankingClientTest)
+ * intercetta le richieste HTTP, controlla che siano quelle attese e risponde con il JSON che darebbe Ollama. Così
+ * si vede che cosa parte davvero, anche se Spring AI lo nasconde: è così che abbiamo scoperto lo schema JSON
+ * generato dal record (docs/28, Parte E).
  */
-abstract class CategoryModelContractTest {
+class CategoryModelTest {
 
     static final String OLLAMA = "http://ollama.test";
 
@@ -39,14 +40,18 @@ abstract class CategoryModelContractTest {
     MockRestServiceServer server;
     CategoryModel model;
 
-    /** La versione da provare, costruita con questo RestClient.Builder (collegato al server finto). */
-    abstract CategoryModel create(RestClient.Builder builder);
-
+    /**
+     * Nell'app i pezzi di Spring AI li crea la configurazione automatica; qui li montiamo a mano, con OllamaApi
+     * collegato al server finto: OllamaApi (l'HTTP) → OllamaChatModel (il "modello" di Spring AI) → ChatClient
+     * (l'interfaccia comoda).
+     */
     @BeforeEach
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        model = create(builder);
+        OllamaApi ollamaApi = OllamaApi.builder().baseUrl(OLLAMA).restClientBuilder(builder).build();
+        OllamaChatModel chatModel = OllamaChatModel.builder().ollamaApi(ollamaApi).build();
+        model = new CategoryModel(ChatClient.builder(chatModel));
     }
 
     /** La risposta di /api/chat, con il testo del modello in message.content (a sua volta JSON). */

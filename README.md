@@ -91,7 +91,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 25. [Fase 3, passo 6: l'import CSV e i conti manuali (es. Trade Republic)](docs/25-fase-3-passo-6-import-csv.md)
 26. [Fase 3, passo 7a: i suggerimenti di categoria dalla tua storia](docs/26-fase-3-passo-7a-suggerimenti.md)
 27. [Fase 3, passo 7b: l'intelligenza artificiale con Spring AI e Ollama](docs/27-fase-3-passo-7b-ia-spring-ai.md)
-28. [Fase 3, passo 7b.2: il modello che sceglie la categoria, Spring AI e RestClient a confronto, la misura](docs/28-fase-3-passo-7b2-modello-e-misura.md)
+28. [Fase 3, passo 7b.2: il modello che sceglie la categoria con Spring AI, e la misura](docs/28-fase-3-passo-7b2-modello-e-misura.md)
 
 ## Piano di lavoro
 

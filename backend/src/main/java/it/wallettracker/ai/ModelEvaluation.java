@@ -43,17 +43,16 @@ public class ModelEvaluation {
      * @param unsure  "non so"
      * @param seconds il tempo medio per domanda
      */
-    public record State(String model, AiClient client, boolean running, int done, int total, int right, int wrong,
+    public record State(String model, boolean running, int done, int total, int right, int wrong,
             int unsure, double seconds, List<Mistake> mistakes, String error) {
     }
 
-    private final List<CategoryModel> models;
+    private final CategoryModel categoryModel;
     private final AtomicReference<State> state = new AtomicReference<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    /** Spring inietta tutte le implementazioni di CategoryModel: Spring AI e RestClient. */
-    public ModelEvaluation(List<CategoryModel> models) {
-        this.models = models;
+    public ModelEvaluation(CategoryModel categoryModel) {
+        this.categoryModel = categoryModel;
     }
 
     public State state() {
@@ -61,17 +60,16 @@ public class ModelEvaluation {
     }
 
     /** Fa partire la misura in background, se non ce n'è già una in corso. */
-    public synchronized void start(String model, AiClient client, List<Case> cases) {
+    public synchronized void start(String model, List<Case> cases) {
         State current = state.get();
         if (current != null && current.running()) {
             return;
         }
-        CategoryModel categoryModel = models.stream().filter(m -> m.client() == client).findFirst().orElseThrow();
-        state.set(new State(model, client, true, 0, cases.size(), 0, 0, 0, 0, List.of(), null));
-        executor.submit(() -> run(categoryModel, model, client, cases));
+        state.set(new State(model, true, 0, cases.size(), 0, 0, 0, 0, List.of(), null));
+        executor.submit(() -> run(model, cases));
     }
 
-    private void run(CategoryModel categoryModel, String model, AiClient client, List<Case> cases) {
+    private void run(String model, List<Case> cases) {
         int right = 0;
         int wrong = 0;
         int unsure = 0;
@@ -90,13 +88,13 @@ public class ModelEvaluation {
                     mistakes.add(new Mistake(c.question().merchant(), c.expected(), nameOf(c.question(), answer.get())));
                 }
                 double seconds = (System.nanoTime() - start) / 1e9 / (i + 1);
-                state.set(new State(model, client, i + 1 < cases.size(), i + 1, cases.size(), right, wrong, unsure,
+                state.set(new State(model, i + 1 < cases.size(), i + 1, cases.size(), right, wrong, unsure,
                         seconds, List.copyOf(mistakes), null));
             }
         } catch (RuntimeException e) {
             log.warn("Misura di {} non riuscita: {}", model, e.getMessage());
             State last = state.get();
-            state.set(new State(model, client, false, last.done(), last.total(), right, wrong, unsure, last.seconds(),
+            state.set(new State(model, false, last.done(), last.total(), right, wrong, unsure, last.seconds(),
                     List.copyOf(mistakes), "Il modello non ha risposto: " + e.getMessage()));
         }
     }

@@ -1,12 +1,12 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 
-import { AiClient, AiProvider, AiStatus } from '../api/models';
+import { AiProvider, AiStatus } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
 /** Ogni quanto chiedere lo stato mentre il modello si scarica o la misura è in corso. */
 const POLL_MS = 1000;
 
-/** Un modello consigliato, con i numeri misurati (docs/28, Parte H). */
+/** Un modello consigliato, con i numeri misurati (docs/28, Parte G). */
 export interface RecommendedModel {
   name: string;
   note: string;
@@ -16,7 +16,7 @@ export interface RecommendedModel {
 }
 
 /**
- * I modelli consigliati: scelti misurando, non a occhio (docs/28, Parte H). Usano la stessa memoria; il secondo
+ * I modelli consigliati: scelti misurando, non a occhio (docs/28, Parte G). Usano la stessa memoria; il secondo
  * è circa tre volte più veloce ma sbaglia di più. Più piccoli non conviene: gemma3:1b ha indovinato il 12%.
  * Più grandi nemmeno: qwen2.5:7b, con il doppio della memoria, non è stato più preciso di gemma3:4b.
  */
@@ -35,12 +35,6 @@ export const RECOMMENDED_MODELS: RecommendedModel[] = [
     memory: 'circa 3 GB',
     precision: '57%',
   },
-];
-
-/** I client con cui il backend può parlare con Ollama (docs/28): devono dare le stesse risposte. */
-export const AI_CLIENTS: { value: AiClient; label: string }[] = [
-  { value: 'SPRING_AI', label: 'Spring AI' },
-  { value: 'REST_CLIENT', label: 'RestClient (HTTP scritto a mano)' },
 ];
 
 /**
@@ -72,10 +66,8 @@ export class AiSettingsPanel implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   protected readonly recommended = RECOMMENDED_MODELS;
-  protected readonly clients = AI_CLIENTS;
-  /** Le scelte della misura: modello (tra quelli scaricati), client, quanti esercenti. */
+  /** Le scelte della misura: modello (tra quelli scaricati) e quanti esercenti. */
   protected readonly evaluationModel = signal('');
-  protected readonly evaluationClient = signal<AiClient>('SPRING_AI');
   protected readonly samples = signal(20);
   protected readonly evaluationError = signal<string | null>(null);
 
@@ -144,7 +136,7 @@ export class AiSettingsPanel implements OnInit {
 
   evaluate(): void {
     this.evaluationError.set(null);
-    this.api.evaluateAi(this.evaluationModel(), this.evaluationClient(), this.samples()).subscribe({
+    this.api.evaluateAi(this.evaluationModel(), this.samples()).subscribe({
       next: (status) => this.show(status, false),
       error: (response) =>
         this.evaluationError.set(response.error?.detail ?? 'La misura non è partita.'),
