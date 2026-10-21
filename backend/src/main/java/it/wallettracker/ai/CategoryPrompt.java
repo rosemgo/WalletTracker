@@ -4,9 +4,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Il prompt, cioè le parole che mandiamo al modello. Sta in una classe sola, usata da tutte e due le versioni
- * ({@link SpringAiCategoryModel} e {@link RestClientCategoryModel}): per confrontarle, devono mandare
- * esattamente la stessa domanda.
+ * Il prompt, cioè le parole che mandiamo al modello (le usa {@link CategoryModel}). Sta in una classe a parte,
+ * senza Spring: è solo testo, e si prova e si legge meglio da solo.
  *
  * <p>Un prompt ha due parti:
  * <ul>
@@ -44,8 +43,8 @@ public final class CategoryPrompt {
 
     /**
      * La risposta che vogliamo dal modello: un oggetto JSON con un solo campo, obbligatorio,
-     * {@code {"categoryId": 12}} ({@code 0} = non so). Spring AI ricava lo schema JSON da questo record; nella
-     * versione con RestClient lo scriviamo a mano, uguale.
+     * {@code {"categoryId": 12}} ({@code 0} = non so). Spring AI ricava lo schema JSON da questo record (vedi
+     * CategoryModelTest, che controlla lo schema davvero inviato).
      */
     public record Answer(Long categoryId) {
     }

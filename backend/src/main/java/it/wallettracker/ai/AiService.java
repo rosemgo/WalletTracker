@@ -90,11 +90,10 @@ public class AiService {
      * scaricamento). Funziona anche con l'IA spenta: serve proprio a decidere se accenderla, e con quale modello.
      *
      * @param model   un modello già scaricato in Ollama
-     * @param client  con quale dei due client chiedere (Spring AI o RestClient: devono dare le stesse risposte)
      * @param samples quanti esercenti provare
      */
     @Transactional(readOnly = true)
-    public Status evaluate(String model, AiClient client, int samples) {
+    public Status evaluate(String model, int samples) {
         List<String> installed = installedModels();
         if (installed == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ollama non risponde: è avviato?");
@@ -110,7 +109,7 @@ public class AiService {
                     "Non c'è niente da misurare: la misura confronta il modello con le categorie che hai scelto a mano"
                             + " per spese ed entrate, e non ne hai ancora scelta nessuna.");
         }
-        modelEvaluation.start(model, client, cases);
+        modelEvaluation.start(model, cases);
         return status();
     }
 

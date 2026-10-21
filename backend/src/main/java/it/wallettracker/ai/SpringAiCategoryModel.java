@@ -25,9 +25,7 @@ public class SpringAiCategoryModel implements CategoryModel {
     private final ChatClient chatClient;
 
     public SpringAiCategoryModel(ChatClient.Builder chatClientBuilder) {
-
         this.chatClient = chatClientBuilder.build();
-
     }
 
     @Override

@@ -150,8 +150,9 @@ Answer answer = chatClient.prompt()
         .entity(Answer.class, spec -> spec.useProviderStructuredOutput()); // lo schema lo genera dal record
 ```
 
-Nel 7b.2 (`docs/28`) li abbiamo scritti **tutti e due davvero**, con gli stessi test, così il confronto lo vedi
-sul codice e non solo nella tabella.
+Nel 7b.2 (`docs/28`) li abbiamo scritti tutti e due per confronto, poi abbiamo tenuto solo Spring AI. Il
+confronto ha mostrato dal vivo l'ultima riga della tabella: un dettaglio che Spring AI nascondeva (`docs/28`,
+Parte E).
 
 ---
 

@@ -3,7 +3,6 @@ package it.wallettracker.ai;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,7 +24,6 @@ import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -47,7 +45,7 @@ import reactor.core.publisher.Flux;
 /**
  * Test delle impostazioni dell'IA. Ollama è finto ({@code @MockitoBean}): decidiamo noi se "risponde" e che
  * cosa. Così i test (e la CI) non hanno bisogno di Ollama né di un modello scaricato. Per la misura della
- * precisione sono finti anche i due client (le loro prove sono in CategoryModelContractTest).
+ * precisione è finto anche CategoryModel (le sue prove sono in CategoryModelTest).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -82,18 +80,9 @@ class AiControllerTest {
     OllamaApi ollamaApi;
 
     @MockitoBean
-    SpringAiCategoryModel springAiModel;
-
-    @MockitoBean
-    RestClientCategoryModel restClientModel;
+    CategoryModel categoryModel;
 
     private int counter;
-
-    @BeforeEach
-    void clients() {
-        when(springAiModel.client()).thenReturn(AiClient.SPRING_AI);
-        when(restClientModel.client()).thenReturn(AiClient.REST_CLIENT);
-    }
 
     @AfterEach
     void backToDefaults() {
@@ -208,10 +197,10 @@ class AiControllerTest {
         classificationService.classifyAll();
         when(ollamaApi.listModels()).thenReturn(models("gemma3:4b"));
         // Il modello finto indovina Esselunga e sbaglia la pizzeria.
-        when(restClientModel.suggest(any(CategoryQuestion.class), eq("gemma3:4b")))
+        when(categoryModel.suggest(any(CategoryQuestion.class), eq("gemma3:4b")))
                 .thenReturn(Optional.of(groceries.getId()));
 
-        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"REST_CLIENT\", \"samples\": 10}"))
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"samples\": 10}"))
                 .hasStatus(202);
         for (int i = 0; i < 50 && modelEvaluation.state().running(); i++) {
             Thread.sleep(100);
@@ -219,7 +208,6 @@ class AiControllerTest {
 
         assertThat(mvc.get().uri("/api/ai")).bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.evaluation.running").isEqualTo(false);
-            json.assertThat().extractingPath("$.evaluation.client").isEqualTo("REST_CLIENT");
             json.assertThat().extractingPath("$.evaluation.done").isEqualTo(2);
             json.assertThat().extractingPath("$.evaluation.right").isEqualTo(1);
             json.assertThat().extractingPath("$.evaluation.wrong").isEqualTo(1);
@@ -227,19 +215,18 @@ class AiControllerTest {
             json.assertThat().extractingPath("$.evaluation.mistakes[0].expected").isEqualTo("Bar e ristoranti");
             json.assertThat().extractingPath("$.evaluation.mistakes[0].answer").isEqualTo("Spesa alimentare");
         });
-        // Le domande: mai la risposta tra gli esempi; e con il client scelto, non con l'altro.
+        // Le domande: mai la risposta tra gli esempi.
         ArgumentCaptor<CategoryQuestion> questions = ArgumentCaptor.forClass(CategoryQuestion.class);
-        verify(restClientModel, times(2)).suggest(questions.capture(), eq("gemma3:4b"));
+        verify(categoryModel, times(2)).suggest(questions.capture(), eq("gemma3:4b"));
         assertThat(questions.getAllValues()).allSatisfy(question -> assertThat(question.examples())
                 .noneMatch(example -> example.merchant().equals(question.merchant())));
-        verify(springAiModel, never()).suggest(any(), any());
     }
 
     @Test
     void withoutChoicesMadeByHandThereIsNothingToMeasure() {
         when(ollamaApi.listModels()).thenReturn(models("gemma3:4b"));
 
-        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 10}"))
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"samples\": 10}"))
                 .hasStatus(409).bodyJson().extractingPath("$.detail").asString()
                 .contains("Non c'è niente da misurare");
     }
@@ -248,17 +235,16 @@ class AiControllerTest {
     void onlyADownloadedModelCanBeMeasured() {
         when(ollamaApi.listModels()).thenReturn(models("llama3.2:3b"));
 
-        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 10}"))
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"samples\": 10}"))
                 .hasStatus(409).bodyJson().extractingPath("$.detail").asString()
                 .contains("non è scaricato");
     }
 
     @Test
     void wrongEvaluationRequestsAre400() {
-        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"BOH\", \"samples\": 10}")).hasStatus(400);
-        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 0}")).hasStatus(400);
-        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"client\": \"SPRING_AI\", \"samples\": 101}")).hasStatus(400);
-        assertThat(evaluate("{\"model\": \"x; rm\", \"client\": \"SPRING_AI\", \"samples\": 10}")).hasStatus(400);
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"samples\": 0}")).hasStatus(400);
+        assertThat(evaluate("{\"model\": \"gemma3:4b\", \"samples\": 101}")).hasStatus(400);
+        assertThat(evaluate("{\"model\": \"x; rm\", \"samples\": 10}")).hasStatus(400);
     }
 
     private MvcTestResult evaluate(String json) {

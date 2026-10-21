@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 
-import { AiClient, AiProvider, AiStatus, ModelEvaluation } from '../api/models';
+import { AiProvider, AiStatus, ModelEvaluation } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AiSettingsPanel } from './ai-settings-panel';
 
@@ -23,7 +23,6 @@ function evaluation(
 ): ModelEvaluation {
   return {
     model: 'llama3.2:3b',
-    client: 'REST_CLIENT',
     running: done < 5,
     done,
     total: 5,
@@ -43,7 +42,7 @@ describe('AiSettingsPanel', () => {
   let changes: [AiProvider, string][];
   let downloads: number;
   let afterDownload: AiStatus[];
-  let evaluations: [string, AiClient, number][];
+  let evaluations: [string, number][];
   let evaluationResponse: () => Observable<AiStatus>;
 
   beforeEach(() => {
@@ -74,8 +73,8 @@ describe('AiSettingsPanel', () => {
           },
         });
       },
-      evaluateAi: (model: string, client: AiClient, samples: number) => {
-        evaluations.push([model, client, samples]);
+      evaluateAi: (model: string, samples: number) => {
+        evaluations.push([model, samples]);
         return evaluationResponse();
       },
     };
@@ -226,14 +225,12 @@ describe('AiSettingsPanel', () => {
     const page = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
 
-    // Il modello proposto per la misura è quello scelto; ne scegliamo un altro, con RestClient, su 5.
+    // Il modello proposto per la misura è quello scelto; ne scegliamo un altro, su 5 esercenti.
     const selects = Array.from(page.querySelectorAll('select'));
-    const [modelSelect, clientSelect] = selects.slice(-2);
+    const modelSelect = selects[selects.length - 1];
     expect(modelSelect.value).toBe('gemma3:4b');
     modelSelect.value = 'llama3.2:3b';
     modelSelect.dispatchEvent(new Event('change'));
-    clientSelect.value = 'REST_CLIENT';
-    clientSelect.dispatchEvent(new Event('change'));
     const samples = page.querySelector('input[type="number"]') as HTMLInputElement;
     samples.value = '5';
     samples.dispatchEvent(new Event('input'));
@@ -252,7 +249,7 @@ describe('AiSettingsPanel', () => {
     ];
     button(page, 'Misura').click();
     fixture.detectChanges();
-    expect(evaluations).toEqual([['llama3.2:3b', 'REST_CLIENT', 5]]);
+    expect(evaluations).toEqual([['llama3.2:3b', 5]]);
     expect(page.textContent).toContain('in corso: 0 di 5');
     expect(button(page, 'Misura').disabled).toBe(true);
 
@@ -263,7 +260,7 @@ describe('AiSettingsPanel', () => {
 
     vi.advanceTimersByTime(1000); // finita: il polling si ferma
     fixture.detectChanges();
-    expect(page.textContent).toContain('Misura di llama3.2:3b (RestClient): 5 esercenti.');
+    expect(page.textContent).toContain('Misura di llama3.2:3b: 5 esercenti.');
     expect(page.textContent).toContain('80% giuste');
     expect(page.textContent).toContain('4,3 secondi a domanda');
     const mistake = page.querySelector('table[aria-label="Errori del modello"] tbody tr')!;

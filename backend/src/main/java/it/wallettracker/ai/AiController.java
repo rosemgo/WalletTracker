@@ -52,16 +52,15 @@ public class AiController {
     @PostMapping("/evaluation")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public AiService.Status evaluate(@Valid @RequestBody EvaluationRequest request) {
-        return aiService.evaluate(request.model(), request.client(), request.samples());
+        return aiService.evaluate(request.model(), request.samples());
     }
 
     /**
-     * Il corpo di {@code POST /api/ai/evaluation}: quale modello, con quale client, su quanti esercenti (al
-     * massimo 100: con un modello da qualche secondo a domanda sono già alcuni minuti).
+     * Il corpo di {@code POST /api/ai/evaluation}: quale modello e su quanti esercenti (al massimo 100: con un
+     * modello da qualche secondo a domanda sono già alcuni minuti).
      */
     public record EvaluationRequest(
             @NotNull @Pattern(regexp = MODEL_NAME) String model,
-            @NotNull AiClient client,
             @Min(1) @Max(100) int samples) {
     }
 
