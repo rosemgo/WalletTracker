@@ -165,16 +165,35 @@ sai se il problema è nel servizio o nel codice. Tutte le risposte qui sotto son
 ### B1. Avviarlo
 
 ```bash
-docker run -d --name ollama -p 127.0.0.1:11434:11434 -v ollama:/root/.ollama ollama/ollama
+docker run -d --name ollama --restart unless-stopped -p 127.0.0.1:11434:11434 -v ollama:/root/.ollama ollama/ollama
 ```
 
 | Pezzo | Significato |
 |---|---|
 | `-d` | in background ("detached") |
 | `--name ollama` | un nome, per i comandi successivi (`docker stop ollama`...) |
+| `--restart unless-stopped` | Docker lo riavvia da solo quando parte (dopo aver riacceso il PC), finché non lo fermi tu |
 | `-p 127.0.0.1:11434:11434` | la porta, **solo** per questo computer: dagli altri dispositivi non si raggiunge |
 | `-v ollama:/root/.ollama` | un "volume": i modelli scaricati restano anche se il container viene ricreato |
 | `ollama/ollama` | l'immagine ufficiale (è grande, diversi GB: contiene anche le librerie per le schede video) |
+
+**`docker run` si fa una volta sola**: crea il container. Rifarlo ne crea un secondo, che litiga con il primo per la
+porta. Le volte successive il container esiste già: con `--restart unless-stopped` riparte da solo, altrimenti
+`docker start ollama` (o il pulsante ▶ in Docker Desktop).
+
+**Su Windows**, se `docker run` risponde "An attempt was made to access a socket in a way forbidden by its access
+permissions", la porta 11434 è finita in un blocco che Windows riserva per Hyper-V/WSL (cambia a ogni avvio:
+controlla con `netsh interface ipv4 show excludedportrange protocol=tcp`). Si risolve una volta per tutte
+riservandola, da un PowerShell come amministratore:
+
+```powershell
+net stop winnat
+netsh int ipv4 add excludedportrange protocol=tcp startport=11434 numberofports=1
+net start winnat
+```
+
+Attenzione: anche un `docker run` fallito crea il container (fermo); toglilo con `docker rm <nome>` prima di
+riprovare.
 
 Verifica:
 

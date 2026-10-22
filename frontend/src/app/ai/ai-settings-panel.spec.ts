@@ -122,7 +122,8 @@ describe('AiSettingsPanel', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent!;
 
     expect(text).toContain('✗ Ollama non risponde');
-    expect(text).toContain('docker run');
+    expect(text).toContain('docker start ollama'); // di solito basta riavviarlo
+    expect(text).toContain('--restart unless-stopped'); // e la prima volta, crearlo così
     expect(text).not.toContain('Scarica il modello');
   });
 

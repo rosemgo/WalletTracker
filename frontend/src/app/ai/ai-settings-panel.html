@@ -116,10 +116,12 @@
           } @else {
             <span class="status-bad">✗ Ollama non risponde</span>
             <div class="secondary">
-              Avvialo, ad esempio con Docker:
+              Se il container di Ollama esiste già, avvialo da Docker Desktop o con
+              <code>docker start ollama</code>. Solo la prima volta, crealo con
               <code
-                >docker run -d -p 127.0.0.1:11434:11434 -v ollama:/root/.ollama ollama/ollama</code
-              >
+                >docker run -d --name ollama --restart unless-stopped -p 127.0.0.1:11434:11434 -v
+                ollama:/root/.ollama ollama/ollama</code
+              >: con <code>--restart unless-stopped</code> ripartirà da solo insieme a Docker.
             </div>
           }
         </li>
