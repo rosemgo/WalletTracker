@@ -85,7 +85,9 @@ public class AiChatClients {
     public AiChatClients(ChatClient.Builder ollamaChatClientBuilder, AiSettingsRepository settingsRepository,
             SecretCipher cipher, @Value("${wallettracker.ai.mistral.base-url}") String mistralBaseUrl,
             @Value("${wallettracker.ai.gemini.base-url:}") String geminiBaseUrl) {
+
         this(ollamaChatClientBuilder, settingsRepository, cipher, mistralBaseUrl, geminiBaseUrl, Duration.ofSeconds(5));
+
     }
 
     /** Per i test: con un'attesa breve tra i tentativi. */
