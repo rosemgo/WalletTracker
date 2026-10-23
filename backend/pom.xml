@@ -73,7 +73,6 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- Driver JDBC: la "spina" che permette a Java di parlare con PostgreSQL -->
         <!-- I suggerimenti di categoria con un modello locale (Ollama), tramite Spring AI (docs/27). -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
@@ -99,6 +98,8 @@
             <artifactId>commons-csv</artifactId>
             <version>1.14.1</version>
         </dependency>
+
+        <!-- Driver JDBC: la "spina" che permette a Java di parlare con PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
