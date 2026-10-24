@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Chiede al modello la categoria di un movimento, con <b>Spring AI</b>: tutto il lavoro HTTP e JSON lo fa la
- * libreria. Il prompt è in {@link CategoryPrompt}. La stessa domanda va a qualunque fornitore (Ollama, Mistral,
+ * libreria. Il prompt è in {@link CategoryPrompt}. La stessa domanda va a qualunque fornitore (Ollama,
  * Gemini): il {@link ChatClient} giusto lo dà {@link AiChatClients}.
  *
  * <ul>

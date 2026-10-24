@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Le impostazioni dell'IA e lo stato di Ollama e dei servizi cloud (passo 7c: Mistral e Gemini, docs/30).
+ * Le impostazioni dell'IA e lo stato di Ollama e dei servizi cloud (passo 7c: Google Gemini, docs/30).
  *
  * <p>{@link OllamaApi} è il "client" di Ollama che Spring AI crea da solo (configurazione automatica), con
  * l'indirizzo scritto in {@code spring.ai.ollama.base-url}. Qui lo usiamo solo per chiedere quali modelli
@@ -34,19 +34,18 @@ public class AiService {
     /**
      * Le impostazioni e lo stato, per la pagina Impostazioni.
      *
-     * @param provider        la scelta dell'utente: spento, Ollama, Mistral o Gemini
+     * @param provider        la scelta dell'utente: spento, Ollama o Gemini
      * @param ollamaModel     il modello scelto per Ollama
      * @param ollamaReachable se Ollama risponde
      * @param installedModels i modelli già scaricati in Ollama
      * @param modelInstalled  se il modello scelto è tra quelli scaricati
      * @param download        lo scaricamento in corso o l'ultimo fatto, o null
      * @param evaluation      la misura della precisione in corso o l'ultima fatta, o null
-     * @param mistral         Mistral AI: modello, chiave, consenso
      * @param gemini          Google Gemini: modello, chiave, consenso
      */
     public record Status(AiProvider provider, String ollamaModel, boolean ollamaReachable, List<String> installedModels,
             boolean modelInstalled, ModelDownload.State download, ModelEvaluation.State evaluation,
-            CloudStatus mistral, CloudStatus gemini) {
+            CloudStatus gemini) {
     }
 
     /**
@@ -97,7 +96,7 @@ public class AiService {
         List<String> models = reachable ? installed : List.of();
         return new Status(settings.getProvider(), settings.getOllamaModel(), reachable, models,
                 isInstalled(models, settings.getOllamaModel()), modelDownload.state(), modelEvaluation.state(),
-                cloudStatus(settings, AiProvider.MISTRAL), cloudStatus(settings, AiProvider.GEMINI));
+                cloudStatus(settings, AiProvider.GEMINI));
     }
 
     private CloudStatus cloudStatus(AiSettings settings, AiProvider cloud) {
@@ -120,11 +119,9 @@ public class AiService {
      * resta salvato. Un modello null vuol dire "lascia quello di prima".
      */
     @Transactional
-    public Status change(AiProvider provider, String ollamaModel, String mistralModel, String geminiModel,
-            boolean consent) {
+    public Status change(AiProvider provider, String ollamaModel, String geminiModel, boolean consent) {
         AiSettings settings = settings();
         settings.changeModels(ollamaModel.trim(),
-                mistralModel != null ? mistralModel.trim() : settings.model(AiProvider.MISTRAL),
                 geminiModel != null ? geminiModel.trim() : settings.model(AiProvider.GEMINI));
         if (provider.cloud()) {
             if (settings.encryptedApiKey(provider) == null) {
@@ -183,7 +180,7 @@ public class AiService {
                             "Il modello " + target.model() + " non è scaricato: scaricalo in Impostazioni.");
                 }
             }
-            case MISTRAL, GEMINI -> {
+            case GEMINI -> {
                 if (settings.encryptedApiKey(target.provider()) == null) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Manca la chiave di " + target.provider().label + ": inseriscila in Impostazioni.");

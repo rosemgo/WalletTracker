@@ -22,7 +22,6 @@
       >
         <option value="NONE">Spenti</option>
         <option value="OLLAMA">Sul mio computer (Ollama)</option>
-        <option value="MISTRAL">Nel cloud: Mistral AI</option>
         <option value="GEMINI">Nel cloud: Google Gemini</option>
       </select>
     </label>
@@ -86,15 +85,7 @@
     </p>
   }
   @if (status(); as s) {
-    @if (provider() === 'MISTRAL') {
-      <app-cloud-ai-section
-        provider="MISTRAL"
-        [cloud]="s.mistral"
-        [(aiModel)]="mistralModel"
-        [(consent)]="consent"
-        (statusChange)="show($event, false)"
-      />
-    } @else if (provider() === 'GEMINI') {
+    @if (provider() === 'GEMINI') {
       <app-cloud-ai-section
         provider="GEMINI"
         [cloud]="s.gemini"

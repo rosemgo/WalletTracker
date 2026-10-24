@@ -77,9 +77,7 @@ wallettracker:
     check-every: 30m
     initial-delay: 10s
   ai:
-    # Gli indirizzi dei servizi cloud (passo 7c, docs/30). Si cambiano solo per i test, che li puntano a un
-    # server finto. Per Gemini, vuoto = l'indirizzo di Google (lo sceglie la libreria di Google).
-    mistral:
-      base-url: https://api.mistral.ai
+    # L'indirizzo di Gemini (passo 7c, docs/30). Si cambia solo per i test, che lo puntano a un server finto.
+    # Vuoto = l'indirizzo di Google (lo sceglie la libreria di Google).
     gemini:
       base-url:

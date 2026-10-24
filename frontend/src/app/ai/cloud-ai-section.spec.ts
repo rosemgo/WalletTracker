@@ -6,13 +6,13 @@ import { WalletApi } from '../api/wallet-api';
 import { CloudAiSection } from './cloud-ai-section';
 
 const NO_KEY: AiCloudStatus = {
-  model: 'mistral-small-latest',
+  model: 'gemini-flash-latest',
   keySet: false,
   keyHint: null,
   consent: false,
 };
 const READY: AiCloudStatus = {
-  model: 'mistral-small-latest',
+  model: 'gemini-flash-latest',
   keySet: true,
   keyHint: '…XYZ9',
   consent: true,
@@ -28,7 +28,7 @@ describe('CloudAiSection', () => {
   beforeEach(() => {
     savedKeys = [];
     deleted = [];
-    saveResponse = () => of({ mistral: READY } as AiStatus);
+    saveResponse = () => of({ gemini: READY } as AiStatus);
     testResponse = of({ ok: true, answer: 'Spesa alimentare', seconds: 1.234, error: null });
     const fakeApi: Partial<WalletApi> = {
       saveAiKey: (provider: AiCloudProvider, apiKey: string) => {
@@ -37,7 +37,7 @@ describe('CloudAiSection', () => {
       },
       deleteAiKey: (provider: AiCloudProvider) => {
         deleted.push(provider);
-        return of({ mistral: NO_KEY } as AiStatus);
+        return of({ gemini: NO_KEY } as AiStatus);
       },
       testAiConnection: () => testResponse,
     };
@@ -47,7 +47,7 @@ describe('CloudAiSection', () => {
     });
   });
 
-  async function render(cloud: AiCloudStatus, provider: AiCloudProvider = 'MISTRAL') {
+  async function render(cloud: AiCloudStatus, provider: AiCloudProvider = 'GEMINI') {
     const fixture = TestBed.createComponent(CloudAiSection);
     fixture.componentRef.setInput('provider', provider);
     fixture.componentRef.setInput('cloud', cloud);
@@ -66,13 +66,13 @@ describe('CloudAiSection', () => {
     const { page } = await render(NO_KEY);
     const text = page.textContent!.replace(/\s+/g, ' ');
 
-    expect(text).toContain('Come avere la chiave di Mistral AI');
-    expect(page.querySelector('a')?.getAttribute('href')).toBe('https://console.mistral.ai');
+    expect(text).toContain('Come avere la chiave di Google Gemini');
+    expect(page.querySelector('a')?.getAttribute('href')).toBe('https://aistudio.google.com');
     expect(text).toContain('Non vengono inviati importi, date, IBAN, numeri di carta, il tuo nome');
   });
 
   it('Gemini warns about the free plan', async () => {
-    const { page } = await render({ ...NO_KEY, model: 'gemini-flash-latest' }, 'GEMINI');
+    const { page } = await render(NO_KEY);
 
     expect(page.textContent).toContain('con il piano gratuito Google può usare i dati inviati');
   });
@@ -90,7 +90,7 @@ describe('CloudAiSection', () => {
     button(page, 'Salva la chiave').click();
     await fixture.whenStable();
 
-    expect(savedKeys).toEqual([['MISTRAL', 'my-secret-key-123']]);
+    expect(savedKeys).toEqual([['GEMINI', 'my-secret-key-123']]);
     expect(emitted.length).toBe(1);
     expect(field.value).toBe(''); // la chiave non resta nella pagina
   });
@@ -102,7 +102,7 @@ describe('CloudAiSection', () => {
     expect(page.querySelector('input[type="password"]')).toBeNull();
     button(page, 'togli').click();
     await fixture.whenStable();
-    expect(deleted).toEqual(['MISTRAL']);
+    expect(deleted).toEqual(['GEMINI']);
   });
 
   it('a key with wrong characters is explained', async () => {
@@ -137,19 +137,19 @@ describe('CloudAiSection', () => {
     button(page, 'Prova la connessione').click();
     await fixture.whenStable();
     expect(page.textContent).toContain(
-      '✓ Mistral AI risponde: ESSELUNGA → Spesa alimentare (1,2 s)',
+      '✓ Google Gemini risponde: ESSELUNGA → Spesa alimentare (1,2 s)',
     );
 
     testResponse = of({
       ok: false,
       answer: null,
       seconds: 0.3,
-      error: 'La chiave di Mistral AI non è valida.',
+      error: 'La chiave di Google Gemini non è valida.',
     });
     button(page, 'Prova la connessione').click();
     await fixture.whenStable();
     expect(page.querySelector('.error')?.textContent).toContain(
-      'La chiave di Mistral AI non è valida',
+      'La chiave di Google Gemini non è valida',
     );
   });
 });

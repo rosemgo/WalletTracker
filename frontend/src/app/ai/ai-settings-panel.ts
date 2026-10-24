@@ -71,13 +71,12 @@ export class AiSettingsPanel implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   /** I modelli dei servizi cloud e il consenso: li cambia CloudAiSection (two-way binding), li salva save(). */
-  protected readonly mistralModel = signal('');
   protected readonly geminiModel = signal('');
   protected readonly consent = signal(false);
 
   protected readonly recommended = RECOMMENDED_MODELS;
   /**
-   * Le scelte della misura: che cosa misurare ("OLLAMA|gemma3:4b", "MISTRAL|mistral-small-latest") e quanti
+   * Le scelte della misura: che cosa misurare ("OLLAMA|gemma3:4b", "GEMINI|gemini-flash-latest") e quanti
    * esercenti. Fornitore e modello stanno in un valore solo perché un menu ha un valore solo.
    */
   protected readonly evaluationTarget = signal('');
@@ -96,14 +95,11 @@ export class AiSettingsPanel implements OnInit {
       value: `OLLAMA|${m}`,
       label: `${m} (sul tuo computer)`,
     }));
-    for (const cloud of ['MISTRAL', 'GEMINI'] as const) {
-      const c = cloud === 'MISTRAL' ? s.mistral : s.gemini;
-      if (c.keySet && c.consent) {
-        targets.push({
-          value: `${cloud}|${c.model}`,
-          label: `${CLOUD_INFO[cloud].label} · ${c.model}`,
-        });
-      }
+    if (s.gemini.keySet && s.gemini.consent) {
+      targets.push({
+        value: `GEMINI|${s.gemini.model}`,
+        label: `${CLOUD_INFO.GEMINI.label} · ${s.gemini.model}`,
+      });
     }
     return targets;
   });
@@ -141,7 +137,6 @@ export class AiSettingsPanel implements OnInit {
       .changeAi({
         provider: this.provider(),
         ollamaModel: this.model().trim(),
-        mistralModel: this.mistralModel().trim(),
         geminiModel: this.geminiModel().trim(),
         consent: this.consent(),
       })
@@ -205,7 +200,6 @@ export class AiSettingsPanel implements OnInit {
     if (form) {
       this.provider.set(status.provider);
       this.model.set(status.ollamaModel);
-      this.mistralModel.set(status.mistral.model);
       this.geminiModel.set(status.gemini.model);
       this.consent.set(false);
     }
@@ -215,9 +209,7 @@ export class AiSettingsPanel implements OnInit {
       const current =
         status.provider === 'OLLAMA'
           ? `OLLAMA|${status.ollamaModel}`
-          : status.provider === 'MISTRAL'
-            ? `MISTRAL|${status.mistral.model}`
-            : `GEMINI|${status.gemini.model}`;
+          : `GEMINI|${status.gemini.model}`;
       this.evaluationTarget.set(targets.includes(current) ? current : (targets[0] ?? ''));
     }
     clearTimeout(this.timer);
@@ -242,9 +234,7 @@ function savedMessage(status: AiStatus): string {
       return "Suggerimenti con l'IA spenti.";
     case 'OLLAMA':
       return `Suggerimenti con l'IA accesi, con il modello ${status.ollamaModel}.`;
-    default: {
-      const cloud = status.provider === 'MISTRAL' ? status.mistral : status.gemini;
-      return `Suggerimenti con l'IA accesi: ${CLOUD_INFO[status.provider].label}, modello ${cloud.model}.`;
-    }
+    case 'GEMINI':
+      return `Suggerimenti con l'IA accesi: ${CLOUD_INFO.GEMINI.label}, modello ${status.gemini.model}.`;
   }
 }

@@ -79,15 +79,11 @@
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
         <!--
-            I servizi cloud del passo 7c (docs/30): Mistral AI e Google Gemini. Qui NON usiamo gli "starter"
-            (che configurano tutto da soli all'avvio e vogliono la chiave nel file di configurazione), ma le
-            librerie semplici: la chiave la inserisce l'utente dalla pagina Impostazioni, quindi il "modello"
+            Il servizio cloud del passo 7c (docs/30): Google Gemini. Qui NON usiamo lo "starter"
+            (che configura tutto da solo all'avvio e vuole la chiave nel file di configurazione), ma la
+            libreria semplice: la chiave la inserisce l'utente dalla pagina Impostazioni, quindi il "modello"
             lo costruiamo noi quando serve, con la chiave letta (e decifrata) dal database.
         -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-mistral-ai</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-google-genai</artifactId>

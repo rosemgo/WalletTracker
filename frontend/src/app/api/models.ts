@@ -397,12 +397,12 @@ export interface UsedCategories {
 
 /**
  * Chi suggerisce le categorie: nessuno (spento), un modello sul proprio computer (Ollama), o un servizio cloud
- * (Mistral AI, Google Gemini: passo 7c).
+ * (Google Gemini: passo 7c).
  */
-export type AiProvider = 'NONE' | 'OLLAMA' | 'MISTRAL' | 'GEMINI';
+export type AiProvider = 'NONE' | 'OLLAMA' | 'GEMINI';
 
 /** I servizi cloud. */
-export type AiCloudProvider = 'MISTRAL' | 'GEMINI';
+export type AiCloudProvider = 'GEMINI';
 
 /** Lo stato di un servizio cloud. La chiave non c'è mai: solo se è salvata e le sue ultime 4 lettere. */
 export interface AiCloudStatus {
@@ -424,7 +424,6 @@ export interface AiConnectionTest {
 export interface AiSettingsChange {
   provider: AiProvider;
   ollamaModel: string;
-  mistralModel: string;
   geminiModel: string;
   consent: boolean; // il consenso all'invio dei dati, se si sceglie un servizio cloud
 }
@@ -469,6 +468,5 @@ export interface AiStatus {
   modelInstalled: boolean;
   download: ModelDownload | null;
   evaluation: ModelEvaluation | null;
-  mistral: AiCloudStatus;
   gemini: AiCloudStatus;
 }

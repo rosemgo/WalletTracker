@@ -5,7 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Dagli errori delle librerie a messaggi che dicono che cosa fare. Le librerie di Mistral e di Google lanciano
+ * Dagli errori delle librerie a messaggi che dicono che cosa fare. Le librerie (di Ollama, di Google) lanciano
  * eccezioni diverse, ma il codice HTTP della risposta c'è sempre nel messaggio ("HTTP 401", "401 Unauthorized"):
  * guardiamo quello, nell'eccezione e nelle sue cause.
  *
