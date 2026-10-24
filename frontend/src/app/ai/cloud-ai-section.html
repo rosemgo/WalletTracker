@@ -97,6 +97,17 @@
       <p class="status-good">
         ✓ {{ info().label }} risponde: ESSELUNGA → {{ t.answer }} ({{ seconds(t.seconds) }})
       </p>
+      @if (t.model || t.thinkingTokens !== null) {
+        <p class="secondary">
+          @if (t.model) {
+            Ha risposto il modello <code>{{ t.model }}</code
+            >.
+          }
+          @if (t.thinkingTokens !== null) {
+            Prima di rispondere ha "ragionato" con {{ t.thinkingTokens }} token.
+          }
+        </p>
+      }
     } @else {
       <p class="error">{{ t.error }}</p>
     }

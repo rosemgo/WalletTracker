@@ -93,8 +93,9 @@ class CloudChatTest {
     static String geminiAnswer(String content) {
         return """
                 {"candidates": [{"content": {"role": "model", "parts": [{"text": %s}]}, "finishReason": "STOP"}],
-                 "usageMetadata": {"promptTokenCount": 120, "candidatesTokenCount": 8, "totalTokenCount": 128},
-                 "modelVersion": "gemini-flash-latest"}
+                 "usageMetadata": {"promptTokenCount": 120, "candidatesTokenCount": 8, "totalTokenCount": 140,
+                                   "thoughtsTokenCount": 12},
+                 "modelVersion": "gemini-3.8-flash"}
                 """.formatted(quoted(content));
     }
 
@@ -106,9 +107,11 @@ class CloudChatTest {
     void geminiGetsTheKeyTheModelAndTheSchema() {
         reply = geminiAnswer("{\"categoryId\": 12}");
 
-        Optional<Long> answer = categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"));
+        CategoryModel.Reply answer = categoryModel.ask(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"));
 
-        assertThat(answer).contains(12L);
+        assertThat(answer.categoryId()).contains(12L);
+        assertThat(answer.model()).isEqualTo("gemini-3.8-flash"); // il modello vero dietro l'alias
+        assertThat(answer.thinkingTokens()).isEqualTo(12);
         Received request = received.getFirst();
         System.out.println("GEMINI " + request.path() + "\n" + request.body());
         assertThat(request.method()).isEqualTo("POST");
@@ -132,9 +135,8 @@ class CloudChatTest {
         assertThat(received).hasSize(1); // una chiave sbagliata non si riprova
     }
 
-    /** Lento (circa 17 secondi): la libreria di Google aspetta sempre di più tra un tentativo e l'altro. */
     @Test
-    void tooManyRequestsIsRetriedByGoogleAndThenExplained() {
+    void tooManyRequestsIsRetriedAndThenExplained() {
         status = 429;
         reply = """
                 {"error": {"code": 429, "message": "Resource has been exhausted (e.g. check quota).",
@@ -142,7 +144,28 @@ class CloudChatTest {
 
         assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest")))
                 .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.GEMINI)).contains("troppe richieste"));
-        assertThat(received).hasSize(5); // i tentativi li fa la libreria di Google: noi non ne aggiungiamo
+        // La prima volta e due nuovi tentativi, nostri: quelli della libreria di Google sono spenti. Prima di
+        // spegnerli le richieste erano 5 (solo Google), e il test durava 17 secondi.
+        assertThat(received).hasSize(3);
+    }
+
+    @Test
+    void afterAnOverloadTheNextTryCanWork() {
+        // 503 "sovraccarico" la prima volta, poi la risposta.
+        server.removeContext("/");
+        server.createContext("/", exchange -> {
+            received.add(new Received("POST", exchange.getRequestURI().toString(), null, null, ""));
+            boolean first = received.size() == 1;
+            byte[] bytes = (first ? "{\"error\": {\"code\": 503, \"message\": \"The model is overloaded.\"}}"
+                    : geminiAnswer("{\"categoryId\": 12}")).getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(first ? 503 : 200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+
+        assertThat(categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"))).contains(12L);
+        assertThat(received).hasSize(2);
     }
 
     @Test

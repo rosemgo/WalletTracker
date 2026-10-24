@@ -120,16 +120,19 @@ class AiCloudControllerTest {
     void theConnectionTestAsksOneQuestion() {
         saveKey("GEMINI", KEY);
         choose("GEMINI", true);
-        when(categoryModel.suggest(any(CategoryQuestion.class), eq(new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"))))
+        when(categoryModel.ask(any(CategoryQuestion.class), eq(new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"))))
                 .thenAnswer(call -> {
                     CategoryQuestion question = call.getArgument(0);
-                    return Optional.of(question.categories().stream()
-                            .filter(o -> o.name().equals("Spesa alimentare")).findFirst().orElseThrow().id());
+                    return new CategoryModel.Reply(Optional.of(question.categories().stream()
+                            .filter(o -> o.name().equals("Spesa alimentare")).findFirst().orElseThrow().id()),
+                            "gemini-3.8-flash", 12);
                 });
 
         assertThat(mvc.post().uri("/api/ai/connection-test/GEMINI")).hasStatusOk().bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.ok").isEqualTo(true);
             json.assertThat().extractingPath("$.answer").isEqualTo("Spesa alimentare");
+            json.assertThat().extractingPath("$.model").isEqualTo("gemini-3.8-flash");
+            json.assertThat().extractingPath("$.thinkingTokens").isEqualTo(12);
         });
     }
 
@@ -137,7 +140,7 @@ class AiCloudControllerTest {
     void aFailedConnectionTestSaysWhy() {
         saveKey("GEMINI", KEY);
         choose("GEMINI", true);
-        when(categoryModel.suggest(any(), any())).thenThrow(new NonTransientAiException("401 Unauthorized"));
+        when(categoryModel.ask(any(), any())).thenThrow(new NonTransientAiException("401 Unauthorized"));
 
         assertThat(mvc.post().uri("/api/ai/connection-test/GEMINI")).hasStatusOk().bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.ok").isEqualTo(false);

@@ -29,7 +29,14 @@ describe('CloudAiSection', () => {
     savedKeys = [];
     deleted = [];
     saveResponse = () => of({ gemini: READY } as AiStatus);
-    testResponse = of({ ok: true, answer: 'Spesa alimentare', seconds: 1.234, error: null });
+    testResponse = of({
+      ok: true,
+      answer: 'Spesa alimentare',
+      seconds: 1.234,
+      error: null,
+      model: 'gemini-3.8-flash',
+      thinkingTokens: 246,
+    });
     const fakeApi: Partial<WalletApi> = {
       saveAiKey: (provider: AiCloudProvider, apiKey: string) => {
         savedKeys.push([provider, apiKey]);
@@ -139,12 +146,17 @@ describe('CloudAiSection', () => {
     expect(page.textContent).toContain(
       '✓ Google Gemini risponde: ESSELUNGA → Spesa alimentare (1,2 s)',
     );
+    expect(page.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Ha risposto il modello gemini-3.8-flash. Prima di rispondere ha "ragionato" con 246 token.',
+    );
 
     testResponse = of({
       ok: false,
       answer: null,
       seconds: 0.3,
       error: 'La chiave di Google Gemini non è valida.',
+      model: null,
+      thinkingTokens: null,
     });
     button(page, 'Prova la connessione').click();
     await fixture.whenStable();

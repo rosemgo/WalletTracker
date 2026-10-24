@@ -1,6 +1,7 @@
 package it.wallettracker.ai;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,6 +51,17 @@ public final class AiErrors {
             }
         }
         return name + " non ha risposto: " + shortly(error.getMessage());
+    }
+
+    /** Il codice HTTP di errore nel messaggio dell'eccezione o delle sue cause (400, 429, 503...), se c'è. */
+    public static Optional<Integer> httpCode(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            Matcher code = HTTP_CODE.matcher(String.valueOf(t.getMessage()));
+            if (code.find()) {
+                return Optional.of(Integer.parseInt(code.group(1)));
+            }
+        }
+        return Optional.empty();
     }
 
     private static String invalidKey(String name) {

@@ -56,7 +56,7 @@ class CategoryModelTest {
 
     /** La domanda di CategoryModel, con il ChatClient collegato al server finto. */
     Optional<Long> ask() {
-        return CategoryModel.ask(chatClient, AiChatClients.options(AiTarget.ollama("gemma3:4b")), QUESTION);
+        return CategoryModel.ask(chatClient, AiChatClients.options(AiTarget.ollama("gemma3:4b")), QUESTION).categoryId();
     }
 
     /** La risposta di /api/chat, con il testo del modello in message.content (a sua volta JSON). */

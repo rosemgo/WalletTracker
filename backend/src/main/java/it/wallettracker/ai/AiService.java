@@ -2,7 +2,6 @@ package it.wallettracker.ai;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import it.wallettracker.account.AccountRepository;
@@ -59,8 +58,14 @@ public class AiService {
     public record CloudStatus(String model, boolean keySet, String keyHint, boolean consent) {
     }
 
-    /** Il risultato di "Prova la connessione": che cosa ha risposto, in quanto tempo, o perché no. */
-    public record ConnectionTest(boolean ok, String answer, double seconds, String error) {
+    /**
+     * Il risultato di "Prova la connessione": che cosa ha risposto, in quanto tempo, o perché no.
+     *
+     * @param model          il modello che ha risposto davvero (con un alias, quello scelto dal fornitore), o null
+     * @param thinkingTokens i token di "ragionamento" usati (solo Gemini), o null
+     */
+    public record ConnectionTest(boolean ok, String answer, double seconds, String error, String model,
+            Integer thinkingTokens) {
     }
 
     private final AiSettingsRepository settingsRepository;
@@ -205,13 +210,17 @@ public class AiService {
                 EvaluationCases.options(categoryRepository.findAll(), CategoryKind.EXPENSE), List.of());
         long start = System.nanoTime();
         try {
-            Optional<Long> answer = categoryModel.suggest(question, target);
-            String name = answer.flatMap(id -> question.categories().stream().filter(o -> o.id().equals(id)).findFirst())
+            CategoryModel.Reply reply = categoryModel.ask(question, target);
+            String name = reply.categoryId()
+                    .flatMap(id -> question.categories().stream().filter(o -> o.id().equals(id)).findFirst())
                     .map(CategoryQuestion.Option::name).orElse("non so");
-            return new ConnectionTest(true, name, seconds(start), null);
+            double seconds = seconds(start);
+            log.info("Prova della connessione a {}: {} in {} s (modello {}, token di ragionamento {})", provider.label,
+                    name, String.format("%.1f", seconds), reply.model(), reply.thinkingTokens());
+            return new ConnectionTest(true, name, seconds, null, reply.model(), reply.thinkingTokens());
         } catch (RuntimeException e) {
             log.warn("Prova della connessione a {} non riuscita: {}", provider.label, e.getMessage());
-            return new ConnectionTest(false, null, seconds(start), AiErrors.describe(e, provider));
+            return new ConnectionTest(false, null, seconds(start), AiErrors.describe(e, provider), null, null);
         }
     }
 

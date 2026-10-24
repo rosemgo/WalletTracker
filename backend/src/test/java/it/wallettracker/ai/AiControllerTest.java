@@ -181,6 +181,10 @@ class AiControllerTest {
                 .thenReturn(Flux.error(new IllegalStateException("pull model manifest: file does not exist")));
 
         assertThat(mvc.post().uri("/api/ai/model/download")).hasStatus(202);
+        // L'errore arriva su un altro thread (publishOn, vedi ModelDownload): aspettiamo che lo scaricamento finisca.
+        for (int i = 0; i < 50 && modelDownload.state().running(); i++) {
+            Thread.sleep(100);
+        }
 
         assertThat(mvc.get().uri("/api/ai")).bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.download.running").isEqualTo(false);

@@ -418,6 +418,8 @@ export interface AiConnectionTest {
   answer: string | null; // la categoria scelta per ESSELUNGA, o "non so"
   seconds: number;
   error: string | null;
+  model: string | null; // il modello che ha risposto davvero (dietro un alias come "gemini-flash-latest")
+  thinkingTokens: number | null; // i token di "ragionamento" usati prima di rispondere (solo Gemini)
 }
 
 /** Il corpo di PUT /api/ai. */

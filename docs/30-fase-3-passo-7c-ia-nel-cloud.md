@@ -894,13 +894,82 @@ V23. Risultato: `provider = NONE`, le colonne di Mistral sparite, i vincoli nuov
 
 ### O4. Una cosa scoperta nei test
 
-Prima il 429 ("troppe richieste") lo provavamo con Mistral. Ora lo proviamo con Gemini, e il test
-`tooManyRequestsIsRetriedByGoogleAndThenExplained` mostra che cosa fa la libreria di Google: riceve **5** richieste
-(la prima e 4 nuovi tentativi), aspettando sempre di più tra l'una e l'altra. Il test dura circa 17 secondi, ma
-conferma quello che dicevamo in H3: per Gemini non serve aggiungere nostri tentativi.
+Prima il 429 ("troppe richieste") lo provavamo con Mistral. Provandolo con Gemini si è visto che cosa fa la libreria
+di Google: riceve **5** richieste (la prima e 4 nuovi tentativi), aspettando sempre di più tra l'una e l'altra; il test
+durava 17 secondi. E per gli errori "passeggeri" riprovava anche il nostro `RetryTemplate`: due livelli di tentativi,
+uno dentro l'altro, senza che nel log restasse traccia. La Parte O6 lo sistema.
 
 ### O5. Risultati
 
-- backend: tutti i test passano (1 saltato, la prova dal vivo);
+- backend: tutti i test passano (1 saltato, la prova dal vivo), e dopo la O6 il test del 429 dura pochi secondi
+  invece di 17;
 - frontend: 116 test passano;
 - la V23 applicata su un database con Mistral scelto: va.
+
+### O6. "102 secondi": quanto ci mette, e quale modello risponde
+
+La prima "Prova la connessione" con Gemini ha risposto giusto, ma in **102,6 secondi**. Per capire di chi è il tempo
+abbiamo fatto la stessa domanda **senza l'app**, da PowerShell, con una sola richiesta:
+
+```powershell
+$k = Read-Host "Chiave"      # incollala qui: così non finisce nella cronologia né negli screenshot
+$body = '{"contents":[{"parts":[{"text":"Di che categoria di spesa è ESSELUNGA? Rispondi con una parola."}]}]}'
+$sw = [Diagnostics.Stopwatch]::StartNew()
+$r = Invoke-RestMethod -Method Post -ContentType "application/json" -Headers @{ "x-goog-api-key" = $k } `
+     -Uri "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" -Body $body
+$sw.Elapsed.TotalSeconds
+$r.modelVersion
+$r.usageMetadata
+```
+
+Risultato: **81 secondi** anche così, `modelVersion` = `gemini-3.8-flash`, `thoughtsTokenCount` = 246. Che cosa ci dice:
+
+- il tempo **non** è dell'app: una richiesta diretta, senza i nostri tentativi, ci mette lo stesso. È l'attesa dal
+  lato di Google (con il piano gratuito le richieste possono aspettare in coda) o della rete;
+- **non** è il ragionamento: 246 token un modello Flash li genera in un paio di secondi;
+- dietro l'alias `gemini-flash-latest` c'è, oggi, `gemini-3.8-flash`: lo dice Google nella risposta.
+
+Per separare rete e Google, `curl.exe` (incluso in Windows) misura le fasi della richiesta:
+
+```powershell
+curl.exe -s -o NUL -H "x-goog-api-key: $k" -H "Content-Type: application/json" -d $body `
+  -w "connessione %{time_connect}s, prima risposta %{time_starttransfer}s, totale %{time_total}s`n" `
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+```
+
+Se "connessione" è grande, il problema è la rete (firewall, antivirus, IPv6); se è piccola e "prima risposta" è
+grande, è Google che ci mette a rispondere. Prova anche `gemini-flash-lite-latest`, e in orari diversi.
+
+**Che cosa abbiamo cambiato nell'app:**
+
+1. **Il modello vero e il ragionamento, nella pagina.** `CategoryModel` ora usa `.responseEntity(...)` invece di
+   `.entity(...)`: insieme alla risposta "tradotta" in oggetto Java ci dà la `ChatResponse` completa. Da lì
+   `getMetadata().getModel()` è il `modelVersion` di Google, e `GoogleGenAiUsage.getThoughtsTokenCount()` i token di
+   ragionamento. "Prova la connessione" li mostra: *"Ha risposto il modello gemini-3.8-flash. Prima di rispondere ha
+   "ragionato" con 246 token."* Il risultato è un record, `CategoryModel.Reply`; `suggest(...)` (usato da misura e
+   "Chiedi all'IA") resta com'era e prende solo la categoria.
+2. **Un solo livello di tentativi, e nel log.** Alla libreria di Google diciamo di fare un tentativo solo
+   (`HttpRetryOptions.builder().attempts(1)`); i nuovi tentativi li fa il nostro `RetryTemplate`, per 429, 500, 503
+   e per gli errori "passeggeri" di Spring AI: al massimo 3 richieste, con 5 e 10 secondi di attesa. Un
+   `RetryListener` scrive ogni tentativo non riuscito nel log del backend:
+
+   ```
+   WARN  AiChatClients : Google Gemini: tentativo 1 non riuscito: Google Gemini risponde "troppe richieste"...
+   ```
+
+   Così, se un giorno vedi 100 secondi, nel terminale del backend c'è scritto se e perché ha riprovato. E ogni
+   "Prova la connessione" riuscita scrive una riga con il tempo, il modello e i token. Il codice HTTP lo trova
+   `AiErrors.httpCode(...)`, lo stesso metodo con cui `AiErrors` sceglie il messaggio.
+3. **Il ragionamento non lo limitiamo.** Si potrebbe chiedere a Gemini di ragionare meno (`thinkingLevel`), ma
+   abbiamo scelto di no: meglio una risposta più precisa che una più veloce, e come abbiamo visto il tempo non
+   dipende dal ragionamento.
+
+**Perché il nome del modello è un campo libero.** Google ha molti modelli e ne cambia l'elenco ogni pochi mesi:
+scritto nel codice, invecchierebbe subito. Il nome va a Google così com'è. Un **alias** (`gemini-flash-latest`,
+`gemini-flash-lite-latest`) lo sposta Google sul modello più recente; un **nome fisso** (es. `gemini-2.5-flash`)
+resta lo stesso finché Google non lo ritira, ed è meglio per confrontare le misure nel tempo. Un nome sbagliato dà
+404, e la pagina dice "Il modello non esiste".
+
+**Sicurezza:** una chiave mostrata in uno screenshot o incollata in una chat va considerata compromessa. Si cancella
+su aistudio.google.com (API keys) e se ne crea una nuova, poi "cambia" nelle Impostazioni. Per questo nel comando
+sopra c'è `Read-Host`: la chiave non resta scritta da nessuna parte.
