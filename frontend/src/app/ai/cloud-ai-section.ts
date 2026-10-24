@@ -10,6 +10,8 @@ interface CloudInfo {
   keyUrl: string;
   keySteps: string[];
   dataNote: string;
+  /** I modelli consigliati, con che cosa cambia tra l'uno e l'altro: il campo resta libero per tutti gli altri. */
+  models: { name: string; note: string }[];
 }
 
 /**
@@ -29,6 +31,18 @@ export const CLOUD_INFO: Record<AiCloudProvider, CloudInfo> = {
     dataNote:
       'Attenzione: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti. ' +
       'Leggi le condizioni sul sito prima di accettare.',
+    // Misurati con "Prova la connessione" (docs/30, parte O6): con il piano gratuito il Flash più recente può
+    // aspettare minuti in coda, il Lite risponde in pochi secondi.
+    models: [
+      {
+        name: 'gemini-flash-lite-latest',
+        note: 'veloce: di solito risponde in pochi secondi',
+      },
+      {
+        name: 'gemini-flash-latest',
+        note: 'ragiona prima di rispondere, quindi può essere più preciso, ma con il piano gratuito può impiegare minuti',
+      },
+    ],
   },
 };
 

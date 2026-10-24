@@ -51,6 +51,18 @@
       <input [value]="aiModel()" (input)="aiModel.set($any($event.target).value)" maxlength="100" />
     </label>
   </div>
+  <ul class="hint model-hints">
+    @for (m of info().models; track m.name) {
+      <li>
+        <button type="button" class="link" (click)="aiModel.set(m.name)">{{ m.name }}</button>:
+        {{ m.note }}
+      </li>
+    }
+  </ul>
+  <p class="secondary">
+    Cliccando un nome lo metti nel campo; poi premi "Salva". Puoi scrivere anche il nome di un altro
+    modello di Google.
+  </p>
 
   <h4>Che cosa viene inviato</h4>
   <ul class="hint">

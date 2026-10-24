@@ -138,6 +138,20 @@ describe('CloudAiSection', () => {
     expect(fixture.componentInstance.consent()).toBe(true);
   });
 
+  it('suggests the models: a click puts the name in the field', async () => {
+    const { fixture, page } = await render(READY);
+    const text = page.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('gemini-flash-lite-latest: veloce');
+    expect(text).toContain('gemini-flash-latest: ragiona prima di rispondere');
+
+    button(page, 'gemini-flash-lite-latest').click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.aiModel()).toBe('gemini-flash-lite-latest');
+    expect((page.querySelector('input:not([type])') as HTMLInputElement).value).toBe(
+      'gemini-flash-lite-latest',
+    );
+  });
+
   it('the connection test shows the answer, or why it failed', async () => {
     const { fixture, page } = await render(READY);
 

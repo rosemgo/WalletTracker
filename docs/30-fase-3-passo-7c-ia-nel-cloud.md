@@ -970,6 +970,16 @@ scritto nel codice, invecchierebbe subito. Il nome va a Google così com'è. Un 
 resta lo stesso finché Google non lo ritira, ed è meglio per confrontare le misure nel tempo. Un nome sbagliato dà
 404, e la pagina dice "Il modello non esiste".
 
+**Il Lite.** La stessa domanda con `gemini-flash-lite-latest` (oggi `gemini-3.5-flash-lite`): **4,3 secondi**,
+connessione 0,03 s, nessun token di ragionamento, risposta giusta. Con `gemini-flash-latest`, rifatta con `curl.exe`:
+connessione 0,08 s, **prima risposta dopo 366 secondi**. La rete è velocissima, l'attesa è tutta nella coda di
+Google per il piano gratuito (`"serviceTier": "standard"`), soprattutto su un modello appena uscito.
+
+Per questo sotto il campo "Modello" la pagina ora suggerisce i due nomi, con che cosa cambia (`CLOUD_INFO.models` in
+`cloud-ai-section.ts`): *gemini-flash-lite-latest*, veloce; *gemini-flash-latest*, ragiona e può essere più preciso
+ma può impiegare minuti. Un clic sul nome lo mette nel campo. Quale indovina di più sui tuoi esercenti lo dice
+"Misura la precisione".
+
 **Sicurezza:** una chiave mostrata in uno screenshot o incollata in una chat va considerata compromessa. Si cancella
 su aistudio.google.com (API keys) e se ne crea una nuova, poi "cambia" nelle Impostazioni. Per questo nel comando
 sopra c'è `Read-Host`: la chiave non resta scritta da nessuna parte.
