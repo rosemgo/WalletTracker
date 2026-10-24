@@ -50,7 +50,7 @@ class AiCloudControllerTest {
     void backToDefaults() {
         jdbc.update("""
                 UPDATE ai_settings SET provider = 'NONE', gemini_api_key = NULL, gemini_consent_at = NULL,
-                    gemini_model = 'gemini-flash-latest'""");
+                    gemini_model = 'gemini-flash-lite-latest'""");
     }
 
     @Test
@@ -58,6 +58,7 @@ class AiCloudControllerTest {
         assertThat(saveKey("GEMINI", KEY)).hasStatusOk().bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.gemini.keySet").isEqualTo(true);
             json.assertThat().extractingPath("$.gemini.keyHint").isEqualTo("…XYZ9");
+            json.assertThat().extractingPath("$.gemini.model").isEqualTo("gemini-flash-lite-latest"); // V24
         });
 
         // Nel database c'è solo la versione cifrata.
@@ -120,7 +121,7 @@ class AiCloudControllerTest {
     void theConnectionTestAsksOneQuestion() {
         saveKey("GEMINI", KEY);
         choose("GEMINI", true);
-        when(categoryModel.ask(any(CategoryQuestion.class), eq(new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"))))
+        when(categoryModel.ask(any(CategoryQuestion.class), eq(new AiTarget(AiProvider.GEMINI, "gemini-flash-lite-latest"))))
                 .thenAnswer(call -> {
                     CategoryQuestion question = call.getArgument(0);
                     return new CategoryModel.Reply(Optional.of(question.categories().stream()

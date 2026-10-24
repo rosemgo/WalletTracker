@@ -25,14 +25,14 @@ impiegava 80 secondi a domanda), o chi non vuole installare Ollama.
 | L | provalo tu, con le tue chiavi |
 | M | sicurezza |
 | N | esercizi guidati, con le soluzioni |
-| O | aggiornamento: Mistral tolto, solo Gemini (V23) |
+| O | aggiornamento: Mistral tolto, solo Gemini (V23); il modello più veloce come predefinito (V24) |
 
 > **Aggiornamento: Mistral AI è stato tolto (Parte O).** Il passo 7c è nato con due servizi, Mistral e Gemini, e le
 > parti B-K raccontano quella versione: ogni volta che leggi "i due servizi", oggi nel codice c'è solo Gemini. Mistral
 > non dà più chiavi API con il piano gratuito, e un servizio cloud (Gemini) più uno locale (Ollama) bastano. La
 > versione con Mistral resta nella storia di git (commit `7f2df93`), e aggiungerlo di nuovo è l'Esercizio 1.
 >
-> Prerequisiti: `docs/27`, `docs/28`, `docs/29`, e `git pull`. Al primo avvio Flyway applica la **V22** e la **V23**.
+> Prerequisiti: `docs/27`, `docs/28`, `docs/29`, e `git pull`. Al primo avvio Flyway applica la **V22**, la **V23** e la **V24**.
 >
 > Prezzi, limiti dei piani gratuiti e regole sull'uso dei dati **cambiano**: in questa guida non li scriviamo come
 > se fossero fissi. Leggili sul sito del fornitore prima di creare la chiave.
@@ -731,7 +731,7 @@ messaggio di "Prova la connessione" dirà che cosa (chiave, modello, limite, ret
 
 ## Parte L: provalo tu, con la tua chiave
 
-1. `git pull`, riavvia il backend (Flyway applica la V22 e la V23) e la dashboard.
+1. `git pull`, riavvia il backend (Flyway applica la V22, la V23 e la V24) e la dashboard.
 2. Apri **aistudio.google.com**, entra con il tuo account Google, premi "Get API key" e poi "Create API key".
    Leggi le condizioni: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti.
 3. In **Impostazioni**, "Suggerimenti" → "Nel cloud: Google Gemini". Incolla la chiave, "Salva la chiave": deve
@@ -739,7 +739,7 @@ messaggio di "Prova la connessione" dirà che cosa (chiave, modello, limite, ret
 4. Leggi "Che cosa viene inviato", spunta la casella, premi **Salva**.
 5. **Prova la connessione**: deve rispondere "ESSELUNGA → Spesa alimentare" in un secondo o due. Se no, il messaggio
    dice perché.
-6. **Misura la precisione** con "Google Gemini · gemini-flash-latest" sui tuoi esercenti, e confrontala con
+6. **Misura la precisione** con "Google Gemini · gemini-flash-lite-latest" sui tuoi esercenti, e confrontala con
    gemma3:4b: quale indovina di più? Quale è più veloce?
 7. Prova **"Chiedi all'IA"** nella pagina Movimenti.
 8. Dopo qualche giorno, guarda su aistudio.google.com quanto hai consumato.
@@ -778,7 +778,7 @@ devi scrivere da zero?
 <summary>Soluzione</summary>
 
 1. `pom.xml`: `spring-ai-openai` (la libreria, non lo starter);
-2. una migrazione (V24): il vincolo `ai_settings_provider_check` con `'OPENAI'`, le colonne `openai_api_key`,
+2. una migrazione (V25): il vincolo `ai_settings_provider_check` con `'OPENAI'`, le colonne `openai_api_key`,
    `openai_model`, `openai_consent_at`, e il vincolo `ck_ai_settings_cloud_ready` rifatto;
 3. `AiProvider`: `OPENAI("OpenAI")`, e `cloud()` lo comprende;
 4. `AiSettings`: i tre campi, e un caso in più negli `switch`;
@@ -983,3 +983,25 @@ ma può impiegare minuti. Un clic sul nome lo mette nel campo. Quale indovina di
 **Sicurezza:** una chiave mostrata in uno screenshot o incollata in una chat va considerata compromessa. Si cancella
 su aistudio.google.com (API keys) e se ne crea una nuova, poi "cambia" nelle Impostazioni. Per questo nel comando
 sopra c'è `Read-Host`: la chiave non resta scritta da nessuna parte.
+
+### O7. Il Lite diventa il predefinito (V24)
+
+"Misura la precisione" con `gemini-flash-lite-latest` sui tuoi esercenti: **43%** (3 su 7), **0,7 secondi** a
+domanda. Sugli stessi esercenti gemma3:4b aveva fatto 14% (1 su 7). Con 7 esercenti ogni risposta vale 14 punti,
+quindi il numero è solo indicativo; e degli errori, tre su quattro non si potevano indovinare (lo stesso Amazon una
+volta "Shopping" e una volta "Multimedia"; "PAYPAL *BANDINI SRL", che dal nome non dice che cosa vende). Per una
+misura affidabile servono più esercenti categorizzati a mano (30-40).
+
+Quindi il predefinito diventa il Lite, con una migrazione nuova (la V22, che conteneva il vecchio valore, è già
+applicata e non si modifica):
+
+```sql
+ALTER TABLE ai_settings ALTER COLUMN gemini_model SET DEFAULT 'gemini-flash-lite-latest';
+UPDATE ai_settings SET gemini_model = 'gemini-flash-lite-latest' WHERE gemini_model = 'gemini-flash-latest';
+```
+
+- `SET DEFAULT`: vale per le righe nuove (un'installazione da zero);
+- `UPDATE ... WHERE gemini_model = 'gemini-flash-latest'`: chi aveva ancora il vecchio predefinito passa al nuovo;
+  chi aveva scritto un altro nome lo tiene.
+
+Chi preferisce la precisione del Flash, accettando l'attesa, lo sceglie con un clic sotto il campo "Modello".

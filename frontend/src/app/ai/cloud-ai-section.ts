@@ -36,7 +36,7 @@ export const CLOUD_INFO: Record<AiCloudProvider, CloudInfo> = {
     models: [
       {
         name: 'gemini-flash-lite-latest',
-        note: 'veloce: di solito risponde in pochi secondi',
+        note: 'veloce: di solito risponde in pochi secondi (è quello predefinito)',
       },
       {
         name: 'gemini-flash-latest',
