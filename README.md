@@ -103,6 +103,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 37. [Fase grafica, passo 4: i Movimenti per giorno e il dettaglio di un movimento (simili, Annulla)](docs/37-fase-grafica-movimenti.md)
 38. [Fase grafica, passo 5: Analisi, l'esploratore e la pagina di una categoria (budget con il ritmo)](docs/38-fase-grafica-analisi.md)
 39. [Fase grafica, passo 6: il Budget e le pagine di "Altro" (tabelle come schede sul telefono, errori in parole)](docs/39-fase-grafica-budget-e-altro.md)
+40. [L'esercente scritto nella causale: bonifici e addebiti diretti riconosciuti dal nome (migrazione V28)](docs/40-esercente-nella-causale.md)
 
 ## Piano di lavoro
 

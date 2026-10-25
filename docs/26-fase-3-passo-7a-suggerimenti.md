@@ -132,6 +132,9 @@ categoria. Hibernate l'id lo conosce già, perché è la colonna `category_id` d
 
 ### 6. La chiave dell'esercente, rivista con i testi veri (migrazione V16)
 
+> Aggiornamento (`docs/40`): quando la causale scrive il nome dopo un'etichetta ("Anagrafica Ordinante ACME SRL",
+> "Creditor id. … ACME SRL Id Mandato"), la chiave è solo quel nome; le chiavi salvate le ricalcola la V28.
+
 Provando con i movimenti veri di Amazon, il gruppo del menu non compariva mai. Questa è la chiave che la
 regola di allora calcolava per alcuni testi reali (il nome del titolare è inventato):
 

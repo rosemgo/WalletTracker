@@ -172,6 +172,9 @@ export interface Transaction {
   currency: string;
   counterparty: string | null;
   description: string | null;
+  // Il nome da mostrare: la controparte, o il nome scritto nella causale ("Anagrafica Ordinante ACME SRL"), o la
+  // causale (docs/40). Facoltativo: i dati di prova dei test spesso non lo hanno.
+  name?: string | null;
   type: TransactionType | null;
   categoryId: number | null; // l'id della categoria (tiene già conto di quella scelta a mano)
   category: string | null; // il nome della categoria, da mostrare

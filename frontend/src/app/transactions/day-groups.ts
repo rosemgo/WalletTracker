@@ -69,8 +69,11 @@ export function groupByDay(items: Transaction[], today: Date): DayGroup[] {
   return groups;
 }
 
-/** Il nome di un movimento nell'elenco: la controparte, o la causale; spazi ripetuti ridotti a uno. */
+/**
+ * Il nome di un movimento nell'elenco: quello deciso dal backend (la controparte, o il nome scritto nella causale), o
+ * la causale; spazi ripetuti ridotti a uno.
+ */
 export function nameOf(transaction: Transaction): string {
-  const text = transaction.counterparty || transaction.description || '';
+  const text = transaction.name || transaction.counterparty || transaction.description || '';
   return text.replace(/\s+/g, ' ').trim() || '(nessuna descrizione)';
 }

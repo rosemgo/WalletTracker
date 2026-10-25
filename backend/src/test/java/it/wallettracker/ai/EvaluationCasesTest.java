@@ -117,6 +117,18 @@ class EvaluationCasesTest {
     }
 
     @Test
+    void ofADirectDebitOnlyTheCreditorIsSentNotTheDebtor() {
+        // Nella causale di un addebito SDD c'è anche il debitore, cioè il titolare: prima arrivava al modello.
+        List<ModelEvaluation.Case> cases = EvaluationCases.build(List.of(
+                manual("2026-10-05", "-45.10", null, "Addebito SDD CORE Scad. 05/10/2026 Imp. 45,10 Creditor id. "
+                        + "IT00ZZZ0000000000 GAMMA LUCE E GAS S.P.A. Id Mandato 0000000001 Debitore MARIO ROSSI",
+                        TransactionType.EXPENSE, SPESA)),
+                CATEGORIES, OWNERS, 10);
+
+        assertThat(cases.get(0).question().merchant()).isEqualTo("GAMMA LUCE E GAS S.P.A.");
+    }
+
+    @Test
     void respectsTheLimitAndTheNumberOfExamples() {
         List<BankTransaction> manual = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) {

@@ -319,6 +319,24 @@ class TransactionControllerTest {
     }
 
     @Test
+    void theNameIsTheCounterpartyOrTheNameWrittenInTheDescription() {
+        Account account = account();
+        transaction(account, LocalDate.of(2026, 9, 1), "12.00", "Bonifico N. 0000000001IT BIC Ordinante ALFAITMMXXX "
+                + "Codifica Ordinante IT00X0000000000000000000001 Anagrafica Ordinante ACME SRL Note: Rimborso");
+        transaction(account, LocalDate.of(2026, 9, 2), "-5.00", "BAR");
+
+        assertThat(mvc.get().uri("/api/transactions"))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.items[*].name").asArray()
+                .containsExactly("BAR", "ACME SRL");
+        // La ricerca guarda la causale intera: il nome c'è.
+        assertThat(mvc.get().uri("/api/transactions?text=acme"))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.items[*].name").asArray()
+                .containsExactly("ACME SRL");
+    }
+
+    @Test
     void aNoteCanBeWrittenFoundAndRemoved() {
         BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-9.98", "AMAZON");
         BankTransaction other = transaction(account(), LocalDate.of(2026, 9, 2), "-5.00", "BAR");
