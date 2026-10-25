@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -5,6 +6,8 @@ import { filter, map } from 'rxjs';
 
 import { SetupStore } from './api/setup-store';
 import { MORE_PAGES, NavItem } from './more/more-pages';
+import { PrivacyStore } from './privacy/privacy-store';
+import { AppStatus } from './pwa/app-status';
 import { ThemeStore } from './theme/theme-store';
 
 /**
@@ -45,11 +48,15 @@ export const MORE_SECTION: NavItem = {
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [NgTemplateOutlet, RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
 })
 export class App implements OnInit {
   protected readonly setup = inject(SetupStore);
+  /** La modalità discreta: l'occhio in alto (docs/42, parte B). */
+  protected readonly privacy = inject(PrivacyStore);
+  /** La rete e le versioni nuove dell'app installabile (docs/42, parte E). */
+  protected readonly status = inject(AppStatus);
   protected readonly sections = MAIN_SECTIONS;
   protected readonly more = MORE_SECTION;
   protected readonly morePages = MORE_PAGES;

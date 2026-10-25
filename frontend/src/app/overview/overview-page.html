@@ -42,7 +42,7 @@
     <section class="card hero">
       <span class="secondary">{{ figure()?.label }}</span>
       <span class="big-figure">{{
-        figure()?.value ?? o.spent | currency: o.currency : 'symbol' : '1.0-0'
+        figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
       }}</span>
       <p class="comparison">{{ comparison() }}</p>
       <app-month-chart
@@ -66,7 +66,7 @@
       </div>
       <p class="secondary income">
         Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
-        {{ o.income | currency: o.currency : 'symbol' : '1.0-0' }}
+        {{ o.income | money: o.currency : 'symbol' : '1.0-0' }}
       </p>
     </section>
 
@@ -107,7 +107,7 @@
                 {{ u.name }}
                 <span class="secondary">{{ u.date | date: 'EEEE d MMMM' }}</span>
               </span>
-              <strong>{{ u.amount | currency: o.currency }}</strong>
+              <strong>{{ u.amount | money: o.currency }}</strong>
             </li>
           }
         </ul>
@@ -144,7 +144,7 @@
 <ng-template #bar let-c>
   <span class="bar-label">
     <span>{{ categoryName(c) }}</span>
-    <strong>{{ c.amount | currency: overview()!.currency : 'symbol' : '1.0-0' }}</strong>
+    <strong>{{ c.amount | money: overview()!.currency : 'symbol' : '1.0-0' }}</strong>
   </span>
   <span class="bar-line">
     <span class="track">

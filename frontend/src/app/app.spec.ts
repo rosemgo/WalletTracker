@@ -82,4 +82,26 @@ describe('App', () => {
       'Impostazioni',
     );
   });
+
+  it('the eye switches the discreet mode, and says whether it is on', async () => {
+    localStorage.clear();
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const eye = (fixture.nativeElement as HTMLElement).querySelector(
+      'button.eye',
+    ) as HTMLButtonElement;
+
+    expect(eye.getAttribute('aria-label')).toContain('Modalità discreta');
+    expect(eye.getAttribute('role')).toBe('switch');
+    expect(eye.getAttribute('aria-checked')).toBe('false');
+    eye.click();
+    await fixture.whenStable();
+    expect(eye.getAttribute('aria-checked')).toBe('true');
+    expect(eye.title).toBe('Mostra gli importi');
+    // L'interruttore della colonna del PC segue la stessa scelta.
+    const navEye = (fixture.nativeElement as HTMLElement).querySelector('button.nav-eye');
+    expect(navEye?.getAttribute('aria-checked')).toBe('true');
+    eye.click(); // spenta di nuovo: il prossimo test parte da zero
+    localStorage.clear();
+  });
 });

@@ -6,12 +6,24 @@
     <base href="/" />
     <!-- viewport-fit=cover: la pagina usa tutto lo schermo; la barra in basso lascia lo spazio della "barretta". -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Il colore della barra del browser sul telefono, chiaro o scuro come il sistema. -->
-    <meta name="theme-color" content="#eeede9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#15171a" media="(prefers-color-scheme: dark)" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!-- Il colore della barra del browser sul telefono, chiaro o scuro come il sistema (= il fondo della pagina). -->
+    <meta name="theme-color" content="#f2f3f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0e12" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Le tue spese e i tuoi conti, a colpo d'occhio." />
+    <!-- L'app installabile (docs/42): il manifest dice nome, icone e come aprirsi; le icone per le schede e per iOS. -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <!-- iOS: aperta dalla schermata Home, senza la barra di Safari; il titolo sotto l'icona. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Wallet" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <app-root></app-root>
+    <!-- Senza JavaScript l'app non funziona: lo diciamo invece di mostrare una pagina bianca. -->
+    <noscript>WalletTracker ha bisogno di JavaScript: attivalo nel browser.</noscript>
   </body>
 </html>

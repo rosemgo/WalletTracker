@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import {
   Component,
   OnInit,
@@ -14,6 +13,7 @@ import { ActivatedRoute, RouterLink, RouterLinkActive, RouterOutlet } from '@ang
 import { TYPES, TYPE_LABELS } from '../api/labels';
 import { Account, Transaction, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
 import { avatarHue, groupByDay, initialOf, nameOf } from './day-groups';
 import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
@@ -39,7 +39,7 @@ const SIDE_BY_SIDE = '(min-width: 1100px)';
  */
 @Component({
   selector: 'app-transactions-page',
-  imports: [CurrencyPipe, RouterLink, RouterLinkActive, RouterOutlet, SuggestionsPanel],
+  imports: [MoneyPipe, RouterLink, RouterLinkActive, RouterOutlet, SuggestionsPanel],
   templateUrl: './transactions-page.html',
 })
 export class TransactionsPage implements OnInit {

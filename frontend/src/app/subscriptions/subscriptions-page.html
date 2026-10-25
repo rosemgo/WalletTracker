@@ -12,8 +12,8 @@
   @for (total of o.totals; track total.currency) {
     <section class="card hero">
       <span class="secondary">Gli abbonamenti costano, al mese</span>
-      <span class="big-figure tile-value">{{ total.monthly | currency: total.currency }}</span>
-      <p class="comparison">{{ total.yearly | currency: total.currency }} all'anno</p>
+      <span class="big-figure tile-value">{{ total.monthly | money: total.currency }}</span>
+      <p class="comparison">{{ total.yearly | money: total.currency }} all'anno</p>
     </section>
   }
 
@@ -38,7 +38,7 @@
                 @if (s.priceChanged) {
                   <div class="secondary">
                     <!-- Un rincaro si nota: era l'importo al momento della conferma. -->
-                    prezzo cambiato: prima {{ s.expectedAmount | currency: s.currency }}
+                    prezzo cambiato: prima {{ s.expectedAmount | money: s.currency }}
                   </div>
                 }
                 @if (s.late) {
@@ -48,11 +48,11 @@
                 }
               </td>
               <td data-label="Importo" class="amount">
-                {{ s.lastAmount ?? s.expectedAmount | currency: s.currency }}
+                {{ s.lastAmount ?? s.expectedAmount | money: s.currency }}
                 {{ frequencyLabels[s.frequency] }}
               </td>
               <td data-label="Al mese" class="amount">
-                {{ s.monthlyCost | currency: s.currency }}
+                {{ s.monthlyCost | money: s.currency }}
               </td>
               <td data-label="Pagato il">
                 {{ s.lastDate ? (s.lastDate | date: 'dd/MM/yyyy') : '—' }}
@@ -99,7 +99,7 @@
         />
       </label>
       <div>
-        <strong>{{ suggestion.typicalAmount | currency: suggestion.currency }}</strong>
+        <strong>{{ suggestion.typicalAmount | money: suggestion.currency }}</strong>
         {{ frequencyLabels[suggestion.frequency] }} · {{ suggestion.occurrences }} pagamenti ·
         ultimo il
         {{ suggestion.lastDate | date: 'dd/MM/yyyy' }}
@@ -123,7 +123,7 @@
           <li>
             {{ d.merchantKey }} ·
             @if (d.amount !== null) {
-              circa {{ d.amount | currency: d.currency }}
+              circa {{ d.amount | money: d.currency }}
             } @else {
               tutti gli importi ({{ d.currency }})
             }

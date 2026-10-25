@@ -1,9 +1,11 @@
-import { CurrencyPipe, DecimalPipe, formatCurrency, formatDate } from '@angular/common';
+import { DecimalPipe, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { CategoryOverview } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
+import { PrivacyStore } from '../privacy/privacy-store';
 import { BarChart } from './bar-chart';
 
 /** Sotto questa differenza (in euro) si è "in linea con il solito", come nel Riepilogo. */
@@ -17,13 +19,14 @@ const MONTH_INITIALS = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', '
  */
 @Component({
   selector: 'app-category-page',
-  imports: [BarChart, CurrencyPipe, DecimalPipe, RouterLink],
+  imports: [BarChart, DecimalPipe, MoneyPipe, RouterLink],
   templateUrl: './category-page.html',
 })
 export class CategoryPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly route = inject(ActivatedRoute);
   private readonly locale = inject(LOCALE_ID);
+  private readonly privacy = inject(PrivacyStore);
 
   protected readonly overview = signal<CategoryOverview | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -127,12 +130,9 @@ export class CategoryPage implements OnInit {
   }
 
   private euros(value: number, currency: string): string {
-    return formatCurrency(
-      value,
-      this.locale,
-      currency === 'EUR' ? '€' : currency,
-      currency,
-      '1.0-0',
+    // Con la modalità discreta, le cifre nascoste (docs/42): anche nelle frasi costruite qui.
+    return this.privacy.hide(
+      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, '1.0-0'),
     );
   }
 }

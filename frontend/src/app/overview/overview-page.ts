@@ -1,16 +1,12 @@
-import {
-  CurrencyPipe,
-  DatePipe,
-  NgTemplateOutlet,
-  formatCurrency,
-  formatDate,
-} from '@angular/common';
+import { DatePipe, NgTemplateOutlet, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AlertsPanel } from '../alerts/alerts-panel';
 import { Overview, OverviewCategory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
+import { PrivacyStore } from '../privacy/privacy-store';
 import { MonthChart } from './month-chart';
 
 /** Quante categorie mostrare in "Dove vanno": le altre sono in Analisi. */
@@ -45,12 +41,13 @@ function capitalized(text: string): string {
  */
 @Component({
   selector: 'app-overview-page',
-  imports: [AlertsPanel, CurrencyPipe, DatePipe, MonthChart, NgTemplateOutlet, RouterLink],
+  imports: [AlertsPanel, DatePipe, MoneyPipe, MonthChart, NgTemplateOutlet, RouterLink],
   templateUrl: './overview-page.html',
 })
 export class OverviewPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly locale = inject(LOCALE_ID);
+  private readonly privacy = inject(PrivacyStore);
 
   /** Il mese di oggi: non si va oltre. */
   protected readonly currentMonth = monthOf(new Date());
@@ -188,7 +185,8 @@ export class OverviewPage implements OnInit {
 
   /** La riga sotto una categoria: la differenza dal solito, o quante volte se non c'è un solito. */
   protected categoryNote(category: OverviewCategory, currency: string): string {
-    return categoryNote(category, (v) => this.euros(v, currency));
+    // hide anche sulla frase intera: il segno lo aggiunge categoryNote, davanti all'importo già nascosto.
+    return this.privacy.hide(categoryNote(category, (v) => this.euros(v, currency)));
   }
 
   protected categoryName(category: OverviewCategory): string {
@@ -197,12 +195,9 @@ export class OverviewPage implements OnInit {
 
   /** Un importo senza decimali: "1.284 €". */
   private euros(value: number, currency: string): string {
-    return formatCurrency(
-      value,
-      this.locale,
-      currency === 'EUR' ? '€' : currency,
-      currency,
-      '1.0-0',
+    // Con la modalità discreta, le cifre nascoste (docs/42): anche nelle frasi costruite qui.
+    return this.privacy.hide(
+      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, '1.0-0'),
     );
   }
 }

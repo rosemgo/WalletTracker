@@ -1,6 +1,8 @@
 import { formatCurrency } from '@angular/common';
 import { Component, LOCALE_ID, computed, inject, input, output, signal } from '@angular/core';
 
+import { PrivacyStore } from '../privacy/privacy-store';
+
 /** La larghezza e l'altezza del disegno: l'SVG poi si allarga quanto la scheda (viewBox). */
 const WIDTH = 340;
 const HEIGHT = 156;
@@ -118,6 +120,7 @@ interface Point {
 })
 export class MonthChart {
   private readonly locale = inject(LOCALE_ID);
+  private readonly privacy = inject(PrivacyStore);
 
   /** La spesa accumulata, un valore per giorno dal giorno 1 a oggi. */
   readonly spentByDay = input.required<number[]>();
@@ -186,7 +189,7 @@ export class MonthChart {
     const lines = [];
     for (let value = step; value < max; value += step) {
       // A mano: in italiano toLocaleString non separa le migliaia sotto 10.000 ("1000 €").
-      const label = `${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
+      const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
       lines.push({ value, y: this.y(value), label });
     }
     return lines;
@@ -265,12 +268,9 @@ export class MonthChart {
 
   private euros(value: number): string {
     const currency = this.currency();
-    return formatCurrency(
-      value,
-      this.locale,
-      currency === 'EUR' ? '€' : currency,
-      currency,
-      '1.0-0',
+    // Con la modalità discreta, le cifre nascoste (docs/42): anche nelle frasi costruite qui.
+    return this.privacy.hide(
+      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, '1.0-0'),
     );
   }
 }

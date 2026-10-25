@@ -151,7 +151,7 @@
               @for (r of p.rowsWithoutMovement; track r.line) {
                 <tr>
                   <td>{{ r.date | date: 'dd/MM/yyyy' }}</td>
-                  <td class="amount">{{ r.amount | currency: r.currency }}</td>
+                  <td class="amount">{{ r.amount | money: r.currency }}</td>
                   <td>{{ r.description ?? '—' }}</td>
                 </tr>
               }
@@ -179,7 +179,7 @@
         @for (c of list; track $index) {
           <tr>
             <td>{{ c.date | date: 'dd/MM/yyyy' }}</td>
-            <td class="amount">{{ c.amount | currency: c.currency }}</td>
+            <td class="amount">{{ c.amount | money: c.currency }}</td>
             <td>{{ c.counterparty ?? '—' }}</td>
             <td>{{ c.description ?? '—' }}</td>
           </tr>

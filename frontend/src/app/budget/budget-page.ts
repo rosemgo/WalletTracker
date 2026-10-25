@@ -1,10 +1,12 @@
-import { CurrencyPipe, formatCurrency, formatDate } from '@angular/common';
+import { formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { Budget, BudgetStatus, Category } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
+import { PrivacyStore } from '../privacy/privacy-store';
 
 /** Come si presenta ogni stato: un'icona e un'etichetta, mai solo il colore. */
 const STATUS: Record<BudgetStatus, { icon: string; label: string }> = {
@@ -27,13 +29,14 @@ const SAME_PACE = 5;
  */
 @Component({
   selector: 'app-budget-page',
-  imports: [CurrencyPipe, ReactiveFormsModule, RouterLink],
+  imports: [MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './budget-page.html',
 })
 export class BudgetPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly locale = inject(LOCALE_ID);
+  private readonly privacy = inject(PrivacyStore);
 
   protected readonly statusInfo = STATUS;
   protected readonly Math = Math; // per Math.min nel template
@@ -216,12 +219,9 @@ export class BudgetPage implements OnInit {
   }
 
   private euros(value: number, currency: string): string {
-    return formatCurrency(
-      value,
-      this.locale,
-      currency === 'EUR' ? '€' : currency,
-      currency,
-      '1.0-0',
+    // Con la modalità discreta, le cifre nascoste (docs/42): anche nelle frasi costruite qui.
+    return this.privacy.hide(
+      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, '1.0-0'),
     );
   }
 

@@ -33,9 +33,9 @@
     <!-- Il totale: una cifra sola, con la frase del ritmo e la stessa barra delle schede. -->
     <section class="card hero budget-total">
       <span class="secondary">Speso nelle categorie con un budget</span>
-      <span class="big-figure">{{ t.spent | currency: t.currency : 'symbol' : '1.0-0' }}</span>
+      <span class="big-figure">{{ t.spent | money: t.currency : 'symbol' : '1.0-0' }}</span>
       <p class="comparison">
-        su {{ t.monthlyAmount | currency: t.currency : 'symbol' : '1.0-0' }} · {{ t.sentence }}
+        su {{ t.monthlyAmount | money: t.currency : 'symbol' : '1.0-0' }} · {{ t.sentence }}
       </p>
       <div class="meter" aria-hidden="true">
         <div
@@ -94,13 +94,13 @@
 
       <div class="budget-numbers">
         <span>
-          <strong>{{ b.spent | currency: b.currency }}</strong> di
-          {{ b.monthlyAmount | currency: b.currency }}
+          <strong>{{ b.spent | money: b.currency }}</strong> di
+          {{ b.monthlyAmount | money: b.currency }}
         </span>
         @if (b.remaining >= 0) {
-          <span>restano {{ b.remaining | currency: b.currency }}</span>
+          <span>restano {{ b.remaining | money: b.currency }}</span>
         } @else {
-          <span class="negative">superato di {{ -b.remaining | currency: b.currency }}</span>
+          <span class="negative">superato di {{ -b.remaining | money: b.currency }}</span>
         }
       </div>
       <p class="secondary pace">{{ budgetNote(b) }}</p>

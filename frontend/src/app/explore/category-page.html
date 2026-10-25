@@ -13,13 +13,13 @@
   <div class="category-page">
     <section class="card hero">
       <h1>{{ o.name }}</h1>
-      <span class="big-figure">{{ o.amount | currency: o.currency : 'symbol' : '1.0-0' }}</span>
+      <span class="big-figure">{{ o.amount | money: o.currency : 'symbol' : '1.0-0' }}</span>
       <p class="comparison">{{ comparison() }}</p>
 
       @if (budget(); as b) {
         <div class="budget-pace">
           <div class="budget-pace-head">
-            <span>Budget {{ b.amount | currency: o.currency : 'symbol' : '1.0-0' }}</span>
+            <span>Budget {{ b.amount | money: o.currency : 'symbol' : '1.0-0' }}</span>
             <span class="secondary">{{ b.text }}</span>
           </div>
           <div
@@ -75,7 +75,7 @@
                 m.movements === 1 ? '1 volta' : m.movements + ' volte'
               }}</span>
             </span>
-            <strong>{{ m.amount | currency: o.currency }}</strong>
+            <strong>{{ m.amount | money: o.currency }}</strong>
           </li>
         } @empty {
           <li class="secondary">Nessun movimento in questo mese.</li>

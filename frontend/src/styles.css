@@ -177,7 +177,8 @@ ul.rows strong {
 }
 
 .app-nav .brand,
-.app-nav .more-pages {
+.app-nav .more-pages,
+.app-nav .nav-eye {
   display: none;
 }
 
@@ -229,6 +230,46 @@ ul.rows strong {
   background: var(--soft);
 }
 
+/* Il marchio: un quadrato arrotondato con la sfumatura dell'accento, come l'icona di un'app. */
+.brand-mark {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--acc-strong), var(--acc-2));
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* La barra in alto (docs/42, parte B): sul telefono il nome dell'app a sinistra e l'occhio a destra. */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* env(safe-area-inset-top): sotto la "tacca" dei telefoni, quando l'app è aperta a schermo intero (PWA). */
+  padding: calc(10px + env(safe-area-inset-top)) 16px 0;
+}
+
+.top-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* L'occhio acceso: la modalità discreta è attiva, e si vede. */
+button.eye[aria-checked='true'] {
+  background: var(--soft);
+  color: var(--acc);
+}
+
 .page main {
   padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); /* in fondo, lo spazio della barra */
 }
@@ -238,6 +279,16 @@ ul.rows strong {
   padding: 12px 16px;
   background: var(--soft);
   border-radius: 14px;
+}
+
+/* Senza rete: un giallo tenue, si nota ma non allarma (docs/42). */
+.banner.offline {
+  background: light-dark(#fff4d1, #3a3012);
+}
+
+.banner.update button.link {
+  margin-left: 4px;
+  font-weight: 650;
 }
 
 @media (min-width: 900px) {
@@ -270,20 +321,6 @@ ul.rows strong {
     font-size: 17px;
     font-weight: 700;
     letter-spacing: -0.02em;
-  }
-
-  /* Il marchio: un quadrato arrotondato con la sfumatura dell'accento, come l'icona di un'app. */
-  .brand-mark {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--acc-strong), var(--acc-2));
-    color: #ffffff;
-    font-size: 15px;
-    font-weight: 800;
   }
 
   .app-nav .section {
@@ -370,6 +407,75 @@ ul.rows strong {
 
   .banner {
     margin: 16px 40px 0;
+  }
+
+  /* Sul PC il nome e l'interruttore della modalità discreta sono nella colonna. */
+  .top-bar {
+    display: none;
+  }
+
+  .app-nav .nav-eye {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    margin-top: auto; /* in fondo alla colonna */
+    padding: 0 10px;
+    border-radius: var(--radius-s);
+    background: transparent;
+    color: var(--sec);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .app-nav .nav-eye .nav-icon {
+    width: 24px;
+    height: 24px;
+    background: none;
+  }
+
+  .app-nav .nav-eye svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* L'interruttore disegnato: un binario con un pallino che scorre a destra quando è acceso. */
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 34px;
+    height: 20px;
+    margin-left: auto;
+    border-radius: 10px;
+    background: var(--field-line);
+    transition: background-color 0.2s;
+  }
+
+  .switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+    transition: transform 0.2s var(--ease);
+  }
+
+  .nav-eye[aria-checked='true'] {
+    color: var(--acc);
+  }
+
+  .nav-eye[aria-checked='true'] .switch {
+    background: var(--acc-strong);
+  }
+
+  .nav-eye[aria-checked='true'] .switch::after {
+    transform: translateX(14px);
   }
 }
 

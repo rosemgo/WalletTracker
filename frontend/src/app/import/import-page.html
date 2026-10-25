@@ -219,7 +219,7 @@
                     [class.negative]="row.amount < 0"
                     [class.positive]="row.amount > 0"
                   >
-                    {{ row.amount | currency: row.currency }}
+                    {{ row.amount | money: row.currency }}
                   </td>
                 </tr>
               }

@@ -33,9 +33,56 @@
         </a>
       }
     </div>
+    <!-- Sul PC l'interruttore della modalità discreta sta in fondo alla colonna, con la scritta. -->
+    <button
+      type="button"
+      class="nav-eye"
+      role="switch"
+      [attr.aria-checked]="privacy.discreet()"
+      (click)="privacy.toggle()"
+    >
+      <span class="nav-icon"><ng-container *ngTemplateOutlet="eyeIcon" /></span>
+      <span>Modalità discreta</span>
+      <span class="switch" aria-hidden="true"></span>
+    </button>
   </nav>
 
   <div class="page">
+    <!--
+      La barra in alto, solo sul telefono: il nome dell'app e l'occhio della modalità discreta (docs/42, parte B).
+      L'occhio è un interruttore (role="switch"): aria-checked dice ai lettori di schermo se è acceso; il nome resta lo
+      stesso.
+    -->
+    <header class="top-bar">
+      <span class="top-brand"
+        ><span class="brand-mark" aria-hidden="true">W</span>WalletTracker</span
+      >
+      <button
+        type="button"
+        class="icon eye"
+        role="switch"
+        aria-label="Modalità discreta: nasconde gli importi"
+        [attr.aria-checked]="privacy.discreet()"
+        [title]="privacy.discreet() ? 'Mostra gli importi' : 'Nascondi gli importi'"
+        (click)="privacy.toggle()"
+      >
+        <ng-container *ngTemplateOutlet="eyeIcon" />
+      </button>
+    </header>
+
+    <!-- L'app installabile (docs/42, parte E): senza rete, e quando c'è una versione nuova. role="status": i lettori
+         di schermo leggono l'avviso quando compare, senza spostare il punto in cui si trova chi li usa. -->
+    @if (!status.online()) {
+      <div class="banner offline" role="status">
+        Senza rete: stai vedendo gli ultimi dati scaricati, e per ora non si possono fare modifiche.
+      </div>
+    }
+    @if (status.updateReady()) {
+      <div class="banner update" role="status">
+        È pronta una nuova versione di WalletTracker.
+        <button type="button" class="link" (click)="status.reload()">Aggiorna</button>
+      </div>
+    }
     @if (setup.status()?.configured === false) {
       <div class="banner">
         Per iniziare, configura il collegamento con Enable Banking:
@@ -48,3 +95,14 @@
     </main>
   </div>
 </div>
+
+<!-- L'occhio, aperto o barrato: lo stesso disegno nella barra del telefono e nella colonna del PC. -->
+<ng-template #eyeIcon>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+    <circle cx="12" cy="12" r="2.8" />
+    @if (privacy.discreet()) {
+      <path d="M4 4l16 16" />
+    }
+  </svg>
+</ng-template>

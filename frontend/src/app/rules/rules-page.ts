@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -22,6 +22,7 @@ import {
   TransactionType,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 
 /** I valori del modulo per una regola nuova. */
 const NEW_RULE: RuleRequest = {
@@ -44,7 +45,7 @@ const NEW_RULE: RuleRequest = {
  */
 @Component({
   selector: 'app-rules-page',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, NgTemplateOutlet],
+  imports: [DatePipe, MoneyPipe, NgTemplateOutlet, ReactiveFormsModule],
   templateUrl: './rules-page.html',
 })
 export class RulesPage implements OnInit {

@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -6,6 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { Account, CompletionPreview, CompletionResult } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 import { MAX_FILE_BYTES } from './import-page';
 import { FileDrop } from '../ui/file-drop';
 
@@ -21,7 +22,7 @@ import { FileDrop } from '../ui/file-drop';
  */
 @Component({
   selector: 'app-completion-page',
-  imports: [CurrencyPipe, DatePipe, FileDrop, NgTemplateOutlet, ReactiveFormsModule, RouterLink],
+  imports: [DatePipe, FileDrop, MoneyPipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink],
   templateUrl: './completion-page.html',
 })
 export class CompletionPage implements OnInit {

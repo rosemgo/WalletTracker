@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -24,6 +24,7 @@ import {
   UsedCategories,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 import { avatarHue, initialOf, nameOf } from './day-groups';
 import { TransactionsChanged } from './transactions-changed';
 
@@ -70,7 +71,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [CurrencyPipe, DatePipe, RouterLink],
+  imports: [DatePipe, MoneyPipe, RouterLink],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {

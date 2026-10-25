@@ -277,7 +277,8 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
    ritmo in parole; sul telefono le tabelle di Altro diventano schede; gli errori di aggiornamento in parole.
    Dopo il passo 6, un passo in più: **l'aspetto moderno** (`docs/41`): carattere Inter, campi e scelta del file
    ridisegnati, nomi leggibili, grafici animati e da scorrere con il dito.
-7. **PWA** e modalità discreta (il tema scuro è già nel passo 2).
+7. **PWA** e modalità discreta (il tema scuro è già nel passo 2). **Fatto**, `docs/42`: l'occhio in alto (sul PC
+   in fondo alla colonna); l'app si installa e si apre senza rete. Sul telefono servirà l'https della Fase 4.
 
 Ogni passo con la sua guida e i suoi test, come sempre.
 

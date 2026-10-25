@@ -24,7 +24,7 @@
       }}</span>
       <h1>{{ nameOf(t) }}</h1>
       <span class="detail-amount" [class.positive]="t.amount > 0">{{
-        t.amount | currency: t.currency
+        t.amount | money: t.currency
       }}</span>
       <span class="secondary"
         >{{ t.bookingDate | date: 'EEEE d MMMM y' }} · {{ accountName() }}</span
@@ -114,7 +114,7 @@
         <h2>Lo stesso esercente</h2>
         <p>
           {{ m.movements === 1 ? '1 movimento' : m.movements + ' movimenti' }} nell'ultimo anno ·
-          {{ m.total | currency: t.currency }} in tutto
+          {{ m.total | money: t.currency }} in tutto
         </p>
         @if (m.recent.length > 0) {
           <ul class="rows">
@@ -125,7 +125,7 @@
                     {{ r.bookingDate | date: 'EEEE d MMMM' }}
                     <span class="secondary">{{ r.category ?? 'senza categoria' }}</span>
                   </span>
-                  <strong>{{ r.amount | currency: r.currency }}</strong>
+                  <strong>{{ r.amount | money: r.currency }}</strong>
                 </a>
               </li>
             }

@@ -105,6 +105,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 39. [Fase grafica, passo 6: il Budget e le pagine di "Altro" (tabelle come schede sul telefono, errori in parole)](docs/39-fase-grafica-budget-e-altro.md)
 40. [L'esercente scritto nella causale: bonifici e addebiti diretti riconosciuti dal nome (migrazione V28)](docs/40-esercente-nella-causale.md)
 41. [Fase grafica: un aspetto moderno, grafici vivi (Inter, campi, scelta del file, grafici animati e da scorrere)](docs/41-fase-grafica-aspetto-moderno.md)
+42. [Fase grafica, passo 7: l'app installabile (PWA) e la modalità discreta](docs/42-fase-grafica-pwa-e-modalita-discreta.md)
 
 ## Piano di lavoro
 
@@ -133,7 +134,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] file di Trade Republic anche per il conto collegato: completa causale e controparte dei movimenti già arrivati e aggiunge i mesi prima dello storico della banca, con anteprima e regole di partenza per le sue causali (`docs/31`)
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
-- [ ] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`, i Movimenti in `docs/37`, Analisi in `docs/38`, Budget e Altro in `docs/39`, l'aspetto moderno e i grafici vivi in `docs/41`
+- [x] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`, i Movimenti in `docs/37`, Analisi in `docs/38`, Budget e Altro in `docs/39`, l'aspetto moderno e i grafici vivi in `docs/41`, l'app installabile e la modalità discreta in `docs/42`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili
@@ -157,6 +158,7 @@ Dalla cartella `frontend/` (serve Node.js 24 LTS):
 ```bash
 npm install                    # la prima volta, e dopo ogni modifica a package.json
 npm start                      # la dashboard su https://localhost:8443 (il backend deve essere avviato)
+npm run pwa                    # la build di produzione su http://localhost:4300, installabile come app (docs/42)
 npm test -- --watch=false      # esegue i test una volta
 ```
 

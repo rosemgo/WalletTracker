@@ -1,8 +1,9 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 
 import { Frequency, SubscriptionOverview, SubscriptionSuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 import { ReadablePipe, readable } from '../text/readable';
 
 export const FREQUENCY_LABELS: Record<Frequency, string> = {
@@ -18,7 +19,7 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
  */
 @Component({
   selector: 'app-subscriptions-page',
-  imports: [CurrencyPipe, DatePipe, ReadablePipe],
+  imports: [DatePipe, MoneyPipe, ReadablePipe],
   templateUrl: './subscriptions-page.html',
 })
 export class SubscriptionsPage implements OnInit {

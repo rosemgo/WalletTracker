@@ -1,4 +1,4 @@
-import { CurrencyPipe, NgTemplateOutlet, formatCurrency } from '@angular/common';
+import { NgTemplateOutlet, formatCurrency } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -12,6 +12,8 @@ import {
   Transaction,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
+import { PrivacyStore } from '../privacy/privacy-store';
 import { ReadablePipe } from '../text/readable';
 import { avatarHue, groupByDay, initialOf, nameOf } from '../transactions/day-groups';
 import { BarChart } from './bar-chart';
@@ -55,7 +57,7 @@ interface Row {
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [BarChart, CurrencyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
+  imports: [BarChart, MoneyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
   templateUrl: './explore-page.html',
 })
 export class ExplorePage implements OnInit {
@@ -63,6 +65,7 @@ export class ExplorePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly locale = inject(LOCALE_ID);
+  private readonly privacy = inject(PrivacyStore);
 
   protected readonly metrics = METRICS;
   protected readonly periods = PERIODS;
@@ -393,7 +396,7 @@ export class ExplorePage implements OnInit {
       group,
       name: group.name ?? (this.by() === 'CATEGORY' ? 'Senza categoria' : 'Senza descrizione'),
       share: total > 0 ? `${Math.round((Math.max(0, group.amount) / total) * 100)}%` : '',
-      note: groupNote(group, (v) => this.euros(v, currency)),
+      note: this.privacy.hide(groupNote(group, (v) => this.euros(v, currency))), // anche il segno (docs/42)
       width: Math.max(0, (group.amount / highest) * 100),
     }));
   }
@@ -407,10 +410,9 @@ export class ExplorePage implements OnInit {
       currency,
       '1.0-0',
     );
-    if (value < 0) {
-      return `−${text}`;
-    }
-    return signed && value > 0 ? `+${text}` : text;
+    const sign = value < 0 ? '−' : signed && value > 0 ? '+' : '';
+    // Con la modalità discreta, le cifre (e il segno) nascoste (docs/42).
+    return this.privacy.hide(sign + text);
   }
 }
 

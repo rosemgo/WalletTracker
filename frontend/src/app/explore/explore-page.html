@@ -114,9 +114,7 @@
                       <span>{{ r.name | readable }}</span>
                       <span class="secondary">{{ r.note }}</span>
                     </span>
-                    <strong>{{
-                      r.group.amount | currency: s.currency : 'symbol' : '1.0-0'
-                    }}</strong>
+                    <strong>{{ r.group.amount | money: s.currency : 'symbol' : '1.0-0' }}</strong>
                   </div>
                 </li>
               } @empty {
@@ -173,7 +171,7 @@
                       }
                     </span>
                     <span class="amount" [class.positive]="t.amount > 0">{{
-                      t.amount | currency: t.currency
+                      t.amount | money: t.currency
                     }}</span>
                   </a>
                 </li>
@@ -195,7 +193,7 @@
       <span class="secondary">{{ r.note }}</span>
     </span>
     <span class="group-amount">
-      <strong>{{ r.group.amount | currency: series()!.currency : 'symbol' : '1.0-0' }}</strong>
+      <strong>{{ r.group.amount | money: series()!.currency : 'symbol' : '1.0-0' }}</strong>
       <span class="secondary">{{ r.share }}</span>
     </span>
   </span>

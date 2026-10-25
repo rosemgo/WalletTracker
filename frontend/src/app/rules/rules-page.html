@@ -129,7 +129,7 @@
         @for (t of p.examples; track t.id) {
           <li>
             {{ t.bookingDate | date: 'dd/MM/yyyy' }} · {{ t.description ?? t.counterparty }} ·
-            {{ t.amount | currency: t.currency }}
+            {{ t.amount | money: t.currency }}
           </li>
         }
       </ul>
