@@ -132,6 +132,9 @@ deve esserci, in un campo qualsiasi.
 
 ## Parte E: la pagina Movimenti
 
+> Aggiornamento (`docs/37`): la nota ora si scrive nella **scheda del movimento**; nell'elenco si vede sotto il
+> nome. Il funzionamento (API, pulizia, sicurezza) è lo stesso descritto qui.
+
 Sotto la categoria di ogni movimento:
 
 - senza nota: il collegamento **"aggiungi una nota"**, accanto a "modifica";

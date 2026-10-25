@@ -572,3 +572,39 @@ export interface Overview {
   toReview: number;
   suggestions: number;
 }
+
+/** Da dove è arrivato un movimento (TransactionDetailDto.Origin). */
+export type TransactionOrigin = 'BANK' | 'CSV' | 'TRADE_REPUBLIC_FILE';
+
+/** Perché un movimento ha la sua categoria. */
+export type CategoryOrigin = 'MANUAL' | 'RULE' | 'NONE';
+
+/** GET /api/transactions/{id}: il dettaglio di un movimento (docs/37). */
+export interface TransactionDetail {
+  transaction: Transaction;
+  rawJson: string; // i dati originali, come sono arrivati
+  importedAt: string;
+  origin: TransactionOrigin;
+  categoryOrigin: CategoryOrigin;
+  ruleName: string | null; // la regola che ha deciso, se è stata una regola
+  merchant: {
+    key: string;
+    name: string;
+    movements: number; // nell'ultimo anno, questo compreso
+    total: number;
+    categories: number; // in quante categorie diverse
+    recent: Transaction[]; // gli altri, dal più recente
+  } | null;
+  suggestion: {
+    merchantKey: string;
+    categoryId: number;
+    category: string;
+    model: string | null;
+  } | null;
+}
+
+/** Una scelta di categoria in blocco (PUT /api/transactions/manual-categories). */
+export interface CategoryChange {
+  id: number;
+  categoryId: number | null;
+}

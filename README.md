@@ -100,6 +100,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 34. [La nota di un movimento (scriverla, vederla, ritrovarla con la ricerca)](docs/34-note-movimenti.md)
 35. [Fase grafica, passo 2: le basi (carattere, temi giorno e notte, navigazione per telefono e PC)](docs/35-fase-grafica-le-basi.md)
 36. [Fase grafica, passo 3: il Riepilogo (il mese rispetto al solito, Analisi nella barra, lazy loading)](docs/36-fase-grafica-riepilogo.md)
+37. [Fase grafica, passo 4: i Movimenti per giorno e il dettaglio di un movimento (simili, Annulla)](docs/37-fase-grafica-movimenti.md)
 
 ## Piano di lavoro
 
@@ -128,7 +129,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] file di Trade Republic anche per il conto collegato: completa causale e controparte dei movimenti già arrivati e aggiunge i mesi prima dello storico della banca, con anteprima e regole di partenza per le sue causali (`docs/31`)
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
-- [ ] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`
+- [ ] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`, i Movimenti in `docs/37`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili

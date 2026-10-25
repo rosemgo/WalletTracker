@@ -103,7 +103,7 @@ describe('SuggestionsPanel', () => {
     expect(accepted).toEqual([['PIZZERIA DA GINO', 5]]);
     expect(reloads).toBe(1);
     expect(page.textContent).toContain('"Bar e ristoranti" assegnata a 3 movimenti');
-    expect(page.querySelector('table')).toBeNull(); // niente più da suggerire
+    expect(page.querySelector('.suggestion-list')).toBeNull(); // niente più da suggerire
   });
 
   it('"no" remembers the refusal without telling the page to reload', async () => {
@@ -149,7 +149,7 @@ describe('SuggestionsPanel', () => {
       ai = [{ enabled: true, model: 'gemma3:4b', toAsk: 0, job: null }];
       const fixture = TestBed.createComponent(SuggestionsPanel);
       await fixture.whenStable();
-      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
+      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.suggestion-list li');
 
       expect(rows[0].querySelector('.ai-tag')).toBeNull(); // dalla tua storia
       expect(rows[1].querySelector('.ai-tag')?.textContent).toBe('IA');
@@ -166,7 +166,7 @@ describe('SuggestionsPanel', () => {
       expect(page.textContent).toContain(
         "4 esercenti senza categoria non sono ancora stati chiesti all'IA",
       );
-      expect(page.querySelector('table')).toBeNull();
+      expect(page.querySelector('.suggestion-list')).toBeNull();
       expect(button(page, "Chiedi all'IA")).toBeTruthy();
     });
 

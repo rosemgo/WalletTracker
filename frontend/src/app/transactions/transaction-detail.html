@@ -1,0 +1,289 @@
+<div class="detail">
+  <div class="detail-top">
+    <a
+      class="icon-link"
+      [routerLink]="['/movimenti']"
+      queryParamsHandling="preserve"
+      aria-label="Torna ai movimenti"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    </a>
+    <span class="secondary">Movimento</span>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (detail(); as d) {
+    @let t = d.transaction;
+
+    <section class="card detail-head">
+      <span class="initial" aria-hidden="true">{{ nameOf(t).charAt(0) }}</span>
+      <h1>{{ nameOf(t) }}</h1>
+      <span class="detail-amount" [class.positive]="t.amount > 0">{{
+        t.amount | currency: t.currency
+      }}</span>
+      <span class="secondary"
+        >{{ t.bookingDate | date: 'EEEE d MMMM y' }} · {{ accountName() }}</span
+      >
+      <span class="chip">{{ t.status === 'PENDING' ? 'In attesa' : 'Contabilizzato' }}</span>
+    </section>
+
+    <section class="card detail-rows">
+      <button type="button" class="detail-row" (click)="openCategories()">
+        <span>
+          <span class="secondary">Categoria</span>
+          <strong>{{ t.category ?? 'Nessuna categoria' }}</strong>
+        </span>
+        <span class="action">Cambia</span>
+      </button>
+      <p class="secondary why">{{ categoryWhy() }}</p>
+      <button type="button" class="detail-row" (click)="sheet.set('type')">
+        <span>
+          <span class="secondary">Conta come</span>
+          <span>
+            {{ t.type ? typeLabel(t, t.type) : 'Da verificare' }}
+            @if (t.manualType) {
+              <span class="secondary">(scelto da te)</span>
+            }
+          </span>
+        </span>
+        <span class="action">Cambia</span>
+      </button>
+    </section>
+
+    @if (d.suggestion; as s) {
+      <section class="card soft suggestion-card">
+        <p>
+          Suggerita: <strong>{{ s.category }}</strong>
+          @if (s.model) {
+            <span class="ai-tag">IA</span>
+          }
+        </p>
+        <div class="buttons">
+          <button type="button" class="primary" (click)="acceptSuggestion()">Accetta</button>
+          <button type="button" (click)="dismissSuggestion()">No, grazie</button>
+        </div>
+        <p class="secondary">
+          Accettando, la ricevono tutti i movimenti di questo esercente senza categoria.
+        </p>
+      </section>
+    }
+
+    @if (proposal(); as p) {
+      <section class="card soft" role="status">
+        <p>
+          {{
+            p.movements.length === 1
+              ? "C'è un altro movimento"
+              : 'Ci sono altri ' + p.movements.length + ' movimenti'
+          }}
+          di questo esercente in «{{ p.from }}». Li sposti anche in «{{ p.to }}»?
+        </p>
+        <div class="buttons">
+          <button type="button" class="primary" (click)="moveSimilar()">
+            {{ p.movements.length === 1 ? 'Sposta anche quello' : 'Sposta anche quelli' }}
+          </button>
+          <button type="button" (click)="onlyThis()">Solo questo</button>
+        </div>
+      </section>
+    } @else if (done(); as dn) {
+      <section class="done" role="status">
+        <span>{{ dn.text }}</span>
+        <button type="button" class="link" (click)="undo()">Annulla</button>
+      </section>
+    }
+
+    @if (ruleAdvice() === 'link') {
+      <p class="secondary rule-advice">
+        <a routerLink="/regole" [queryParams]="ruleParams(t)">Crea una regola</a> per i prossimi
+        movimenti di questo esercente.
+      </p>
+    } @else if (ruleAdvice() === 'mixed') {
+      <p class="secondary rule-advice">
+        Una regola per questo esercente non conviene: i suoi movimenti sono in
+        {{ d.merchant?.categories }} categorie diverse, e una regola li metterebbe tutti insieme.
+      </p>
+    }
+
+    @if (d.merchant; as m) {
+      <section class="card">
+        <h2>Lo stesso esercente</h2>
+        <p>
+          {{ m.movements === 1 ? '1 movimento' : m.movements + ' movimenti' }} nell'ultimo anno ·
+          {{ m.total | currency: t.currency }} in tutto
+        </p>
+        @if (m.recent.length > 0) {
+          <ul class="rows">
+            @for (r of m.recent; track r.id) {
+              <li>
+                <a [routerLink]="['/movimenti', r.id]" queryParamsHandling="preserve">
+                  <span>
+                    {{ r.bookingDate | date: 'EEEE d MMMM' }}
+                    <span class="secondary">{{ r.category ?? 'senza categoria' }}</span>
+                  </span>
+                  <strong>{{ r.amount | currency: r.currency }}</strong>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+        <button type="button" class="link" (click)="searchMerchant()">
+          Tutti i movimenti di questo esercente
+        </button>
+      </section>
+    }
+
+    <section class="card">
+      <h2>Nota</h2>
+      @if (editingNote()) {
+        <form class="note-edit" (submit)="$event.preventDefault(); saveNote(noteInput.value)">
+          <input
+            #noteInput
+            type="text"
+            [value]="t.note ?? ''"
+            [maxLength]="maxNoteLength"
+            aria-label="Nota del movimento"
+            placeholder="per esempio: regalo per Luca"
+            (keydown.escape)="editingNote.set(false)"
+          />
+          <button type="submit">Salva</button>
+          <button type="button" (click)="editingNote.set(false)">Annulla</button>
+        </form>
+      } @else if (t.note) {
+        <p class="note-text">{{ t.note }}</p>
+        <button type="button" class="link" (click)="editingNote.set(true)">Modifica</button>
+      } @else {
+        <button type="button" class="link" (click)="editingNote.set(true)">
+          Aggiungi una nota
+        </button>
+        <p class="secondary">Solo per te, e la ritrovi con la ricerca.</p>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Dettagli</h2>
+      <dl class="facts">
+        <dt>Conto</dt>
+        <dd>{{ accountName() }}</dd>
+        @if (t.counterparty) {
+          <dt>Controparte</dt>
+          <dd>{{ t.counterparty }}</dd>
+        }
+        @if (t.description) {
+          <dt>Causale</dt>
+          <dd>{{ t.description }}</dd>
+        }
+        <dt>Data contabile</dt>
+        <dd>{{ t.bookingDate | date: 'EEEE d MMMM y' }}</dd>
+        @if (t.valueDate && t.valueDate !== t.bookingDate) {
+          <dt>Data valuta</dt>
+          <dd>{{ t.valueDate | date: 'EEEE d MMMM y' }}</dd>
+        }
+        <dt>Arrivato</dt>
+        <dd>{{ origins[d.origin] }}, il {{ d.importedAt | date: 'd MMMM y' }}</dd>
+      </dl>
+      <button
+        type="button"
+        class="link"
+        [attr.aria-expanded]="showRaw()"
+        (click)="showRaw.set(!showRaw())"
+      >
+        {{ showRaw() ? 'Nascondi i dati originali' : 'Mostra i dati originali' }}
+      </button>
+      @if (showRaw()) {
+        <pre class="raw">{{ rawText() }}</pre>
+      }
+    </section>
+
+    <!--
+      Il foglio di scelta: un <dialog>, che il browser apre sopra la pagina con lo sfondo scuro, chiude con Esc e
+      tiene il focus dentro. Sul telefono sale dal basso, sul PC sta al centro.
+    -->
+    <dialog
+      #sheetDialog
+      class="sheet"
+      [attr.aria-label]="sheet() === 'type' ? 'Conta come' : 'Scegli una categoria'"
+      (close)="onSheetClosed()"
+      (click)="onSheetClick($event)"
+    >
+      <div class="sheet-body">
+        <div class="sheet-head">
+          <h2>{{ sheet() === 'type' ? 'Conta come' : 'Scegli una categoria' }}</h2>
+          <button type="button" class="icon" (click)="sheet.set(null)" aria-label="Chiudi">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+
+        @if (sheet() === 'category') {
+          <input
+            type="search"
+            class="sheet-search"
+            placeholder="Cerca una categoria"
+            aria-label="Cerca una categoria"
+            [value]="categorySearch()"
+            (input)="categorySearch.set($any($event.target).value)"
+          />
+          <div class="sheet-list">
+            @for (section of categorySections(); track section.title) {
+              <h3>{{ section.title }}</h3>
+              @for (c of section.items; track c.id) {
+                <button
+                  type="button"
+                  class="choice"
+                  [attr.aria-pressed]="c.id === t.categoryId"
+                  (click)="chooseCategory(c.id, c.name)"
+                >
+                  <span>{{ c.name }}</span>
+                  @if (c.id === t.categoryId) {
+                    <span class="check" aria-hidden="true">✓</span>
+                  }
+                </button>
+              }
+            }
+            @if (t.manualCategoryId !== null) {
+              <h3>Altro</h3>
+              <button
+                type="button"
+                class="choice"
+                (click)="chooseCategory(null, 'quella delle regole')"
+              >
+                <span>Togli la mia scelta (decidono le regole)</span>
+              </button>
+            }
+          </div>
+        } @else if (sheet() === 'type') {
+          <div class="sheet-list">
+            @for (type of types; track type) {
+              <button
+                type="button"
+                class="choice"
+                [attr.aria-pressed]="type === t.type"
+                (click)="chooseType(type)"
+              >
+                <span>
+                  {{ typeLabel(t, type) }}
+                  <span class="secondary">{{ typeHints[type] }}</span>
+                </span>
+                @if (type === t.type) {
+                  <span class="check" aria-hidden="true">✓</span>
+                }
+              </button>
+            }
+            @if (t.manualType) {
+              <button type="button" class="choice" (click)="chooseType(null)">
+                <span>
+                  Automatico
+                  <span class="secondary">Lo decide di nuovo l'app, con le regole</span>
+                </span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </dialog>
+  } @else if (!error()) {
+    <p>Caricamento...</p>
+  }
+</div>

@@ -13,46 +13,43 @@
       (segno "IA"). Finché non accetti, i movimenti restano senza categoria.
     </p>
     @if (suggestions().length > 0) {
-      <div class="table-scroll">
-        <table>
-          <tbody>
-            @for (s of suggestions(); track s.merchantKey) {
-              <tr>
-                <td>
-                  {{ s.merchantName }}
-                  @if (s.model) {
-                    <span class="ai-tag" title="Suggerito dall'intelligenza artificiale">IA</span>
-                  }
-                  <div class="secondary">
-                    {{ s.transactions === 1 ? '1 movimento' : s.transactions + ' movimenti' }} senza
-                    categoria ·
-                    @if (s.model) {
-                      suggerita dall'IA ({{ s.model }}): controlla prima di accettare
-                    } @else {
-                      l'hai scelta per
-                      {{ s.examples === 1 ? '1 movimento' : s.examples + ' movimenti' }}
-                    }
-                  </div>
-                </td>
-                <td>{{ s.category }}</td>
-                <td class="amount">
-                  <button type="button" [disabled]="busy() !== null" (click)="accept(s)">
-                    Accetta
-                  </button>
-                  <button
-                    type="button"
-                    class="link"
-                    [disabled]="busy() !== null"
-                    (click)="dismiss(s)"
-                  >
-                    no
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <!-- Un elenco, non una tabella: sul telefono ogni suggerimento sta in una riga leggibile. -->
+      <ul class="suggestion-list">
+        @for (s of suggestions(); track s.merchantKey) {
+          <li>
+            <span class="suggestion-text">
+              <span>
+                {{ s.merchantName }}
+                @if (s.model) {
+                  <span class="ai-tag" title="Suggerito dall'intelligenza artificiale">IA</span>
+                }
+              </span>
+              <strong>{{ s.category }}</strong>
+              <span class="secondary">
+                {{ s.transactions === 1 ? '1 movimento' : s.transactions + ' movimenti' }} senza
+                categoria ·
+                @if (s.model) {
+                  suggerita dall'IA ({{ s.model }}): controlla prima di accettare
+                } @else {
+                  l'hai scelta per
+                  {{ s.examples === 1 ? '1 movimento' : s.examples + ' movimenti' }}
+                }
+              </span>
+            </span>
+            <span class="buttons">
+              <button
+                type="button"
+                class="primary"
+                [disabled]="busy() !== null"
+                (click)="accept(s)"
+              >
+                Accetta
+              </button>
+              <button type="button" [disabled]="busy() !== null" (click)="dismiss(s)">no</button>
+            </span>
+          </li>
+        }
+      </ul>
     }
 
     @if (ai(); as a) {

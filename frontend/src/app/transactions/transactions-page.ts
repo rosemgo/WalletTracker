@@ -1,42 +1,51 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-
-import { CategoryGroup, categoryGroups, kindOf } from '../api/category-groups';
-import { TYPES, TYPE_LABELS } from '../api/labels';
+import { CurrencyPipe } from '@angular/common';
 import {
-  Account,
-  Category,
-  Transaction,
-  TransactionPage,
-  TransactionType,
-  UsedCategories,
-} from '../api/models';
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { ActivatedRoute, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+
+import { TYPES, TYPE_LABELS } from '../api/labels';
+import { Account, Transaction, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
+import { groupByDay, nameOf } from './day-groups';
 import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
+import { TransactionsChanged } from './transactions-changed';
 
-/** Quanti movimenti per pagina. */
-const PAGE_SIZE = 50;
+/** Quanti movimenti per volta: i primi all'apertura, altrettanti a ogni "Mostra altri". */
+export const PAGE_SIZE = 50;
 
-/** La nota più lunga, come nel backend (TransactionService.MAX_NOTE_LENGTH). */
-export const MAX_NOTE_LENGTH = 300;
+/** Il massimo che il backend dà in una richiesta (TransactionService.MAX_PAGE_SIZE). */
+const MAX_PAGE_SIZE = 200;
 
 /** Quanto aspettare dopo l'ultimo tasto prima di cercare. */
 export const SEARCH_DELAY_MS = 300;
 
+/** La larghezza da cui il dettaglio sta accanto all'elenco (come nel CSS). */
+const SIDE_BY_SIDE = '(min-width: 1100px)';
+
 /**
- * La pagina dei movimenti: filtri per conto e per tipo, elenco a pagine, correzione manuale del tipo e
- * della categoria, "crea una regola" da una correzione, e la nota di un movimento.
+ * Movimenti (docs/37): l'elenco raggruppato per giorno, con il totale del giorno, la ricerca e i filtri a "pillole".
+ * Toccando un movimento si apre il suo dettaglio (`/movimenti/42`, la pagina figlia nel `<router-outlet>`): sul
+ * telefono al posto dell'elenco, sul PC accanto. L'elenco resta in vita sotto il dettaglio, con i suoi filtri e i
+ * movimenti già caricati: tornando indietro è come lo si era lasciato.
  */
 @Component({
   selector: 'app-transactions-page',
-  imports: [CurrencyPipe, DatePipe, RouterLink, SuggestionsPanel],
+  imports: [CurrencyPipe, RouterLink, RouterLinkActive, RouterOutlet, SuggestionsPanel],
   templateUrl: './transactions-page.html',
 })
 export class TransactionsPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly changed = inject(TransactionsChanged);
 
   /** Il pannello dei suggerimenti nel template: viewChild() ci dà il componente, per chiamarne i metodi. */
   private readonly suggestionsPanel = viewChild(SuggestionsPanel);
@@ -45,58 +54,98 @@ export class TransactionsPage implements OnInit {
   protected readonly typeLabels = TYPE_LABELS;
   protected readonly periods = PERIODS;
   protected readonly periodLabels = PERIOD_LABELS;
-  protected readonly maxNoteLength = MAX_NOTE_LENGTH;
+  protected readonly nameOf = nameOf;
 
   protected readonly accounts = signal<Account[]>([]);
-  protected readonly result = signal<TransactionPage | null>(null);
+  /** I movimenti caricati finora (la prima pagina, più quelle di "Mostra altri"). */
+  protected readonly items = signal<Transaction[]>([]);
+  /** Quanti movimenti ci sono in tutto con questi filtri; null prima della prima risposta. */
+  protected readonly totalItems = signal<number | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
-  // I filtri scelti dall'utente (null = tutti) e la pagina corrente.
+  // I filtri scelti dall'utente (null = tutti).
   protected readonly accountId = signal<number | null>(null);
   protected readonly type = signal<TransactionType | null>(null);
   protected readonly uncategorized = signal(false);
   protected readonly period = signal<Period>('ALL');
   protected readonly from = signal<string | null>(null); // "2026-10-01"; null = nessun limite
   protected readonly to = signal<string | null>(null);
-  protected readonly text = signal(''); // la ricerca: causale, controparte, categoria o importo
-  protected readonly page = signal(0);
+  protected readonly text = signal(''); // la ricerca: causale, controparte, categoria, nota o importo
+
+  /** È aperto il dettaglio di un movimento (la pagina figlia)? */
+  protected readonly detailOpen = signal(false);
 
   /** Il timer della ricerca: si cerca quando l'utente smette di scrivere (vedi onSearch). */
   private searchTimer: ReturnType<typeof setTimeout> | undefined;
-  /** Il numero dell'ultima richiesta: le risposte delle richieste superate si ignorano (vedi load). */
+  /** Il numero dell'ultima richiesta: le risposte delle richieste superate si ignorano. */
   private lastRequest = 0;
+  /** Dove era l'elenco sul telefono prima di aprire un dettaglio: ci si torna chiudendolo. */
+  private listScroll = 0;
 
-  /** L'elenco delle categorie, per il menu a discesa. */
-  protected readonly categories = signal<Category[]>([]);
-  /** Il movimento di cui si sta modificando la categoria; null = nessuno. */
-  protected readonly editingCategory = signal<number | null>(null);
-  /** Il movimento di cui si sta scrivendo la nota; null = nessuno. */
-  protected readonly editingNote = signal<number | null>(null);
-  /** Le categorie già usate per esercenti simili a quello del movimento in modifica: in cima al menu. */
-  protected readonly usedCategories = signal<UsedCategories | null>(null);
-
-  /**
-   * Un signal "calcolato": il nome di ogni conto, per id. Si ricalcola da solo quando cambia
-   * accounts(), e solo allora (il risultato viene memorizzato).
-   */
   protected readonly accountNames = computed(
     () => new Map(this.accounts().map((a) => [a.id, a.label])),
   );
 
+  /** I movimenti per giorno: si ricalcola quando cambiano i movimenti caricati. */
+  protected readonly days = computed(() => groupByDay(this.items(), new Date()));
+
+  protected readonly hasMore = computed(() => this.items().length < (this.totalItems() ?? 0));
+
+  constructor() {
+    // Quando il dettaglio cambia qualcosa, l'elenco si ricarica (non alla prima esecuzione: lì carica ngOnInit).
+    let first = true;
+    effect(() => {
+      this.changed.version();
+      if (first) {
+        first = false;
+        return;
+      }
+      untracked(() => this.reloadLoaded());
+    });
+    // Una ricerca chiesta dal dettaglio: il testo nel campo, e si cerca.
+    effect(() => {
+      const request = this.changed.search();
+      if (request !== null) {
+        untracked(() => {
+          this.changed.search.set(null); // usata: non vale più per la prossima apertura della pagina
+          this.text.set(request.text.slice(0, 100));
+          this.load();
+        });
+      }
+    });
+  }
+
   ngOnInit(): void {
-    // Un filtro nell'indirizzo, dai link delle altre pagine: /movimenti?type=TO_REVIEW (il Riepilogo, "da verificare").
-    const type = this.route.snapshot.queryParamMap.get('type');
+    // Filtri nell'indirizzo, dai link delle altre pagine: /movimenti?type=TO_REVIEW (il Riepilogo), ?text=AMAZON.
+    const params = this.route.snapshot.queryParamMap;
+    const type = params.get('type');
     if (type !== null && (TYPES as readonly string[]).includes(type)) {
       this.type.set(type as TransactionType);
     }
+    this.text.set((params.get('text') ?? '').slice(0, 100));
     this.api.accounts().subscribe({ next: (accounts) => this.accounts.set(accounts) });
-    this.loadCategories();
     this.load();
   }
 
-  /** Carica la pagina corrente con i filtri correnti. */
+  /** Carica da capo la prima pagina con i filtri correnti. */
   load(): void {
+    this.fetch(0, PAGE_SIZE, false);
+  }
+
+  /** "Mostra altri": la pagina successiva, aggiunta in fondo. */
+  loadMore(): void {
+    this.fetch(this.items().length / PAGE_SIZE, PAGE_SIZE, true);
+  }
+
+  /** Ricarica i movimenti già caricati (dopo una modifica), senza tornare alla sola prima pagina. */
+  private reloadLoaded(): void {
+    const size = Math.min(MAX_PAGE_SIZE, Math.max(PAGE_SIZE, this.items().length));
+    this.fetch(0, size, false);
+    this.suggestionsPanel()?.reload();
+  }
+
+  private fetch(page: number, size: number, append: boolean): void {
     const from = this.from();
     const to = this.to();
     // Le date "2026-10-01" si confrontano anche come testo: l'ordine alfabetico è quello delle date.
@@ -106,9 +155,7 @@ export class TransactionsPage implements OnInit {
     }
     this.loading.set(true);
     this.error.set(null);
-    // Scrivendo nella ricerca partono più richieste di fila, e le risposte possono arrivare in un ordine
-    // diverso: "netf" dopo "netflix" rimetterebbe in pagina i risultati vecchi. Ogni richiesta ha un numero, e
-    // conta solo la risposta all'ultima.
+    // Le risposte possono arrivare in un ordine diverso da quello delle richieste: conta solo l'ultima.
     const request = ++this.lastRequest;
     this.api
       .transactions({
@@ -118,15 +165,16 @@ export class TransactionsPage implements OnInit {
         from,
         to,
         text: this.text(),
-        page: this.page(),
-        size: PAGE_SIZE,
+        page,
+        size,
       })
       .subscribe({
         next: (result) => {
           if (request !== this.lastRequest) {
             return;
           }
-          this.result.set(result);
+          this.items.set(append ? [...this.items(), ...result.items] : result.items);
+          this.totalItems.set(result.totalItems);
           this.loading.set(false);
         },
         error: (response) => {
@@ -146,14 +194,23 @@ export class TransactionsPage implements OnInit {
   onAccountFilter(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.accountId.set(value === '' ? null : Number(value));
-    this.page.set(0); // con un filtro nuovo si riparte dalla prima pagina
     this.load();
   }
 
   onTypeFilter(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.type.set(value === '' ? null : (value as TransactionType));
-    this.page.set(0);
+    this.load();
+  }
+
+  /** La pillola "Da verificare": accende o spegne il filtro per tipo TO_REVIEW. */
+  toggleToReview(): void {
+    this.type.set(this.type() === 'TO_REVIEW' ? null : 'TO_REVIEW');
+    this.load();
+  }
+
+  toggleUncategorized(): void {
+    this.uncategorized.set(!this.uncategorized());
     this.load();
   }
 
@@ -164,19 +221,10 @@ export class TransactionsPage implements OnInit {
   onSearch(event: Event): void {
     this.text.set((event.target as HTMLInputElement).value);
     clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => {
-      this.page.set(0);
-      this.load();
-    }, SEARCH_DELAY_MS);
+    this.searchTimer = setTimeout(() => this.load(), SEARCH_DELAY_MS);
   }
 
-  onUncategorizedFilter(event: Event): void {
-    this.uncategorized.set((event.target as HTMLInputElement).checked);
-    this.page.set(0);
-    this.load();
-  }
-
-  /** Un periodo dal menu ("Questo mese"...): le date le calcoliamo noi; "Scegli le date" lascia quelle che ci sono. */
+  /** Un periodo dal menu ("Questo mese"...): le date le calcoliamo noi; "Scegli le date" mostra i due campi. */
   onPeriod(event: Event): void {
     const period = (event.target as HTMLSelectElement).value as Period;
     this.period.set(period);
@@ -185,146 +233,51 @@ export class TransactionsPage implements OnInit {
       this.from.set(range.from);
       this.to.set(range.to);
     }
-    this.page.set(0);
     this.load();
   }
 
-  /**
-   * Una data scelta dal calendario (campo <input type="date">, che il browser mostra con il suo calendario).
-   * Cambiare una data a mano vuol dire "Scegli le date". Una data cancellata (vuota) toglie il limite.
-   */
+  /** Una data scelta dal calendario. Una data cancellata (vuota) toglie il limite. */
   onDate(which: 'from' | 'to', event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     (which === 'from' ? this.from : this.to).set(value === '' ? null : value);
     this.period.set('CUSTOM');
-    this.page.set(0);
     this.load();
   }
 
-  goToPage(page: number): void {
-    this.page.set(page);
-    this.load();
-  }
-
-  /** L'utente ha scelto un tipo dal menu del movimento: è una correzione manuale. */
-  onCorrect(transaction: Transaction, event: Event): void {
-    const type = (event.target as HTMLSelectElement).value as TransactionType;
-    this.correct(transaction, type);
-  }
-
-  /** Toglie la correzione manuale: il tipo torna a deciderlo il motore. */
-  onResetCorrection(transaction: Transaction): void {
-    this.correct(transaction, null);
-  }
-
-  private correct(transaction: Transaction, type: TransactionType | null): void {
-    this.api.correctType(transaction.id, type).subscribe({
-      // Ricarichiamo la pagina intera: una correzione può cambiare anche altri movimenti
-      // (ad esempio l'altra metà di un trasferimento).
-      next: () => this.load(),
-      error: () => this.error.set('La correzione non è stata salvata.'),
-    });
-  }
-
-  /** Il nome di un tipo nel menu di un movimento. Per un'entrata, "Spesa" vuol dire rimborso di una spesa. */
-  protected typeLabel(transaction: Transaction, type: TransactionType): string {
-    return type === 'EXPENSE' && transaction.amount > 0
-      ? 'Rimborso di una spesa'
-      : this.typeLabels[type];
-  }
-
-  /** Le categorie del menu, con in cima il gruppo che si addice al tipo del movimento. */
-  protected groupsFor(transaction: Transaction): CategoryGroup[] {
-    return categoryGroups(this.categories(), kindOf(transaction.type));
-  }
-
   /**
-   * La categoria scelta nel menu. Il valore di un'opzione HTML è sempre testo ("7"): lo trasformiamo nel
-   * numero dell'id. "" (nessuna categoria) toglie la scelta manuale.
+   * Si apre un dettaglio. Sul telefono il dettaglio prende il posto dell'elenco: ricordiamo dove era l'elenco e
+   * partiamo dall'alto; chiudendo, si torna allo stesso punto.
    */
-  saveCategory(transaction: Transaction, value: string): void {
-    this.api.correctCategory(transaction.id, value === '' ? null : Number(value)).subscribe({
-      next: () => {
-        this.editingCategory.set(null);
-        this.load();
-        // Una categoria scelta a mano può far nascere un suggerimento per gli altri movimenti dell'esercente.
-        this.suggestionsPanel()?.reload();
-      },
-      error: (response) =>
-        this.error.set(response.error?.detail ?? 'La categoria non è stata salvata.'),
-    });
-  }
-
-  /**
-   * "modifica" la categoria: apre il menu e chiede al backend le categorie già usate per gli esercenti
-   * con la stessa prima parola (es. AMAZON), che il menu mette in cima ("Usate per «AMAZON…»"). Se la
-   * risposta arriva quando l'utente è già passato a un altro movimento, la ignoriamo: non è più quella giusta.
-   */
-  openCategory(transaction: Transaction): void {
-    this.usedCategories.set(null);
-    this.editingCategory.set(transaction.id);
-    this.api.usedCategories(transaction.id).subscribe({
-      next: (used) => {
-        if (this.editingCategory() === transaction.id) {
-          this.usedCategories.set(used);
-        }
-      },
-      // Senza le categorie usate il menu funziona lo stesso: non mostriamo errori.
-    });
-  }
-
-  /**
-   * I dati per "crea una regola da questa correzione": la pagina Regole li legge dall'indirizzo
-   * (es. /regole?pattern=NETFLIX&resultType=EXPENSE&categoryId=8) e compila il modulo.
-   * Come testo da cercare proponiamo la controparte o, se manca, la causale: l'utente può accorciarlo.
-   */
-  protected ruleParams(transaction: Transaction): Record<string, string> {
-    // Spazi ridotti a uno, come li mostra la tabella: molte banche riempiono i campi di spazi
-    // ("MAR GROUP SPA   FOGLIANISE    ITA"). Il backend comunque non bada al numero di spazi.
-    const pattern = (transaction.counterparty || transaction.description || '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 200);
-    return {
-      pattern,
-      resultType: transaction.type ?? 'EXPENSE',
-      amountSign: transaction.amount < 0 ? 'NEGATIVE' : 'POSITIVE',
-      categoryId: transaction.categoryId !== null ? String(transaction.categoryId) : '',
-    };
-  }
-
-  /** Controparte e causale, senza ripetere lo stesso testo due volte. */
-  protected textOf(transaction: Transaction): string {
-    const counterparty = transaction.counterparty ?? '';
-    const description = transaction.description ?? '';
-    if (counterparty.toLowerCase() === description.toLowerCase()) {
-      return counterparty || '(nessuna descrizione)';
+  onDetailOpen(): void {
+    if (!this.detailOpen() && !matchMedia(SIDE_BY_SIDE).matches) {
+      this.listScroll = window.scrollY;
+      window.scrollTo(0, 0);
     }
-    return `${counterparty} ${description}`.trim();
+    this.detailOpen.set(true);
   }
 
-  /**
-   * Salva la nota scritta nel campo (vuota la toglie). Aggiorniamo solo quel movimento nella pagina, senza
-   * ricaricarla: una nota non cambia né i totali né la classificazione degli altri.
-   */
-  saveNote(transaction: Transaction, note: string): void {
-    this.api.changeNote(transaction.id, note.trim() === '' ? null : note).subscribe({
-      next: (saved) => {
-        this.editingNote.set(null);
-        this.result.update((page) =>
-          page === null
-            ? page
-            : {
-                ...page,
-                items: page.items.map((t) => (t.id === saved.id ? { ...t, note: saved.note } : t)),
-              },
-        );
-      },
-      error: (response) => this.error.set(response.error?.detail ?? 'La nota non è stata salvata.'),
-    });
+  onDetailClose(): void {
+    this.detailOpen.set(false);
+    if (!matchMedia(SIDE_BY_SIDE).matches) {
+      const y = this.listScroll;
+      setTimeout(() => window.scrollTo(0, y)); // dopo che l'elenco è di nuovo visibile
+    }
   }
 
-  private loadCategories(): void {
-    this.api.categories().subscribe({ next: (categories) => this.categories.set(categories) });
+  /** La riga sotto il nome: categoria (o tipo) e conto, e "in attesa" se non è ancora contabilizzato. */
+  protected metaOf(t: Transaction): string {
+    let what: string;
+    if (t.category) {
+      what = t.category;
+    } else if (t.type === 'EXPENSE' || t.type === 'INCOME') {
+      what = 'senza categoria';
+    } else {
+      what = t.type ? this.typeLabels[t.type].toLowerCase() : 'da verificare';
+    }
+    const parts = [what, this.accountNames().get(t.accountId) ?? ''];
+    if (t.status === 'PENDING') {
+      parts.push('in attesa');
+    }
+    return parts.filter((p) => p !== '').join(' · ');
   }
 }

@@ -1,10 +1,12 @@
 package it.wallettracker.transaction;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import it.wallettracker.transaction.TransactionDetailService.CategoryChange;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,9 +20,36 @@ import org.springframework.web.bind.annotation.RestController;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final TransactionDetailService detailService;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(TransactionService transactionService, TransactionDetailService detailService) {
         this.transactionService = transactionService;
+        this.detailService = detailService;
+    }
+
+    /** {@code GET /api/transactions/42}: il dettaglio di un movimento (docs/37). */
+    @GetMapping("/{id}")
+    public TransactionDetailDto detail(@PathVariable Long id) {
+        return detailService.detail(id, LocalDate.now());
+    }
+
+    /**
+     * {@code GET /api/transactions/42/similar?categoryId=7}: gli altri movimenti dello stesso esercente con la
+     * categoria 7 (senza {@code categoryId}: quelli senza categoria). Dopo aver cambiato la categoria del movimento
+     * 42, la pagina propone di spostare anche questi.
+     */
+    @GetMapping("/{id}/similar")
+    public List<TransactionDto> similar(@PathVariable Long id, @RequestParam(required = false) Long categoryId) {
+        return detailService.similar(id, categoryId);
+    }
+
+    /**
+     * {@code PUT /api/transactions/manual-categories} con {@code [{"id": 42, "categoryId": 7}, ...]}: la categoria di
+     * più movimenti in una volta. Risponde con le scelte di prima: rimandarle è l'"Annulla".
+     */
+    @PutMapping("/manual-categories")
+    public List<CategoryChange> changeCategories(@RequestBody List<CategoryChange> changes) {
+        return detailService.changeCategories(changes);
     }
 
     /**

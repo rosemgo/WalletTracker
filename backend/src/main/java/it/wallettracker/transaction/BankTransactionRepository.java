@@ -228,4 +228,11 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
      * Spring Data ricava la query dal nome del metodo: "count", "by type", "or type is null".
      */
     long countByTypeOrTypeIsNull(TransactionType type);
+
+    /**
+     * I movimenti da un giorno in poi, con la categoria già caricata (un JOIN FETCH, niente query per ognuno): il
+     * dettaglio di un movimento ci cerca gli altri movimenti dello stesso esercente (docs/37).
+     */
+    @Query("SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category WHERE t.bookingDate >= :from")
+    List<BankTransaction> findSinceWithCategory(@Param("from") LocalDate from);
 }

@@ -33,6 +33,15 @@ export const routes: Routes = [
     path: 'movimenti',
     loadComponent: () => import('./transactions/transactions-page').then((m) => m.TransactionsPage),
     title: 'Movimenti · WalletTracker',
+    // Il dettaglio è una pagina "figlia": si apre dentro l'elenco (nel suo <router-outlet>), che resta in vita.
+    children: [
+      {
+        path: ':id',
+        loadComponent: () =>
+          import('./transactions/transaction-detail').then((m) => m.TransactionDetail),
+        title: 'Movimento · WalletTracker',
+      },
+    ],
   },
   {
     path: 'conti',

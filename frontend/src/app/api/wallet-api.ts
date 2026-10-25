@@ -25,6 +25,8 @@ import {
   ImportResult,
   LinkResult,
   ManualAccountRequest,
+  CategoryChange,
+  TransactionDetail,
   Overview,
   Rule,
   RulePreview,
@@ -154,6 +156,25 @@ export class WalletApi {
     return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-category`, {
       categoryId,
     });
+  }
+
+  /** GET /api/transactions/{id}: il dettaglio di un movimento. */
+  transaction(id: number): Observable<TransactionDetail> {
+    return this.http.get<TransactionDetail>(`/api/transactions/${id}`);
+  }
+
+  /**
+   * GET /api/transactions/{id}/similar?categoryId=7: gli altri movimenti dello stesso esercente con quella categoria
+   * (con `null`: quelli senza categoria).
+   */
+  similarTransactions(id: number, categoryId: number | null): Observable<Transaction[]> {
+    const params: Record<string, number> = categoryId === null ? {} : { categoryId };
+    return this.http.get<Transaction[]>(`/api/transactions/${id}/similar`, { params });
+  }
+
+  /** PUT /api/transactions/manual-categories: la categoria di più movimenti; risponde con le scelte di prima. */
+  changeCategories(changes: CategoryChange[]): Observable<CategoryChange[]> {
+    return this.http.put<CategoryChange[]>('/api/transactions/manual-categories', changes);
   }
 
   /** PUT /api/transactions/{id}/note; con `null` o un testo vuoto la nota viene tolta. */

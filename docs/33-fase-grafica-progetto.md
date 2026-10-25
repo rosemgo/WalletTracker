@@ -268,7 +268,8 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
    `docs/35`: la sezione "Oggi" si chiama **Riepilogo**; "Analisi" entra nella barra con la sua pagina (passo 5).
 3. **Riepilogo**: l'API `overview` (con i test sul "solito"), poi la schermata del mese; i grafici di 12 mesi di oggi
    passano ad Analisi. **Fatto**, `docs/36`: Analisi è già nella barra, con la pagina di 12 mesi.
-4. **Movimenti**: il nuovo elenco per giorno, le pillole, i suggerimenti nella riga.
+4. **Movimenti**: il nuovo elenco per giorno, le pillole, i suggerimenti nella riga. **Fatto**, `docs/37`, con il
+   dettaglio di un movimento (parte M); i suggerimenti restano in un pannello sopra l'elenco e nella scheda.
 5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici.
 6. **Budget** e **Altro**: ridisegnati con i componenti comuni.
 7. **PWA** e modalità discreta (il tema scuro è già nel passo 2).

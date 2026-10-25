@@ -1287,3 +1287,578 @@ ul.rows li > span {
     grid-row: span 3;
   }
 }
+
+/* ---- Movimenti (docs/37) ---- */
+
+/* Nascosto alla vista, ma letto dai lettori di schermo (per esempio l'etichetta di un campo con l'icona). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Sul telefono il dettaglio prende il posto dell'elenco (che resta in vita, nascosto). */
+.movements.with-detail .movements-list {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  /* Sul PC il dettaglio sta accanto all'elenco, e resta fermo mentre l'elenco scorre. */
+  .movements.with-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .movements.with-detail .movements-list {
+    display: block;
+  }
+
+  .movements.with-detail .movements-detail {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.search-field svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--sec);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+}
+
+.search-field input:focus-visible {
+  outline: none; /* il contorno lo disegna il riquadro intorno */
+}
+
+.search-field:focus-within {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* Le pillole dei filtri: scorrono di lato sul telefono, piene quando il filtro è acceso. */
+.pills {
+  display: flex;
+  gap: 8px;
+  margin: 0 -16px 12px;
+  padding: 0 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pill {
+  flex-shrink: 0;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Un menu a pillola: la freccia disegnata con due sfumature nel colore del testo (currentColor). */
+select.pill {
+  appearance: none;
+  padding-right: 30px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 16px,
+    calc(100% - 11px) 16px;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.pill.on {
+  background-color: var(--ink);
+  color: var(--bg);
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.dates label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--sec);
+  font-size: 0.9rem;
+}
+
+.days.loading {
+  opacity: 0.6;
+}
+
+.day {
+  margin-bottom: 12px;
+}
+
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 4px 6px;
+  color: var(--sec);
+  font-size: 13px;
+}
+
+.day-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.day ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.day li + li {
+  border-top: 1px solid var(--line);
+}
+
+a.movement {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 12px 0;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Il movimento aperto nel dettaglio (sul PC si vedono insieme). */
+a.movement.selected {
+  margin: 0 -16px;
+  padding: 12px 16px;
+  background: var(--soft);
+}
+
+.day li:first-child a.movement.selected {
+  border-radius: 16px 16px 0 0;
+}
+
+.day li:last-child a.movement.selected {
+  border-radius: 0 0 16px 16px;
+}
+
+.movement-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.movement-text .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movement-text .note {
+  margin: 0;
+  color: var(--sec);
+  font-size: 0.85rem;
+}
+
+a.movement .amount {
+  font-weight: 600;
+}
+
+button.more {
+  width: 100%;
+  min-height: 48px;
+  background: var(--card);
+}
+
+.count {
+  text-align: center;
+}
+
+.card.empty {
+  color: var(--sec);
+}
+
+/* Sul PC le pillole stanno tutte su una riga o vanno a capo: lo spazio c'è. */
+@media (min-width: 900px) {
+  .pills {
+    flex-wrap: wrap;
+    margin: 0 0 12px;
+    padding: 0;
+    overflow: visible;
+  }
+}
+
+/* I suggerimenti di categoria, sopra l'elenco: una riga per esercente, i pulsanti sotto sul telefono. */
+ul.suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.suggestion-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.suggestion-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 16rem;
+}
+
+/* ---- Il dettaglio di un movimento ---- */
+.detail-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.icon-link svg,
+button.icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.detail-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.detail-head .initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  background: var(--track);
+  font-size: 22px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.detail-head h1 {
+  margin: 6px 0 0;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.detail-amount {
+  font-size: 2.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.chip {
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--track);
+  font-size: 12px;
+}
+
+.detail-rows {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+button.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: 400;
+  text-align: left;
+}
+
+button.detail-row > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+button.detail-row strong {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+button.detail-row + .why + button.detail-row {
+  border-top: 1px solid var(--line);
+}
+
+button.detail-row .action {
+  color: var(--acc);
+  font-weight: 600;
+}
+
+.why {
+  margin: 0 0 10px;
+}
+
+.card.soft {
+  background: var(--soft);
+}
+
+.card p:first-child {
+  margin-top: 0;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.done {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 1rem;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.done button.link {
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.rule-advice {
+  margin: -4px 4px 1rem;
+}
+
+ul.rows li > a {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+ul.rows li > a > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.note-text {
+  margin: 0 0 6px;
+}
+
+dl.facts {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  margin: 0 0 10px;
+}
+
+dl.facts dt,
+dl.facts dd {
+  margin: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+dl.facts dt {
+  color: var(--sec);
+}
+
+dl.facts dd {
+  overflow-wrap: anywhere;
+}
+
+pre.raw {
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--track);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Il foglio di scelta (<dialog>): sul telefono sale dal basso, sul PC sta al centro. */
+dialog.sheet {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85dvh;
+  margin: auto 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 20px 20px 0 0;
+  background: var(--card);
+  color: var(--ink);
+}
+
+dialog.sheet::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+@media (min-width: 700px) {
+  dialog.sheet {
+    width: 480px;
+    margin: auto;
+    border-radius: 20px;
+  }
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 85dvh;
+  box-sizing: border-box;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+dialog.sheet button.icon {
+  background: var(--track);
+}
+
+input.sheet-search {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.sheet-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.sheet-list h3 {
+  margin: 14px 0 2px;
+  color: var(--sec);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+button.choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  font-weight: 400;
+  text-align: left;
+}
+
+button.choice > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+button.choice[aria-pressed='true'] {
+  font-weight: 600;
+}
+
+button.choice .secondary {
+  font-weight: 400; /* la spiegazione resta normale anche nella scelta attuale */
+}
+
+button.choice .check {
+  color: var(--acc);
+}
