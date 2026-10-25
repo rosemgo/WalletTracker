@@ -1,72 +1,321 @@
-/* Stili globali: valgono per tutta l'applicazione. Volutamente semplici, senza librerie. */
+/*
+ * Stili globali: valgono per tutta l'applicazione. Volutamente semplici, senza librerie (docs/35).
+ *
+ * I colori sono VARIABILI CSS ("design token"): un nome che dice a che cosa serve il colore (--ink, il testo; --card,
+ * lo sfondo delle schede...), non com'è fatto. Le regole qui sotto usano solo i nomi; i valori sono scritti una
+ * volta sola, per ogni tema. Così il tema scuro è lo stesso elenco di nomi con altri valori (docs/33, parte H).
+ */
+
+/* Il carattere, servito dalla nostra app (pacchetto npm): nessuna richiesta a Google, funziona anche senza rete. */
+@import '@fontsource-variable/schibsted-grotesk';
+
+/*
+ * Ogni colore ha due valori: light-dark(giorno, notte). Il browser sceglie quale usare guardando "color-scheme":
+ * - "light dark" (automatico, nessun data-theme): come il sistema (telefono o computer in modalità scura o chiara);
+ * - data-theme="giorno" o "notte" (scelta nelle Impostazioni, ThemeStore): sempre quello.
+ * color-scheme cambia anche i campi, le caselle e le barre di scorrimento del browser.
+ */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#eeede9, #15171a); /* lo sfondo della pagina */
+  --card: light-dark(#ffffff, #1f2226); /* lo sfondo delle schede */
+  --ink: light-dark(#16171b, #ecedee); /* il testo */
+  --sec: light-dark(#5b5d64, #a3a8b0); /* il testo secondario: date, spiegazioni */
+  --line: light-dark(#e6e4de, #2c3036); /* linee di separazione, bordi dei campi */
+  --track: light-dark(#ecebe6, #2a2e33); /* il fondo di una barra, i pulsanti secondari */
+  --acc: light-dark(
+    #1f5fd6,
+    #e59a2e
+  ); /* l'accento: link, la sezione attiva, il valore che conta in un grafico */
+  --on-acc: light-dark(#ffffff, #15171a); /* il testo sopra l'accento */
+  --soft: light-dark(#e8eef9, #2b2419); /* un riquadro da notare (un avviso, un suggerimento) */
+  --bar: light-dark(
+    #a3a5ac,
+    #4a4f57
+  ); /* le barre "normali" dei grafici, accanto a quella in evidenza */
+  --pos: light-dark(#1f5fd6, #e59a2e); /* entrate, risparmio */
+  --neg: light-dark(#c8571b, #6e9cf0); /* uscite oltre le entrate, valori negativi da notare */
+  --ok: light-dark(#1e7f3c, #5cc27a); /* stati: tutto bene */
+  --warn: light-dark(#f2b21b, #f2c14e); /* stati: attenzione (solo come sfondo di un'icona) */
+  --bad: light-dark(#c2362f, #f07068); /* stati: errore, budget superato */
+  --nav: light-dark(#ffffff, #1b1d21); /* la barra in basso del telefono */
+  --side: light-dark(#e5e4df, #1b1d21); /* la colonna a sinistra del PC */
+}
+
+:root[data-theme='giorno'] {
+  color-scheme: light;
+}
+
+:root[data-theme='notte'] {
+  color-scheme: dark;
+}
 
 :root {
-  --text: #1f2933;
-  --muted: #616e7c;
-  --border: #d9e2ec;
-  --background: #f5f7fa;
-  --accent: #2563eb;
-  --negative: #c62828;
-  --positive: #2e7d32;
   font-family:
+    'Schibsted Grotesk Variable',
     system-ui,
     -apple-system,
     'Segoe UI',
     Roboto,
     sans-serif;
-  color: var(--text);
-  background: var(--background);
+  color: var(--ink);
+  background: var(--bg);
+  accent-color: var(--acc); /* caselle, pulsanti di opzione, barre di avanzamento */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
 }
 
-header {
+a {
+  color: var(--acc);
+}
+
+/* ---- La struttura: navigazione e pagina (docs/35, parte D) ----
+   Sul telefono la navigazione è una barra fissa in basso, a portata di pollice; sul PC (da 900 pixel) diventa una
+   colonna a sinistra con tutte le pagine. Stesso HTML, due disposizioni. */
+
+.app-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* env(safe-area-inset-bottom): lo spazio della "barretta" dei telefoni senza tasti, da non coprire. */
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  background: var(--nav);
+  border-top: 1px solid var(--line);
+}
+
+.app-nav .brand,
+.app-nav .more-pages {
+  display: none;
+}
+
+.app-nav .section {
   display: flex;
-  flex-wrap: wrap; /* su uno schermo stretto il menu va sotto il nome, invece di uscire dalla pagina */
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem 2rem;
-  padding: 0.75rem 1.5rem;
-  background: white;
-  border-bottom: 1px solid var(--border);
-}
-
-nav {
-  display: flex;
-  flex-wrap: wrap; /* le voci vanno a capo quando non c'è spazio */
-  gap: 0.25rem 1rem;
-}
-
-.brand {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-nav a {
-  color: var(--muted);
+  justify-content: center;
+  gap: 3px;
+  min-height: 48px; /* almeno 44 pixel: si tocca con il pollice */
+  color: var(--sec);
+  font-size: 11px;
   text-decoration: none;
 }
 
-nav a.active {
-  color: var(--accent);
+.app-nav svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor; /* il colore del testo del link: grigio, o l'accento se attivo */
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app-nav .section.more svg {
+  stroke-width: 2.6; /* i tre puntini */
+}
+
+.app-nav .section.active {
+  color: var(--acc);
   font-weight: 600;
 }
 
-main {
-  padding: 1rem 1.5rem;
-  max-width: 1200px;
+.page main {
+  padding: 16px 16px calc(88px + env(safe-area-inset-bottom)); /* in fondo, lo spazio della barra */
+}
+
+.banner {
+  margin: 12px 16px 0;
+  padding: 12px 16px;
+  background: var(--soft);
+  border-radius: 12px;
+}
+
+@media (min-width: 900px) {
+  .shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+  .app-nav {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 24px 16px;
+    overflow-y: auto;
+    background: var(--side);
+    border-top: none;
+  }
+
+  .app-nav .brand {
+    display: block;
+    padding: 0 12px 20px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .app-nav .section {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .app-nav .section svg {
+    width: 20px;
+    height: 20px;
+    color: var(--sec);
+  }
+
+  .app-nav .section.active {
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .app-nav .section.active svg {
+    color: var(--acc);
+  }
+
+  .app-nav .section.more {
+    display: none; /* sul PC le pagine di "Altro" sono già qui sotto */
+  }
+
+  .app-nav .more-pages {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .app-nav .more-pages a {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--sec);
+    font-size: 14px;
+    text-decoration: none;
+  }
+
+  .app-nav .more-pages a.active {
+    background: var(--card);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .page main {
+    padding: 28px 32px 48px;
+    max-width: 1200px;
+  }
+
+  .banner {
+    margin: 16px 32px 0;
+  }
+}
+
+/* ---- "Altro" sul telefono: un elenco di link in una scheda ---- */
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  background: var(--card);
+  border-radius: 16px;
+}
+
+.link-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.link-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.link-list a > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-list svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--sec);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- La scelta del tema, nelle Impostazioni ---- */
+fieldset.choices {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+fieldset.choices legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+fieldset.choices label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+}
+
+fieldset.choices label > span {
+  display: flex;
+  flex-direction: column;
+}
+
+fieldset.choices input {
+  margin-top: 4px;
 }
 
 h1 {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 4px 0 16px;
 }
 
+/* Le tabelle sono schede: sfondo pieno, angoli arrotondati, nessun bordo esterno né ombra (docs/33, parte F). */
 table {
   width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border: 1px solid var(--border);
+  border-collapse: separate; /* con "collapse" gli angoli arrotondati non funzionano */
+  border-spacing: 0;
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 table.loading {
@@ -75,46 +324,60 @@ table.loading {
 
 th,
 td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
 }
 
+tr:last-child > td {
+  border-bottom: none;
+}
+
 th {
-  background: #eef2f7;
+  color: var(--sec);
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
+/*
+ * Gli importi: allineati a destra. Niente cifre "tabellari" (font-variant-numeric: tabular-nums): in questo carattere
+ * allargano anche il punto e la virgola, e "2.100,00" diventa "2 . 100 , 00".
+ */
 .amount {
   text-align: right;
   white-space: nowrap;
 }
 
 .negative {
-  color: var(--negative);
+  color: var(--neg);
+}
+
+/* Nell'elenco dei movimenti una spesa non è un allarme: il segno meno basta, il colore resta quello del testo. */
+td.amount.negative {
+  color: inherit;
 }
 
 .positive {
-  color: var(--positive);
+  color: var(--pos);
 }
 
 .secondary {
-  color: var(--muted);
+  color: var(--sec);
   font-size: 0.85rem;
 }
 
 .hint {
-  color: var(--muted);
+  color: var(--sec);
   max-width: 50rem;
 }
 
 .message {
-  color: var(--positive);
+  color: var(--ok);
 }
 
 .error {
-  color: var(--negative);
+  color: var(--bad);
 }
 
 .filters {
@@ -143,7 +406,7 @@ th {
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.9rem;
-  color: var(--muted);
+  color: var(--sec);
 }
 
 /* La casella "Solo senza categoria": accanto al testo, allineata in basso con gli altri filtri. */
@@ -155,10 +418,55 @@ th {
   min-height: 2rem;
 }
 
+/* I campi e i pulsanti: alti almeno 40 pixel, angoli arrotondati, i colori del tema. */
 select,
+input,
+textarea,
 button {
   font: inherit;
-  padding: 0.3rem 0.5rem;
+  color: inherit;
+}
+
+select,
+input:not([type='checkbox'], [type='radio'], [type='file']),
+textarea {
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+button {
+  min-height: 40px;
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--track);
+  color: var(--ink);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Il pulsante che conferma un modulo ("Salva", "Collega"...) è quello principale: l'accento. */
+button[type='submit'],
+button.primary {
+  background: var(--acc);
+  color: var(--on-acc);
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Il contorno di chi usa la tastiera: sempre visibile, nel colore dell'accento. */
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
 }
 
 /* Due pulsanti vicini in una cella (es. "Accetta" e "no"): un po' di spazio tra loro. */
@@ -167,12 +475,14 @@ td button + button {
 }
 
 button.link {
+  min-height: 0;
   padding: 0;
   border: none;
   background: none;
-  color: var(--accent);
+  color: var(--acc);
   cursor: pointer;
   font-size: inherit;
+  font-weight: inherit;
 }
 
 .pager {
@@ -189,21 +499,18 @@ button.link {
   margin-bottom: 1rem;
 }
 
-input {
-  font: inherit;
-  padding: 0.3rem 0.5rem;
-}
-
 h2 {
   font-size: 1.1rem;
+  font-weight: 600;
   margin-top: 0;
 }
 
+/* La scheda: sfondo pieno, angoli arrotondati, nessun bordo e nessuna ombra (docs/33, parte F). */
 .card {
-  background: white;
-  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 16px;
   padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 /* Un riquadro subito dopo una tabella (es. il modulo sotto l'elenco dei conti): un po' di spazio. */
@@ -224,7 +531,7 @@ table + .card,
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.9rem;
-  color: var(--muted);
+  color: var(--sec);
 }
 
 .form-grid label.checkbox {
@@ -238,26 +545,20 @@ table + .card,
 
 /* Un campo non valido, dopo che l'utente ci è passato: Angular aggiunge da solo le classi ng-invalid e ng-touched. */
 input.ng-invalid.ng-touched {
-  border-color: var(--negative);
+  border-color: var(--bad);
 }
 
 .preview {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   margin-top: 1rem;
 }
 
 tr.disabled {
-  color: var(--muted);
-}
-
-.banner {
-  padding: 0.6rem 1.5rem;
-  background: #fff7e6;
-  border-bottom: 1px solid #f5d38a;
+  color: var(--sec);
 }
 
 code {
-  background: #eef2f7;
+  background: var(--track);
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
   font-size: 0.9em;
@@ -266,8 +567,7 @@ code {
 /* ---- Riepilogo ---- */
 
 .card.warning {
-  background: #fff7e6;
-  border-color: #f5d38a;
+  background: var(--soft);
 }
 
 .tiles {
@@ -282,28 +582,29 @@ code {
 }
 
 .tile {
-  background: white;
-  border: 1px solid var(--border);
-  padding: 0.75rem 1rem;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
 }
 
 .tile-label {
-  color: var(--muted);
+  color: var(--sec);
   font-size: 0.9rem;
 }
 
 .tile-value {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0.25rem 0;
 }
 
 /* ---- Grafico (app-monthly-chart) ----
    I colori delle serie sono verificati per chi non distingue bene i colori (daltonismo): blu e arancione. */
 app-monthly-chart {
-  --series-income: #2a78d6;
-  --series-expenses: #eb6834;
-  --grid: #e6e9ee;
+  --series-income: var(--pos);
+  --series-expenses: var(--neg);
+  --grid: var(--line);
   display: block;
 }
 
@@ -311,7 +612,7 @@ app-monthly-chart {
   display: flex;
   gap: 1.25rem;
   font-size: 0.9rem;
-  color: var(--muted);
+  color: var(--sec);
   margin-bottom: 0.5rem;
 }
 
@@ -355,12 +656,12 @@ app-monthly-chart {
 }
 
 .chart .baseline {
-  stroke: #c3cad3;
+  stroke: var(--bar);
   stroke-width: 1;
 }
 
 .chart .axis {
-  fill: var(--muted);
+  fill: var(--sec);
   font-size: 11px;
 }
 
@@ -373,7 +674,7 @@ app-monthly-chart {
 }
 
 .chart .highlight {
-  fill: #f1f3f6;
+  fill: var(--track);
 }
 
 .chart .hit {
@@ -386,7 +687,7 @@ app-monthly-chart {
 }
 
 .chart .hit:focus-visible {
-  stroke: var(--accent);
+  stroke: var(--acc);
   stroke-width: 1;
 }
 
@@ -394,9 +695,9 @@ app-monthly-chart {
   position: absolute;
   top: 0;
   transform: translateX(12px);
-  background: white;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
   pointer-events: none; /* il mouse "passa attraverso" il riquadro */
@@ -454,7 +755,7 @@ app-monthly-chart {
 }
 
 .category-row.muted .category-name {
-  color: var(--muted);
+  color: var(--sec);
   font-style: italic;
 }
 
@@ -466,12 +767,12 @@ app-monthly-chart {
 .category-bar {
   display: block;
   height: 100%;
-  background: #2a78d6; /* lo stesso blu delle entrate nel grafico: una serie sola, un colore solo */
+  background: var(--acc); /* una serie sola, un colore solo */
   border-radius: 0 4px 4px 0; /* dritta all'inizio, arrotondata alla fine */
 }
 
 .category-row.muted .category-bar {
-  background: #9aa5b1;
+  background: var(--bar);
 }
 
 /* ---- Budget ----
@@ -515,34 +816,34 @@ app-monthly-chart {
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 50%;
-  color: white;
+  color: var(--card);
   font-size: 0.7rem;
   font-weight: 700;
 }
 
 .status.ok .status-icon,
 .meter-fill.ok {
-  background: #0ca30c;
+  background: var(--ok);
 }
 
 .status.warning .status-icon,
 .meter-fill.warning {
-  background: #fab219;
+  background: var(--warn);
 }
 
 .status.warning .status-icon {
-  color: #1f2933; /* sul giallo il bianco non si legge */
+  color: #16171b; /* sul giallo si legge solo il testo scuro, in entrambi i temi */
 }
 
 .status.over .status-icon,
 .meter-fill.over {
-  background: #d03b3b;
+  background: var(--bad);
 }
 
 .meter {
   position: relative;
   height: 12px;
-  background: #e6e9ee;
+  background: var(--track);
   border-radius: 6px;
 }
 
@@ -557,7 +858,7 @@ app-monthly-chart {
   bottom: -4px;
   width: 2px;
   margin-left: -1px;
-  background: var(--text);
+  background: var(--ink);
 }
 
 .budget-numbers {
@@ -576,22 +877,14 @@ app-monthly-chart {
   margin-bottom: 1.5rem;
 }
 
+/* Niente bordo colorato a sinistra (lo stile "da IA", docs/33 parte F): lo stato lo dice l'icona, con la scritta. */
 .alert {
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
   padding: 0.75rem 1rem;
-  background: white;
-  border: 1px solid var(--border);
-  border-left-width: 4px;
-}
-
-.alert.critical {
-  border-left-color: #d03b3b;
-}
-
-.alert.warning {
-  border-left-color: #fab219;
+  background: var(--card);
+  border-radius: 14px;
 }
 
 .alert .status-icon {
@@ -600,12 +893,12 @@ app-monthly-chart {
 }
 
 .status-icon.critical {
-  background: #d03b3b;
+  background: var(--bad);
 }
 
 .status-icon.warning {
-  background: #fab219;
-  color: #1f2933;
+  background: var(--warn);
+  color: #16171b;
 }
 
 /* ---- Abbonamenti ---- */
@@ -626,7 +919,7 @@ app-monthly-chart {
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--sec);
 }
 
 .suggestion-actions {
@@ -643,7 +936,7 @@ app-monthly-chart {
 
 .dismissed {
   margin-top: 1.5rem;
-  color: var(--muted);
+  color: var(--sec);
 }
 
 /* Lo stato dell'IA nelle Impostazioni: sempre simbolo + testo, mai solo il colore. */
@@ -657,11 +950,11 @@ app-monthly-chart {
 }
 
 .status-good {
-  color: #0ca30c;
+  color: var(--ok);
 }
 
 .status-bad {
-  color: #d03b3b;
+  color: var(--bad);
 }
 
 progress {
@@ -680,9 +973,9 @@ progress {
   display: inline-block;
   margin-left: 0.4rem;
   padding: 0 0.35rem;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--acc);
   border-radius: 0.25rem;
-  color: var(--accent);
+  color: var(--acc);
   font-size: 0.75rem;
   vertical-align: middle;
 }
@@ -691,8 +984,8 @@ progress {
 .cloud-section {
   margin: 0.75rem 0;
   padding: 0.75rem 1rem;
-  border-left: 3px solid var(--accent);
-  background: rgba(37, 99, 235, 0.04);
+  border-radius: 12px;
+  background: var(--soft);
 }
 
 .cloud-section h4 {

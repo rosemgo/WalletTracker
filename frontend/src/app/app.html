@@ -1,26 +1,46 @@
-<header>
-  <span class="brand">WalletTracker</span>
-  <nav>
-    <a routerLink="/riepilogo" routerLinkActive="active">Riepilogo</a>
-    <a routerLink="/budget" routerLinkActive="active">Budget</a>
-    <a routerLink="/abbonamenti" routerLinkActive="active">Abbonamenti</a>
-    <a routerLink="/movimenti" routerLinkActive="active">Movimenti</a>
-    <a routerLink="/conti" routerLinkActive="active">Conti</a>
-    <a routerLink="/importa" routerLinkActive="active">Importa CSV</a>
-    <a routerLink="/regole" routerLinkActive="active">Regole</a>
-    <a routerLink="/categorie" routerLinkActive="active">Categorie</a>
-    <a routerLink="/collega" routerLinkActive="active">Collega una banca</a>
-    <a routerLink="/impostazioni" routerLinkActive="active">Impostazioni</a>
+<div class="shell">
+  <nav class="app-nav" aria-label="Sezioni">
+    <span class="brand">WalletTracker</span>
+    @for (section of sections; track section.path) {
+      <a
+        class="section"
+        [routerLink]="section.path"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="section.icon" /></svg>
+        <span>{{ section.label }}</span>
+      </a>
+    }
+    <!-- "Altro" serve solo sul telefono: sul PC le sue pagine sono qui sotto, nella colonna. -->
+    <a
+      class="section more"
+      [routerLink]="more.path"
+      [class.active]="inMore()"
+      [attr.aria-current]="inMore() ? 'page' : null"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="more.icon" /></svg>
+      <span>{{ more.label }}</span>
+    </a>
+    <div class="more-pages">
+      @for (page of morePages; track page.path) {
+        <a [routerLink]="page.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+          {{ page.label }}
+        </a>
+      }
+    </div>
   </nav>
-</header>
 
-@if (setup.status()?.configured === false) {
-  <div class="banner">
-    Per iniziare, configura il collegamento con Enable Banking:
-    <a routerLink="/impostazioni">apri le Impostazioni</a>.
+  <div class="page">
+    @if (setup.status()?.configured === false) {
+      <div class="banner">
+        Per iniziare, configura il collegamento con Enable Banking:
+        <a routerLink="/impostazioni">apri le Impostazioni</a>.
+      </div>
+    }
+
+    <main>
+      <router-outlet />
+    </main>
   </div>
-}
-
-<main>
-  <router-outlet />
-</main>
+</div>

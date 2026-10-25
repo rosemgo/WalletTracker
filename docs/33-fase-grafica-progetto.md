@@ -48,7 +48,7 @@ ma la spesa **accumulata** del mese contro quella di un mese tipico (la media de
 
 **Indispensabili (la prima versione):**
 
-- Home "Oggi": speso nel mese, confronto con il solito, grafico del mese, categorie principali con la differenza dal
+- Home "Riepilogo" (nelle bozze "Oggi"): speso nel mese, confronto con il solito, grafico del mese, categorie principali con la differenza dal
   solito, spese in arrivo, cose da sistemare;
 - Movimenti: elenco per giorno con il totale del giorno, ricerca, filtri rapidi a "pillole" (mese, da verificare,
   conto, entrate), categoria e suggerimenti direttamente nella riga;
@@ -85,7 +85,7 @@ modello giusto è una **barra in basso** con cinque voci, raggiungibile con il p
 
 | Sezione | Che cosa c'è |
 |---|---|
-| **Oggi** | la Home (Parte D1) |
+| **Riepilogo** | la Home, il mese in corso (Parte D1; nelle bozze si chiamava "Oggi") |
 | **Movimenti** | elenco, ricerca, filtri, da verificare, suggerimenti |
 | **Analisi** | andamento, categorie, calendario; da qui il dettaglio di una categoria e **Esplora** |
 | **Budget** | i budget del mese, con il ritmo |
@@ -97,7 +97,7 @@ Sul PC la stessa barra diventa una colonna a sinistra: stessa struttura, più sp
 
 ## Parte D: le schermate e i loro grafici
 
-### D1. Oggi
+### D1. Riepilogo (nelle bozze "Oggi")
 
 - **La cifra**: "Speso finora 1.284 €", grande, e sotto "126 € in meno del solito, a questo punto del mese". Una
   sola cifra grande per schermata.
@@ -234,7 +234,7 @@ Le schermate chiedono dati già "pronti", calcolati dal backend, non migliaia di
 
 | API | Per | Che cosa restituisce |
 |---|---|---|
-| `GET /api/overview?month=2026-10` | Oggi | speso finora; la spesa accumulata giorno per giorno; il mese tipico (media degli ultimi N mesi, giorno per giorno); categorie del mese con il "solito"; prossime uscite ricorrenti; conteggi da sistemare |
+| `GET /api/overview?month=2026-10` | Riepilogo | speso finora; la spesa accumulata giorno per giorno; il mese tipico (media degli ultimi N mesi, giorno per giorno); categorie del mese con il "solito"; prossime uscite ricorrenti; conteggi da sistemare |
 | `GET /api/analysis?from=…&to=…` | Analisi | spese ed entrate per mese; categorie del periodo; spesa di ogni giorno di un mese |
 | `GET /api/categories/{id}/overview` | Una categoria | il mese, il solito, il budget e il ritmo, 12 mesi, gli esercenti |
 | `GET /api/transactions/{id}` | Dettaglio movimento | tutti i campi, la categoria con la sua **origine** (scelta da te, regola, suggerimento), i dati originali della banca, il riepilogo dell'esercente (quante volte, quanto, ultimi movimenti) |
@@ -264,12 +264,14 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
 ## Parte K: i passi successivi
 
 1. **Scegliere la direzione** (e correggere le bozze finché convincono).
-2. **Le basi**: variabili CSS, caratteri, la barra in basso, i componenti comuni; la struttura a cinque sezioni.
-3. **Oggi**: l'API `overview` (con i test sul "solito"), poi la schermata.
+2. **Le basi**: variabili CSS, caratteri, la barra in basso, i componenti comuni; la struttura a sezioni. **Fatto**,
+   `docs/35`: la sezione "Oggi" si chiama **Riepilogo**; "Analisi" entra nella barra con la sua pagina (passo 5).
+3. **Riepilogo**: l'API `overview` (con i test sul "solito"), poi la schermata del mese; i grafici di 12 mesi di oggi
+   passano ad Analisi.
 4. **Movimenti**: il nuovo elenco per giorno, le pillole, i suggerimenti nella riga.
 5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici.
 6. **Budget** e **Altro**: ridisegnati con i componenti comuni.
-7. **PWA**, modalità discreta, tema scuro.
+7. **PWA** e modalità discreta (il tema scuro è già nel passo 2).
 
 Ogni passo con la sua guida e i suoi test, come sempre.
 

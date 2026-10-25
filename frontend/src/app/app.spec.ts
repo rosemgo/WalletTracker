@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import { SetupStatus } from './api/models';
@@ -21,29 +21,56 @@ describe('App', () => {
     };
     TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([]), { provide: WalletApi, useValue: fakeApi }],
+      providers: [
+        provideRouter([{ path: '**', children: [] }]),
+        { provide: WalletApi, useValue: fakeApi },
+      ],
     });
   });
 
-  it('shows the links to the pages', async () => {
+  it('shows the main sections, "Altro" and, for the PC column, the service pages', async () => {
     configured = true;
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('nav a'));
+    const nav = (fixture.nativeElement as HTMLElement).querySelector('nav') as HTMLElement;
+    const texts = (selector: string) =>
+      Array.from(nav.querySelectorAll(selector)).map((a) => a.textContent?.trim());
 
-    expect(links.map((a) => a.textContent?.trim())).toEqual([
-      'Riepilogo',
-      'Budget',
+    expect(nav.getAttribute('aria-label')).toBe('Sezioni');
+    expect(texts('a.section')).toEqual(['Riepilogo', 'Movimenti', 'Budget', 'Altro']);
+    expect(texts('.more-pages a')).toEqual([
       'Abbonamenti',
-      'Movimenti',
       'Conti',
-      'Importa CSV',
+      'Collega una banca',
+      'Importa',
       'Regole',
       'Categorie',
-      'Collega una banca',
       'Impostazioni',
     ]);
+    // Ogni sezione principale ha la sua icona, nascosta ai lettori di schermo (c'è già la scritta).
+    expect(nav.querySelectorAll('a.section svg[aria-hidden="true"] path').length).toBe(4);
     expect((fixture.nativeElement as HTMLElement).querySelector('.banner')).toBeNull();
+  });
+
+  it('"Altro" is the current section also in its pages, and only there', async () => {
+    configured = true;
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const more = () =>
+      (fixture.nativeElement as HTMLElement).querySelector('a.section.more') as HTMLElement;
+
+    for (const [url, current] of [
+      ['/regole', true],
+      ['/importa/completa', true],
+      ['/altro', true],
+      ['/movimenti', false],
+      ['/riepilogo', false],
+    ] as const) {
+      await router.navigateByUrl(url);
+      await fixture.whenStable();
+      expect(more().classList.contains('active')).toBe(current);
+      expect(more().getAttribute('aria-current')).toBe(current ? 'page' : null);
+    }
   });
 
   it('invites to open the settings when Enable Banking is not configured', async () => {

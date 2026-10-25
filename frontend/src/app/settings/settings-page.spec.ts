@@ -85,7 +85,7 @@ describe('SettingsPage', () => {
 
     await chooseFile(page, `${APP_ID}.pem`, PEM);
     await fixture.whenStable();
-    expect((page.querySelectorAll('input')[1] as HTMLInputElement).value).toBe(APP_ID);
+    expect(applicationIdField(page).value).toBe(APP_ID);
 
     (
       Array.from(page.querySelectorAll('button')).find((b) =>
@@ -100,9 +100,9 @@ describe('SettingsPage', () => {
     expect(TestBed.inject(SetupStore).status()?.configured).toBe(true); // lo stato condiviso è aggiornato
   });
 
-  /** Il valore del campo "Application ID" (il secondo <input> della pagina). */
+  /** Il campo "Application ID", riconosciuto dal suo esempio (non dalla posizione: la pagina ha altri campi). */
   function applicationIdField(page: HTMLElement): HTMLInputElement {
-    return page.querySelectorAll('input')[1] as HTMLInputElement;
+    return page.querySelector('input[placeholder^="es. cf589be3"]') as HTMLInputElement;
   }
 
   it('replaces the Application ID when a different file is chosen', async () => {

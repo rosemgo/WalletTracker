@@ -41,27 +41,29 @@
 @if (loading()) {
   <p>Caricamento delle banche...</p>
 } @else {
-  <table>
-    <tbody>
-      @for (bank of filteredBanks(); track bank.name) {
-        <tr>
-          <td>
-            {{ bank.name }}
-            @if (bank.maxConsentDays) {
-              <div class="secondary">consenso fino a {{ bank.maxConsentDays }} giorni</div>
-            }
-          </td>
-          <td class="amount">
-            <button type="button" [disabled]="starting() !== null" (click)="connect(bank)">
-              {{ starting() === bank.name ? 'Apertura della banca...' : 'Collega' }}
-            </button>
-          </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td>Nessuna banca trovata.</td>
-        </tr>
-      }
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <tbody>
+        @for (bank of filteredBanks(); track bank.name) {
+          <tr>
+            <td>
+              {{ bank.name }}
+              @if (bank.maxConsentDays) {
+                <div class="secondary">consenso fino a {{ bank.maxConsentDays }} giorni</div>
+              }
+            </td>
+            <td class="amount">
+              <button type="button" [disabled]="starting() !== null" (click)="connect(bank)">
+                {{ starting() === bank.name ? 'Apertura della banca...' : 'Collega' }}
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td>Nessuna banca trovata.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
 }

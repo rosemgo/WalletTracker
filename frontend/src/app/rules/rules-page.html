@@ -50,7 +50,9 @@
           <span class="secondary">in quest'ordine e una dopo l'altra</span>
         }
         @case ('ALL_WORDS') {
-          <span class="secondary">parole intere, in qualsiasi ordine, anche con altre in mezzo</span>
+          <span class="secondary"
+            >parole intere, in qualsiasi ordine, anche con altre in mezzo</span
+          >
         }
         @case ('STARTS_WITH') {
           <span class="secondary">all'inizio del testo</span>
@@ -135,54 +137,56 @@
   }
 </form>
 
-<table>
-  <thead>
-    <tr>
-      <th>Priorità</th>
-      <th>Nome</th>
-      <th>Condizione</th>
-      <th>Risultato</th>
-      <th class="amount">Usata</th>
-      <th>Attiva</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    @for (rule of rules(); track rule.id) {
-      <tr [class.disabled]="!rule.enabled">
-        <td>{{ rule.priority }}</td>
-        <td>
-          {{ rule.name }}
-          @if (rule.builtin) {
-            <div class="secondary">regola di partenza</div>
-          }
-        </td>
-        <td>
-          {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
-          <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
-        </td>
-        <td>
-          {{ typeLabels[rule.resultType] }}
-          @if (rule.category) {
-            <div class="secondary">{{ rule.category }}</div>
-          }
-        </td>
-        <td class="amount">{{ rule.uses }}</td>
-        <td>
-          <input
-            type="checkbox"
-            [checked]="rule.enabled"
-            [attr.aria-label]="'Attiva ' + rule.name"
-            (change)="toggle(rule)"
-          />
-        </td>
-        <td>
-          <button type="button" class="link" (click)="edit(rule)">Modifica</button>
-          @if (!rule.builtin) {
-            · <button type="button" class="link" (click)="remove(rule)">Elimina</button>
-          }
-        </td>
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Priorità</th>
+        <th>Nome</th>
+        <th>Condizione</th>
+        <th>Risultato</th>
+        <th class="amount">Usata</th>
+        <th>Attiva</th>
+        <th></th>
       </tr>
-    }
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      @for (rule of rules(); track rule.id) {
+        <tr [class.disabled]="!rule.enabled">
+          <td>{{ rule.priority }}</td>
+          <td>
+            {{ rule.name }}
+            @if (rule.builtin) {
+              <div class="secondary">regola di partenza</div>
+            }
+          </td>
+          <td>
+            {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
+            <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
+          </td>
+          <td>
+            {{ typeLabels[rule.resultType] }}
+            @if (rule.category) {
+              <div class="secondary">{{ rule.category }}</div>
+            }
+          </td>
+          <td class="amount">{{ rule.uses }}</td>
+          <td>
+            <input
+              type="checkbox"
+              [checked]="rule.enabled"
+              [attr.aria-label]="'Attiva ' + rule.name"
+              (change)="toggle(rule)"
+            />
+          </td>
+          <td>
+            <button type="button" class="link" (click)="edit(rule)">Modifica</button>
+            @if (!rule.builtin) {
+              · <button type="button" class="link" (click)="remove(rule)">Elimina</button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

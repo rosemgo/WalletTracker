@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { AiSettingsPanel } from '../ai/ai-settings-panel';
 import { SetupStore } from '../api/setup-store';
 import { WalletApi } from '../api/wallet-api';
+import { ThemeSection } from '../theme/theme-section';
 
 /** Un Application ID di Enable Banking è un UUID, es. "cf589be3-3755-465b-a8df-a90a16a31403". */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,7 +18,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [AiSettingsPanel, RouterLink],
+  imports: [AiSettingsPanel, RouterLink, ThemeSection],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
