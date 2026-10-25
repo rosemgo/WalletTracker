@@ -267,7 +267,7 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
 2. **Le basi**: variabili CSS, caratteri, la barra in basso, i componenti comuni; la struttura a sezioni. **Fatto**,
    `docs/35`: la sezione "Oggi" si chiama **Riepilogo**; "Analisi" entra nella barra con la sua pagina (passo 5).
 3. **Riepilogo**: l'API `overview` (con i test sul "solito"), poi la schermata del mese; i grafici di 12 mesi di oggi
-   passano ad Analisi.
+   passano ad Analisi. **Fatto**, `docs/36`: Analisi è già nella barra, con la pagina di 12 mesi.
 4. **Movimenti**: il nuovo elenco per giorno, le pillole, i suggerimenti nella riga.
 5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici.
 6. **Budget** e **Altro**: ridisegnati con i componenti comuni.

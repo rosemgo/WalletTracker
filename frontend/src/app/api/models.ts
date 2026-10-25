@@ -534,3 +534,41 @@ export interface AiStatus {
   evaluation: ModelEvaluation | null;
   gemini: AiCloudStatus;
 }
+
+/** Una categoria del mese nel Riepilogo (OverviewDto.CategoryRow). */
+export interface OverviewCategory {
+  categoryId: number | null; // null = spese senza categoria
+  name: string | null;
+  amount: number; // positivo: quanto hai speso
+  movements: number;
+  usualSoFar: number | null; // di solito, allo stesso giorno del mese (null: nessun mese da confrontare)
+  usualMonth: number | null; // di solito, in un mese intero
+}
+
+/** Un abbonamento atteso nei prossimi giorni. */
+export interface OverviewUpcoming {
+  subscriptionId: number;
+  name: string;
+  date: string; // "2026-11-01"
+  amount: number;
+}
+
+/** GET /api/overview: il Riepilogo di un mese, già calcolato dal backend (docs/36). */
+export interface Overview {
+  month: string; // "2026-10"
+  day: string; // il giorno fino a cui contano i numeri: oggi, o l'ultimo del mese per un mese passato
+  daysInMonth: number;
+  currency: string;
+  currencies: string[];
+  spent: number;
+  income: number;
+  spentByDay: number[]; // la spesa accumulata, dal giorno 1 a "day"
+  usualMonths: number; // 0 = nessun confronto possibile
+  usualSoFar: number | null;
+  usualMonth: number | null;
+  usualByDay: number[]; // il mese tipico, un valore per ogni giorno del mese (vuoto senza solito)
+  categories: OverviewCategory[];
+  upcoming: OverviewUpcoming[];
+  toReview: number;
+  suggestions: number;
+}

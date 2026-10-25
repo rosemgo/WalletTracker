@@ -34,7 +34,7 @@ Il nome della prima sezione: nel progetto era "Oggi"; diventa **Riepilogo**, il 
 **mese in corso** (quanto hai speso finora rispetto al solito), più le spese in arrivo nei prossimi giorni e le cose
 da sistemare: "Oggi" faceva pensare al solo giorno.
 
-**Analisi** non è ancora nella barra: arriverà con la sua pagina (passo 5). Fino ad allora i grafici di 12 mesi
+**Analisi** non è ancora nella barra: arriverà con la sua pagina (aggiornamento: è arrivata nel passo 3, `docs/36`). Fino ad allora i grafici di 12 mesi
 restano nel Riepilogo; quando il Riepilogo diventerà la schermata del mese (passo 3), passeranno ad Analisi. Una voce
 che porta a una pagina vuota non la mettiamo.
 

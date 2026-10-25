@@ -37,7 +37,7 @@ describe('App', () => {
       Array.from(nav.querySelectorAll(selector)).map((a) => a.textContent?.trim());
 
     expect(nav.getAttribute('aria-label')).toBe('Sezioni');
-    expect(texts('a.section')).toEqual(['Riepilogo', 'Movimenti', 'Budget', 'Altro']);
+    expect(texts('a.section')).toEqual(['Riepilogo', 'Movimenti', 'Analisi', 'Budget', 'Altro']);
     expect(texts('.more-pages a')).toEqual([
       'Abbonamenti',
       'Conti',
@@ -48,7 +48,7 @@ describe('App', () => {
       'Impostazioni',
     ]);
     // Ogni sezione principale ha la sua icona, nascosta ai lettori di schermo (c'è già la scritta).
-    expect(nav.querySelectorAll('a.section svg[aria-hidden="true"] path').length).toBe(4);
+    expect(nav.querySelectorAll('a.section svg[aria-hidden="true"] path').length).toBe(5);
     expect((fixture.nativeElement as HTMLElement).querySelector('.banner')).toBeNull();
   });
 

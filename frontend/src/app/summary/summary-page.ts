@@ -3,7 +3,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Summary } from '../api/models';
-import { AlertsPanel } from '../alerts/alerts-panel';
 import { WalletApi } from '../api/wallet-api';
 import { MonthlyChart } from './monthly-chart';
 
@@ -23,14 +22,14 @@ interface CategoryRow {
 }
 
 /**
- * Il riepilogo: entrate, spese e risparmio del periodo, mese per mese.
+ * Analisi (era il Riepilogo, docs/36): entrate, spese e risparmio del periodo, mese per mese.
  *
  * Tutti i conti insieme: i trasferimenti tra conti propri e il saldo della carta di credito non contano,
  * perché la classificazione li ha già riconosciuti (vedi SummaryService nel backend).
  */
 @Component({
   selector: 'app-summary-page',
-  imports: [CurrencyPipe, DatePipe, PercentPipe, RouterLink, MonthlyChart, AlertsPanel],
+  imports: [CurrencyPipe, DatePipe, PercentPipe, RouterLink, MonthlyChart],
   templateUrl: './summary-page.html',
 })
 export class SummaryPage implements OnInit {

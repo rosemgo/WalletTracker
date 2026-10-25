@@ -18,6 +18,7 @@ export const MAIN_SECTIONS: NavItem[] = [
     icon: 'M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z',
   },
   { path: '/movimenti', label: 'Movimenti', icon: 'M4 7h16M4 12h16M4 17h10' },
+  { path: '/analisi', label: 'Analisi', icon: 'M5 20V11M12 20V5M19 20v-6' },
   {
     path: '/budget',
     label: 'Budget',

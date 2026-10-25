@@ -31,7 +31,7 @@
     <select (change)="onTypeFilter($event)">
       <option value="">Tutti i tipi</option>
       @for (t of types; track t) {
-        <option [value]="t">{{ typeLabels[t] }}</option>
+        <option [value]="t" [selected]="t === type()">{{ typeLabels[t] }}</option>
       }
     </select>
   </label>

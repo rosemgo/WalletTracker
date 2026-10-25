@@ -25,6 +25,7 @@ import {
   ImportResult,
   LinkResult,
   ManualAccountRequest,
+  Overview,
   Rule,
   RulePreview,
   RuleRequest,
@@ -236,6 +237,21 @@ export class WalletApi {
       applicationId,
       privateKeyPem,
     });
+  }
+
+  /**
+   * GET /api/overview?month=2026-10&currency=EUR: il Riepilogo di un mese. Senza mese, quello in corso; senza
+   * valuta, quella con più spese.
+   */
+  overview(month: string | null, currency: string | null): Observable<Overview> {
+    let params = new HttpParams();
+    if (month) {
+      params = params.set('month', month);
+    }
+    if (currency) {
+      params = params.set('currency', currency);
+    }
+    return this.http.get<Overview>('/api/overview', { params });
   }
 
   /** GET /api/summary/monthly?from=2025-11: il riepilogo da quel mese al mese in corso. */

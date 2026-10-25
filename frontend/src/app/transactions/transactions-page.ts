@@ -1,6 +1,6 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { CategoryGroup, categoryGroups, kindOf } from '../api/category-groups';
 import { TYPES, TYPE_LABELS } from '../api/labels';
@@ -36,6 +36,7 @@ export const SEARCH_DELAY_MS = 300;
 })
 export class TransactionsPage implements OnInit {
   private readonly api = inject(WalletApi);
+  private readonly route = inject(ActivatedRoute);
 
   /** Il pannello dei suggerimenti nel template: viewChild() ci dà il componente, per chiamarne i metodi. */
   private readonly suggestionsPanel = viewChild(SuggestionsPanel);
@@ -84,6 +85,11 @@ export class TransactionsPage implements OnInit {
   );
 
   ngOnInit(): void {
+    // Un filtro nell'indirizzo, dai link delle altre pagine: /movimenti?type=TO_REVIEW (il Riepilogo, "da verificare").
+    const type = this.route.snapshot.queryParamMap.get('type');
+    if (type !== null && (TYPES as readonly string[]).includes(type)) {
+      this.type.set(type as TransactionType);
+    }
     this.api.accounts().subscribe({ next: (accounts) => this.accounts.set(accounts) });
     this.loadCategories();
     this.load();

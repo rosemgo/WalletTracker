@@ -184,4 +184,48 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
         long getMovements();
     }
+
+    /**
+     * Le spese e le entrate di un periodo, giorno per giorno: una riga per giorno, valuta, tipo e categoria (es.
+     * "5 ottobre 2026, EUR, EXPENSE, Spesa alimentare, -120.00, 2 movimenti"). Il Riepilogo (docs/36) ne ricava la
+     * curva del mese e quella del "mese tipico". Anche qui somma il database: per sette mesi sono poche centinaia di
+     * righe, qualunque sia il numero di movimenti. Il periodo va da {@code from} (incluso) a {@code to} (escluso).
+     */
+    @Query("""
+            SELECT t.bookingDate AS day, t.currency AS currency, t.type AS type,
+                   c.id AS categoryId, c.name AS category, SUM(t.amount) AS total, COUNT(t) AS movements
+            FROM BankTransaction t LEFT JOIN t.category c
+            WHERE t.type IN (it.wallettracker.transaction.TransactionType.EXPENSE,
+                             it.wallettracker.transaction.TransactionType.INCOME)
+              AND t.bookingDate >= :from AND t.bookingDate < :to
+            GROUP BY t.bookingDate, t.currency, t.type, c.id, c.name
+            """)
+    List<DailyTotal> sumByDay(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Una riga di {@link #sumByDay}. */
+    interface DailyTotal {
+        LocalDate getDay();
+
+        String getCurrency();
+
+        TransactionType getType();
+
+        Long getCategoryId(); // null per le spese senza categoria
+
+        String getCategory();
+
+        BigDecimal getTotal();
+
+        long getMovements();
+    }
+
+    /** Il giorno del movimento più vecchio in una valuta: da lì comincia la storia che conosciamo. */
+    @Query("SELECT MIN(t.bookingDate) FROM BankTransaction t WHERE t.currency = :currency")
+    LocalDate findFirstDate(@Param("currency") String currency);
+
+    /**
+     * Quanti movimenti sono da verificare: quelli di tipo TO_REVIEW e quelli non ancora classificati (tipo null).
+     * Spring Data ricava la query dal nome del metodo: "count", "by type", "or type is null".
+     */
+    long countByTypeOrTypeIsNull(TransactionType type);
 }

@@ -1,0 +1,139 @@
+<header class="overview-head">
+  <div>
+    <span class="secondary">{{ dayLabel() }}</span>
+    <h1>{{ monthTitle() }}</h1>
+  </div>
+  <div class="month-arrows">
+    <button type="button" class="icon" (click)="previous()" aria-label="Mese precedente">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    </button>
+    <button
+      type="button"
+      class="icon"
+      (click)="next()"
+      [disabled]="isCurrent()"
+      aria-label="Mese successivo"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Gli avvisi (consenso della banca in scadenza, aggiornamento non riuscito...): sono la prima cosa da sapere. -->
+<app-alerts-panel />
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (overview(); as o) {
+  <div class="overview" [class.loading]="loading()">
+    @if (o.currencies.length > 1) {
+      <label class="currency-choice">
+        Valuta
+        <select (change)="onCurrency($event)">
+          @for (c of o.currencies; track c) {
+            <option [value]="c" [selected]="c === o.currency">{{ c }}</option>
+          }
+        </select>
+      </label>
+    }
+
+    <section class="card hero">
+      <span class="secondary">{{ isCurrent() ? 'Speso finora' : 'Speso nel mese' }}</span>
+      <span class="big-figure">{{ o.spent | currency: o.currency : 'symbol' : '1.0-0' }}</span>
+      <p class="comparison">{{ comparison() }}</p>
+      <app-month-chart
+        [spentByDay]="o.spentByDay"
+        [usualByDay]="o.usualByDay"
+        [daysInMonth]="o.daysInMonth"
+        [monthShort]="monthShort()"
+        [description]="chartDescription()"
+      />
+      <div class="chart-keys">
+        <span><span class="key month"></span>{{ monthTitle() }}</span>
+        @if (o.usualMonths > 0) {
+          <span>
+            <span class="key usual"></span>Un mese tipico (media di
+            {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
+          </span>
+        }
+      </div>
+      <p class="secondary income">
+        Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
+        {{ o.income | currency: o.currency : 'symbol' : '1.0-0' }}
+      </p>
+    </section>
+
+    @if (topCategories().length > 0) {
+      <section class="card">
+        <div class="card-head">
+          <h2>Dove vanno</h2>
+          <a routerLink="/analisi">Tutte</a>
+        </div>
+        <ul class="bars">
+          @for (c of topCategories(); track c.categoryId) {
+            <li>
+              <span class="bar-label">
+                <span>{{ categoryName(c) }}</span>
+                <strong>{{ c.amount | currency: o.currency : 'symbol' : '1.0-0' }}</strong>
+              </span>
+              <span class="bar-line">
+                <span class="track">
+                  <span class="fill" [style.width.%]="(c.amount / highest()) * 100"></span>
+                </span>
+                <span class="secondary">{{ categoryNote(c, o.currency) }}</span>
+              </span>
+            </li>
+          }
+        </ul>
+      </section>
+    } @else {
+      <section class="card">
+        <h2>Dove vanno</h2>
+        <p class="secondary">Nessuna spesa {{ isCurrent() ? 'finora' : 'in questo mese' }}.</p>
+      </section>
+    }
+
+    @if (o.upcoming.length > 0) {
+      <section class="card">
+        <h2>In arrivo nei prossimi 7 giorni</h2>
+        <ul class="rows">
+          @for (u of o.upcoming; track u.subscriptionId) {
+            <li>
+              <span>
+                {{ u.name }}
+                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' }}</span>
+              </span>
+              <strong>{{ u.amount | currency: o.currency }}</strong>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (o.toReview > 0 || o.suggestions > 0) {
+      <!-- aria-label: il nome del link per i lettori di schermo, "7 movimenti da verificare" in una frase sola. -->
+      <div class="todo">
+        @if (o.toReview > 0) {
+          <a
+            routerLink="/movimenti"
+            [queryParams]="{ type: 'TO_REVIEW' }"
+            [attr.aria-label]="toReviewLabel()"
+          >
+            <strong>{{ o.toReview }}</strong>
+            <span>{{ o.toReview === 1 ? 'movimento' : 'movimenti' }} da verificare</span>
+          </a>
+        }
+        @if (o.suggestions > 0) {
+          <a routerLink="/movimenti" [attr.aria-label]="suggestionsLabel()">
+            <strong>{{ o.suggestions }}</strong>
+            <span>{{ o.suggestions === 1 ? 'categoria suggerita' : 'categorie suggerite' }}</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+} @else if (loading()) {
+  <p>Caricamento...</p>
+}

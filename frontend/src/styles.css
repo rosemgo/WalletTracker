@@ -83,7 +83,7 @@ a {
   bottom: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   /* env(safe-area-inset-bottom): lo spazio della "barretta" dei telefoni senza tasti, da non coprire. */
   padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
   background: var(--nav);
@@ -1003,4 +1003,287 @@ label.consent {
 /* "cambia" e "togli" accanto alla chiave salvata: un po' di spazio tra le parole. */
 .cloud-section button.link {
   margin-left: 0.75rem;
+}
+
+/* ---- Riepilogo (docs/36) ---- */
+.overview-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.overview-head h1 {
+  margin: 2px 0 0;
+}
+
+.month-arrows {
+  display: flex;
+  gap: 8px;
+}
+
+/* Un pulsante con solo l'icona: quadrato, almeno 44 pixel, la scritta per i lettori di schermo è in aria-label. */
+button.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--card);
+}
+
+button.icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.overview.loading {
+  opacity: 0.6;
+}
+
+.currency-choice {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  color: var(--sec);
+  font-size: 0.9rem;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* La cifra grande: una sola per schermata (docs/33, parte F). */
+.big-figure {
+  font-size: 3rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.comparison {
+  margin: 2px 0 8px;
+}
+
+.hero .income {
+  margin: 8px 0 0;
+}
+
+.month-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.month-chart .base,
+.month-chart .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.month-chart .axis {
+  fill: var(--sec);
+  font-size: 10px;
+}
+
+/*
+ * Il grafico è disegnato largo 340 e poi allargato quanto la scheda (viewBox): sul telefono resta quasi uguale, sul PC
+ * diventa quasi il doppio, e con lui le scritte. Da 600 pixel in su le scriviamo più piccole, così sullo schermo
+ * restano di circa 12 pixel.
+ */
+@media (min-width: 600px) {
+  .month-chart .axis {
+    font-size: 7px;
+  }
+}
+
+.month-chart .usual,
+.month-chart .month {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.month-chart .usual {
+  stroke: var(--bar);
+}
+
+.month-chart .month {
+  stroke: var(--acc);
+}
+
+.month-chart .area {
+  fill: var(--acc);
+  fill-opacity: 0.1;
+}
+
+.month-chart .today {
+  fill: var(--acc);
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+.chart-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 0.8rem;
+  color: var(--sec);
+}
+
+.chart-keys .key {
+  width: 14px;
+  height: 2px;
+  margin-right: 6px;
+}
+
+.chart-keys .key.month {
+  background: var(--acc);
+}
+
+.chart-keys .key.usual {
+  background: var(--bar);
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.card-head a {
+  color: var(--sec);
+  font-size: 0.9rem;
+}
+
+/* "Dove vanno": barre sottili, tutte dello stesso colore (conta la lunghezza), con la differenza dal solito. */
+ul.bars,
+ul.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.bars li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bar-label strong,
+ul.rows strong {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bar-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-line .track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.bar-line .fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--acc);
+}
+
+.bar-line .secondary {
+  min-width: 7.5rem;
+  text-align: right;
+}
+
+ul.rows li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+ul.rows li:first-child {
+  border-top: none;
+}
+
+ul.rows li > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Le cose da sistemare: due riquadri toccabili, il numero grande e la parola sotto. */
+.todo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 8px;
+}
+
+.todo a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.todo strong {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.todo span {
+  color: var(--sec);
+  font-size: 0.85rem;
+}
+
+/* Sul PC il Riepilogo sta in due colonne: a sinistra la cifra e il grafico, a destra il resto. */
+@media (min-width: 1100px) {
+  .overview {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0 16px;
+    align-items: start;
+  }
+
+  .overview > .currency-choice {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .overview > .hero {
+    grid-row: span 3;
+  }
 }

@@ -2,7 +2,7 @@ import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
 
 import {
@@ -459,5 +459,29 @@ describe('TransactionsPage', () => {
     expect(noteChanges[1]).toEqual([449, null]);
     expect(page.querySelector('.note')).toBeNull();
     expect(page.textContent).toContain('aggiungi una nota');
+  });
+
+  it('a type in the address (from the Riepilogo) is the starting filter', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ type: 'TO_REVIEW' }) } },
+    });
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+
+    expect(requests[0].type).toBe('TO_REVIEW');
+    const typeSelect = (fixture.nativeElement as HTMLElement).querySelectorAll(
+      '.filters select',
+    )[1] as HTMLSelectElement;
+    expect(typeSelect.value).toBe('TO_REVIEW');
+  });
+
+  it('an unknown type in the address is ignored', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ type: 'BOH' }) } },
+    });
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+
+    expect(requests[0].type).toBeNull();
   });
 });
