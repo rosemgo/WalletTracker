@@ -3,12 +3,13 @@ import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 
 import {
   Category,
   Transaction,
   TransactionFilter,
+  TransactionPage,
   TransactionType,
   UsedCategories,
 } from '../api/models';
@@ -48,6 +49,7 @@ describe('TransactionsPage', () => {
   let items: Transaction[];
   let suggestionLoads: number;
   let used: UsedCategories;
+  let respond: ((filter: TransactionFilter) => Observable<TransactionPage>) | null;
 
   beforeEach(() => {
     requests.length = 0;
@@ -56,11 +58,15 @@ describe('TransactionsPage', () => {
     items = [SETTLEMENT];
     suggestionLoads = 0;
     used = { word: null, categories: [] };
+    respond = null;
     registerLocaleData(localeIt);
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of([]),
       transactions: (filter: TransactionFilter) => {
         requests.push(filter);
+        if (respond) {
+          return respond(filter);
+        }
         return of({ items, page: 0, size: 50, totalItems: items.length, totalPages: 1 });
       },
       correctType: (id: number, type: TransactionType | null) => {
@@ -119,9 +125,100 @@ describe('TransactionsPage', () => {
       uncategorized: false,
       from: null,
       to: null,
+      text: '',
       page: 0,
       size: 50,
     });
+  });
+
+  it('searches when the user stops typing, from the first page', async () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(TransactionsPage);
+      fixture.detectChanges();
+      const search = (fixture.nativeElement as HTMLElement).querySelector(
+        '.filters input[type="search"]',
+      ) as HTMLInputElement;
+      const before = requests.length;
+
+      for (const value of ['n', 'net', 'netflix']) {
+        search.value = value;
+        search.dispatchEvent(new Event('input'));
+        vi.advanceTimersByTime(100); // si scrive più in fretta dei 300 ms
+      }
+      expect(requests.length).toBe(before); // ancora niente
+      vi.advanceTimersByTime(300);
+
+      expect(requests.length).toBe(before + 1); // una richiesta sola, con l'ultimo testo
+      expect(requests.at(-1)).toMatchObject({ text: 'netflix', page: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /** Scrive nella ricerca e aspetta i 300 ms (con i timer finti di Vitest). */
+  async function typeSearch(
+    fixture: { nativeElement: HTMLElement; whenStable(): Promise<unknown> },
+    value: string,
+  ) {
+    const search = fixture.nativeElement.querySelector(
+      '.filters input[type="search"]',
+    ) as HTMLInputElement;
+    search.value = value;
+    search.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(300);
+  }
+
+  it('only the answer to the last search is shown', async () => {
+    vi.useFakeTimers();
+    try {
+      const answers: Subject<TransactionPage>[] = [];
+      respond = () => {
+        const answer = new Subject<TransactionPage>();
+        answers.push(answer);
+        return answer;
+      };
+      const fixture = TestBed.createComponent(TransactionsPage);
+      fixture.detectChanges();
+      const result = (n: number): TransactionPage => ({
+        items: [{ ...SETTLEMENT, id: n, description: `RISULTATO ${n}` }],
+        page: 0,
+        size: 50,
+        totalItems: 1,
+        totalPages: 1,
+      });
+
+      await typeSearch(fixture, 'netf'); // richiesta 2 (la 1 è quella dell'apertura)
+      await typeSearch(fixture, 'netflix'); // richiesta 3
+      answers[2].next(result(3)); // l'ultima risponde per prima...
+      answers[1].next(result(2)); // ...e la precedente arriva dopo: va ignorata
+      answers[0].next(result(1));
+      fixture.detectChanges();
+
+      const text = (fixture.nativeElement as HTMLElement).textContent;
+      expect(text).toContain('RISULTATO 3');
+      expect(text).not.toContain('RISULTATO 2');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says when a search finds nothing', async () => {
+    vi.useFakeTimers();
+    try {
+      items = [];
+      const fixture = TestBed.createComponent(TransactionsPage);
+      fixture.detectChanges();
+
+      await typeSearch(fixture, 'spotify');
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        'Nessun movimento trovato per "spotify" con questi filtri.',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('"Solo senza categoria" asks only for the movements without a category', async () => {

@@ -137,6 +137,9 @@ export class WalletApi {
     if (filter.to !== null) {
       params = params.set('to', filter.to);
     }
+    if (filter.text.trim() !== '') {
+      params = params.set('text', filter.text.trim());
+    }
     return this.http.get<TransactionPage>('/api/transactions', { params });
   }
 

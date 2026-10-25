@@ -10,7 +10,9 @@ import java.time.LocalDate;
  * @param uncategorized solo i movimenti senza categoria
  * @param from          dal giorno (incluso)
  * @param to            al giorno (incluso)
+ * @param text          il testo cercato: nella causale, nella controparte, nel nome della categoria, oppure un
+ *                      importo ("12,99")
  */
 public record TransactionFilter(Long accountId, TransactionType type, boolean uncategorized, LocalDate from,
-        LocalDate to) {
+        LocalDate to, String text) {
 }

@@ -19,6 +19,9 @@ import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
 /** Quanti movimenti per pagina. */
 const PAGE_SIZE = 50;
 
+/** Quanto aspettare dopo l'ultimo tasto prima di cercare. */
+export const SEARCH_DELAY_MS = 300;
+
 /**
  * La pagina dei movimenti: filtri per conto e per tipo, elenco a pagine, correzione manuale del tipo e
  * della categoria, e "crea una regola" da una correzione.
@@ -51,7 +54,13 @@ export class TransactionsPage implements OnInit {
   protected readonly period = signal<Period>('ALL');
   protected readonly from = signal<string | null>(null); // "2026-10-01"; null = nessun limite
   protected readonly to = signal<string | null>(null);
+  protected readonly text = signal(''); // la ricerca: causale, controparte, categoria o importo
   protected readonly page = signal(0);
+
+  /** Il timer della ricerca: si cerca quando l'utente smette di scrivere (vedi onSearch). */
+  private searchTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Il numero dell'ultima richiesta: le risposte delle richieste superate si ignorano (vedi load). */
+  private lastRequest = 0;
 
   /** L'elenco delle categorie, per il menu a discesa. */
   protected readonly categories = signal<Category[]>([]);
@@ -85,6 +94,10 @@ export class TransactionsPage implements OnInit {
     }
     this.loading.set(true);
     this.error.set(null);
+    // Scrivendo nella ricerca partono più richieste di fila, e le risposte possono arrivare in un ordine
+    // diverso: "netf" dopo "netflix" rimetterebbe in pagina i risultati vecchi. Ogni richiesta ha un numero, e
+    // conta solo la risposta all'ultima.
+    const request = ++this.lastRequest;
     this.api
       .transactions({
         accountId: this.accountId(),
@@ -92,16 +105,27 @@ export class TransactionsPage implements OnInit {
         uncategorized: this.uncategorized(),
         from,
         to,
+        text: this.text(),
         page: this.page(),
         size: PAGE_SIZE,
       })
       .subscribe({
         next: (result) => {
+          if (request !== this.lastRequest) {
+            return;
+          }
           this.result.set(result);
           this.loading.set(false);
         },
-        error: () => {
-          this.error.set('Impossibile caricare i movimenti: il backend è avviato?');
+        error: (response) => {
+          if (request !== this.lastRequest) {
+            return;
+          }
+          this.error.set(
+            response.status === 400
+              ? (response.error?.detail ?? 'Ricerca non valida.')
+              : 'Impossibile caricare i movimenti: il backend è avviato?',
+          );
           this.loading.set(false);
         },
       });
@@ -119,6 +143,19 @@ export class TransactionsPage implements OnInit {
     this.type.set(value === '' ? null : (value as TransactionType));
     this.page.set(0);
     this.load();
+  }
+
+  /**
+   * La ricerca: si cerca 300 millisecondi dopo l'ultimo tasto, non a ogni lettera ("debounce"). Così scrivendo
+   * "netflix" parte una richiesta sola, non sette. Svuotare il campo (anche con la x del campo) mostra tutto.
+   */
+  onSearch(event: Event): void {
+    this.text.set((event.target as HTMLInputElement).value);
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.page.set(0);
+      this.load();
+    }, SEARCH_DELAY_MS);
   }
 
   onUncategorizedFilter(event: Event): void {

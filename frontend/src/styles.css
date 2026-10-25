@@ -128,6 +128,16 @@ th {
   max-width: 100%;
 }
 
+/* La ricerca su una riga sua, sopra gli altri filtri: è il filtro più usato. */
+.filters label.search {
+  flex-basis: 100%;
+}
+
+.filters label.search input {
+  width: 100%;
+  max-width: 32rem;
+}
+
 .filters label {
   display: flex;
   flex-direction: column;

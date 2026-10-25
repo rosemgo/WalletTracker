@@ -1,5 +1,9 @@
 package it.wallettracker.transaction;
 
+import java.math.BigDecimal;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
 import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.web.NotFoundException;
@@ -16,6 +20,9 @@ public class TransactionService {
 
     /** Il massimo di movimenti per pagina: oltre, una richiesta potrebbe diventare pesante. */
     static final int MAX_PAGE_SIZE = 200;
+
+    /** Il testo da cercare più lungo che accettiamo: nessuna causale ne ha bisogno di più. */
+    static final int MAX_SEARCH_LENGTH = 100;
 
     private final BankTransactionRepository repository;
     private final ClassificationService classificationService;
@@ -42,14 +49,54 @@ public class TransactionService {
         // PageRequest dice a Spring Data quale pagina vogliamo; Spring aggiunge da solo LIMIT e OFFSET
         // alla query, e fa una seconda query (COUNT) per sapere quanti movimenti ci sono in tutto.
         PageRequest pageRequest = PageRequest.of( Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE) );
+        String text = filter.text() == null ? "" : filter.text().strip();
+        if (text.length() > MAX_SEARCH_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Il testo da cercare è troppo lungo: al massimo " + MAX_SEARCH_LENGTH + " caratteri.");
+        }
+        BigDecimal amount = amountIn(text);
         Page<BankTransaction> result = repository.search(filter.accountId(), filter.type(), filter.uncategorized(),
-                filter.from(), filter.to(), pageRequest);
+                filter.from(), filter.to(), !text.isEmpty(), likePattern(text), amount != null,
+                amount != null ? amount : BigDecimal.ZERO, pageRequest);
         return new TransactionPageDto(
                 result.getContent().stream().map(TransactionDto::from).toList(),
                 result.getNumber(),
                 result.getSize(),
                 result.getTotalElements(),
                 result.getTotalPages());
+    }
+
+    /**
+     * Il testo cercato come modello per LIKE: in minuscolo, tra due {@code %} ("contiene"). I caratteri che per LIKE
+     * hanno un significato ({@code %} "qualsiasi testo", {@code _} "un carattere qualsiasi") e il carattere di
+     * escape {@code \} si proteggono con un {@code \} davanti: cercando "100%" si trova "100%", non "100" seguito da
+     * qualsiasi cosa. Il testo arriva come parametro, mai incollato nella query: niente SQL injection.
+     */
+    static String likePattern(String text) {
+        String escaped = text.toLowerCase(Locale.ROOT)
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+        return "%" + escaped + "%";
+    }
+
+    /** Un importo scritto all'italiana o all'inglese: "12,99", "12.99", "1.234,56", "1234", "-45,50 €". */
+    private static final Pattern AMOUNT = Pattern.compile(
+            "-?(\\d{1,3}(\\.\\d{3})+(,\\d{1,2})?|\\d+([.,]\\d{1,2})?)");
+
+    /**
+     * Se il testo cercato è un importo, il suo valore (senza segno: la ricerca trova sia le spese sia le entrate);
+     * altrimenti null. "1.234" è milleduecentotrentaquattro: un importo ha due decimali, non tre.
+     */
+    static BigDecimal amountIn(String text) {
+        String cleaned = text.replace("€", "").replace(" ", "");
+        if (!AMOUNT.matcher(cleaned).matches()) {
+            return null;
+        }
+        String number = cleaned.contains(",") || cleaned.matches("-?\\d{1,3}(\\.\\d{3})+")
+                ? cleaned.replace(".", "").replace(",", ".")
+                : cleaned;
+        return new BigDecimal(number).abs();
     }
 
     /**

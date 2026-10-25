@@ -4,6 +4,17 @@
 <app-suggestions-panel (accepted)="load()" />
 
 <div class="filters">
+  <!-- type="search": il browser aggiunge la x per svuotare il campo. -->
+  <label class="search">
+    Cerca
+    <input
+      type="search"
+      [value]="text()"
+      (input)="onSearch($event)"
+      maxlength="100"
+      placeholder="esercente, causale, categoria o importo"
+    />
+  </label>
   <label>
     Conto
     <select (change)="onAccountFilter($event)">
@@ -163,7 +174,13 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="5">Nessun movimento con questi filtri.</td>
+            <td colspan="5">
+              @if (text().trim() !== '') {
+                Nessun movimento trovato per "{{ text().trim() }}" con questi filtri.
+              } @else {
+                Nessun movimento con questi filtri.
+              }
+            </td>
           </tr>
         }
       </tbody>

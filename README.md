@@ -95,6 +95,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 29. [Fase 3, passo 7b.3: "Chiedi all'IA", i suggerimenti dell'intelligenza artificiale nei Movimenti](docs/29-fase-3-passo-7b3-chiedi-all-ia.md)
 30. [Fase 3, passo 7c: l'IA nel cloud, con Google Gemini (chiave cifrata, consenso)](docs/30-fase-3-passo-7c-ia-nel-cloud.md)
 31. [Fase 3: completare i movimenti di Trade Republic con il suo file](docs/31-fase-3-trade-republic-completa-movimenti.md)
+32. [La ricerca nei movimenti: testo, categoria, importo](docs/32-ricerca-movimenti.md)
 
 ## Piano di lavoro
 

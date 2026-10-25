@@ -31,6 +31,7 @@ describe('WalletApi', () => {
         uncategorized: false,
         from: '2026-10-01',
         to: null,
+        text: '   ',
         page: 1,
         size: 50,
       })
@@ -43,7 +44,27 @@ describe('WalletApi', () => {
     expect(request.request.params.has('uncategorized')).toBe(false);
     expect(request.request.params.get('from')).toBe('2026-10-01');
     expect(request.request.params.has('to')).toBe(false);
+    expect(request.request.params.has('text')).toBe(false); // solo spazi: nessuna ricerca
     request.flush({ items: [], page: 1, size: 50, totalItems: 0, totalPages: 0 });
+  });
+
+  it('sends the search text without the spaces around it', () => {
+    api
+      .transactions({
+        accountId: null,
+        type: null,
+        uncategorized: false,
+        from: null,
+        to: null,
+        text: '  netflix ',
+        page: 0,
+        size: 50,
+      })
+      .subscribe();
+
+    const request = http.expectOne((r) => r.url === '/api/transactions');
+    expect(request.request.params.get('text')).toBe('netflix');
+    request.flush({ items: [], page: 0, size: 50, totalItems: 0, totalPages: 0 });
   });
 
   it('sends the CSV file and the mapping as two parts of a multipart request', async () => {

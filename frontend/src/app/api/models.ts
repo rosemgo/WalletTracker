@@ -196,6 +196,7 @@ export interface TransactionFilter {
   uncategorized: boolean; // solo i movimenti senza categoria
   from: string | null; // dal giorno, incluso: "2026-10-01"
   to: string | null; // al giorno, incluso
+  text: string; // la ricerca: causale, controparte, categoria o importo ("12,99"); vuoto = nessun filtro
   page: number;
   size: number;
 }
