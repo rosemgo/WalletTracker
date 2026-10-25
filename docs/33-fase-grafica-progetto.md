@@ -154,8 +154,8 @@ Molte app generate oggi si somigliano tutte. I segni più riconoscibili, e che c
 | Lo stile "da IA" | Noi |
 |---|---|
 | sfumature viola-blu, sfondi con aloni, "vetro smerigliato" | colori pieni, uno sfondo, **un solo** colore d'accento |
-| ogni cosa in una "card" con ombra morbida e angoli molto arrotondati | sezioni separate da linee sottili, come un estratto conto; poche superfici |
-| il carattere Inter ovunque, titoli enormi e testo grigio chiarissimo | un carattere con personalità (IBM Plex, nella direzione A) e testo ben leggibile al sole |
+| ogni cosa in una "card" con ombra morbida, sfumature, bordo colorato a sinistra | schede piatte: un colore pieno, angoli arrotondati, nessuna ombra |
+| il carattere Inter ovunque, titoli enormi e testo grigio chiarissimo | un carattere con personalità (Schibsted Grotesk) e testo ben leggibile al sole |
 | emoji come icone, "✨" per le funzioni intelligenti | icone a linea, sobrie; l'IA è una parola ("Suggerita"), non una scintilla |
 | quattro riquadri di numeri in cima (KPI) uguali tra loro | una cifra sola, con una frase che la spiega |
 | grafici con i colori predefiniti della libreria, torte colorate | grafici disegnati per questa app, pochi colori, frasi al posto delle legende dove si può |
@@ -194,23 +194,31 @@ Le bozze mostrano la stessa schermata "Oggi" in tre stili; le altre schermate so
 **La mia proposta è la A**: si legge bene al sole, regge molti grafici senza diventare rumorosa, e non somiglia alle
 app generate in serie. Dalla C si può prendere il **tema scuro** per la sera.
 
-**La scelta: A e C insieme, come due temi della stessa app.** Guardandole, A e C sembrano la stessa app di giorno e di
-notte: stessa sobrietà, un solo accento. Quindi una sola impaginazione (quella di A: caratteri IBM Plex, righe
-sottili, poche superfici) con due insiemi di colori, che il telefono sceglie da solo (`prefers-color-scheme`) e che
-si possono anche forzare dalle Impostazioni:
+**La scelta: lo stile C, in due temi (giorno e notte).** Guardandole, A e C sembravano la stessa app di giorno e di
+notte; dei due piacciono di più il carattere e le schede arrotondate di C. Quindi:
+
+- **carattere**: Schibsted Grotesk (un grottesco con personalità, ma sobrio), cifre tabulari negli elenchi;
+- **schede**: le sezioni sono schede arrotondate (16 px) su uno sfondo appena diverso, **piatte**: niente ombre,
+  niente sfumature, niente bordi colorati. È questo che le tiene lontane dallo stile "da IA";
+- **due temi**, che il telefono sceglie da solo (`prefers-color-scheme`) e che si possono forzare dalle Impostazioni.
 
 | | Giorno | Notte |
 |---|---|---|
-| sfondo | `#F3F2EE` (carta) | `#15171A` |
+| sfondo | `#EEEDE9` | `#15171A` |
+| schede, barra in basso | `#FFFFFF` | `#1F2226` |
 | testo | `#16171B` | `#ECEDEE` |
 | testo secondario | `#5B5D64` | `#A3A8B0` |
-| righe | `#D8D6CF` | `#30343A` |
-| accento (il mese corrente, i pulsanti) | blu `#1F5FD6` | ambra `#E59A2E` |
+| righe | `#E6E4DE` | `#2C3036` |
+| accento (il mese corrente, i pulsanti, la sezione attiva) | blu `#1F5FD6` | ambra `#E59A2E` |
 | confronto ("il solito") | grigio `#80838B` | grigio `#7E8590` |
+| risparmio: messo da parte / in rosso | blu / arancio `#C8571B` | ambra / blu `#6E9CF0` |
+| calendario (più spesa = più intenso) | scala di blu, dal chiaro allo scuro | scala di ambre, dallo scuro al luminoso |
 
 L'accento cambia con il tema: il blu su fondo scuro perde forza, l'ambra su fondo chiaro si legge male. Il
-significato resta lo stesso: "questo è il dato che conta". Le coppie accento-grigio sono verificate per il
-daltonismo in tutti e due i temi. Le bozze della notte sono nella terza riga del canvas.
+significato resta lo stesso: "questo è il dato che conta". Tutte le coppie e le scale dei grafici sono verificate per
+il daltonismo nei due temi, sullo sfondo delle schede. Nel canvas: riga 2 il tema giorno, riga 3 il tema notte, con
+le stesse quattro schermate (Oggi, Movimenti, Analisi, una categoria). Nelle bozze i colori sono già variabili CSS:
+le due versioni di ogni schermata differiscono solo per il tema.
 
 ---
 
