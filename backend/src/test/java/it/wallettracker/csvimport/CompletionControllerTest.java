@@ -203,6 +203,15 @@ class CompletionControllerTest {
                 .param("accountId", manual.getId().toString()))
                 .hasStatus(400).bodyJson().extractingPath("$.detail").asString().startsWith("Questo è un conto manuale");
 
+        // Un conto collegato di un'altra banca: il file di Trade Republic non c'entra.
+        BankConnection ing = connectionRepository.save(new BankConnection("ING", "IT", "session-ing",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account ingAccount = accountRepository.save(new Account(ing, "key-ing", "uid-ing", null, "Conto", "EUR"));
+        assertThat(mvc.post().uri("/api/imports/completion/preview").multipart().file(csvPart(TradeRepublicCsvTest.CSV))
+                .param("accountId", ingAccount.getId().toString()))
+                .hasStatus(400).bodyJson().extractingPath("$.detail").asString()
+                .startsWith("Questa pagina è per i conti Trade Republic");
+
         String broken = TradeRepublicCsvTest.CSV.replace("\"10.000000\"", "\"dieci\"");
         assertThat(post("/api/imports/completion", broken)).hasStatus(400).bodyJson()
                 .extractingPath("$.errors[0]").isEqualTo("Riga 2: amount \"dieci\" non è un numero.");

@@ -24,8 +24,9 @@
   <p>Caricamento...</p>
 } @else if (accounts().length === 0) {
   <p>
-    Non hai conti collegati. Se Trade Republic l'hai aggiunto come conto manuale, i suoi movimenti
-    si caricano da <a routerLink="/importa">Importa CSV</a>.
+    Non hai un conto Trade Republic collegato: collegalo da
+    <a routerLink="/collega">Collega una banca</a>. Se l'hai aggiunto come conto manuale, i suoi
+    movimenti si caricano da <a routerLink="/importa">Importa CSV</a>.
   </p>
 } @else if (result(); as done) {
   <div class="card">
@@ -43,7 +44,7 @@
     <h2>1. Conto e file</h2>
     <div class="form-grid">
       <label>
-        Conto collegato
+        Conto Trade Republic
         <select [formControl]="account">
           @for (a of accounts(); track a.id) {
             <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>

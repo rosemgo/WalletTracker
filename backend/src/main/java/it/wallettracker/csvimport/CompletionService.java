@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -38,9 +39,10 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Completa un conto <b>collegato</b> con il file della banca (docs/31). Trade Republic, con Enable Banking, manda
- * solo data e importo, e uno storico corto. Il suo file di esportazione ha controparte e causale, e può partire da
- * molto prima. Qui:
+ * Completa un conto Trade Republic <b>collegato</b> con il file della banca (docs/31). Solo Trade Republic: è l'unica
+ * banca che, con Enable Banking, manda i movimenti senza causale, e ogni banca ha un file diverso. Trade Republic
+ * manda solo data e importo, e uno storico corto; il suo file di esportazione ha controparte e causale, e può partire
+ * da molto prima. Qui:
  * <ul>
  *   <li>le righe che corrispondono a un movimento già arrivato gli danno <b>controparte e causale</b>;</li>
  *   <li>le righe <b>più vecchie</b> del primo movimento arrivato dalla banca diventano <b>movimenti nuovi</b>: quei
@@ -182,6 +184,10 @@ public class CompletionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Questo è un conto manuale: i suoi movimenti si caricano con \"Importa CSV\".");
         }
+        if (!isTradeRepublic(account.getBankName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Questa pagina è per i conti Trade Republic: "
+                    + "è l'unica banca che manda i movimenti senza causale, e il file che legge è il suo.");
+        }
         TradeRepublicCsv.Reading reading = read(content);
         LocalDate from = reading.rows().stream().map(TradeRepublicCsv.Row::date).min(LocalDate::compareTo).orElseThrow();
         LocalDate to = reading.rows().stream().map(TradeRepublicCsv.Row::date).max(LocalDate::compareTo).orElseThrow();
@@ -221,6 +227,16 @@ public class CompletionService {
         }
         return new Plan(account, reading, from, to, bankFrom, movements, matching,
                 reading.rows().size() - fresh.size(), toAdd, withoutMovement);
+    }
+
+    /**
+     * Il conto è di Trade Republic? Il nome della banca viene da Enable Banking, e può essere scritto in modi diversi
+     * ("Trade Republic", "Trade Republic Bank GmbH", "TradeRepublic"): confrontiamo solo le lettere, in minuscolo.
+     * Lo stesso controllo è nella pagina (completion-page.ts).
+     */
+    static boolean isTradeRepublic(String bankName) {
+        return bankName != null && bankName.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "")
+                .contains("traderepublic");
     }
 
     /** Legge il file, con i controlli: è di Trade Republic, non è troppo grande, ogni riga si legge. */

@@ -266,7 +266,11 @@ legge (lo stesso `ImportRejectedException` dell'import); 404 se il conto non esi
 - indirizzo `/importa/completa`; ci si arriva dalla pagina **Conti** (accanto a un conto Trade Republic collegato,
   "completa con il file") e da **Importa CSV**, che ora dice: "Hai Trade Republic collegato? Allora non serve
   importare";
-- il menu mostra solo i conti **collegati**, e sceglie da solo quello di Trade Republic;
+- il menu mostra solo i conti **Trade Republic collegati**: è l'unica banca che manda i movimenti senza causale, e
+  il file che la pagina sa leggere è il suo (ogni banca ha un formato diverso). Il backend fa lo stesso controllo
+  (`CompletionService.isTradeRepublic`) e rifiuta gli altri conti con un 400. Il nome della banca arriva da Enable
+  Banking e può essere scritto in modi diversi ("Trade Republic", "Trade Republic Bank GmbH"): si confrontano solo
+  le lettere, in minuscolo. Se non c'è un conto Trade Republic collegato, la pagina dice come collegarlo;
 - scelto il file, l'anteprima arriva subito: il periodo, quanti movimenti verranno completati (con la tabella dei
   testi), quanti lo erano già, che cosa resta fuori;
 - "Completa N movimenti" salva; il riepilogo finale porta alla pagina Movimenti;

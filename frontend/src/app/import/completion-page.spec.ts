@@ -7,7 +7,7 @@ import { Observable, of, throwError } from 'rxjs';
 
 import { Account, CompletionPreview, CompletionResult } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { CompletionPage } from './completion-page';
+import { CompletionPage, isTradeRepublic } from './completion-page';
 
 registerLocaleData(localeIt);
 
@@ -74,19 +74,20 @@ describe('CompletionPage', () => {
   let completions: number[];
   let previewResponse: Observable<CompletionPreview>;
   let completeResponse: Observable<CompletionResult>;
+  let accounts: Account[];
 
   beforeEach(() => {
     previews = [];
     completions = [];
     previewResponse = of(PREVIEW);
     completeResponse = of({ completed: 2, added: 1, alreadyComplete: 0 });
+    accounts = [
+      account(1, 'ENABLE_BANKING', 'ING'),
+      account(2, 'ENABLE_BANKING', 'Trade Republic Bank GmbH'),
+      account(3, 'MANUAL', 'Trade Republic'),
+    ];
     const fakeApi: Partial<WalletApi> = {
-      accounts: () =>
-        of([
-          account(1, 'ENABLE_BANKING', 'ING'),
-          account(2, 'ENABLE_BANKING', 'Trade Republic'),
-          account(3, 'MANUAL', 'Scalable'),
-        ]),
+      accounts: () => of(accounts),
       previewCompletion: (_file: File, accountId: number) => {
         previews.push(accountId);
         return previewResponse;
@@ -126,12 +127,13 @@ describe('CompletionPage', () => {
     return page.textContent!.replace(/\s+/g, ' ');
   }
 
-  it('offers only linked accounts, Trade Republic first, and shows the preview', async () => {
+  it('offers only the linked Trade Republic accounts, and shows the preview', async () => {
     const { page } = await openWithFile();
 
+    // Non ING (un'altra banca), non il Trade Republic manuale (si importa da Importa CSV).
     const options = Array.from(page.querySelectorAll('select option')).map((o) => o.textContent);
-    expect(options).toEqual(['ING · Conto 1 (EUR)', 'Trade Republic · Conto 2 (EUR)']);
-    expect(previews).toEqual([2]); // scelto da solo: è Trade Republic
+    expect(options).toEqual(['Trade Republic Bank GmbH · Conto 2 (EUR)']);
+    expect(previews).toEqual([2]);
     expect(text(page)).toContain(
       'Il file va dal 04/05/2026 al 20/07/2026: 3 movimenti di denaro (e 1 operazione sui titoli, che non muove denaro e viene saltata).',
     );
@@ -155,6 +157,28 @@ describe('CompletionPage', () => {
 
     expect(completions).toEqual([2]);
     expect(text(page)).toContain('2 movimenti completati, 1 aggiunto.');
+  });
+
+  it('without a linked Trade Republic account says how to get one', async () => {
+    accounts = [account(1, 'ENABLE_BANKING', 'ING')];
+    const fixture = TestBed.createComponent(CompletionPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('select')).toBeNull();
+    expect(text(page)).toContain('Non hai un conto Trade Republic collegato');
+  });
+
+  it('recognizes Trade Republic however the bank writes its name', () => {
+    for (const name of [
+      'Trade Republic',
+      'Trade Republic Bank GmbH',
+      'TradeRepublic',
+      'TRADE REPUBLIC',
+    ]) {
+      expect(isTradeRepublic(account(1, 'ENABLE_BANKING', name))).toBe(true);
+    }
+    expect(isTradeRepublic(account(1, 'ENABLE_BANKING', 'ING'))).toBe(false);
   });
 
   it('shows why a file is refused', async () => {

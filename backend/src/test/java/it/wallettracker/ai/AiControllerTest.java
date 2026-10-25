@@ -156,7 +156,7 @@ class AiControllerTest {
     }
 
     @Test
-    void aStreamThatEndsWithoutTheModelIsAFailureNotASuccess() {
+    void aStreamThatEndsWithoutTheModelIsAFailureNotASuccess() throws InterruptedException {
         // Com'è davvero: con internet bloccato Ollama manda {"error": "..."} come messaggio normale e chiude.
         // Spring AI lo legge come un avanzamento vuoto, e lo stream finisce senza errori.
         when(ollamaApi.listModels()).thenReturn(models());
@@ -165,6 +165,10 @@ class AiControllerTest {
                 new ProgressResponse(null, null, null, null)));
 
         assertThat(mvc.post().uri("/api/ai/model/download")).hasStatus(202);
+        // La fine dello stream arriva su un altro thread (publishOn, vedi ModelDownload): aspettiamola.
+        for (int i = 0; i < 50 && modelDownload.state().running(); i++) {
+            Thread.sleep(100);
+        }
 
         assertThat(mvc.get().uri("/api/ai")).bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.download.status").isEqualTo("errore");

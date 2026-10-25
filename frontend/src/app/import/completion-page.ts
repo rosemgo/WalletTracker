@@ -28,7 +28,7 @@ export class CompletionPage implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly accounts = signal<Account[]>([]); // solo i conti collegati
+  protected readonly accounts = signal<Account[]>([]); // solo i conti Trade Republic collegati
   protected readonly loading = signal(true);
   protected readonly file = signal<File | null>(null);
   protected readonly preview = signal<CompletionPreview | null>(null);
@@ -43,16 +43,14 @@ export class CompletionPage implements OnInit {
   }
 
   ngOnInit(): void {
-    // ?conto=5 (il link della pagina Conti) sceglie già il conto; altrimenti il primo di Trade Republic.
+    // Solo i conti Trade Republic collegati: è l'unica banca che manda i movimenti senza causale, e il file che la
+    // pagina legge è il suo (ogni banca ne ha uno diverso). ?conto=5 (il link della pagina Conti) sceglie il conto.
     const fromLink = Number(this.route.snapshot.queryParamMap.get('conto'));
     this.api.accounts().subscribe({
       next: (accounts) => {
-        const linked = accounts.filter((a) => a.source !== 'MANUAL');
+        const linked = accounts.filter((a) => a.source !== 'MANUAL' && isTradeRepublic(a));
         this.accounts.set(linked);
-        const chosen =
-          linked.find((a) => a.id === fromLink) ??
-          linked.find((a) => isTradeRepublic(a)) ??
-          linked[0];
+        const chosen = linked.find((a) => a.id === fromLink) ?? linked[0];
         this.account.setValue(chosen?.id ?? null, { emitEvent: false });
         this.loading.set(false);
       },
@@ -164,9 +162,16 @@ export class CompletionPage implements OnInit {
   }
 }
 
-/** Trade Republic è la banca per cui serve questa pagina (docs/31). */
+/**
+ * Trade Republic è la banca per cui serve questa pagina (docs/31). Il nome viene da Enable Banking e può essere
+ * scritto in modi diversi ("Trade Republic", "Trade Republic Bank GmbH"): confrontiamo solo le lettere. Lo stesso
+ * controllo è nel backend (CompletionService.isTradeRepublic).
+ */
 export function isTradeRepublic(account: Account): boolean {
-  return account.bank.toLowerCase().includes('trade republic');
+  return account.bank
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+    .includes('traderepublic');
 }
 
 /** Il messaggio del backend, con l'elenco delle righe sbagliate se c'è (campo "errors" del ProblemDetail). */
