@@ -48,6 +48,10 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     List<BankTransaction> findTop15ByAccountOrderByBookingDateDescIdDesc(Account account);
 
+    /** I movimenti di un conto in uno stato e in un periodo, in ordine (per completarli da un file, docs/31). */
+    List<BankTransaction> findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(Account account,
+            TransactionStatus status, LocalDate from, LocalDate to);
+
     /** I movimenti di un tipo da una certa data in poi (per cercare gli abbonamenti tra le spese). */
     List<BankTransaction> findByTypeAndBookingDateGreaterThanEqual(TransactionType type, LocalDate from);
 

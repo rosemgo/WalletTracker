@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { ROLES, ROLE_LABELS } from '../api/labels';
 import { Account, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { isTradeRepublic } from '../import/completion-page';
 
 /**
  * La pagina dei conti: elenco dei conti, con il ruolo modificabile da un menu a tendina.
@@ -28,6 +29,7 @@ export class AccountsPage implements OnInit {
 
   // Le costanti che il template deve vedere vanno esposte come proprietà del componente.
   protected readonly roles = ROLES;
+  protected readonly isTradeRepublic = isTradeRepublic;
   protected readonly roleLabels = ROLE_LABELS;
 
   // Lo stato della pagina, con i signals: quando un valore cambia (set/update), Angular aggiorna

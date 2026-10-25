@@ -94,6 +94,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 28. [Fase 3, passo 7b.2: il modello che sceglie la categoria con Spring AI, e la misura](docs/28-fase-3-passo-7b2-modello-e-misura.md)
 29. [Fase 3, passo 7b.3: "Chiedi all'IA", i suggerimenti dell'intelligenza artificiale nei Movimenti](docs/29-fase-3-passo-7b3-chiedi-all-ia.md)
 30. [Fase 3, passo 7c: l'IA nel cloud, con Google Gemini (chiave cifrata, consenso)](docs/30-fase-3-passo-7c-ia-nel-cloud.md)
+31. [Fase 3: completare i movimenti di Trade Republic con il suo file](docs/31-fase-3-trade-republic-completa-movimenti.md)
 
 ## Piano di lavoro
 
@@ -110,7 +111,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] passo 3: collegamento delle banche dalla dashboard e pulsante "Aggiorna ora"
   - [x] passo 4: gestione delle regole dalla dashboard (con prova prima di salvare)
   - [x] passo 5: configurazione guidata delle credenziali Enable Banking (pagina Impostazioni)
-- [ ] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic); il piano a passi è in `docs/18`
+- [x] **Fase 3**: grafici, budget, abbonamenti ricorrenti, avvisi di scadenza del consenso, import CSV (es. esportazione di Trade Republic); il piano a passi è in `docs/18`
   - [x] riepilogo mensile con grafico entrate/spese
   - [x] categorie: scelta a mano, "crea una regola da questa correzione", rimborsi, spese per categoria
   - [x] budget mensili per categoria, con stato e ritmo di spesa
@@ -119,7 +120,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] elenco delle categorie: di partenza e modificabile, menu a discesa ordinati per tipo, integrità garantita dal database
   - [x] categorie collegate per id (soluzione normalizzata), senza query N+1
   - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
-  - [ ] **da fare**: estratto conto CSV anche per i conti collegati che non danno i dettagli dei movimenti (es. Trade Republic): completare causale e controparte dei movimenti già arrivati, in alternativa alla correzione a mano (vedi `docs/25`, "E Trade Republic?")
+  - [x] file di Trade Republic anche per il conto collegato: completa causale e controparte dei movimenti già arrivati, con anteprima e regole di partenza per le sue causali (`docs/31`)
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale

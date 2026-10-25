@@ -1,0 +1,161 @@
+<h1>Completa i movimenti</h1>
+
+<p class="hint">
+  Trade Republic, con il collegamento della banca, manda solo la data e l'importo dei movimenti:
+  senza causale il programma non sa che cosa sono, e restano "Da verificare". Il file che esporti
+  dall'app di Trade Republic invece ha tutto: caricalo qui e i movimenti già arrivati riceveranno
+  controparte e causale. Non viene aggiunto nessun movimento, e quello che la banca ha mandato non
+  viene cambiato.
+</p>
+<details class="hint">
+  <summary>Come esportare il file da Trade Republic</summary>
+  <ol>
+    <li>Nell'app (o su app.traderepublic.com) apri il profilo, poi i documenti.</li>
+    <li>Scegli "Esportazione transazioni", il periodo che ti serve e il formato CSV.</li>
+    <li>Salva il file e caricalo qui sotto, così com'è (non aprirlo e salvarlo con Excel).</li>
+  </ol>
+</details>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Caricamento...</p>
+} @else if (accounts().length === 0) {
+  <p>
+    Non hai conti collegati. Se Trade Republic l'hai aggiunto come conto manuale, i suoi movimenti
+    si caricano da <a routerLink="/importa">Importa CSV</a>.
+  </p>
+} @else if (result(); as done) {
+  <div class="card">
+    <h2>Fatto</h2>
+    <p class="message">
+      {{
+        done.completed === 1 ? '1 movimento completato' : done.completed + ' movimenti completati'
+      }}
+      @if (done.alreadyComplete > 0) {
+        ({{ done.alreadyComplete }} lo erano già)
+      }
+      .
+    </p>
+    <p>
+      I movimenti sono stati classificati di nuovo: con la causale, le regole e i suggerimenti
+      possono lavorare. <a routerLink="/movimenti">Vai ai movimenti</a> e controlla quelli rimasti
+      "Da verificare".
+    </p>
+    <button type="button" (click)="restart()">Carica un altro file</button>
+  </div>
+} @else {
+  <div class="card">
+    <h2>1. Conto e file</h2>
+    <div class="form-grid">
+      <label>
+        Conto collegato
+        <select [formControl]="account">
+          @for (a of accounts(); track a.id) {
+            <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
+          }
+        </select>
+      </label>
+      <label>
+        File CSV di Trade Republic (al massimo 5 MB)
+        <input type="file" accept=".csv,text/csv,text/plain" (change)="onFile($event)" />
+      </label>
+    </div>
+    @if (busy() && !preview()) {
+      <p class="secondary">Lettura del file...</p>
+    }
+  </div>
+
+  @if (preview(); as p) {
+    <div class="card">
+      <h2>2. Anteprima</h2>
+      <p>{{ summary(p) }}</p>
+      <ul>
+        <li>
+          <strong>{{
+            count(p.toComplete.length, 'movimento riceverà', 'movimenti riceveranno')
+          }}</strong>
+          controparte e causale;
+        </li>
+        @if (p.alreadyComplete > 0) {
+          <li>
+            {{ count(p.alreadyComplete, 'ha', 'hanno') }} già i testi (forse hai già caricato questo
+            file);
+          </li>
+        }
+        @if (p.rowsWithoutMovement.length > 0) {
+          <li>
+            {{
+              count(
+                p.rowsWithoutMovement.length,
+                'riga del file non trova',
+                'righe del file non trovano'
+              )
+            }}
+            un movimento: di solito sono più recenti dell'ultimo aggiornamento del conto (aggiornalo
+            e riprova) o più vecchie dello storico che la banca ha dato;
+          </li>
+        }
+        @if (p.movementsWithoutRow.length > 0) {
+          <li>
+            {{
+              count(
+                p.movementsWithoutRow.length,
+                'movimento del periodo non è',
+                'movimenti del periodo non sono'
+              )
+            }}
+            nel file:
+            {{ p.movementsWithoutRow.length === 1 ? "resta com'è" : 'restano come sono' }}.
+          </li>
+        }
+      </ul>
+
+      @if (p.toComplete.length > 0) {
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th class="amount">Importo</th>
+              <th>Controparte</th>
+              <th>Causale</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of p.toComplete; track c.transactionId) {
+              <tr>
+                <td>{{ c.date | date: 'dd/MM/yyyy' }}</td>
+                <td class="amount">{{ c.amount | currency: c.currency }}</td>
+                <td>{{ c.counterparty ?? '—' }}</td>
+                <td>{{ c.description ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <button type="button" [disabled]="busy()" (click)="complete()">
+          Completa
+          {{ p.toComplete.length === 1 ? '1 movimento' : p.toComplete.length + ' movimenti' }}
+        </button>
+      } @else {
+        <p class="secondary">Non c'è niente da completare.</p>
+      }
+
+      @if (p.rowsWithoutMovement.length > 0) {
+        <h3>Righe del file senza movimento</h3>
+        <table>
+          <tbody>
+            @for (r of p.rowsWithoutMovement; track r.line) {
+              <tr>
+                <td>{{ r.date | date: 'dd/MM/yyyy' }}</td>
+                <td class="amount">{{ r.amount | currency: r.currency }}</td>
+                <td>{{ r.description ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+}

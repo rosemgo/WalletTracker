@@ -112,6 +112,14 @@
                 @if (account.lastSyncError) {
                   <div class="error">{{ account.lastSyncError }}</div>
                 }
+                @if (isTradeRepublic(account)) {
+                  <!-- Trade Republic manda i movimenti senza causale: si completano con il suo file. -->
+                  <div>
+                    <a routerLink="/importa/completa" [queryParams]="{ conto: account.id }"
+                      >completa con il file</a
+                    >
+                  </div>
+                }
               </td>
             }
           </tr>

@@ -1,10 +1,16 @@
 <h1>Importa CSV</h1>
 
 <p class="hint">
-  Per i conti che Enable Banking non copre (ad esempio Trade Republic): esporta i movimenti dalla
-  banca in un file CSV e caricalo qui. Il programma propone come leggere le colonne; tu controlli
-  l'anteprima e, se serve, correggi. Reimportare lo stesso file, o un file che si sovrappone al
-  precedente, non crea doppioni.
+  Hai Trade Republic <strong>collegato</strong> con la banca? Allora non serve importare: usa
+  <a routerLink="/importa/completa">Completa i movimenti</a>, che aggiunge le causali ai movimenti
+  già arrivati.
+</p>
+
+<p class="hint">
+  Per i conti che Enable Banking non copre (conti manuali): esporta i movimenti dalla banca in un
+  file CSV e caricalo qui. Il programma propone come leggere le colonne; tu controlli l'anteprima e,
+  se serve, correggi. Reimportare lo stesso file, o un file che si sovrappone al precedente, non
+  crea doppioni.
 </p>
 
 @if (error()) {

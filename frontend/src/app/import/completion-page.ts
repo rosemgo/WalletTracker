@@ -1,0 +1,160 @@
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+
+import { Account, CompletionPreview, CompletionResult } from '../api/models';
+import { WalletApi } from '../api/wallet-api';
+import { MAX_FILE_BYTES } from './import-page';
+
+/**
+ * Completa i movimenti di un conto collegato con il file della banca (docs/31). Trade Republic, con Enable
+ * Banking, manda solo data e importo; il suo file "Esportazione transazioni" ha controparte e causale.
+ *
+ * Il percorso, come per l'importazione:
+ * 1. scegli il conto e il file: il backend abbina ogni riga del file al suo movimento e mostra l'anteprima;
+ * 2. se va bene, confermi: i movimenti ricevono i testi e vengono classificati di nuovo.
+ * Nessun movimento viene aggiunto: quelli li porta la sincronizzazione.
+ */
+@Component({
+  selector: 'app-completion-page',
+  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink],
+  templateUrl: './completion-page.html',
+})
+export class CompletionPage implements OnInit {
+  private readonly api = inject(WalletApi);
+  private readonly fb = inject(NonNullableFormBuilder);
+  private readonly route = inject(ActivatedRoute);
+
+  protected readonly accounts = signal<Account[]>([]); // solo i conti collegati
+  protected readonly loading = signal(true);
+  protected readonly file = signal<File | null>(null);
+  protected readonly preview = signal<CompletionPreview | null>(null);
+  protected readonly result = signal<CompletionResult | null>(null);
+  protected readonly busy = signal(false);
+  protected readonly error = signal<string | null>(null);
+
+  protected readonly account = this.fb.control<number | null>(null);
+
+  constructor() {
+    this.account.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.requestPreview());
+  }
+
+  ngOnInit(): void {
+    // ?conto=5 (il link della pagina Conti) sceglie già il conto; altrimenti il primo di Trade Republic.
+    const fromLink = Number(this.route.snapshot.queryParamMap.get('conto'));
+    this.api.accounts().subscribe({
+      next: (accounts) => {
+        const linked = accounts.filter((a) => a.source !== 'MANUAL');
+        this.accounts.set(linked);
+        const chosen =
+          linked.find((a) => a.id === fromLink) ??
+          linked.find((a) => isTradeRepublic(a)) ??
+          linked[0];
+        this.account.setValue(chosen?.id ?? null, { emitEvent: false });
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('Impossibile caricare i conti: il backend è avviato?');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  onFile(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    if (file && file.size > MAX_FILE_BYTES) {
+      this.file.set(null);
+      this.preview.set(null);
+      this.error.set('Il file è troppo grande: al massimo 5 MB. Esporta un periodo più breve.');
+      return;
+    }
+    this.file.set(file);
+    this.requestPreview();
+  }
+
+  complete(): void {
+    const file = this.file();
+    const accountId = this.account.value;
+    if (!file || accountId === null || this.busy()) {
+      return;
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.completeTransactions(file, accountId).subscribe({
+      next: (result) => {
+        this.busy.set(false);
+        this.result.set(result);
+      },
+      error: (response) => {
+        this.busy.set(false);
+        this.error.set(errorOf(response, 'Il completamento non è riuscito.'));
+      },
+    });
+  }
+
+  /** "Il file va dal 01/07/2026 al 20/07/2026: 18 movimenti di denaro (e 4 operazioni sui titoli...)." */
+  protected summary(p: CompletionPreview): string {
+    const day = (iso: string) => iso.split('-').reverse().join('/');
+    const skipped =
+      p.skippedRows === 0
+        ? ''
+        : p.skippedRows === 1
+          ? ' (e 1 operazione sui titoli, che non muove denaro e viene saltata)'
+          : ` (e ${p.skippedRows} operazioni sui titoli, che non muovono denaro e vengono saltate)`;
+    return `Il file va dal ${day(p.from)} al ${day(p.to)}: ${this.count(p.fileRows, 'movimento', 'movimenti')} di denaro${skipped}.`;
+  }
+
+  protected resultMessage(done: CompletionResult): string {
+    const already = done.alreadyComplete > 0 ? ` (${done.alreadyComplete} lo erano già)` : '';
+    return `${this.count(done.completed, 'movimento completato', 'movimenti completati')}${already}.`;
+  }
+
+  /** "1 movimento", "5 movimenti". */
+  protected count(n: number, one: string, many: string): string {
+    return `${n} ${n === 1 ? one : many}`;
+  }
+
+  /** "Carica un altro file": si ricomincia, con lo stesso conto. */
+  restart(): void {
+    this.result.set(null);
+    this.preview.set(null);
+    this.file.set(null);
+    this.error.set(null);
+  }
+
+  private requestPreview(): void {
+    const file = this.file();
+    const accountId = this.account.value;
+    this.preview.set(null);
+    this.error.set(null);
+    if (!file || accountId === null) {
+      return;
+    }
+    this.busy.set(true);
+    this.api.previewCompletion(file, accountId).subscribe({
+      next: (preview) => {
+        this.busy.set(false);
+        this.preview.set(preview);
+      },
+      error: (response) => {
+        this.busy.set(false);
+        this.error.set(errorOf(response, 'Il file non si può leggere.'));
+      },
+    });
+  }
+}
+
+/** Trade Republic è la banca per cui serve questa pagina (docs/31). */
+export function isTradeRepublic(account: Account): boolean {
+  return account.bank.toLowerCase().includes('trade republic');
+}
+
+/** Il messaggio del backend, con l'elenco delle righe sbagliate se c'è (campo "errors" del ProblemDetail). */
+function errorOf(
+  response: { error?: { detail?: string; errors?: string[] } },
+  fallback: string,
+): string {
+  return [response.error?.detail ?? fallback, ...(response.error?.errors ?? [])].join(' ');
+}

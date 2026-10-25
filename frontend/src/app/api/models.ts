@@ -101,6 +101,54 @@ export interface ImportResult {
   duplicates: number; // righe già importate in passato, saltate
 }
 
+/**
+ * L'anteprima di POST /api/imports/completion/preview: che cosa cambierebbe completando i movimenti di un conto
+ * collegato con il file di Trade Republic (docs/31).
+ */
+export interface CompletionPreview {
+  from: string; // il primo giorno del file, "2026-07-01"
+  to: string;
+  fileRows: number; // le righe che muovono denaro
+  skippedRows: number; // le operazioni sui titoli, senza denaro
+  toComplete: Completion[];
+  alreadyComplete: number; // movimenti che hanno già controparte e causale
+  rowsWithoutMovement: CompletionFileRow[];
+  movementsWithoutRow: CompletionMovement[];
+}
+
+/** Un movimento da completare, con i testi che riceve. */
+export interface Completion {
+  transactionId: number;
+  date: string;
+  amount: number;
+  currency: string;
+  counterparty: string | null;
+  description: string | null;
+}
+
+/** Una riga del file senza un movimento. */
+export interface CompletionFileRow {
+  line: number;
+  date: string;
+  amount: number;
+  currency: string;
+  description: string | null;
+}
+
+/** Un movimento del conto che nel file non c'è. */
+export interface CompletionMovement {
+  id: number;
+  date: string;
+  amount: number;
+  currency: string;
+}
+
+/** La risposta di POST /api/imports/completion. */
+export interface CompletionResult {
+  completed: number;
+  alreadyComplete: number;
+}
+
 /** Un movimento, come lo restituisce GET /api/transactions. */
 export interface Transaction {
   id: number;

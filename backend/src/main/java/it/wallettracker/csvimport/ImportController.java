@@ -3,6 +3,8 @@ package it.wallettracker.csvimport;
 import java.io.IOException;
 
 import it.wallettracker.account.AccountRepository;
+import it.wallettracker.csvimport.ImportDtos.CompletionPreview;
+import it.wallettracker.csvimport.ImportDtos.CompletionResult;
 import it.wallettracker.csvimport.ImportDtos.ImportResult;
 import it.wallettracker.csvimport.ImportDtos.Preview;
 import it.wallettracker.web.NotFoundException;
@@ -22,7 +24,10 @@ import org.springframework.web.multipart.MultipartFile;
  * Le API dell'importazione CSV.
  * <ul>
  *   <li>{@code POST /api/imports/preview} (file, mapping facoltativa, accountId): l'anteprima, senza salvare;</li>
- *   <li>{@code POST /api/imports} (file, mapping, accountId): l'importazione.</li>
+ *   <li>{@code POST /api/imports} (file, mapping, accountId): l'importazione;</li>
+ *   <li>{@code POST /api/imports/completion/preview} (file, accountId): che cosa cambierebbe completando i
+ *       movimenti di un conto collegato con il file di Trade Republic (docs/31);</li>
+ *   <li>{@code POST /api/imports/completion} (file, accountId): il completamento.</li>
  * </ul>
  *
  * <p>Le richieste sono "multipart": come un modulo HTML con un file allegato. Ogni pezzo ha un nome:
@@ -35,10 +40,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class ImportController {
 
     private final CsvImportService importService;
+    private final CompletionService completionService;
     private final AccountRepository accountRepository;
 
-    public ImportController(CsvImportService importService, AccountRepository accountRepository) {
+    public ImportController(CsvImportService importService, CompletionService completionService,
+            AccountRepository accountRepository) {
         this.importService = importService;
+        this.completionService = completionService;
         this.accountRepository = accountRepository;
     }
 
@@ -56,6 +64,18 @@ public class ImportController {
     public ImportResult importFile(@RequestPart("file") MultipartFile file,
             @Valid @RequestPart("mapping") ImportMapping mapping, @RequestParam Long accountId) throws IOException {
         return importService.importFile(file.getBytes(), accountId, mapping);
+    }
+
+    @PostMapping("/completion/preview")
+    public CompletionPreview completionPreview(@RequestPart("file") MultipartFile file, @RequestParam Long accountId)
+            throws IOException {
+        return completionService.preview(file.getBytes(), accountId);
+    }
+
+    @PostMapping("/completion")
+    public CompletionResult complete(@RequestPart("file") MultipartFile file, @RequestParam Long accountId)
+            throws IOException {
+        return completionService.complete(file.getBytes(), accountId);
     }
 
     /**

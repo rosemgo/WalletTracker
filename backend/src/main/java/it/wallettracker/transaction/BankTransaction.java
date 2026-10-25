@@ -141,6 +141,25 @@ public class BankTransaction {
         this.transferPeerId = transferPeerId;
     }
 
+    /**
+     * Completa controparte e causale con quelle di un file della banca (docs/31: Trade Republic le manda senza).
+     * Riempie solo i campi vuoti: quello che è arrivato dalla banca non si sovrascrive mai.
+     *
+     * @return true se ha cambiato qualcosa
+     */
+    public boolean completeDetails(String newCounterparty, String newDescription) {
+        boolean changed = false;
+        if (counterparty == null && newCounterparty != null) {
+            counterparty = newCounterparty;
+            changed = true;
+        }
+        if (description == null && newDescription != null) {
+            description = newDescription;
+            changed = true;
+        }
+        return changed;
+    }
+
     /** Correzione manuale (dalla dashboard): {@code null} la toglie. */
     public void setManualType(TransactionType manualType) {
         this.manualType = manualType;

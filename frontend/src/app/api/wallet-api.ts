@@ -20,6 +20,8 @@ import {
   CategorySuggestion,
   ImportMapping,
   ImportPreview,
+  CompletionPreview,
+  CompletionResult,
   ImportResult,
   LinkResult,
   ManualAccountRequest,
@@ -95,6 +97,24 @@ export class WalletApi {
   /** POST /api/imports: importa il file nel conto manuale, con la mappatura confermata. */
   importCsv(file: File, accountId: number, mapping: ImportMapping): Observable<ImportResult> {
     return this.http.post<ImportResult>('/api/imports', importForm(file, mapping), {
+      params: { accountId },
+    });
+  }
+
+  /** POST /api/imports/completion/preview: che cosa cambierebbe completando un conto collegato (docs/31). */
+  previewCompletion(file: File, accountId: number): Observable<CompletionPreview> {
+    return this.http.post<CompletionPreview>(
+      '/api/imports/completion/preview',
+      importForm(file, null),
+      {
+        params: { accountId },
+      },
+    );
+  }
+
+  /** POST /api/imports/completion: completa i movimenti del conto collegato con il file. */
+  completeTransactions(file: File, accountId: number): Observable<CompletionResult> {
+    return this.http.post<CompletionResult>('/api/imports/completion', importForm(file, null), {
       params: { accountId },
     });
   }
