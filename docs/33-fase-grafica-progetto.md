@@ -270,7 +270,8 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
    passano ad Analisi. **Fatto**, `docs/36`: Analisi è già nella barra, con la pagina di 12 mesi.
 4. **Movimenti**: il nuovo elenco per giorno, le pillole, i suggerimenti nella riga. **Fatto**, `docs/37`, con il
    dettaglio di un movimento (parte M); i suggerimenti restano in un pannello sopra l'elenco e nella scheda.
-5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici.
+5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici. **Fatto**, `docs/38`: l'esploratore è la
+   pagina Analisi stessa.
 6. **Budget** e **Altro**: ridisegnati con i componenti comuni.
 7. **PWA** e modalità discreta (il tema scuro è già nel passo 2).
 

@@ -207,7 +207,7 @@ lettore di schermo li legge come una frase sola.
 
 **Analisi.** La pagina di 12 mesi (entrate e spese mese per mese, risparmio, categorie del periodo) è la vecchia
 pagina Riepilogo: ora si chiama Analisi, sta in `/analisi` ed entra nella barra (cinque voci: Riepilogo, Movimenti,
-Analisi, Budget, Altro). Nel passo 5 diventerà l'esploratore progettato in `docs/33`, parte L.
+Analisi, Budget, Altro). Nel passo 5 è diventata l'esploratore progettato in `docs/33`, parte L (`docs/38`).
 
 **Lazy loading.** Con la pagina nuova la build ha avvisato: il pacchetto iniziale superava di 3,5 kB il limite di
 500 kB che Angular controlla (`budgets` in `angular.json`). Invece di alzare il limite, le pagine si caricano **quando

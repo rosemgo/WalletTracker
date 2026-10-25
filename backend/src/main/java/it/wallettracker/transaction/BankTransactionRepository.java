@@ -235,4 +235,16 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
      */
     @Query("SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category WHERE t.bookingDate >= :from")
     List<BankTransaction> findSinceWithCategory(@Param("from") LocalDate from);
+
+    /**
+     * Le spese e le entrate di un periodo (giorni inclusi), con categoria e conto già caricati: Analisi (docs/38) le
+     * raggruppa per categoria, esercente o conto. JOIN FETCH: niente query per ogni movimento.
+     */
+    @Query("""
+            SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category JOIN FETCH t.account
+            WHERE t.bookingDate >= :from AND t.bookingDate <= :to
+              AND t.type IN (it.wallettracker.transaction.TransactionType.EXPENSE,
+                             it.wallettracker.transaction.TransactionType.INCOME)
+            """)
+    List<BankTransaction> findMovementsBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject, of } from 'rxjs';
 
-import { Account, Transaction, TransactionFilter, TransactionPage } from '../api/models';
+import { Account, Category, Transaction, TransactionFilter, TransactionPage } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isoDate } from './period';
 import { TransactionsChanged } from './transactions-changed';
@@ -85,6 +85,8 @@ describe('TransactionsPage', () => {
         });
       },
       categorySuggestions: () => of([]),
+      categories: () =>
+        of([{ id: 5, name: 'Shopping', kind: 'EXPENSE', builtin: true, uses: 1 } as Category]),
       aiSuggestionsStatus: () => of({ enabled: false, model: 'gemma3:4b', toAsk: 0, job: null }),
     };
     TestBed.configureTestingModule({
@@ -290,5 +292,18 @@ describe('TransactionsPage', () => {
     await fixture.whenStable();
     expect(requests.at(-1)).toMatchObject({ text: 'amazon', page: 0, size: 50 });
     expect((page.querySelector('input[type="search"]') as HTMLInputElement).value).toBe('amazon');
+  });
+
+  it('a category in the address (from the page of a category) is a pill that can be removed', async () => {
+    routeParams = { categoryId: '5' };
+    const { fixture, page } = await render();
+    expect(requests[0]).toMatchObject({ categoryId: 5 });
+    const chip = page.querySelector('button.pill.on') as HTMLButtonElement;
+    expect(chip.textContent).toContain('Shopping');
+
+    chip.click();
+    await fixture.whenStable();
+    expect(requests.at(-1)).toMatchObject({ categoryId: null, page: 0 });
+    expect(page.textContent).not.toContain('Shopping ✕');
   });
 });

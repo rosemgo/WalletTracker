@@ -1,0 +1,99 @@
+<div class="detail-top">
+  <a class="icon-link" routerLink="/analisi" aria-label="Torna ad Analisi">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+  </a>
+  <span class="secondary">Categoria</span>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (overview(); as o) {
+  <div class="category-page">
+    <section class="card hero">
+      <h1>{{ o.name }}</h1>
+      <span class="big-figure">{{ o.amount | currency: o.currency : 'symbol' : '1.0-0' }}</span>
+      <p class="comparison">{{ comparison() }}</p>
+
+      @if (budget(); as b) {
+        <div class="budget-pace">
+          <div class="budget-pace-head">
+            <span>Budget {{ b.amount | currency: o.currency : 'symbol' : '1.0-0' }}</span>
+            <span class="secondary">{{ b.text }}</span>
+          </div>
+          <div
+            class="pace-track"
+            role="img"
+            [attr.aria-label]="
+              'Budget usato al ' +
+              (b.used | number: '1.0-0') +
+              ' per cento' +
+              (b.pace !== null
+                ? '; a questo punto del mese il ritmo regolare è al ' +
+                  (b.pace | number: '1.0-0') +
+                  ' per cento'
+                : '')
+            "
+          >
+            <span class="pace-fill" [class.over]="b.over" [style.width.%]="b.used"></span>
+            @if (b.pace !== null) {
+              <span class="pace-mark" [style.left.%]="b.pace"></span>
+            }
+          </div>
+          @if (b.pace !== null) {
+            <span class="secondary"
+              >La tacca è dove dovresti essere oggi, spendendo in modo regolare.</span
+            >
+          }
+        </div>
+      } @else {
+        <a routerLink="/budget" class="secondary">Imposta un budget per questa categoria</a>
+      }
+    </section>
+
+    <section class="card">
+      <h2>Ultimi 12 mesi</h2>
+      <app-bar-chart
+        [values]="monthValues()"
+        [labels]="monthLabels()"
+        [selected]="monthValues().length - 1"
+        [average]="o.usualMonth"
+        [averageLabel]="averageLabel()"
+        [description]="chartDescription()"
+      />
+    </section>
+
+    <section class="card">
+      <h2>Dove, {{ isCurrent() ? 'questo mese' : 'a ' + monthName() }}</h2>
+      <ul class="rows">
+        @for (m of o.merchants; track m.key) {
+          <li>
+            <span>
+              {{ m.name ?? 'Senza descrizione' }}
+              <span class="secondary">{{
+                m.movements === 1 ? '1 volta' : m.movements + ' volte'
+              }}</span>
+            </span>
+            <strong>{{ m.amount | currency: o.currency }}</strong>
+          </li>
+        } @empty {
+          <li class="secondary">Nessun movimento in questo mese.</li>
+        }
+      </ul>
+    </section>
+
+    <div class="buttons wide">
+      <a
+        class="button primary"
+        routerLink="/movimenti"
+        [queryParams]="{ categoryId: o.categoryId }"
+      >
+        Vedi i movimenti
+      </a>
+      <a class="button" routerLink="/budget">{{ o.budget ? 'Cambia il budget' : 'I budget' }}</a>
+    </div>
+  </div>
+} @else if (!error()) {
+  <p>Caricamento...</p>
+}

@@ -74,16 +74,13 @@
         <ul class="bars">
           @for (c of topCategories(); track c.categoryId) {
             <li>
-              <span class="bar-label">
-                <span>{{ categoryName(c) }}</span>
-                <strong>{{ c.amount | currency: o.currency : 'symbol' : '1.0-0' }}</strong>
-              </span>
-              <span class="bar-line">
-                <span class="track">
-                  <span class="fill" [style.width.%]="(c.amount / highest()) * 100"></span>
-                </span>
-                <span class="secondary">{{ categoryNote(c, o.currency) }}</span>
-              </span>
+              @if (c.categoryId !== null) {
+                <a class="bar-link" [routerLink]="['/analisi/categoria', c.categoryId]">
+                  <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
+                </a>
+              } @else {
+                <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
+              }
             </li>
           }
         </ul>
@@ -137,3 +134,17 @@
 } @else if (loading()) {
   <p>Caricamento...</p>
 }
+
+<!-- Una categoria di "Dove vanno": il nome, l'importo, la barra e la differenza dal solito. -->
+<ng-template #bar let-c>
+  <span class="bar-label">
+    <span>{{ categoryName(c) }}</span>
+    <strong>{{ c.amount | currency: overview()!.currency : 'symbol' : '1.0-0' }}</strong>
+  </span>
+  <span class="bar-line">
+    <span class="track">
+      <span class="fill" [style.width.%]="(c.amount / highest()) * 100"></span>
+    </span>
+    <span class="secondary">{{ categoryNote(c, overview()!.currency) }}</span>
+  </span>
+</ng-template>

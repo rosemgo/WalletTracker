@@ -1,4 +1,10 @@
-import { CurrencyPipe, DatePipe, formatCurrency, formatDate } from '@angular/common';
+import {
+  CurrencyPipe,
+  DatePipe,
+  NgTemplateOutlet,
+  formatCurrency,
+  formatDate,
+} from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -39,7 +45,7 @@ function capitalized(text: string): string {
  */
 @Component({
   selector: 'app-overview-page',
-  imports: [AlertsPanel, CurrencyPipe, DatePipe, MonthChart, RouterLink],
+  imports: [AlertsPanel, CurrencyPipe, DatePipe, MonthChart, NgTemplateOutlet, RouterLink],
   templateUrl: './overview-page.html',
 })
 export class OverviewPage implements OnInit {

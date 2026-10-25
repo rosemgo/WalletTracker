@@ -19,7 +19,7 @@ import java.util.Objects;
  * <p>I mesi non sono lunghi uguali: per il giorno 31 di un mese di 30 giorni si usa il totale del mese (nel giorno 31
  * non c'è stato niente da spendere).
  */
-final class MonthCurves {
+public final class MonthCurves {
 
     private MonthCurves() {
     }
@@ -92,7 +92,7 @@ final class MonthCurves {
      * <b>per intero</b>, cioè che cominciano dopo il primo movimento della storia ({@code historyStart}). Il primo mese
      * di un conto collegato a metà mese è incompleto: nella media farebbe sembrare il solito più basso.
      */
-    static List<YearMonth> usualMonths(YearMonth month, int count, LocalDate historyStart) {
+    public static List<YearMonth> usualMonths(YearMonth month, int count, LocalDate historyStart) {
         List<YearMonth> months = new ArrayList<>();
         if (historyStart == null) {
             return months;

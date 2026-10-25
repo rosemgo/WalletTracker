@@ -83,6 +83,9 @@ public final class TransactionSearch {
             if (filter.type() != null) {
                 conditions.add(cb.equal(root.get("type"), filter.type()));
             }
+            if (filter.categoryId() != null) {
+                conditions.add(cb.equal(category.get("id"), filter.categoryId()));
+            }
             if (filter.uncategorized()) {
                 conditions.add(cb.isNull(root.get("category")));
             }

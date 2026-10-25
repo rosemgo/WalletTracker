@@ -72,6 +72,8 @@ export class TransactionsPage implements OnInit {
   protected readonly from = signal<string | null>(null); // "2026-10-01"; null = nessun limite
   protected readonly to = signal<string | null>(null);
   protected readonly text = signal(''); // la ricerca: causale, controparte, categoria, nota o importo
+  /** Solo una categoria (dalla pagina di una categoria, "Vedi i movimenti"); null = tutte. */
+  protected readonly category = signal<{ id: number; name: string } | null>(null);
 
   /** È aperto il dettaglio di un movimento (la pagina figlia)? */
   protected readonly detailOpen = signal(false);
@@ -124,6 +126,19 @@ export class TransactionsPage implements OnInit {
       this.type.set(type as TransactionType);
     }
     this.text.set((params.get('text') ?? '').slice(0, 100));
+    const categoryId = Number(params.get('categoryId'));
+    if (Number.isInteger(categoryId) && categoryId > 0) {
+      this.category.set({ id: categoryId, name: 'Una categoria' });
+      // Il nome, per la pillola: dall'elenco delle categorie.
+      this.api.categories().subscribe({
+        next: (categories) => {
+          const found = categories.find((c) => c.id === categoryId);
+          if (found && this.category()?.id === categoryId) {
+            this.category.set({ id: categoryId, name: found.name });
+          }
+        },
+      });
+    }
     this.api.accounts().subscribe({ next: (accounts) => this.accounts.set(accounts) });
     this.load();
   }
@@ -165,6 +180,7 @@ export class TransactionsPage implements OnInit {
         from,
         to,
         text: this.text(),
+        categoryId: this.category()?.id ?? null,
         page,
         size,
       })
@@ -206,6 +222,12 @@ export class TransactionsPage implements OnInit {
   /** La pillola "Da verificare": accende o spegne il filtro per tipo TO_REVIEW. */
   toggleToReview(): void {
     this.type.set(this.type() === 'TO_REVIEW' ? null : 'TO_REVIEW');
+    this.load();
+  }
+
+  /** La pillola della categoria: toccandola si toglie il filtro. */
+  clearCategory(): void {
+    this.category.set(null);
     this.load();
   }
 

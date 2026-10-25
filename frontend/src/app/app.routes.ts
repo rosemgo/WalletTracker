@@ -15,8 +15,13 @@ export const routes: Routes = [
   { path: 'riepilogo', component: OverviewPage, title: 'Riepilogo · WalletTracker' },
   {
     path: 'analisi',
-    loadComponent: () => import('./summary/summary-page').then((m) => m.SummaryPage),
+    loadComponent: () => import('./explore/explore-page').then((m) => m.ExplorePage),
     title: 'Analisi · WalletTracker',
+  },
+  {
+    path: 'analisi/categoria/:id',
+    loadComponent: () => import('./explore/category-page').then((m) => m.CategoryPage),
+    title: 'Categoria · WalletTracker',
   },
   {
     path: 'budget',

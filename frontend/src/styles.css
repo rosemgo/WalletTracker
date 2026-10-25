@@ -1862,3 +1862,320 @@ button.choice .secondary {
 button.choice .check {
   color: var(--acc);
 }
+
+/* ---- Analisi (docs/38) ---- */
+
+/* Un interruttore a più posizioni (Spese · Entrate · Netto): una riga di pulsanti, quello scelto pieno. */
+.segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.segmented button {
+  min-height: 38px;
+  padding: 0 6px;
+  background: transparent;
+  font-weight: 400;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+.explore.loading,
+.explore .card.loading {
+  opacity: 0.6;
+}
+
+/* Mentre arrivano i gruppi nuovi, quelli di prima non si toccano: sarebbero di un altro periodo. */
+.explore .card.loading {
+  pointer-events: none;
+}
+
+.filter-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 4px 0;
+}
+
+button.chip-button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+}
+
+.filter-chip a {
+  font-size: 0.9rem;
+}
+
+.bar-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0 4px;
+}
+
+.bar-chart .zero {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.bar-chart .bar {
+  fill: var(--bar);
+  pointer-events: none;
+}
+
+.bar-chart .bar.on {
+  fill: var(--acc);
+}
+
+/* Il netto: in su (risparmiato) e in giù (speso più delle entrate) in due colori; la barra scelta piena. */
+.bar-chart .bar.pos {
+  fill: var(--pos);
+  fill-opacity: 0.4;
+}
+
+.bar-chart .bar.neg {
+  fill: var(--neg);
+  fill-opacity: 0.4;
+}
+
+.bar-chart .bar.pos.on,
+.bar-chart .bar.neg.on {
+  fill-opacity: 1;
+}
+
+.bar-chart .axis {
+  fill: var(--sec);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.bar-chart .axis.on {
+  fill: var(--ink);
+  font-weight: 600;
+}
+
+.bar-chart .average {
+  stroke: var(--ink);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.bar-chart .average-label {
+  fill: var(--ink);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.bar-chart .hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.bar-chart .hit:focus-visible {
+  outline: none;
+  stroke: var(--acc);
+  stroke-width: 2;
+}
+
+@media (min-width: 600px) {
+  .bar-chart .axis {
+    font-size: 8px;
+  }
+
+  .bar-chart .average-label {
+    font-size: 7px;
+  }
+}
+
+.pills.by {
+  align-items: center;
+}
+
+ul.groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.groups li + li {
+  border-top: 1px solid var(--line);
+}
+
+ul.groups > li.secondary {
+  padding: 10px 0;
+}
+
+.group-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 400;
+  text-align: left;
+}
+
+/* Una riga senza barra (il netto): il nome a sinistra, l'importo a destra. */
+.group-row.simple {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.group-text,
+.group-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-amount {
+  align-items: flex-end;
+}
+
+.group-row .track,
+.bar-line .track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.group-row .track {
+  display: block;
+}
+
+.group-row .fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--acc);
+}
+
+.days-title {
+  margin: 16px 4px 8px;
+}
+
+/* Il Riepilogo: una categoria di "Dove vanno" apre la sua pagina. */
+a.bar-link {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+@media (min-width: 1100px) {
+  .explore {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0 16px;
+    align-items: start;
+  }
+
+  .explore > .currency-choice {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* ---- La pagina di una categoria ---- */
+.category-page {
+  max-width: 720px; /* sul PC una colonna sola, non larga quanto lo schermo: il grafico resta leggibile */
+}
+.category-page h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.budget-pace {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.budget-pace-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.pace-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--track);
+}
+
+.pace-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: var(--acc);
+}
+
+.pace-fill.over {
+  background: var(--bad);
+}
+
+/* La tacca del ritmo: dove dovresti essere oggi spendendo in modo regolare. */
+.pace-mark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+
+/* Un link che sembra un pulsante (per andare in un'altra pagina si usa un link, non un pulsante). */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a.button.primary {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.buttons.wide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

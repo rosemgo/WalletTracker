@@ -23,6 +23,16 @@
 
     <!-- I filtri come "pillole" che scorrono di lato: acceso = pieno. -->
     <div class="pills" role="group" aria-label="Filtri">
+      @if (category(); as c) {
+        <button
+          type="button"
+          class="pill on"
+          (click)="clearCategory()"
+          [attr.aria-label]="'Togli il filtro ' + c.name"
+        >
+          {{ c.name }} ✕
+        </button>
+      }
       <select
         class="pill"
         [class.on]="period() !== 'ALL'"

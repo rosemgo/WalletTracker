@@ -304,6 +304,21 @@ class TransactionControllerTest {
     }
 
     @Test
+    void transactionsCanBeFilteredByCategory() {
+        BankTransaction pizza = transaction(account(), LocalDate.of(2026, 9, 1), "-20.00", "PIZZERIA");
+        BankTransaction shoes = transaction(account(), LocalDate.of(2026, 9, 2), "-50.00", "SCARPE");
+        pizza.setManualCategory(category("Bar e ristoranti"));
+        shoes.setManualCategory(category("Shopping"));
+        transactionRepository.saveAll(List.of(pizza, shoes));
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/transactions?categoryId={id}", category("Shopping").getId()))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.items[*].id").asArray()
+                .containsExactly(shoes.getId().intValue());
+    }
+
+    @Test
     void aNoteCanBeWrittenFoundAndRemoved() {
         BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-9.98", "AMAZON");
         BankTransaction other = transaction(account(), LocalDate.of(2026, 9, 2), "-5.00", "BAR");

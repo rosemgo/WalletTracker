@@ -28,6 +28,12 @@ import {
   CategoryChange,
   TransactionDetail,
   Overview,
+  CategoryOverview,
+  ExploreGroups,
+  ExplorePeriod,
+  ExploreSeries,
+  GroupBy,
+  Metric,
   Rule,
   RulePreview,
   RuleRequest,
@@ -35,7 +41,6 @@ import {
   SubscriptionConfirmation,
   SubscriptionOverview,
   SubscriptionSuggestion,
-  Summary,
   SyncRound,
   Transaction,
   TransactionFilter,
@@ -130,6 +135,9 @@ export class WalletApi {
     }
     if (filter.type !== null) {
       params = params.set('type', filter.type);
+    }
+    if (filter.categoryId != null) {
+      params = params.set('categoryId', filter.categoryId);
     }
     if (filter.uncategorized) {
       params = params.set('uncategorized', true);
@@ -275,9 +283,33 @@ export class WalletApi {
     return this.http.get<Overview>('/api/overview', { params });
   }
 
-  /** GET /api/summary/monthly?from=2025-11: il riepilogo da quel mese al mese in corso. */
-  monthlySummary(from: string): Observable<Summary> {
-    return this.http.get<Summary>('/api/summary/monthly', { params: { from } });
+  /** GET /api/explore/series: le barre di Analisi. */
+  exploreSeries(query: {
+    metric: Metric;
+    period: ExplorePeriod;
+    categoryId: number | null;
+    currency: string | null;
+  }): Observable<ExploreSeries> {
+    return this.http.get<ExploreSeries>('/api/explore/series', { params: definedParams(query) });
+  }
+
+  /** GET /api/explore/groups: i movimenti di una barra raggruppati. */
+  exploreGroups(query: {
+    metric: Metric;
+    from: string;
+    to: string;
+    by: GroupBy;
+    categoryId: number | null;
+    currency: string | null;
+  }): Observable<ExploreGroups> {
+    return this.http.get<ExploreGroups>('/api/explore/groups', { params: definedParams(query) });
+  }
+
+  /** GET /api/categories/{id}/overview?month=2026-10: la pagina di una categoria. */
+  categoryOverview(id: number, month: string | null): Observable<CategoryOverview> {
+    return this.http.get<CategoryOverview>(`/api/categories/${id}/overview`, {
+      params: month ? { month } : {},
+    });
   }
 
   /** GET /api/budgets?month=2026-10 */
@@ -425,4 +457,17 @@ function importForm(file: File, mapping: ImportMapping | null): FormData {
     form.append('mapping', new Blob([JSON.stringify(mapping)], { type: 'application/json' }));
   }
   return form;
+}
+
+/** I parametri di una richiesta senza quelli null: "nessun filtro" vuol dire non mandarli. */
+function definedParams(
+  query: Record<string, string | number | null>,
+): Record<string, string | number> {
+  const params: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== null) {
+      params[key] = value;
+    }
+  }
+  return params;
 }

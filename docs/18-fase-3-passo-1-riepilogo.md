@@ -1,5 +1,8 @@
 # 18. Fase 3, passo 1: il riepilogo mensile e il primo grafico
 
+> Aggiornamento: la pagina di questa guida è stata sostituita dall'esploratore di Analisi (`docs/38`, parte G);
+> l'API `GET /api/summary/monthly` resta, con i suoi test.
+
 **Obiettivo:** una nuova pagina **Riepilogo**, che diventa la pagina iniziale della dashboard:
 1. quattro riquadri con i totali del periodo: **entrate**, **spese**, **risparmio** (con la percentuale
    delle entrate) e **rendite nette degli investimenti**;

@@ -71,9 +71,11 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) String text,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return transactionService.search(new TransactionFilter(accountId, type, uncategorized, from, to, text), page,
+        return transactionService.search(new TransactionFilter(accountId, type, uncategorized, from, to, text,
+                categoryId), page,
                 size);
     }
 

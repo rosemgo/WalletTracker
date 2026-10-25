@@ -117,6 +117,12 @@ describe('OverviewPage', () => {
     expect(rows[1]).toContain('come al solito');
     expect(rows[3]).toMatch(/−56\s€ sul solito/);
     expect(page.querySelector('.card-head a')?.getAttribute('href')).toBe('/analisi');
+    // Una categoria apre la sua pagina; le spese senza categoria no.
+    const links = Array.from(page.querySelectorAll('ul.bars a.bar-link')).map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(links[0]).toMatch(/^\/analisi\/categoria\/\d+$/);
+    expect(links.length).toBe(5);
     // La barra più lunga è la prima.
     const widths = Array.from(page.querySelectorAll<HTMLElement>('.bar-line .fill')).map(
       (bar) => bar.style.width,

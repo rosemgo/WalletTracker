@@ -198,6 +198,7 @@ export interface TransactionFilter {
   from: string | null; // dal giorno, incluso: "2026-10-01"
   to: string | null; // al giorno, incluso
   text: string; // la ricerca: causale, controparte, categoria o importo ("12,99"); vuoto = nessun filtro
+  categoryId?: number | null; // solo i movimenti di questa categoria
   page: number;
   size: number;
 }
@@ -262,42 +263,6 @@ export interface SetupStatus {
   source: 'DASHBOARD' | 'ENV' | null; // da dove arrivano le credenziali in uso
   applicationId: string | null;
   redirectUrl: string; // da registrare nell'applicazione Enable Banking
-}
-
-/** I numeri di un mese (record MonthSummary nel backend). Le spese sono positive: 1200 = spesi 1200. */
-export interface MonthSummary {
-  month: string; // es. "2026-10"
-  income: number;
-  expenses: number;
-  savings: number; // entrate meno spese
-  investmentNet: number; // rendite meno tasse degli investimenti
-  toReview: number; // movimenti ancora da verificare in quel mese
-}
-
-/** I totali del periodo: le stesse voci di MonthSummary, senza il mese. */
-export type SummaryTotals = Omit<MonthSummary, 'month'>;
-
-/** Le spese di una categoria nel periodo (positive; i rimborsi le riducono). */
-export interface CategoryExpense {
-  categoryId: number | null;
-  category: string | null; // il nome; null = spese senza categoria
-  amount: number;
-  movements: number;
-}
-
-/** Il riepilogo di una valuta: un elemento per mese, anche i mesi vuoti. */
-export interface CurrencySummary {
-  currency: string;
-  months: MonthSummary[];
-  total: SummaryTotals;
-  expensesByCategory: CategoryExpense[]; // dalla spesa più alta
-}
-
-/** La risposta di GET /api/summary/monthly. */
-export interface Summary {
-  from: string;
-  to: string;
-  currencies: CurrencySummary[]; // vuoto se nel periodo non ci sono movimenti
 }
 
 /** Come sta andando un budget (enum BudgetStatus nel backend). */
@@ -607,4 +572,70 @@ export interface TransactionDetail {
 export interface CategoryChange {
   id: number;
   categoryId: number | null;
+}
+
+/** Analisi (docs/38): che cosa si guarda, il periodo delle barre, come raggruppare. */
+export type Metric = 'EXPENSES' | 'INCOME' | 'NET';
+export type ExplorePeriod = 'WEEK' | 'MONTH' | 'SIX_MONTHS' | 'YEAR';
+export type GroupBy = 'CATEGORY' | 'MERCHANT' | 'ACCOUNT';
+
+/** Una barra del grafico: un giorno, una settimana o un mese. */
+export interface ExploreBar {
+  from: string;
+  to: string;
+  value: number;
+  future: boolean; // non ancora successa
+}
+
+/** GET /api/explore/series */
+export interface ExploreSeries {
+  metric: Metric;
+  period: ExplorePeriod;
+  categoryId: number | null;
+  currency: string;
+  currencies: string[];
+  unit: 'DAY' | 'WEEK' | 'MONTH';
+  bars: ExploreBar[];
+  averagePerUnit: number | null; // la media di solito per barra; null senza mesi completi
+  usualMonths: number;
+}
+
+/** Un gruppo: una categoria, un esercente o un conto. */
+export interface ExploreGroup {
+  key: string | null;
+  categoryId: number | null;
+  name: string | null;
+  amount: number;
+  movements: number;
+  usual: number | null; // di solito, allo stesso giorno del mese (solo categorie, solo per un mese)
+}
+
+/** GET /api/explore/groups */
+export interface ExploreGroups {
+  metric: Metric;
+  by: GroupBy;
+  from: string;
+  to: string;
+  currency: string;
+  total: number;
+  groups: ExploreGroup[];
+  income: ExploreGroup[]; // per il netto
+  expenses: ExploreGroup[]; // per il netto
+}
+
+/** GET /api/categories/{id}/overview: la pagina di una categoria. */
+export interface CategoryOverview {
+  categoryId: number;
+  name: string;
+  metric: Metric;
+  month: string;
+  day: string;
+  currency: string;
+  amount: number;
+  usualSoFar: number | null;
+  usualMonth: number | null;
+  usualMonths: number;
+  months: { month: string; value: number }[];
+  merchants: ExploreGroup[];
+  budget: Budget | null;
 }

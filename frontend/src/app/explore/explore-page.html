@@ -1,0 +1,200 @@
+<h1>Analisi</h1>
+
+<div class="segmented" role="group" aria-label="Che cosa guardare">
+  @for (m of metrics; track m.value) {
+    <button
+      type="button"
+      [attr.aria-pressed]="m.value === metric()"
+      (click)="chooseMetric(m.value)"
+    >
+      {{ m.label }}
+    </button>
+  }
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (series(); as s) {
+  <div class="explore" [class.loading]="loading()">
+    @if (s.currencies.length > 1) {
+      <label class="currency-choice">
+        Valuta
+        <select (change)="onCurrency($event)">
+          @for (c of s.currencies; track c) {
+            <option [value]="c" [selected]="c === s.currency">{{ c }}</option>
+          }
+        </select>
+      </label>
+    }
+
+    <!-- Sul PC due colonne: a sinistra la cifra e il grafico, a destra l'elenco (docs/33, parte L5). -->
+    <div class="explore-main">
+      <section class="card hero explore-hero">
+        <span class="secondary">{{ headLabel() }}</span>
+        <span class="big-figure">{{ headAmount() }}</span>
+        @if (headNote()) {
+          <p class="comparison">{{ headNote() }}</p>
+        }
+        @if (category(); as c) {
+          <div class="filter-chip">
+            <button
+              type="button"
+              class="chip-button"
+              (click)="clearCategory()"
+              [attr.aria-label]="'Togli il filtro ' + c.name"
+            >
+              {{ c.name }} <span aria-hidden="true">✕</span>
+            </button>
+            <a
+              [routerLink]="['/analisi/categoria', c.id]"
+              [queryParams]="categoryMonth() ? { mese: categoryMonth() } : {}"
+            >
+              La pagina della categoria
+            </a>
+          </div>
+        }
+        <app-bar-chart
+          [values]="barValues()"
+          [labels]="labels()"
+          [names]="barNames()"
+          [future]="barFuture()"
+          [selected]="bar()?.index ?? null"
+          [average]="s.metric === 'NET' ? null : s.averagePerUnit"
+          [averageLabel]="averageLabel()"
+          [diverging]="s.metric === 'NET'"
+          [interactive]="true"
+          [description]="chartDescription()"
+          (picked)="pickBar($event)"
+        />
+        <span class="secondary">Tocca una barra per vedere quel periodo.</span>
+      </section>
+
+      <div class="segmented" role="group" aria-label="Periodo">
+        @for (p of periods; track p.value) {
+          <button
+            type="button"
+            [attr.aria-pressed]="p.value === period()"
+            (click)="choosePeriod(p.value)"
+          >
+            {{ p.label }}
+          </button>
+        }
+      </div>
+
+      <div class="pills by" role="group" aria-label="Raggruppa per">
+        <span class="secondary">Per</span>
+        @for (g of groupings; track g.value) {
+          @if (!(g.value === 'CATEGORY' && category())) {
+            <button
+              type="button"
+              class="pill"
+              [class.on]="g.value === by()"
+              [attr.aria-pressed]="g.value === by()"
+              (click)="chooseBy(g.value)"
+            >
+              {{ g.label }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="explore-side">
+      @if (s.metric === 'NET') {
+        @for (section of netSections(); track section.title) {
+          <section class="card" [class.loading]="groupsLoading()">
+            <h2>{{ section.title }}</h2>
+            <ul class="groups">
+              @for (r of section.rows; track r.group.key) {
+                <li>
+                  <div class="group-row simple">
+                    <span class="group-text">
+                      <span>{{ r.name }}</span>
+                      <span class="secondary">{{ r.note }}</span>
+                    </span>
+                    <strong>{{
+                      r.group.amount | currency: s.currency : 'symbol' : '1.0-0'
+                    }}</strong>
+                  </div>
+                </li>
+              } @empty {
+                <li class="secondary">Niente in questo periodo.</li>
+              }
+            </ul>
+          </section>
+        }
+      } @else {
+        <section class="card" [class.loading]="groupsLoading()">
+          <ul class="groups">
+            @for (r of rows(); track r.group.key) {
+              <li>
+                @if (canPickCategory() && r.group.categoryId !== null) {
+                  <button
+                    type="button"
+                    class="group-row"
+                    (click)="pickCategory(r)"
+                    [attr.aria-label]="r.name + ': mostra solo questa categoria'"
+                  >
+                    <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
+                  </button>
+                } @else {
+                  <div class="group-row">
+                    <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
+                  </div>
+                }
+              </li>
+            } @empty {
+              <li class="secondary">Niente in questo periodo.</li>
+            }
+          </ul>
+        </section>
+      }
+
+      @if (category() && days().length > 0) {
+        <h2 class="days-title">I movimenti</h2>
+        @for (day of days(); track day.date) {
+          <section class="day">
+            <div class="day-head">
+              <h2>{{ day.label }}</h2>
+            </div>
+            <ul>
+              @for (t of day.items; track t.id) {
+                <li>
+                  <a class="movement" [routerLink]="['/movimenti', t.id]">
+                    <span class="movement-text">
+                      <span class="name">{{ nameOf(t) }}</span>
+                      @if (t.note) {
+                        <span class="note">{{ t.note }}</span>
+                      }
+                    </span>
+                    <span class="amount" [class.positive]="t.amount > 0">{{
+                      t.amount | currency: t.currency
+                    }}</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </div>
+  </div>
+} @else if (loading()) {
+  <p>Caricamento...</p>
+}
+
+<ng-template #row let-r>
+  <span class="group-line">
+    <span class="group-text">
+      <span>{{ r.name }}</span>
+      <span class="secondary">{{ r.note }}</span>
+    </span>
+    <span class="group-amount">
+      <strong>{{ r.group.amount | currency: series()!.currency : 'symbol' : '1.0-0' }}</strong>
+      <span class="secondary">{{ r.share }}</span>
+    </span>
+  </span>
+  <span class="track"><span class="fill" [style.width.%]="r.width"></span></span>
+</ng-template>
