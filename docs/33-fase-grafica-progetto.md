@@ -272,7 +272,8 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
    dettaglio di un movimento (parte M); i suggerimenti restano in un pannello sopra l'elenco e nella scheda.
 5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici. **Fatto**, `docs/38`: l'esploratore è la
    pagina Analisi stessa.
-6. **Budget** e **Altro**: ridisegnati con i componenti comuni.
+6. **Budget** e **Altro**: ridisegnati con i componenti comuni. **Fatto**, `docs/39`: il Budget con il totale e il
+   ritmo in parole; sul telefono le tabelle di Altro diventano schede; gli errori di aggiornamento in parole.
 7. **PWA** e modalità discreta (il tema scuro è già nel passo 2).
 
 Ogni passo con la sua guida e i suoi test, come sempre.

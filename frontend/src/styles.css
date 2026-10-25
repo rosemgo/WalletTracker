@@ -924,7 +924,8 @@ app-monthly-chart {
 
 .suggestion-actions {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
 }
 
@@ -2105,8 +2106,12 @@ a.bar-link {
 }
 
 /* ---- La pagina di una categoria ---- */
-.category-page {
+.category-page,
+app-budget-page {
   max-width: 720px; /* sul PC una colonna sola, non larga quanto lo schermo: il grafico resta leggibile */
+}
+app-budget-page {
+  display: block; /* un componente è "inline" se non si dice altro: max-width vale solo per i blocchi */
 }
 .category-page h1 {
   margin: 0;
@@ -2178,4 +2183,211 @@ a.button.primary {
 .buttons.wide {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ---- Le tabelle sul telefono: una scheda per riga (docs/39, parte C) ----
+   Sotto i 700 pixel una tabella con la classe "cards" smette di essere una griglia: ogni riga diventa una scheda, la
+   cella "card-title" va in cima come titolo, e ogni altra cella scrive davanti il nome della sua colonna (preso
+   dall'attributo data-label, con content: attr(...)). L'HTML resta una tabella: sul PC non cambia niente. */
+@media (max-width: 699px) {
+  .table-scroll:has(> table.cards) {
+    overflow-x: visible;
+  }
+
+  table.cards,
+  table.cards tbody,
+  table.cards tr,
+  table.cards td {
+    display: block;
+  }
+
+  table.cards {
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  /* Le intestazioni: nascoste alla vista (le scrive ogni cella), ma lette dai lettori di schermo. */
+  table.cards thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  table.cards tr {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--card);
+  }
+
+  /* Il nome della colonna sta a sinistra (posizionato), il contenuto scorre normale accanto: anche le righe
+     secondarie della cella ("solo entrate") restano sotto il contenuto, non sotto il nome. */
+  table.cards td {
+    position: relative;
+    min-height: 24px;
+    padding: 5px 0 5px 7.5rem;
+    border: none;
+    text-align: left;
+  }
+
+  table.cards td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 7rem;
+    color: var(--sec);
+    font-size: 0.85rem;
+  }
+
+  /* Il titolo della scheda, in cima (order: -1), su tutta la larghezza. */
+  table.cards td.card-title {
+    order: -1;
+    display: block;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  table.cards td.card-title .secondary,
+  table.cards td.card-title div {
+    font-weight: 400;
+  }
+
+  table.cards td.card-title::before,
+  table.cards td[data-label='']::before,
+  table.cards td[colspan]::before {
+    content: none;
+  }
+
+  /* Le azioni (senza nome di colonna) in fondo, su tutta la larghezza. */
+  table.cards td.card-title,
+  table.cards td[data-label=''],
+  table.cards td[colspan] {
+    padding-left: 0;
+  }
+
+  table.cards td select {
+    max-width: 100%;
+  }
+}
+
+/* ---- Budget (docs/39) ----
+   La barra ha l'accento come in tutta l'app; rossa solo quando il budget è superato. Lo stato (nei limiti, quasi
+   esaurito, superato) lo dice l'icona con la scritta, accanto al nome. */
+.meter-fill,
+.meter-fill.ok,
+.meter-fill.warning {
+  background: var(--acc);
+}
+
+.meter-fill.over {
+  background: var(--bad);
+}
+
+.budget-total .meter {
+  margin-top: 8px;
+}
+
+a.budget-name {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.budget-name:hover {
+  text-decoration: underline;
+}
+
+.budget .pace {
+  margin: 4px 0 6px;
+}
+
+.budget-actions {
+  display: flex;
+  gap: 16px;
+}
+
+/* Le regole di partenza: una sezione da aprire, sotto le regole dell'utente. */
+details.builtin-rules {
+  margin-top: 1.5rem;
+}
+
+details.builtin-rules summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--card);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+details.builtin-rules[open] summary {
+  margin-bottom: 8px;
+}
+
+/* Sul PC le righe delle Categorie hanno un menu, più alto del testo: tutto centrato in verticale. */
+table.cards.compact td {
+  vertical-align: middle;
+}
+
+/* La variante compatta (Categorie, decine di righe): sul telefono una scheda per tabella, una riga per categoria. In
+   alto il nome e quanti movimenti; sotto il gruppo e le azioni, sulla stessa riga. */
+@media (max-width: 699px) {
+  table.cards.compact tbody {
+    padding: 0 16px;
+    border-radius: 16px;
+    background: var(--card);
+  }
+
+  table.cards.compact tr {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 0;
+    padding: 12px 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  table.cards.compact tr + tr {
+    border-top: 1px solid var(--line);
+  }
+
+  table.cards.compact td {
+    padding: 0;
+  }
+
+  table.cards.compact td::before {
+    content: none;
+  }
+
+  table.cards.compact td.card-title {
+    order: 0;
+    flex: 1 1 60%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    font-size: 1rem;
+  }
+
+  table.cards.compact td.group select {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  table.cards.compact td.actions {
+    margin-left: auto;
+  }
 }

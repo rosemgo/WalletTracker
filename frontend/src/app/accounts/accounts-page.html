@@ -25,7 +25,7 @@
   <p>Caricamento...</p>
 } @else {
   <div class="table-scroll">
-    <table>
+    <table class="cards">
       <thead>
         <tr>
           <th>Banca</th>
@@ -38,8 +38,8 @@
       <tbody>
         @for (account of accounts(); track account.id) {
           <tr>
-            <td>{{ account.bank }}</td>
-            <td>
+            <td data-label="Banca">{{ account.bank }}</td>
+            <td class="card-title">
               @if (renaming() === account.id) {
                 <!-- Invio salva, Esc annulla; vuoto toglie il nome (come per le categorie). -->
                 <div class="category-edit">
@@ -68,7 +68,7 @@
                 }
               </div>
             </td>
-            <td>
+            <td data-label="Ruolo">
               <select
                 [attr.aria-label]="'Ruolo di ' + nameOf(account)"
                 (change)="onRoleChange(account, $event)"
@@ -82,8 +82,8 @@
             </td>
             @if (account.source === 'MANUAL') {
               <!-- Conto manuale: niente consenso PSD2, i movimenti arrivano da file. -->
-              <td class="secondary">conto manuale</td>
-              <td>
+              <td data-label="Consenso" class="secondary">conto manuale</td>
+              <td data-label="">
                 @if (confirmingDelete() === account.id) {
                   <!-- Eliminare chiede conferma: non si può annullare. -->
                   <span class="secondary"
@@ -102,8 +102,10 @@
                 }
               </td>
             } @else {
-              <td>{{ account.consentValidUntil | date: 'dd/MM/yyyy' }}</td>
-              <td>
+              <td data-label="Consenso fino al">
+                {{ account.consentValidUntil | date: 'dd/MM/yyyy' }}
+              </td>
+              <td data-label="Aggiornato">
                 @if (account.lastSyncAt) {
                   {{ account.lastSyncAt | date: 'dd/MM/yyyy HH:mm' }}
                 } @else {

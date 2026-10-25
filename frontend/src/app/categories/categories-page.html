@@ -40,11 +40,11 @@
 @for (group of groups(); track group.kind) {
   <h2 class="section-title">{{ group.label }}</h2>
   <div class="table-scroll">
-    <table>
+    <table class="cards compact">
       <tbody>
         @for (category of group.categories; track category.id) {
           <tr>
-            <td>
+            <td class="card-title">
               @if (renaming() === category.id) {
                 <!-- Invio salva, Esc annulla (come la categoria nella pagina Movimenti). -->
                 <div class="category-edit">
@@ -66,10 +66,10 @@
                 }
               }
             </td>
-            <td class="amount secondary">
+            <td data-label="Movimenti" class="amount secondary">
               {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
             </td>
-            <td>
+            <td data-label="Gruppo" class="group">
               <select
                 [attr.aria-label]="'Gruppo di ' + category.name"
                 (change)="changeKind(category, $any($event.target).value)"
@@ -81,7 +81,7 @@
                 }
               </select>
             </td>
-            <td class="amount">
+            <td data-label="" class="amount actions">
               @if (confirmingDelete() === category.id) {
                 <!-- Eliminare chiede conferma: non si può annullare. -->
                 <span class="secondary">

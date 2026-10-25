@@ -1,23 +1,25 @@
-<h1>Budget</h1>
-
-<p class="hint">
-  Un budget è quanto vuoi spendere al massimo in una categoria ogni mese. Contano solo le spese
-  vere: un rimborso ("Rimborso di una spesa") le riduce, i trasferimenti tra i tuoi conti non
-  contano mai.
-</p>
-
-<div class="month-nav">
-  <button type="button" aria-label="Mese precedente" (click)="changeMonth(-1)">‹</button>
-  <strong class="month-name">{{ month() + '-01' | date: 'MMMM yyyy' }}</strong>
-  <button
-    type="button"
-    aria-label="Mese successivo"
-    [disabled]="isCurrentMonth()"
-    (click)="changeMonth(1)"
-  >
-    ›
-  </button>
-</div>
+<header class="overview-head">
+  <div>
+    <span class="secondary">{{
+      isCurrentMonth() ? 'Budget del mese' : 'Budget di un mese passato'
+    }}</span>
+    <h1>{{ monthTitle() }}</h1>
+  </div>
+  <div class="month-arrows">
+    <button type="button" class="icon" aria-label="Mese precedente" (click)="changeMonth(-1)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    </button>
+    <button
+      type="button"
+      class="icon"
+      aria-label="Mese successivo"
+      [disabled]="isCurrentMonth()"
+      (click)="changeMonth(1)"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+    </button>
+  </div>
+</header>
 
 @if (message()) {
   <p class="message">{{ message() }}</p>
@@ -27,10 +29,40 @@
 }
 
 <div class="budget-list" [class.loading]="loading()">
-  @for (b of budgets(); track b.id) {
-    <div class="card budget">
+  @if (total(); as t) {
+    <!-- Il totale: una cifra sola, con la frase del ritmo e la stessa barra delle schede. -->
+    <section class="card hero budget-total">
+      <span class="secondary">Speso nelle categorie con un budget</span>
+      <span class="big-figure">{{ t.spent | currency: t.currency : 'symbol' : '1.0-0' }}</span>
+      <p class="comparison">
+        su {{ t.monthlyAmount | currency: t.currency : 'symbol' : '1.0-0' }} · {{ t.sentence }}
+      </p>
+      <div class="meter" aria-hidden="true">
+        <div
+          class="meter-fill"
+          [class.over]="t.spent > t.monthlyAmount"
+          [style.width.%]="(t.monthlyAmount > 0 ? Math.min(1, t.spent / t.monthlyAmount) : 0) * 100"
+        ></div>
+        @if (isCurrentMonth() && t.monthlyAmount > 0) {
+          <div
+            class="meter-today"
+            [style.left.%]="Math.min(1, t.expectedSoFar / t.monthlyAmount) * 100"
+          ></div>
+        }
+      </div>
+    </section>
+  }
+
+  @for (b of sorted(); track b.id) {
+    <section class="card budget">
       <div class="budget-head">
-        <strong>{{ b.category }}</strong>
+        <a
+          class="budget-name"
+          [routerLink]="['/analisi/categoria', b.categoryId]"
+          [queryParams]="{ mese: month() }"
+        >
+          {{ b.category }}
+        </a>
         <!-- Lo stato: icona colorata + etichetta scritta. Il colore da solo non basterebbe. -->
         <span [class]="'status ' + b.status.toLowerCase()">
           <span class="status-icon" aria-hidden="true">{{ statusInfo[b.status].icon }}</span>
@@ -39,8 +71,8 @@
       </div>
 
       <!--
-        La barra: la parte colorata è quanto hai speso. Il trattino verticale ("oggi") è quanto avresti speso
-        finora spendendo in modo regolare: se la barra lo supera, stai spendendo più in fretta del previsto.
+        La barra: la parte colorata è quanto hai speso (rossa se il budget è superato). Il trattino verticale è il
+        ritmo: quanto avresti speso finora spendendo in modo regolare. Se la barra lo supera, stai andando più veloce.
       -->
       <div
         class="meter"
@@ -52,7 +84,11 @@
       >
         <div [class]="'meter-fill ' + b.status.toLowerCase()" [style.width.%]="barPercent(b)"></div>
         @if (isCurrentMonth()) {
-          <div class="meter-today" [style.left.%]="expectedPercent(b)" title="oggi"></div>
+          <div
+            class="meter-today"
+            [style.left.%]="expectedPercent(b)"
+            title="il ritmo di oggi"
+          ></div>
         }
       </div>
 
@@ -67,25 +103,29 @@
           <span class="negative">superato di {{ -b.remaining | currency: b.currency }}</span>
         }
       </div>
-      <div class="secondary">
-        @if (isCurrentMonth()) {
-          a oggi, spendendo in modo regolare, saresti a
-          {{ b.expectedSoFar | currency: b.currency }} ·
-        }
-        media dei 3 mesi prima: {{ b.averageLast3Months | currency: b.currency }} ·
-        <button type="button" class="link" (click)="edit(b)">modifica</button> ·
-        <button type="button" class="link" (click)="remove(b)">elimina</button>
+      <p class="secondary pace">{{ budgetNote(b) }}</p>
+      <div class="budget-actions">
+        <button type="button" class="link" (click)="edit(b)">Modifica</button>
+        <button type="button" class="link" (click)="remove(b)">Elimina</button>
       </div>
-    </div>
+    </section>
   } @empty {
     @if (!loading()) {
-      <p>Nessun budget. Crea il primo qui sotto: ad esempio "Spesa alimentare", 400 € al mese.</p>
+      <p class="card">
+        Nessun budget in questo mese. Creane uno qui sotto: ad esempio "Spesa alimentare", 400 € al
+        mese.
+      </p>
     }
   }
 </div>
 
-<form class="card" [formGroup]="form" (ngSubmit)="save()">
+<form id="budget-form" class="card" [formGroup]="form" (ngSubmit)="save()">
   <h2>{{ editing() ? 'Modifica il budget' : 'Nuovo budget' }}</h2>
+  <p class="hint">
+    Un budget è quanto vuoi spendere al massimo in una categoria ogni mese. Contano solo le spese
+    vere: un rimborso ("Rimborso di una spesa") le riduce, i trasferimenti tra i tuoi conti non
+    contano mai.
+  </p>
   <div class="form-grid">
     <label>
       Categoria
@@ -118,8 +158,10 @@
       </label>
     }
   </div>
-  <button type="submit">{{ editing() ? 'Salva le modifiche' : 'Crea il budget' }}</button>
-  @if (editing()) {
-    <button type="button" class="link" (click)="cancel()">annulla</button>
-  }
+  <div class="buttons">
+    <button type="submit">{{ editing() ? 'Salva le modifiche' : 'Crea il budget' }}</button>
+    @if (editing()) {
+      <button type="button" (click)="cancel()">Annulla</button>
+    }
+  </div>
 </form>

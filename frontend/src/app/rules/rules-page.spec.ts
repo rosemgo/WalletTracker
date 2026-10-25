@@ -245,4 +245,17 @@ describe('RulesPage', () => {
     expect(previewed[0].amountSign).toBe('ANY');
     expect(previewed[0].categoryId).toBeNull();
   });
+
+  it('shows your rules first and keeps the built-in ones in a section to open', async () => {
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    // Solo la regola di partenza dei dividendi: le tue sono zero, e lo dice.
+    expect(page.textContent).toContain('Nessuna regola tua');
+    const builtin = page.querySelector('details.builtin-rules') as HTMLDetailsElement;
+    expect(builtin.open).toBe(false);
+    expect(builtin.querySelector('summary')?.textContent).toContain('Regole di partenza (1)');
+    expect(builtin.querySelectorAll('tbody tr').length).toBe(1);
+  });
 });

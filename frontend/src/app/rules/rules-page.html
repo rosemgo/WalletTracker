@@ -137,56 +137,81 @@
   }
 </form>
 
-<div class="table-scroll">
-  <table>
-    <thead>
-      <tr>
-        <th>Priorità</th>
-        <th>Nome</th>
-        <th>Condizione</th>
-        <th>Risultato</th>
-        <th class="amount">Usata</th>
-        <th>Attiva</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (rule of rules(); track rule.id) {
-        <tr [class.disabled]="!rule.enabled">
-          <td>{{ rule.priority }}</td>
-          <td>
-            {{ rule.name }}
-            @if (rule.builtin) {
-              <div class="secondary">regola di partenza</div>
-            }
-          </td>
-          <td>
-            {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
-            <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
-          </td>
-          <td>
-            {{ typeLabels[rule.resultType] }}
-            @if (rule.category) {
-              <div class="secondary">{{ rule.category }}</div>
-            }
-          </td>
-          <td class="amount">{{ rule.uses }}</td>
-          <td>
-            <input
-              type="checkbox"
-              [checked]="rule.enabled"
-              [attr.aria-label]="'Attiva ' + rule.name"
-              (change)="toggle(rule)"
-            />
-          </td>
-          <td>
-            <button type="button" class="link" (click)="edit(rule)">Modifica</button>
-            @if (!rule.builtin) {
-              · <button type="button" class="link" (click)="remove(rule)">Elimina</button>
-            }
-          </td>
+<!--
+  Le regole sono due elenchi: le tue, sempre in vista, e quelle di partenza (una trentina, per banche e investimenti),
+  raccolte in una sezione da aprire. La tabella è la stessa: un ng-template usato due volte.
+-->
+<ng-template #rulesTable let-list>
+  <div class="table-scroll">
+    <table class="cards">
+      <thead>
+        <tr>
+          <th>Priorità</th>
+          <th>Nome</th>
+          <th>Condizione</th>
+          <th>Risultato</th>
+          <th class="amount">Usata</th>
+          <th>Attiva</th>
+          <th></th>
         </tr>
-      }
-    </tbody>
-  </table>
-</div>
+      </thead>
+      <tbody>
+        @for (rule of asRules(list); track rule.id) {
+          <tr [class.disabled]="!rule.enabled">
+            <td data-label="Priorità">{{ rule.priority }}</td>
+            <td class="card-title">
+              {{ rule.name }}
+              @if (rule.builtin) {
+                <div class="secondary">regola di partenza</div>
+              }
+            </td>
+            <td data-label="Condizione">
+              {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
+              <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
+            </td>
+            <td data-label="Risultato">
+              {{ typeLabels[rule.resultType] }}
+              @if (rule.category) {
+                <div class="secondary">{{ rule.category }}</div>
+              }
+            </td>
+            <td data-label="Usata" class="amount">{{ rule.uses }}</td>
+            <td data-label="Attiva">
+              <input
+                type="checkbox"
+                [checked]="rule.enabled"
+                [attr.aria-label]="'Attiva ' + rule.name"
+                (change)="toggle(rule)"
+              />
+            </td>
+            <td data-label="">
+              <button type="button" class="link" (click)="edit(rule)">Modifica</button>
+              @if (!rule.builtin) {
+                · <button type="button" class="link" (click)="remove(rule)">Elimina</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</ng-template>
+
+<h2 class="section-title">Le tue regole</h2>
+@if (ownRules().length > 0) {
+  <ng-container *ngTemplateOutlet="rulesTable; context: { $implicit: ownRules() }" />
+} @else {
+  <p class="secondary">
+    Nessuna regola tua: creane una qui sopra, oppure da un movimento ("Crea una regola" nella sua
+    scheda).
+  </p>
+}
+
+<details class="builtin-rules">
+  <summary>Regole di partenza ({{ builtinRules().length }})</summary>
+  <p class="hint">
+    Vengono con l'app e riconoscono i movimenti tipici di banche e investimenti. Puoi disattivarle o
+    cambiarne la priorità; non si eliminano.
+  </p>
+  <ng-container *ngTemplateOutlet="rulesTable; context: { $implicit: builtinRules() }" />
+</details>

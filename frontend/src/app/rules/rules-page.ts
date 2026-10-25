@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -44,7 +44,7 @@ const NEW_RULE: RuleRequest = {
  */
 @Component({
   selector: 'app-rules-page',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
+  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, NgTemplateOutlet],
   templateUrl: './rules-page.html',
 })
 export class RulesPage implements OnInit {
@@ -65,6 +65,17 @@ export class RulesPage implements OnInit {
   protected readonly amountSignLabels = AMOUNT_SIGN_LABELS;
 
   protected readonly rules = signal<Rule[]>([]);
+  /** Le regole create dall'utente, e quelle che vengono con l'app (in una sezione da aprire). */
+  protected readonly ownRules = computed(() => this.rules().filter((r) => !r.builtin));
+  protected readonly builtinRules = computed(() => this.rules().filter((r) => r.builtin));
+
+  /**
+   * La variabile di un ng-template (let-list) per TypeScript non ha un tipo: passando di qui torna un elenco di regole,
+   * e il template controlla di nuovo i nomi dei campi.
+   */
+  protected asRules(list: Rule[]): Rule[] {
+    return list;
+  }
   protected readonly editing = signal<Rule | null>(null); // la regola in modifica; null = regola nuova
   protected readonly preview = signal<RulePreview | null>(null);
   protected readonly message = signal<string | null>(null);

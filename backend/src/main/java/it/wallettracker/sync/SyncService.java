@@ -102,16 +102,18 @@ public class SyncService {
             return new AccountSync(result, null);
         } catch (RestClientResponseException e) {
             // Errore previsto: la banca o Enable Banking hanno risposto con un errore (es. 429, troppe letture).
-            error = "HTTP " + e.getStatusCode().value() + " " + e.getResponseBodyAsString();
-            log.warn("{}: importazione non riuscita: {}", account.getName(), error);
+            // Nel log il codice e la risposta; all'utente una frase (SyncErrors).
+            log.warn("{}: importazione non riuscita: HTTP {} {}", account.getName(), e.getStatusCode().value(),
+                    e.getResponseBodyAsString());
+            error = SyncErrors.describe(e);
         } catch (RestClientException e) {
             // Errore previsto: nessuna risposta (rete assente, Enable Banking non raggiungibile...).
-            error = "Enable Banking non raggiungibile: " + e.getMessage();
-            log.warn("{}: importazione non riuscita: {}", account.getName(), error);
+            log.warn("{}: importazione non riuscita: {}", account.getName(), e.getMessage());
+            error = SyncErrors.describe(e);
         } catch (RuntimeException e) {
             // Errore imprevisto (un bug...): lo registriamo con tutti i dettagli (lo "stack trace").
-            error = e.getClass().getSimpleName() + ": " + e.getMessage();
             log.error("{}: importazione non riuscita", account.getName(), e);
+            error = SyncErrors.describe(e);
         }
         // Salviamo anche la data del tentativo fallito: così non riproviamo prima del prossimo intervallo
         // (riprovare subito dopo un 429 servirebbe solo a prenderne un altro).

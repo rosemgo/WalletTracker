@@ -2,11 +2,12 @@ import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
 import { Account, Budget, BudgetRequest, Category } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { addMonths, BudgetPage, monthOf } from './budget-page';
+import { addMonths, BudgetPage, monthOf, paceSentence } from './budget-page';
 
 const CATEGORIES: Category[] = [
   { id: 1, name: 'Spesa alimentare', kind: 'EXPENSE', builtin: true, uses: 0 },
@@ -50,6 +51,7 @@ describe('BudgetPage', () => {
   const updated: [number, BudgetRequest][] = [];
   let accounts: Partial<Account>[];
   let duplicate: boolean;
+  let budgetList: Budget[];
 
   beforeEach(() => {
     registerLocaleData(localeIt);
@@ -58,10 +60,11 @@ describe('BudgetPage', () => {
     updated.length = 0;
     accounts = [{ currency: 'EUR' }];
     duplicate = false;
+    budgetList = [GROCERIES, TRAVEL];
     const fakeApi: Partial<WalletApi> = {
       budgets: (month: string) => {
         requestedMonths.push(month);
-        return of([GROCERIES, TRAVEL]);
+        return of(budgetList);
       },
       categories: () => of(CATEGORIES),
       accounts: () => of(accounts as Account[]),
@@ -81,6 +84,7 @@ describe('BudgetPage', () => {
     TestBed.configureTestingModule({
       imports: [BudgetPage],
       providers: [
+        provideRouter([]),
         { provide: WalletApi, useValue: fakeApi },
         { provide: LOCALE_ID, useValue: 'it-IT' },
       ],
@@ -106,22 +110,58 @@ describe('BudgetPage', () => {
     select.dispatchEvent(new Event('change'));
   }
 
-  it('shows each budget with its status as icon and words, and how much is left', async () => {
+  it('shows the exceeded budgets first, each with its status as icon and words and how much is left', async () => {
     const fixture = TestBed.createComponent(BudgetPage);
     await fixture.whenStable();
     const cards = (fixture.nativeElement as HTMLElement).querySelectorAll('.budget');
 
     expect(requestedMonths).toEqual([monthOf(new Date())]);
-    expect(cards[0].textContent).toContain('Quasi esaurito');
-    expect(cards[0].textContent).toMatch(/restano 80,00\s€/);
-    expect((cards[0].querySelector('.meter-fill') as HTMLElement).style.width).toBe('80%');
-    // Il segno "oggi": 200 di 400 = a metà della barra.
-    expect((cards[0].querySelector('.meter-today') as HTMLElement).style.left).toBe('50%');
-
-    expect(cards[1].textContent).toContain('Superato');
-    expect(cards[1].textContent).toMatch(/superato di 30,00\s€/);
+    // Prima il superato (Viaggi), poi il quasi esaurito (Spesa alimentare).
+    expect(cards[0].textContent).toContain('Superato');
+    expect(cards[0].textContent).toMatch(/superato di 30,00\s€/);
     // La barra non va oltre il 100%, anche se la spesa sì.
-    expect((cards[1].querySelector('.meter-fill') as HTMLElement).style.width).toBe('100%');
+    expect((cards[0].querySelector('.meter-fill') as HTMLElement).style.width).toBe('100%');
+
+    expect(cards[1].textContent).toContain('Quasi esaurito');
+    expect(cards[1].textContent).toMatch(/restano 80,00\s€/);
+    expect((cards[1].querySelector('.meter-fill') as HTMLElement).style.width).toBe('80%');
+    // Il segno del ritmo: 200 di 400 = a metà della barra; e la frase.
+    expect((cards[1].querySelector('.meter-today') as HTMLElement).style.left).toBe('50%');
+    expect(cards[1].querySelector('.pace')?.textContent).toMatch(/120\s€ sopra il ritmo di oggi/);
+    // Il nome della categoria apre la sua pagina, nel mese guardato.
+    expect(cards[1].querySelector('a.budget-name')?.getAttribute('href')).toBe(
+      `/analisi/categoria/1?mese=${monthOf(new Date())}`,
+    );
+  });
+
+  it('sums all the budgets on top, with the pace of the month', async () => {
+    const fixture = TestBed.createComponent(BudgetPage);
+    await fixture.whenStable();
+    const total = (fixture.nativeElement as HTMLElement).querySelector(
+      '.budget-total',
+    ) as HTMLElement;
+
+    expect(total.querySelector('.big-figure')?.textContent).toMatch(/450\s€/);
+    expect(total.textContent?.replace(/\s+/g, ' ')).toMatch(
+      /su 500\s€ · 50\s€ sopra il ritmo di oggi/,
+    );
+  });
+
+  it('does not add up euros and dollars', async () => {
+    budgetList = [GROCERIES, { ...TRAVEL, currency: 'USD' }];
+    const fixture = TestBed.createComponent(BudgetPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('.budget-total')).toBeNull();
+    expect(page.querySelectorAll('.budget').length).toBe(2);
+  });
+
+  it('puts the pace into words', () => {
+    const euros = (v: number) => `${v} €`;
+    expect(paceSentence(203, 200, euros)).toBe('In linea con il ritmo di oggi.');
+    expect(paceSentence(150, 200, euros)).toBe('50 € sotto il ritmo di oggi.');
+    expect(paceSentence(260, 200, euros)).toContain('60 € sopra il ritmo di oggi');
   });
 
   it('moves between months, but not past the current one', async () => {
@@ -138,6 +178,9 @@ describe('BudgetPage', () => {
     expect(requestedMonths[1]).toBe(addMonths(monthOf(new Date()), -1));
     expect(next.disabled).toBe(false);
     expect(page.querySelector('.meter-today')).toBeNull(); // in un mese passato non c'è "oggi"
+    // Un mese passato si giudica intero: quanti budget rispettati, e la media dei tre mesi prima.
+    expect(page.querySelector('.budget-total')?.textContent).toContain('Rispettati 1 su 2.');
+    expect(page.querySelector('.pace')?.textContent).toMatch(/Nei tre mesi prima, in media 150\s€/);
   });
 
   it('creates a budget, accepting the Italian decimal comma', async () => {
@@ -181,9 +224,13 @@ describe('BudgetPage', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
+    // "Modifica" nella scheda della Spesa alimentare (la seconda: prima c'è il budget superato).
+    const groceries = Array.from(page.querySelectorAll('.budget')).find((card) =>
+      card.textContent?.includes('Spesa alimentare'),
+    ) as HTMLElement;
     (
-      Array.from(page.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'modifica',
+      Array.from(groceries.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Modifica',
       ) as HTMLButtonElement
     ).click();
     await fixture.whenStable();

@@ -105,7 +105,7 @@ class SyncServiceTest {
         Round round = syncService.syncAllInBackground();
 
         assertThat(round).isEqualTo(new Round(1, 1, 0));
-        assertThat(reload(failing).getLastSyncError()).startsWith("HTTP 429");
+        assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
         assertThat(reload(working).getLastSyncError()).isNull();
         assertThat(reload(working).getLastSyncAt()).isNotNull();
     }

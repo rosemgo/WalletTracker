@@ -1,6 +1,7 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CurrencyPipe, formatCurrency, formatDate } from '@angular/common';
+import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { Budget, BudgetStatus, Category } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -12,21 +13,30 @@ const STATUS: Record<BudgetStatus, { icon: string; label: string }> = {
   OVER: { icon: '✕', label: 'Superato' },
 };
 
+/** L'ordine delle schede: prima quello che chiede attenzione (superati, poi quasi esauriti). */
+const URGENCY: Record<BudgetStatus, number> = { OVER: 0, WARNING: 1, OK: 2 };
+
+/** Sotto questa differenza (in euro) si è "in linea con il ritmo". */
+const SAME_PACE = 5;
+
 /**
- * I budget mensili: per ogni categoria, quanto hai speso nel mese rispetto al budget.
+ * I budget mensili (docs/39): per ogni categoria, quanto hai speso nel mese rispetto al budget e al **ritmo** (quanto
+ * avresti speso finora spendendo in modo regolare). In cima il totale; le schede da guardare per prime vengono prima.
  *
  * Il modulo per creare o modificare un budget usa i Reactive Forms, come la pagina delle regole.
  */
 @Component({
   selector: 'app-budget-page',
-  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule],
+  imports: [CurrencyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './budget-page.html',
 })
 export class BudgetPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly locale = inject(LOCALE_ID);
 
   protected readonly statusInfo = STATUS;
+  protected readonly Math = Math; // per Math.min nel template
   protected readonly thisMonth = monthOf(new Date());
 
   protected readonly month = signal(this.thisMonth);
@@ -44,6 +54,45 @@ export class BudgetPage implements OnInit {
 
   /** Il mese in corso è quello mostrato? Allora ha senso il segno "oggi" sulle barre. */
   protected readonly isCurrentMonth = computed(() => this.month() === this.thisMonth);
+
+  /** "Ottobre 2026". */
+  protected readonly monthTitle = computed(() => {
+    const text = formatDate(`${this.month()}-01`, 'MMMM y', this.locale);
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  });
+
+  /** Le schede in ordine: superati, quasi esauriti, nei limiti; a parità, per nome. */
+  protected readonly sorted = computed(() =>
+    [...this.budgets()].sort(
+      (a, b) => URGENCY[a.status] - URGENCY[b.status] || a.category.localeCompare(b.category),
+    ),
+  );
+
+  /**
+   * Il totale di tutti i budget del mese, se sono nella stessa valuta (sommare euro e dollari non avrebbe senso):
+   * speso, budget, e dove dovresti essere oggi.
+   */
+  protected readonly total = computed(() => {
+    const budgets = this.budgets();
+    if (budgets.length === 0 || new Set(budgets.map((b) => b.currency)).size > 1) {
+      return null;
+    }
+    const sum = (pick: (b: Budget) => number) => budgets.reduce((t, b) => t + pick(b), 0);
+    const total = {
+      currency: budgets[0].currency,
+      spent: sum((b) => b.spent),
+      monthlyAmount: sum((b) => b.monthlyAmount),
+      expectedSoFar: sum((b) => b.expectedSoFar),
+      kept: budgets.filter((b) => b.status !== 'OVER').length,
+      count: budgets.length,
+    };
+    return {
+      ...total,
+      sentence: this.isCurrentMonth()
+        ? paceSentence(total.spent, total.expectedSoFar, (v) => this.euros(v, total.currency))
+        : `Rispettati ${total.kept} su ${total.count}.`,
+    };
+  });
 
   /**
    * Il modulo. L'importo accetta al massimo due decimali, come i centesimi: lo stesso vincolo del backend
@@ -93,6 +142,14 @@ export class BudgetPage implements OnInit {
     return Math.min(budget.expectedSoFar / budget.monthlyAmount, 1) * 100;
   }
 
+  /** La frase del ritmo di un budget, o per un mese passato la media dei tre mesi prima. */
+  protected budgetNote(budget: Budget): string {
+    const euros = (v: number) => this.euros(v, budget.currency);
+    return this.isCurrentMonth()
+      ? paceSentence(budget.spent, budget.expectedSoFar, euros)
+      : `Nei tre mesi prima, in media ${euros(budget.averageLast3Months)}.`;
+  }
+
   edit(budget: Budget): void {
     this.editing.set(budget);
     this.message.set(null);
@@ -101,6 +158,8 @@ export class BudgetPage implements OnInit {
       monthlyAmount: budget.monthlyAmount,
       currency: budget.currency,
     });
+    // Il modulo è in fondo alla pagina: sul telefono lo portiamo in vista (se il browser sa farlo).
+    document.getElementById('budget-form')?.scrollIntoView?.({ behavior: 'smooth' });
   }
 
   cancel(): void {
@@ -156,6 +215,16 @@ export class BudgetPage implements OnInit {
     return control.invalid && control.touched;
   }
 
+  private euros(value: number, currency: string): string {
+    return formatCurrency(
+      value,
+      this.locale,
+      currency === 'EUR' ? '€' : currency,
+      currency,
+      '1.0-0',
+    );
+  }
+
   private load(): void {
     this.loading.set(true);
     this.api.budgets(this.month()).subscribe({
@@ -180,4 +249,22 @@ export function monthOf(date: Date): string {
 export function addMonths(month: string, delta: number): string {
   const [year, monthNumber] = month.split('-').map(Number);
   return monthOf(new Date(year, monthNumber - 1 + delta, 1));
+}
+
+/**
+ * Il ritmo in parole: quanto hai speso rispetto a quanto avresti speso finora spendendo in modo regolare. Esportata
+ * per i test.
+ */
+export function paceSentence(
+  spent: number,
+  expected: number,
+  euros: (v: number) => string,
+): string {
+  const difference = spent - expected;
+  if (Math.abs(difference) < SAME_PACE) {
+    return 'In linea con il ritmo di oggi.';
+  }
+  return difference > 0
+    ? `${euros(difference)} sopra il ritmo di oggi: rallenta per restare nel budget.`
+    : `${euros(-difference)} sotto il ritmo di oggi.`;
 }
