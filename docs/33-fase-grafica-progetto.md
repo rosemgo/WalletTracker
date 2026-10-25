@@ -19,6 +19,7 @@ claude.ai (link privato, nella conversazione).
 | J | le scelte tecniche da fare |
 | K | i passi successivi |
 | L | Esplora: come Revolut, ma meglio (telefono e PC) |
+| M | il dettaglio di un movimento: come N26, ma meglio |
 
 ---
 
@@ -55,6 +56,8 @@ ma la spesa **accumulata** del mese contro quella di un mese tipico (la media de
 - **Esplora**: spese, entrate o netto, per settimana, mese, 6 mesi o anno, raggruppate per categoria, esercente o
   conto; si tocca una barra per vedere quel periodo e una categoria per vederne i movimenti (Parte L);
 - Dettaglio categoria: andamento, budget con il ritmo, dove (gli esercenti), movimenti;
+- **Dettaglio movimento**: tutti i dati di un movimento, la categoria da cambiare con un tocco (e perché ha quella),
+  gli altri movimenti dello stesso esercente (Parte M);
 - Budget: le barre con il ritmo del mese (esistono già: vanno ridisegnate);
 - **Modalità discreta**: un tocco nasconde gli importi (in metro o in ufficio, qualcuno guarda lo schermo);
 - **Installabile sul telefono** (PWA): icona nella schermata Home, si apre a schermo intero come un'app.
@@ -234,6 +237,8 @@ Le schermate chiedono dati già "pronti", calcolati dal backend, non migliaia di
 | `GET /api/overview?month=2026-10` | Oggi | speso finora; la spesa accumulata giorno per giorno; il mese tipico (media degli ultimi N mesi, giorno per giorno); categorie del mese con il "solito"; prossime uscite ricorrenti; conteggi da sistemare |
 | `GET /api/analysis?from=…&to=…` | Analisi | spese ed entrate per mese; categorie del periodo; spesa di ogni giorno di un mese |
 | `GET /api/categories/{id}/overview` | Una categoria | il mese, il solito, il budget e il ritmo, 12 mesi, gli esercenti |
+| `GET /api/transactions/{id}` | Dettaglio movimento | tutti i campi, la categoria con la sua **origine** (scelta da te, regola, suggerimento), i dati originali della banca, il riepilogo dell'esercente (quante volte, quanto, ultimi movimenti) |
+| `PUT /api/transactions/{id}/manual-category` con `alsoSimilar` | Dettaglio movimento | cambia la categoria; con `alsoSimilar` anche gli altri movimenti dello stesso esercente che avevano la vecchia categoria; restituisce quanti ne ha cambiati, per l'"Annulla" |
 | `GET /api/explore?metric=…&period=…&at=…&by=…&category=…` | Esplora | le barre del periodo, la media per unità (al giorno, a settimana, al mese), i gruppi del periodo scelto con il loro "solito", e, con una categoria, i movimenti per giorno |
 
 Il "solito" va definito bene: per esempio la **media degli ultimi 6 mesi completi**, escludendo trasferimenti tra
@@ -347,4 +352,57 @@ deve imparare due app.
   dettaglio categoria e in Analisi.
 - Lo stato della pagina (che cosa, periodo, colonna, filtro) nell'**indirizzo** (`/esplora?cosa=spese&periodo=mese`):
   così il tasto "indietro" del telefono funziona e una vista si può salvare tra i preferiti.
+
+---
+
+## Parte M: il dettaglio di un movimento, come N26 ma meglio
+
+Nell'app N26 si tocca un movimento e si apre una pagina con tutti i suoi dati, dove si può **cambiare la categoria**
+(N26 la sceglie sempre da solo; l'utente può solo correggerla). Nel canvas: **Dettaglio movimento** (giorno e notte,
+da provare con **Play**; ci si arriva anche toccando "Amazon.it" in Movimenti) e **PC · Movimenti con il dettaglio**.
+
+### M1. Che cosa mostra N26
+
+Il logo e il nome dell'esercente, l'importo, data e ora, lo stato; poi i **dettagli** (categoria, conto, tipo di
+transazione, nome ufficiale dell'esercente, un interruttore "escludi dalle spese"), le **note**, i **tag**, le
+informazioni aggiuntive (carta usata, importo nella valuta originale, cambio) e l'aiuto. La categoria si cambia da
+un elenco a tutto schermo, "Scegli una categoria", e vale solo per quel movimento.
+
+### M2. Dove WalletTracker fa meglio
+
+| | N26 | WalletTracker |
+|---|---|---|
+| Perché quella categoria | non si sa | scritto sotto la categoria: **scelta da te**, **regola** "…", **suggerita dall'IA** e confermata |
+| Gli altri movimenti uguali | si correggono uno per uno | dopo il cambio: "C'è un altro movimento di Amazon.it in «Shopping». Lo sposti anche?" con **Annulla** |
+| Il futuro | ogni nuovo movimento va ricorretto | ci sono le **regole**; l'app la propone solo quando ha senso (da Amazon.it si compra di tutto: lì la regola non la propone, e lo dice) |
+| Elenco delle categorie | lungo, in ordine alfabetico | in cima **quelle già usate per quell'esercente**, poi spese ed entrate separate, con la ricerca |
+| Escludere dai totali | un interruttore "escludi" | **Conta come**: spesa, entrata, giroconto tra i tuoi conti, da non contare; ognuna con una riga che dice che effetto ha |
+| L'esercente | il nome ufficiale | **quante volte, quanto, in media**, gli ultimi movimenti e "Tutti i movimenti di Amazon.it" (la ricerca, `docs/32`) |
+| I dati della banca | nascosti | "Mostra i dati originali della banca": quello che è arrivato davvero (utile quando una causale è strana) |
+| PC | non c'è | la lista a sinistra e il dettaglio a destra: si scorre e si corregge senza cambiare pagina |
+
+### M3. La schermata (telefono)
+
+1. **La testa**: iniziale dell'esercente, nome, importo grande, data e conto, stato (contabilizzato o in attesa).
+2. **Categoria** con "Cambia" e la riga del **perché**; sotto, **Conta come**.
+3. Dopo un cambio, la **proposta per i movimenti simili** (solo se ce ne sono) e poi la conferma con **Annulla**.
+4. **Da Amazon.it**: il riepilogo dell'esercente e gli ultimi movimenti.
+5. **Dettagli**: conto, controparte, causale completa, data contabile e data valuta, da dove è arrivato
+   (sincronizzazione della banca, file CSV, file di Trade Republic); in fondo i dati originali, da aprire.
+6. **Aggiungi una nota** (vedi M4).
+
+La scelta della categoria è un **foglio dal basso** (bottom sheet): si chiude toccando fuori o con la ✕, resta a
+portata di pollice, e la pagina sotto non si perde.
+
+### M4. Che cosa c'è già e che cosa manca
+
+- Già c'è: tutti i campi del movimento (anche `rawJson`), la categoria manuale (`PUT …/manual-category`), il tipo
+  manuale (`PUT …/manual-type`), la regola che ha deciso (`ruleId`), le regole e i suggerimenti.
+- Manca: l'API del dettaglio con l'origine della categoria e il riepilogo dell'esercente; lo spostamento "anche i
+  simili" (con l'Annulla); le **note**, che chiedono una colonna nuova (una migrazione, testo breve, solo per te,
+  cercabile con la ricerca). Le note sono una proposta: si possono anche lasciare per dopo.
+- Non prendiamo da N26 i **tag**: con categorie ben fatte e le note sono un terzo modo di classificare, e poco usato.
+
+Nota: alcune bozze precedenti usano nomi di categoria inventati ("Casa e utenze", "Abbonamenti"); le schermate vere
+useranno le categorie dell'app (`V12__categorie.sql`), come il dettaglio movimento.
 
