@@ -11,12 +11,19 @@ import it.wallettracker.account.Account;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/** Accesso alla tabella {@code bank_transaction}. */
-public interface BankTransactionRepository extends JpaRepository<BankTransaction, Long> {
+/**
+ * Accesso alla tabella {@code bank_transaction}.
+ *
+ * <p>{@link JpaSpecificationExecutor} aggiunge {@code findAll(Specification, Pageable)}: l'elenco dei movimenti con i
+ * filtri e la ricerca, costruiti in Java da {@link TransactionSearch} (docs/32, parte G).
+ */
+public interface BankTransactionRepository extends JpaRepository<BankTransaction, Long>,
+        JpaSpecificationExecutor<BankTransaction> {
 
     boolean existsByAccountAndDedupKey(Account account, String dedupKey);
 
@@ -102,66 +109,6 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
         long getUses();
     }
 
-    /**
-     * I movimenti dal più recente, con due filtri facoltativi.
-     *
-     * <p>Il trucco {@code (:accountId IS NULL OR ...)}: se il parametro è null la condizione è sempre vera,
-     * cioè il filtro è "spento". Così una sola query copre tutte le combinazioni di filtri.
-     *
-     * <p>Il parametro {@link Pageable} fa aggiungere a Spring Data {@code LIMIT} e {@code OFFSET}, e la
-     * query di conteggio per il totale. La {@code """...""" } è un "text block" di Java: una stringa su
-     * più righe.
-     *
-     * <p>{@code LEFT JOIN FETCH}: carica le categorie insieme ai movimenti, nella stessa query, perché la
-     * dashboard ne mostra il nome. Senza, Hibernate farebbe una query in più per ogni categoria (il problema
-     * N+1, docs/09).
-     *
-     * <p>{@code cast(:fromDate as LocalDate)}: con una data nulla, PostgreSQL non saprebbe di che tipo è il
-     * parametro di {@code ? IS NULL} ("could not determine data type of parameter"); il cast glielo dice.
-     *
-     * <p>La query di conteggio delle pagine ({@code countQuery}) Spring Data saprebbe ricavarla
-     * da sola, ma la scriviamo noi: per contare i movimenti la categoria serve solo alla ricerca, quindi un join
-     * semplice, senza FETCH.
-     *
-     * <p>La ricerca (docs/32): {@code :pattern} è già pronto ("%netflix%", in minuscolo, con i caratteri speciali di
-     * LIKE protetti da {@code \}); {@code lower(coalesce(...))} rende la ricerca indifferente a maiuscole e
-     * minuscole e ai campi vuoti. Un importo ({@code :amount}) si cerca con e senza segno. {@code :hasText} e
-     * {@code :hasAmount} spengono le due parti, come il trucco di sopra.
-     */
-    @Query(value = """
-            SELECT t FROM BankTransaction t
-            LEFT JOIN FETCH t.category c
-            LEFT JOIN FETCH t.manualCategory
-            WHERE (:accountId IS NULL OR t.account.id = :accountId)
-              AND (:type IS NULL OR t.type = :type)
-              AND (:uncategorized = false OR t.category IS NULL)
-              AND (cast(:fromDate as LocalDate) IS NULL OR t.bookingDate >= :fromDate)
-              AND (cast(:toDate as LocalDate) IS NULL OR t.bookingDate <= :toDate)
-              AND (:hasText = false
-                   OR lower(coalesce(t.description, '')) LIKE :pattern ESCAPE '\\'
-                   OR lower(coalesce(t.counterparty, '')) LIKE :pattern ESCAPE '\\'
-                   OR lower(coalesce(c.name, '')) LIKE :pattern ESCAPE '\\'
-                   OR (:hasAmount = true AND (t.amount = :amount OR t.amount = -:amount)))
-            ORDER BY t.bookingDate DESC, t.id DESC
-            """,
-            countQuery = """
-            SELECT COUNT(t) FROM BankTransaction t
-            LEFT JOIN t.category c
-            WHERE (:accountId IS NULL OR t.account.id = :accountId)
-              AND (:type IS NULL OR t.type = :type)
-              AND (:uncategorized = false OR t.category IS NULL)
-              AND (cast(:fromDate as LocalDate) IS NULL OR t.bookingDate >= :fromDate)
-              AND (cast(:toDate as LocalDate) IS NULL OR t.bookingDate <= :toDate)
-              AND (:hasText = false
-                   OR lower(coalesce(t.description, '')) LIKE :pattern ESCAPE '\\'
-                   OR lower(coalesce(t.counterparty, '')) LIKE :pattern ESCAPE '\\'
-                   OR lower(coalesce(c.name, '')) LIKE :pattern ESCAPE '\\'
-                   OR (:hasAmount = true AND (t.amount = :amount OR t.amount = -:amount)))
-            """)
-    Page<BankTransaction> search(@Param("accountId") Long accountId, @Param("type") TransactionType type,
-            @Param("uncategorized") boolean uncategorized, @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate, @Param("hasText") boolean hasText, @Param("pattern") String pattern,
-            @Param("hasAmount") boolean hasAmount, @Param("amount") BigDecimal amount, Pageable pageable);
 
     /**
      * I totali dei movimenti di un periodo, raggruppati per mese, valuta e tipo: una riga per ogni

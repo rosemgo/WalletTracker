@@ -12,6 +12,7 @@ agli altri filtri (conto, tipo, periodo, senza categoria) e con le pagine.
 | D | la pagina: aspettare che l'utente smetta di scrivere, e le risposte fuori ordine |
 | E | i test, e la prova nel browser |
 | F | esercizi guidati |
+| G | aggiornamento: più parole, con una Specification |
 
 ---
 
@@ -27,8 +28,9 @@ Se il testo è un **importo** ("12,99", "12.99", "-12,99 €", "1.234,56"), si t
 **con qualsiasi segno**: cercando "12,99" escono l'abbonamento Netflix (−12,99) e il rimborso Zalando (+12,99).
 Le due ricerche si sommano: "2026" trova le causali che contengono "2026" e i movimenti da 2.026,00 €.
 
-La ricerca è "contiene": una parola sola o un pezzo di testo. "netflix amsterdam" cerca proprio quel pezzo, con lo
-spazio in mezzo (Esercizio 1).
+Con **più parole** devono esserci **tutte**, in **qualsiasi ordine** e in **qualsiasi campo** (Parte G):
+"netflix amsterdam" e "amsterdam netflix" trovano "NETFLIX.COM AMSTERDAM"; "canone bancari" trova la causale
+"Canone Mensile conto" nella categoria "Costi bancari"; "netflix 12,99" trova i Netflix da 12,99 €.
 
 ---
 
@@ -46,7 +48,8 @@ solo lavoro sprecato).
 
 ### B2. La query
 
-È la stessa query dell'elenco (`BankTransactionRepository.search`, `docs/09`) con una condizione in più:
+Nella prima versione era la stessa `@Query` dell'elenco (`BankTransactionRepository.search`, `docs/09`) con una
+condizione in più; ora la query si costruisce in Java (Parte G), ma le idee sono le stesse. Per una parola:
 
 ```sql
 AND (:hasText = false
@@ -73,7 +76,7 @@ e non quelli trovati.
 ### B3. LIKE e i suoi caratteri speciali
 
 In LIKE due caratteri non sono lettere: `%` vuol dire "qualsiasi testo" e `_` "un carattere qualsiasi". Il servizio
-costruisce il modello (`TransactionService.likePattern`):
+costruisce il modello (`TransactionSearch.likePattern`, una volta per ogni parola):
 
 ```
 "netflix"  →  "%netflix%"            (contiene "netflix")
@@ -95,7 +98,7 @@ LIKE, non alla sicurezza.
 
 ## Parte C: gli importi
 
-`TransactionService.amountIn` riconosce un importo con un'espressione regolare:
+`TransactionSearch.amountIn` riconosce un importo con un'espressione regolare:
 
 ```
 -?( \d{1,3}(\.\d{3})+(,\d{1,2})?  |  \d+([.,]\d{1,2})? )
@@ -162,10 +165,11 @@ due movimenti; "12,99" → i due Netflix e il rimborso Zalando; "costi banc" →
 
 ## Parte F: esercizi guidati
 
-### Esercizio 1: più parole
+### Esercizio 1: più parole (fatto: Parte G)
 
-Cercando "netflix amsterdam" si trova la causale "NETFLIX.COM AMSTERDAM"? E "amsterdam netflix"? Come faresti a
-trovare i movimenti che contengono **tutte** le parole, in qualsiasi ordine?
+Con la prima versione (un pezzo di testo unico), cercando "netflix amsterdam" si trovava la causale
+"NETFLIX.COM AMSTERDAM"? E "amsterdam netflix"? Come faresti a trovare i movimenti che contengono **tutte** le
+parole, in qualsiasi ordine?
 
 <details>
 <summary>Soluzione</summary>
@@ -204,3 +208,95 @@ Importa CSV con `?conto=`) e lo mette in `text`; a ogni ricerca aggiorna l'indir
 `router.navigate([], { queryParams: { cerca: testo }, replaceUrl: true })`. `replaceUrl` evita di riempire la
 cronologia del browser con una voce per ogni ricerca.
 </details>
+
+---
+
+## Parte G: aggiornamento, più parole con una Specification
+
+### G1. Perché una `@Query` non basta più
+
+Con una parola la condizione era una sola. Con più parole ce n'è **una per parola**: "netflix amsterdam" ne vuole
+due, "netflix amsterdam 12,99" tre. Una `@Query` è scritta una volta per tutte e non può cambiare il numero di
+condizioni. Si potrebbe fissare un massimo (dieci parametri, quelli non usati "spenti"), ma è una query lunghissima
+e fragile.
+
+La soluzione di Spring Data JPA è la **Specification**: una condizione costruita **in Java**, con il **Criteria API**
+di JPA. Il repository estende anche `JpaSpecificationExecutor`, che aggiunge `findAll(Specification, Pageable)`; la
+Specification la costruisce `TransactionSearch.of(filtro, parole)`.
+
+### G2. Com'è fatta
+
+Una Specification è una funzione che riceve tre oggetti e restituisce una condizione (`Predicate`):
+
+```java
+(root, query, cb) -> {
+    List<Predicate> conditions = new ArrayList<>();
+    if (filter.accountId() != null) {
+        conditions.add(cb.equal(root.get("account").get("id"), filter.accountId()));
+    }
+    ...
+    for (String word : words) {
+        conditions.add(wordAnywhere(cb, word, ...));      // una condizione per parola
+    }
+    return cb.and(conditions.toArray(Predicate[]::new));  // tutte insieme: AND
+}
+```
+
+- `root` è il movimento (`BankTransaction`): `root.get("description")` è la sua causale;
+- `cb` (`CriteriaBuilder`) costruisce le condizioni: `cb.equal`, `cb.like`, `cb.lower`, `cb.coalesce`, `cb.or`,
+  `cb.and`;
+- `query` è la query intera: serve a sapere se è quella dei risultati o quella del conteggio (G4).
+
+Un vantaggio in più: un filtro **spento non c'è proprio** nella query (prima era `:accountId IS NULL OR ...`), e
+sparisce anche il problema del tipo dei parametri null (il `cast` delle date).
+
+### G3. Una parola
+
+`wordAnywhere` costruisce, per ogni parola, "è nella causale **OR** nella controparte **OR** nel nome della categoria
+(**OR** è l'importo, se la parola è un importo)". Le parole poi si uniscono con **AND**. L'SQL che Hibernate genera
+per "netflix 12,99" (preso dal log, `logging.level.org.hibernate.SQL=debug`):
+
+```sql
+select ... from bank_transaction bt1_0
+  left join category c1_0 on c1_0.id = bt1_0.category_id
+  left join category mc1_0 on mc1_0.id = bt1_0.manual_category_id
+where (lower(coalesce(bt1_0.description, ?)) like ? escape ''
+       or lower(coalesce(bt1_0.counterparty, ?)) like ? escape ''
+       or lower(coalesce(c1_0.name, ?)) like ? escape '')
+  and (lower(coalesce(bt1_0.description, ?)) like ? escape ''
+       or lower(coalesce(bt1_0.counterparty, ?)) like ? escape ''
+       or lower(coalesce(c1_0.name, ?)) like ? escape ''
+       or bt1_0.amount = ? or bt1_0.amount = ?)
+order by bt1_0.booking_date desc, bt1_0.id desc
+offset ? rows fetch first ? rows only
+```
+
+Tutti i valori sono `?`: parametri, mai testo incollato. E c'è **una query sola**: le categorie arrivano con i
+movimenti (i due `left join`), senza le query in più del problema N+1.
+
+### G4. Il "fetch" e il conteggio
+
+Per mostrare il nome della categoria la carichiamo insieme al movimento: `root.fetch("category", LEFT)`, l'equivalente
+di `LEFT JOIN FETCH`. Ma Spring Data, per sapere quante pagine ci sono, fa anche una query di **conteggio**
+(`select count(...)`), e in un conteggio non si può "caricare" niente: Hibernate darebbe errore. Per questo la
+Specification controlla `query.getResultType()`: se è `Long` (il conteggio) usa un join semplice, altrimenti il
+fetch. In tutti e due i casi ottiene un `Join` con cui cercare nel nome della categoria (`category.get("name")`).
+
+### G5. Le parole
+
+`TransactionSearch.words` divide il testo negli spazi (anche più spazi di fila), in minuscolo. Il simbolo "€" staccato
+si ignora e attaccato si toglie: "-12,99 €" e "12,99€" sono un importo. Al massimo **10 parole** (400 oltre), e il
+limite di 100 caratteri resta.
+
+### G6. L'ordine
+
+L'ordine dei risultati ora è nella richiesta di pagina: `PageRequest.of(pagina, dimensione, Sort.by(desc("bookingDate"),
+desc("id")))`. Spring Data lo trasforma in `order by`.
+
+### G7. Test
+
+| Test | Che cosa prova |
+|---|---|
+| `TransactionControllerTest.severalWordsMustAllBeThereInAnyOrderAndAnyField` | tutte le parole, in qualsiasi ordine; una parola nella causale e una nella categoria; una parola e un importo (anche con "€" staccato); spazi in più; troppe parole = 400 |
+| `TransactionControllerTest.theSearchTextIsSplitIntoWords` | come si divide il testo |
+| i test della Parte E | tutti ancora verdi: con una parola sola la ricerca fa esattamente quello di prima |

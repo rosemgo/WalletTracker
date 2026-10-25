@@ -234,16 +234,50 @@ class TransactionControllerTest {
     }
 
     @Test
+    void severalWordsMustAllBeThereInAnyOrderAndAnyField() {
+        Account account = account();
+        BankTransaction amsterdam = transaction(account, LocalDate.of(2026, 10, 3), "-12.99",
+                "PAGAMENTO CARTA NETFLIX.COM AMSTERDAM");
+        BankTransaction milano = transaction(account, LocalDate.of(2026, 10, 4), "-12.99", "NETFLIX MILANO");
+        BankTransaction fee = transaction(account, LocalDate.of(2026, 10, 11), "-2.00", "Canone Mensile conto");
+        BankTransaction pizza = transaction(account, LocalDate.of(2026, 10, 12), "-24.00", "PIZZERIA AMSTERDAM");
+        classificationService.classifyAll(); // il canone prende la categoria "Costi bancari"
+
+        // Tutte le parole, in qualsiasi ordine.
+        assertThat(ids("netflix amsterdam")).containsExactly(amsterdam.getId().intValue());
+        assertThat(ids("amsterdam netflix")).containsExactly(amsterdam.getId().intValue());
+        assertThat(ids("AMSTERDAM")).containsExactly(pizza.getId().intValue(), amsterdam.getId().intValue());
+        // Una parola nella causale, l'altra nella categoria.
+        assertThat(ids("canone bancari")).containsExactly(fee.getId().intValue());
+        // Una parola e un importo: "netflix" e 12,99 (anche con "€" staccato).
+        assertThat(ids("netflix 12,99 €")).containsExactly(milano.getId().intValue(), amsterdam.getId().intValue());
+        assertThat(ids("pizzeria 12,99")).isEmpty();
+        // Spazi in più tra le parole non contano.
+        assertThat(ids("  netflix    milano ")).containsExactly(milano.getId().intValue());
+        // Troppe parole: 400.
+        assertThat(mvc.get().uri("/api/transactions").queryParam("text", "a b c d e f g h i j k")).hasStatus(400);
+    }
+
+    @Test
+    void theSearchTextIsSplitIntoWords() {
+        assertThat(TransactionSearch.words("  Netflix   AMSTERDAM ")).containsExactly("netflix", "amsterdam");
+        assertThat(TransactionSearch.words("-12,99 €")).containsExactly("-12,99");
+        assertThat(TransactionSearch.words("12,99€")).containsExactly("12,99");
+        assertThat(TransactionSearch.words("   ")).isEmpty();
+        assertThat(TransactionSearch.words(null)).isEmpty();
+    }
+
+    @Test
     void amountsAreRecognizedInTheSearch() {
-        assertThat(TransactionService.amountIn("12,99")).isEqualByComparingTo("12.99");
-        assertThat(TransactionService.amountIn("12.99")).isEqualByComparingTo("12.99");
-        assertThat(TransactionService.amountIn("1.234,56")).isEqualByComparingTo("1234.56");
-        assertThat(TransactionService.amountIn("1.234")).isEqualByComparingTo("1234");
-        assertThat(TransactionService.amountIn("-45,50 €")).isEqualByComparingTo("45.50");
-        assertThat(TransactionService.amountIn("2026")).isEqualByComparingTo("2026");
-        assertThat(TransactionService.amountIn("netflix")).isNull();
-        assertThat(TransactionService.amountIn("12,999")).isNull();
-        assertThat(TransactionService.amountIn("")).isNull();
+        assertThat(TransactionSearch.amountIn("12,99")).isEqualByComparingTo("12.99");
+        assertThat(TransactionSearch.amountIn("12.99")).isEqualByComparingTo("12.99");
+        assertThat(TransactionSearch.amountIn("1.234,56")).isEqualByComparingTo("1234.56");
+        assertThat(TransactionSearch.amountIn("1.234")).isEqualByComparingTo("1234");
+        assertThat(TransactionSearch.amountIn("-45,50 €")).isEqualByComparingTo("45.50");
+        assertThat(TransactionSearch.amountIn("2026")).isEqualByComparingTo("2026");
+        assertThat(TransactionSearch.amountIn("netflix")).isNull();
+        assertThat(TransactionSearch.amountIn("12,999")).isNull();
+        assertThat(TransactionSearch.amountIn("")).isNull();
     }
 
     @Test
