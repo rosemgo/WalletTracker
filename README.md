@@ -96,6 +96,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 30. [Fase 3, passo 7c: l'IA nel cloud, con Google Gemini (chiave cifrata, consenso)](docs/30-fase-3-passo-7c-ia-nel-cloud.md)
 31. [Fase 3: completare i movimenti di Trade Republic con il suo file](docs/31-fase-3-trade-republic-completa-movimenti.md)
 32. [La ricerca nei movimenti: testo, categoria, importo](docs/32-ricerca-movimenti.md)
+33. [Fase grafica, passo 1: il progetto (funzionalità, schermate, grafici, stile)](docs/33-fase-grafica-progetto.md)
 
 ## Piano di lavoro
 
@@ -124,6 +125,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] file di Trade Republic anche per il conto collegato: completa causale e controparte dei movimenti già arrivati e aggiunge i mesi prima dello storico della banca, con anteprima e regole di partenza per le sue causali (`docs/31`)
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
+- [ ] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
 
 ## Comandi utili
