@@ -108,10 +108,12 @@ export interface ImportResult {
 export interface CompletionPreview {
   from: string; // il primo giorno del file, "2026-07-01"
   to: string;
+  bankFrom: string | null; // il primo giorno dei movimenti arrivati dalla banca
   fileRows: number; // le righe che muovono denaro
   skippedRows: number; // le operazioni sui titoli, senza denaro
   toComplete: Completion[];
-  alreadyComplete: number; // movimenti che hanno già controparte e causale
+  toAdd: CompletionNewMovement[]; // le righe più vecchie dello storico della banca, che diventano movimenti
+  alreadyComplete: number; // righe già fatte: movimenti con i testi, o aggiunti da un file caricato prima
   rowsWithoutMovement: CompletionFileRow[];
   movementsWithoutRow: CompletionMovement[];
 }
@@ -119,6 +121,15 @@ export interface CompletionPreview {
 /** Un movimento da completare, con i testi che riceve. */
 export interface Completion {
   transactionId: number;
+  date: string;
+  amount: number;
+  currency: string;
+  counterparty: string | null;
+  description: string | null;
+}
+
+/** Una riga del file che diventerà un movimento. */
+export interface CompletionNewMovement {
   date: string;
   amount: number;
   currency: string;
@@ -146,6 +157,7 @@ export interface CompletionMovement {
 /** La risposta di POST /api/imports/completion. */
 export interface CompletionResult {
   completed: number;
+  added: number;
   alreadyComplete: number;
 }
 

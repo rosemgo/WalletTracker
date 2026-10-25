@@ -31,6 +31,19 @@ class TradeRepublicCsvTest {
             "2026-10-06T10:00:00.000Z","2026-10-01","DEFAULT","DELIVERY","FREE_RECEIPT","STOCK","Alfa SpA","IT0000000001","-400.0000000000","","","","","","","","","FREE_RECEIPT IT0000000001","id-6","","","",""
             """;
 
+    /**
+     * Lo stesso file, ma più lungo: parte da maggio, prima dello storico della banca (nei test di CompletionControllerTest
+     * la banca ha dato i movimenti dal 1° luglio). Un acquisto di titoli (TRADING: commissione e tassa nel netto), una
+     * distribuzione di capitale, un bonifico senza counterparty_name, e un interesse a due giorni dal 1° luglio.
+     */
+    static final String LONG_CSV = HEADER + """
+
+            "2026-05-04T10:00:00.000Z","2026-05-04","DEFAULT","TRADING","BUY","STOCK","Beta SpA","IT0000000002","100.0000000000","10.0000000000","-1000.00","-1.00","-2.00","EUR","","","","Buy trade IT0000000002 BETA SPA, quantity: 100","id-10","","","",""
+            "2026-05-20T10:00:00.000000Z","2026-05-20","DEFAULT","CASH","DIVIDEND_EQUIVALENT_PAYMENT","STOCK","Beta SpA","IT0000000002","100.0000000000","","100.000000","","-26.00","EUR","","","","Capital Distribution for ISIN IT0000000002","id-11","","","",""
+            "2026-06-01T10:00:00.000000Z","2026-06-01","DEFAULT","CASH","TRANSFER_INBOUND","","","","","","500.000000","","","EUR","","","","Incoming transfer from MARIO ROSSI (IT00X0000000000000000000002)","id-12","","","",""
+            "2026-06-29T10:00:00.000000Z","2026-06-29","DEFAULT","CASH","INTEREST_PAYMENT","","","","","","5.000000","","","EUR","","","","Interest payment for payout collection bbbb-2222","id-13","","","",""
+            """ + CSV.substring(HEADER.length() + 1);
+
     static List<List<String>> lines(String csv) {
         return CsvReader.read(csv, ',');
     }
@@ -55,6 +68,23 @@ class TradeRepublicCsvTest {
                 new BigDecimal("-34.20"),    // il bollo: tutto nella colonna delle tasse
                 new BigDecimal("148.00"),    // 200,00 meno 52,00
                 new BigDecimal("-148.00"));  // l'annullamento
+    }
+
+    @Test
+    void buyingSecuritiesMovesMoneyToo() {
+        // Le righe TRADING hanno una categoria diversa da CASH, ma un importo: vanno lette (la prima versione le
+        // saltava). Il netto comprende commissione e tassa.
+        List<List<String>> all = lines(LONG_CSV);
+
+        TradeRepublicCsv.Reading reading = TradeRepublicCsv.read(all.getFirst(), all.subList(1, all.size()));
+
+        TradeRepublicCsv.Row buy = reading.rows().getFirst();
+        assertThat(buy.amount()).isEqualByComparingTo("-1003.00");
+        assertThat(buy.counterparty()).isEqualTo("Beta SpA");
+        assertThat(buy.transactionId()).isEqualTo("id-10");
+        assertThat(buy.cells()).containsEntry("symbol", "IT0000000002"); // la riga intera, per il raw_json
+        assertThat(reading.rows().get(2).counterparty()).isNull(); // bonifico senza counterparty_name né name
+        assertThat(reading.skipped()).isEqualTo(1);               // solo l'operazione sui titoli senza denaro
     }
 
     @Test

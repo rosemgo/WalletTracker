@@ -48,6 +48,26 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     List<BankTransaction> findTop15ByAccountOrderByBookingDateDescIdDesc(Account account);
 
+    /**
+     * Il primo giorno dei movimenti di un conto arrivati dalla <b>banca</b>, cioè senza quelli aggiunti da un file
+     * (impronta che inizia con {@code filePrefix}). Prima di quel giorno la banca non ha dato niente (docs/31).
+     */
+    @Query("SELECT MIN(t.bookingDate) FROM BankTransaction t WHERE t.account = :account AND t.status = :status"
+            + " AND t.dedupKey NOT LIKE :filePrefix")
+    LocalDate findFirstBankDate(@Param("account") Account account, @Param("status") TransactionStatus status,
+            @Param("filePrefix") String filePrefix);
+
+    /**
+     * I movimenti aggiunti da un file (impronta che inizia con {@code filePrefix}) con questo importo e valuta, in un
+     * periodo: per riconoscerli quando la banca li manda (TransactionImportService, docs/31).
+     */
+    @Query("SELECT t FROM BankTransaction t WHERE t.account = :account AND t.dedupKey LIKE :filePrefix"
+            + " AND t.amount = :amount AND t.currency = :currency AND t.bookingDate BETWEEN :from AND :to"
+            + " ORDER BY t.id")
+    List<BankTransaction> findFileMovements(@Param("account") Account account, @Param("filePrefix") String filePrefix,
+            @Param("amount") BigDecimal amount, @Param("currency") String currency, @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
     /** I movimenti di un conto in uno stato e in un periodo, in ordine (per completarli da un file, docs/31). */
     List<BankTransaction> findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(Account account,
             TransactionStatus status, LocalDate from, LocalDate to);

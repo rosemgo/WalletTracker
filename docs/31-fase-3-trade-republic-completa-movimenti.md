@@ -3,8 +3,9 @@
 **Obiettivo:** Trade Republic è collegato con Enable Banking, ma i suoi movimenti arrivano **senza causale né
 controparte**: solo data e importo. Senza testo, regole, suggerimenti e IA non hanno niente su cui lavorare, e
 tutto resta "Da verificare". Trade Republic però dà un file, l'**esportazione delle transazioni** in CSV, che ha
-tutto. In questo passo lo carichiamo nel conto **collegato**: non per aggiungere movimenti (sarebbero doppioni di
-quelli che la sincronizzazione porta da sola), ma per **completare** quelli già arrivati.
+tutto. In questo passo lo carichiamo nel conto **collegato**, per **completare** i movimenti già arrivati e per
+**aggiungere** quelli più vecchi dello storico che la banca ha dato (Parte L). Quelli più recenti no: li porta la
+sincronizzazione, e aggiungerli creerebbe doppioni.
 
 È l'ultima voce della Fase 3 (`docs/25`, "E Trade Republic?").
 
@@ -21,9 +22,10 @@ quelli che la sincronizzazione porta da sola), ma per **completare** quelli già
 | I | provalo tu |
 | J | sicurezza e dati personali |
 | K | esercizi guidati, con le soluzioni |
+| L | aggiornamento: gli acquisti di titoli, i mesi prima dello storico della banca, le regole V26 |
 
 > Prerequisiti: `docs/25` (l'import CSV), `docs/03` (classificazione e regole), e `git pull`. Al primo avvio
-> Flyway applica la **V25**.
+> Flyway applica la **V25** e la **V26**.
 
 ---
 
@@ -103,15 +105,17 @@ coinciderebbe nessuno tra interessi e dividendi. Gli importi di questa guida e d
 
 ### B3. Le righe senza denaro
 
-Il file contiene anche le operazioni sui **titoli**: azioni trasferite (`FREE_RECEIPT`), assegnazioni
-(`INTERMEDIATE_SECURITIES_DISTRIBUTION`). Hanno `category` diversa da `CASH` e nessun importo: sul conto non si
-muove niente, quindi le saltiamo e lo diciamo nell'anteprima ("4 operazioni sui titoli, che non muovono denaro e
-vengono saltate"). Saltiamo anche le righe `CASH` con importo netto zero.
+Il file contiene anche operazioni sui **titoli** senza denaro: azioni trasferite (`FREE_RECEIPT`), assegnazioni
+(`INTERMEDIATE_SECURITIES_DISTRIBUTION`). Hanno importo, commissione e tassa **vuoti**: sul conto non si muove
+niente, quindi le saltiamo e lo diciamo nell'anteprima ("4 operazioni sui titoli, che non muovono denaro e
+vengono saltate"). Saltiamo anche le righe con importo netto zero. Attenzione: gli **acquisti** di titoli hanno
+anch'essi una categoria diversa da `CASH` (`TRADING`), ma il denaro lo muovono; per questo le righe si riconoscono
+dall'importo, non dalla categoria (Parte L1).
 
 ### B4. La controparte
 
 - bonifico: `counterparty_name` ("Mario Rossi");
-- dividendo: nessuna controparte nel file, ma `name` dice chi paga ("Alfa SpA");
+- dividendo e acquisto: nessuna controparte nel file, ma `name` dice il titolo ("Alfa SpA");
 - interessi e bollo: nessuna (resta vuota).
 
 ---
@@ -145,8 +149,9 @@ test (`CompletionMatchingTest.theSignTellsACancellationFromAPayment`).
 
 L'anteprima mostra anche quello che **non** si abbina, e perché può succedere:
 
-- **righe del file senza movimento**: di solito più recenti dell'ultimo aggiornamento del conto (si aggiorna e si
-  riprova) o più vecchie dello storico che Enable Banking ha dato;
+- **righe del file senza movimento** che non si aggiungono: più recenti dell'ultimo aggiornamento del conto (si
+  aggiorna e si riprova), oppure nel periodo della banca ma senza abbinamento (da controllare). Quelle più vecchie
+  dello storico della banca invece si aggiungono (Parte L2);
 - **movimenti del periodo che nel file non ci sono**: restano come sono.
 
 Perché un algoritmo "goloso" (greedy: ogni riga prende il migliore libero) e non uno che cerca l'abbinamento
@@ -160,13 +165,15 @@ vedere ogni abbinamento prima di salvare.
 
 - Si riempiono solo **controparte e causale**, e solo se sono **vuote**: quello che la banca ha mandato non si
   sovrascrive mai (`BankTransaction.completeDetails`, provato da `whatTheBankSentIsNeverOverwritten`);
-- **non si aggiungono movimenti**: li porta la sincronizzazione. Una riga senza movimento resta fuori;
+- si **aggiungono** solo le righe **più vecchie** del primo movimento della banca (Parte L2); quelle recenti le
+  porta la sincronizzazione;
 - **non cambia l'impronta** (`dedup_key`, `docs/06`): la prossima sincronizzazione riconosce gli stessi movimenti
   di prima e non li duplica;
 - solo i movimenti **contabilizzati**: quelli "in attesa" vengono cancellati e riscaricati a ogni aggiornamento
   (`docs/06`), e il testo aggiunto andrebbe perso;
 - **tutto o niente**: se una riga del file non si legge, non cambia niente e l'errore dice quale riga;
-- **ricaricare lo stesso file** non fa danni: i movimenti già completati vengono contati come "lo erano già";
+- **ricaricare lo stesso file** non fa danni: i movimenti già completati, e le righe già aggiunte, vengono contati
+  come "già fatte";
 - dopo il completamento i movimenti vengono **classificati di nuovo**: le regole, le correzioni a mano (che vincono
   sempre) e gli abbinamenti dei trasferimenti tra conti propri ripartono con il testo.
 
@@ -247,7 +254,7 @@ entità JPA: così si prova con dei test veloci, senza database.
 | Metodo e percorso | Corpo | Risposta |
 |---|---|---|
 | `POST /api/imports/completion/preview?accountId=5` | il file (`multipart`, pezzo `file`) | `CompletionPreview`: periodo, righe, movimenti da completare con i testi, già completi, righe senza movimento, movimenti senza riga |
-| `POST /api/imports/completion?accountId=5` | il file | `CompletionResult`: completati, già completi |
+| `POST /api/imports/completion?accountId=5` | il file | `CompletionResult`: completati, aggiunti, già fatti |
 
 Errori: 400 se il file non è di Trade Republic o il conto è manuale; 400 con l'elenco `errors` se una riga non si
 legge (lo stesso `ImportRejectedException` dell'import); 404 se il conto non esiste.
@@ -378,3 +385,98 @@ data e numero di riga, movimenti per id) e può scambiarli. Conta poco: i due mo
 da −50 € con le due causali. Si potrebbe segnalare il caso nell'anteprima ("2 righe uguali: abbinate in ordine")
 contando, per ogni riga, quanti candidati avevano la stessa distanza.
 </details>
+
+---
+
+## Parte L: aggiornamento, un file da gennaio
+
+Caricando un file più lungo, dal 1° gennaio, sono venute fuori tre cose.
+
+### L1. Gli acquisti di titoli venivano saltati
+
+La prima versione leggeva solo le righe con `category` `CASH`, perché nel primo file le altre erano solo
+operazioni sui titoli senza denaro. Il file da gennaio ha anche gli **acquisti** (forma vera, dati inventati):
+
+```
+"2026-05-04T10:00:00Z","2026-05-04","DEFAULT","TRADING","BUY","STOCK","Beta SpA",...,"-1000.00","-1.00","-2.00","EUR",...,"Buy trade IT0000000002 BETA SPA, quantity: 100",...
+```
+
+`category` è `TRADING`, ma sul conto escono 1.003,00 € (prezzo, commissione, tassa sulle transazioni): tra i
+movimenti più grandi del conto, e venivano scartati. Il criterio giusto non è la categoria ma **se la riga ha un
+importo**: le operazioni senza denaro hanno `amount`, `fee` e `tax` vuoti. Una lezione: un esempio solo (il primo
+file) non basta a capire un formato; i casi che non ci sono nell'esempio sono proprio quelli che sfuggono.
+
+Sul file vero da gennaio: 81 movimenti di denaro (prima 72: i 9 acquisti mancavano), 4 righe saltate, nessun
+errore.
+
+### L2. I mesi prima dello storico della banca
+
+Enable Banking, per Trade Republic, ha dato pochi mesi di storico; il file parte da gennaio. Che cosa fare delle
+righe senza movimento? Dipende da **dove** sono:
+
+| Righe senza movimento | Perché | Che cosa facciamo |
+|---|---|---|
+| più vecchie del primo movimento della banca | la banca non ha mai dato quei mesi | **si aggiungono**: senza, mancherebbero da riepilogo, budget e grafici |
+| più recenti dell'ultimo aggiornamento | la sincronizzazione non le ha ancora portate | **no**: le porterà lei, e con un'impronta diversa sarebbero doppioni |
+| nel periodo della banca | importo o data diversi, o un movimento che la banca non ha dato | **no, si mostrano**: è un'anomalia da guardare, non da aggiustare in silenzio |
+
+"Il primo movimento della banca" è `findFirstBankDate`: il giorno più vecchio tra i movimenti contabilizzati del
+conto, **esclusi** quelli aggiunti da un file. Si aggiungono le righe di almeno 3 giorni prima (la tolleranza
+della Parte C2): una riga di due giorni prima potrebbe essere il primo movimento della banca con la data spostata.
+Se il conto non ha ancora movimenti dalla banca non si aggiunge niente: non sapremmo dove inizia il suo storico.
+
+I movimenti aggiunti:
+
+- hanno l'impronta **`trcsv:` + `transaction_id`**, l'identificativo che Trade Republic dà a ogni operazione:
+  ricaricando lo stesso file, o un file che si sovrappone, la riga si riconosce subito e non si aggiunge due
+  volte;
+- hanno come `raw_json` la riga del file, colonna per colonna (come l'import dei conti manuali): si vede sempre da
+  dove arrivano;
+- vengono classificati come gli altri. I bonifici da e verso altri tuoi conti collegati, se nella causale c'è il
+  loro IBAN, diventano trasferimenti tra conti propri: non contano né come spese né come entrate.
+
+### L3. E se un giorno la banca desse quei mesi?
+
+Se ricolleghi Trade Republic, subito dopo il login la banca potrebbe dare uno storico più lungo, e riportare
+movimenti che hai già aggiunto dal file: sarebbero doppi. Per questo l'importazione da Enable Banking ha una
+**regola 5** (`TransactionImportService.fileMovementFor`): prima di salvare un movimento contabilizzato nuovo,
+cerca nel conto un movimento **aggiunto da un file** con stesso importo e valuta e data entro 3 giorni. Se c'è, è
+lo stesso: non lo salva, e il movimento del file **prende l'impronta della banca** (`adoptBankKey`), tenendo testi,
+categoria e correzioni. Dalla volta dopo lo riconosce dall'impronta, come ogni altro movimento. È provato da
+`TransactionImportServiceTest.aMovementAlreadyTakenFromTheFileIsNotSavedTwice`: lo stesso movimento con un giorno
+di differenza non si duplica, uno con lo stesso importo un mese dopo sì.
+
+### L4. Le regole V26
+
+Il file da gennaio ha causali nuove. La V25 è già applicata e non si modifica: le regole arrivano con la **V26**.
+
+| Regola | Testo (inizia con) | Segno | Tipo | Categoria |
+|---|---|---|---|---|
+| Acquisto titoli (Trade Republic) | `Buy trade` | uscita | acquisto titoli | — |
+| Vendita titoli (Trade Republic) | `Sell trade` | entrata | vendita titoli | — |
+| Distribuzione di capitale (Trade Republic) | `Capital Distribution` | qualsiasi | proventi da investimenti | Dividendi |
+| Imposta di bollo annullata (Trade Republic) | `Cancellation Stamp Duty Tax` | qualsiasi | tasse sugli investimenti | Imposta di bollo |
+
+"Sell trade" non c'è nel tuo file (non hai venduto niente): la forma è quella degli acquisti, e se fosse diversa
+lo vedremmo dai movimenti "Da verificare".
+
+### L5. Nella pagina
+
+L'anteprima ha una sezione in più, **Movimenti da aggiungere**, con la stessa tabella di quelli da completare, e
+dice da che giorno parte lo storico della banca. Il pulsante dice tutte e due le cose: "Completa 18 movimenti e
+aggiungine 63". Ricaricando lo stesso file: "Non c'è niente da fare".
+
+### L6. Test
+
+| Test | Che cosa prova |
+|---|---|
+| `TradeRepublicCsvTest.buyingSecuritiesMovesMoneyToo` | gli acquisti si leggono, con commissione e tassa nel netto |
+| `CompletionControllerTest.rowsOlderThanTheBankHistoryBecomeMovements` | le righe più vecchie si aggiungono (impronta, raw_json, regole V26), quella a due giorni dallo storico no; ricaricando niente di doppio |
+| `CompletionControllerTest.withoutMovementsFromTheBankNothingIsAdded` | senza movimenti della banca non si aggiunge niente |
+| `TransactionImportServiceTest.aMovementAlreadyTakenFromTheFileIsNotSavedTwice` | la regola 5 |
+| `completion-page.spec.ts` | la sezione dei movimenti da aggiungere, il pulsante, il messaggio finale |
+
+Nel browser: un conto con i movimenti della banca dal 1° luglio e il file di prova da maggio. Anteprima con 5
+movimenti da completare e 3 da aggiungere (acquisto, distribuzione di capitale, bonifico), la riga del 29 giugno
+mostrata e non aggiunta; dopo "Completa", l'acquisto è "Acquisto titoli" e la distribuzione "Dividendi";
+ricaricando, "8 righe erano già fatte".

@@ -1,4 +1,4 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -14,12 +14,13 @@ import { MAX_FILE_BYTES } from './import-page';
  *
  * Il percorso, come per l'importazione:
  * 1. scegli il conto e il file: il backend abbina ogni riga del file al suo movimento e mostra l'anteprima;
- * 2. se va bene, confermi: i movimenti ricevono i testi e vengono classificati di nuovo.
- * Nessun movimento viene aggiunto: quelli li porta la sincronizzazione.
+ * 2. se va bene, confermi: i movimenti ricevono i testi, quelli più vecchi dello storico della banca vengono
+ *    aggiunti, e tutto viene classificato di nuovo.
+ * Le righe recenti senza movimento non si aggiungono: le porta la sincronizzazione.
  */
 @Component({
   selector: 'app-completion-page',
-  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [CurrencyPipe, DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink],
   templateUrl: './completion-page.html',
 })
 export class CompletionPage implements OnInit {
@@ -106,9 +107,26 @@ export class CompletionPage implements OnInit {
     return `Il file va dal ${day(p.from)} al ${day(p.to)}: ${this.count(p.fileRows, 'movimento', 'movimenti')} di denaro${skipped}.`;
   }
 
+  /** Il pulsante: "Completa 18 movimenti e aggiungine 63", "Completa 5 movimenti", "Aggiungi 3 movimenti". */
+  protected action(p: CompletionPreview): string {
+    const complete = p.toComplete.length;
+    const add = p.toAdd.length;
+    if (complete > 0 && add > 0) {
+      return `Completa ${this.count(complete, 'movimento', 'movimenti')} e aggiungine ${add}`;
+    }
+    return complete > 0
+      ? `Completa ${this.count(complete, 'movimento', 'movimenti')}`
+      : `Aggiungi ${this.count(add, 'movimento', 'movimenti')}`;
+  }
+
   protected resultMessage(done: CompletionResult): string {
-    const already = done.alreadyComplete > 0 ? ` (${done.alreadyComplete} lo erano già)` : '';
-    return `${this.count(done.completed, 'movimento completato', 'movimenti completati')}${already}.`;
+    const parts = [
+      this.count(done.completed, 'movimento completato', 'movimenti completati'),
+      ...(done.added > 0 ? [this.count(done.added, 'aggiunto', 'aggiunti')] : []),
+    ];
+    const already =
+      done.alreadyComplete > 0 ? ` (${done.alreadyComplete} righe erano già fatte)` : '';
+    return `${parts.join(', ')}${already}.`;
   }
 
   /** "1 movimento", "5 movimenti". */

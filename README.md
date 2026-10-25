@@ -120,7 +120,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] elenco delle categorie: di partenza e modificabile, menu a discesa ordinati per tipo, integrità garantita dal database
   - [x] categorie collegate per id (soluzione normalizzata), senza query N+1
   - [x] import CSV nei conti manuali (es. Trade Republic): mappatura proposta e anteprima, tutto o niente, senza doppioni
-  - [x] file di Trade Republic anche per il conto collegato: completa causale e controparte dei movimenti già arrivati, con anteprima e regole di partenza per le sue causali (`docs/31`)
+  - [x] file di Trade Republic anche per il conto collegato: completa causale e controparte dei movimenti già arrivati e aggiunge i mesi prima dello storico della banca, con anteprima e regole di partenza per le sue causali (`docs/31`)
   - [x] suggerimenti di categoria dalla tua storia: stesso esercente, stessa categoria, accetti o rifiuti (passo 7a)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale

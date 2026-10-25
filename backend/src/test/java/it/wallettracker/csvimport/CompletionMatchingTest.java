@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import it.wallettracker.csvimport.CompletionService.Candidate;
 import it.wallettracker.csvimport.CompletionService.Matching;
@@ -15,7 +16,7 @@ class CompletionMatchingTest {
 
     static TradeRepublicCsv.Row row(int line, String date, String amount) {
         return new TradeRepublicCsv.Row(line, LocalDate.parse(date), new BigDecimal(amount), "EUR", "TYPE",
-                "riga " + line, null);
+                "riga " + line, null, "id-" + line, Map.of());
     }
 
     static Candidate movement(long id, String date, String amount) {

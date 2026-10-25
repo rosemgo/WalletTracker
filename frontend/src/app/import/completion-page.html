@@ -1,11 +1,11 @@
 <h1>Completa i movimenti</h1>
 
 <p class="hint">
-  Trade Republic, con il collegamento della banca, manda solo la data e l'importo dei movimenti:
-  senza causale il programma non sa che cosa sono, e restano "Da verificare". Il file che esporti
-  dall'app di Trade Republic invece ha tutto: caricalo qui e i movimenti già arrivati riceveranno
-  controparte e causale. Non viene aggiunto nessun movimento, e quello che la banca ha mandato non
-  viene cambiato.
+  Trade Republic, con il collegamento della banca, manda solo la data e l'importo dei movimenti, e
+  uno storico di pochi mesi: senza causale il programma non sa che cosa sono, e restano "Da
+  verificare". Il file che esporti dall'app di Trade Republic invece ha tutto. Caricalo qui: i
+  movimenti già arrivati riceveranno controparte e causale, e quelli più vecchi dello storico della
+  banca verranno aggiunti. Quello che la banca ha mandato non viene cambiato.
 </p>
 <details class="hint">
   <summary>Come esportare il file da Trade Republic</summary>
@@ -30,15 +30,7 @@
 } @else if (result(); as done) {
   <div class="card">
     <h2>Fatto</h2>
-    <p class="message">
-      {{
-        done.completed === 1 ? '1 movimento completato' : done.completed + ' movimenti completati'
-      }}
-      @if (done.alreadyComplete > 0) {
-        ({{ done.alreadyComplete }} lo erano già)
-      }
-      .
-    </p>
+    <p class="message">{{ resultMessage(done) }}</p>
     <p>
       I movimenti sono stati classificati di nuovo: con la causale, le regole e i suggerimenti
       possono lavorare. <a routerLink="/movimenti">Vai ai movimenti</a> e controlla quelli rimasti
@@ -73,16 +65,27 @@
       <h2>2. Anteprima</h2>
       <p>{{ summary(p) }}</p>
       <ul>
-        <li>
-          <strong>{{
-            count(p.toComplete.length, 'movimento riceverà', 'movimenti riceveranno')
-          }}</strong>
-          controparte e causale;
-        </li>
+        @if (p.toComplete.length > 0) {
+          <li>
+            <strong>{{
+              count(p.toComplete.length, 'movimento riceverà', 'movimenti riceveranno')
+            }}</strong>
+            controparte e causale;
+          </li>
+        }
+        @if (p.toAdd.length > 0) {
+          <li>
+            <strong>{{
+              count(p.toAdd.length, 'movimento verrà aggiunto', 'movimenti verranno aggiunti')
+            }}</strong
+            >: sono più vecchi del {{ p.bankFrom | date: 'dd/MM/yyyy' }}, il primo giorno che la
+            banca ha dato;
+          </li>
+        }
         @if (p.alreadyComplete > 0) {
           <li>
-            {{ count(p.alreadyComplete, 'ha', 'hanno') }} già i testi (forse hai già caricato questo
-            file);
+            {{ count(p.alreadyComplete, 'riga era', 'righe erano') }} già fatte (forse hai già
+            caricato questo file);
           </li>
         }
         @if (p.rowsWithoutMovement.length > 0) {
@@ -94,8 +97,8 @@
                 'righe del file non trovano'
               )
             }}
-            un movimento: di solito sono più recenti dell'ultimo aggiornamento del conto (aggiornalo
-            e riprova) o più vecchie dello storico che la banca ha dato;
+            un movimento e non viene aggiunta: le più recenti arriveranno con il prossimo
+            aggiornamento del conto; le altre, nel periodo della banca, sono da controllare;
           </li>
         }
         @if (p.movementsWithoutRow.length > 0) {
@@ -111,35 +114,29 @@
             {{ p.movementsWithoutRow.length === 1 ? "resta com'è" : 'restano come sono' }}.
           </li>
         }
+        @if (p.bankFrom === null) {
+          <li>
+            questo conto non ha ancora movimenti dalla banca: aggiornalo prima, così si sa da quando
+            parte il suo storico e quali righe aggiungere.
+          </li>
+        }
       </ul>
 
       @if (p.toComplete.length > 0) {
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th class="amount">Importo</th>
-              <th>Controparte</th>
-              <th>Causale</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (c of p.toComplete; track c.transactionId) {
-              <tr>
-                <td>{{ c.date | date: 'dd/MM/yyyy' }}</td>
-                <td class="amount">{{ c.amount | currency: c.currency }}</td>
-                <td>{{ c.counterparty ?? '—' }}</td>
-                <td>{{ c.description ?? '—' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-        <button type="button" [disabled]="busy()" (click)="complete()">
-          Completa
-          {{ p.toComplete.length === 1 ? '1 movimento' : p.toComplete.length + ' movimenti' }}
-        </button>
+        <h3>Movimenti da completare</h3>
+        <ng-container *ngTemplateOutlet="rows; context: { $implicit: p.toComplete }"></ng-container>
+      }
+      @if (p.toAdd.length > 0) {
+        <h3>Movimenti da aggiungere</h3>
+        <ng-container *ngTemplateOutlet="rows; context: { $implicit: p.toAdd }"></ng-container>
+      }
+
+      @if (p.toComplete.length > 0 || p.toAdd.length > 0) {
+        <p>
+          <button type="button" [disabled]="busy()" (click)="complete()">{{ action(p) }}</button>
+        </p>
       } @else {
-        <p class="secondary">Non c'è niente da completare.</p>
+        <p class="secondary">Non c'è niente da fare.</p>
       }
 
       @if (p.rowsWithoutMovement.length > 0) {
@@ -159,3 +156,27 @@
     </div>
   }
 }
+
+<!-- Una tabella di movimenti: la stessa per quelli da completare e per quelli da aggiungere. -->
+<ng-template #rows let-list>
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th class="amount">Importo</th>
+        <th>Controparte</th>
+        <th>Causale</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (c of list; track $index) {
+        <tr>
+          <td>{{ c.date | date: 'dd/MM/yyyy' }}</td>
+          <td class="amount">{{ c.amount | currency: c.currency }}</td>
+          <td>{{ c.counterparty ?? '—' }}</td>
+          <td>{{ c.description ?? '—' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</ng-template>

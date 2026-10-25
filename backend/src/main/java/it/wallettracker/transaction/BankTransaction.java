@@ -160,6 +160,20 @@ public class BankTransaction {
         return changed;
     }
 
+    /**
+     * Il prefisso dell'impronta dei movimenti aggiunti dal file di Trade Republic (docs/31), seguito dal suo
+     * {@code transaction_id}.
+     */
+    public static final String FILE_KEY_PREFIX = "trcsv:";
+
+    /**
+     * Un movimento aggiunto da un file è arrivato anche dalla banca (docs/31): da ora ha l'impronta della banca, così
+     * le prossime sincronizzazioni lo riconoscono subito. Testi, categoria e correzioni restano.
+     */
+    public void adoptBankKey(String bankDedupKey) {
+        this.dedupKey = bankDedupKey;
+    }
+
     /** Correzione manuale (dalla dashboard): {@code null} la toglie. */
     public void setManualType(TransactionType manualType) {
         this.manualType = manualType;

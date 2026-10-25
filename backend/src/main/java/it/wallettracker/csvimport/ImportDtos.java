@@ -44,17 +44,24 @@ public final class ImportDtos {
      *
      * @param from                il primo giorno del file
      * @param to                  l'ultimo giorno del file
+     * @param bankFrom            il primo giorno dei movimenti arrivati dalla banca, o null se non ce ne sono
      * @param fileRows            le righe del file che muovono denaro
      * @param skippedRows         le righe saltate: operazioni sui titoli, senza denaro sul conto
      * @param toComplete          i movimenti che verranno completati, con i testi presi dal file
-     * @param alreadyComplete     i movimenti trovati che hanno già controparte e causale (es. file già caricato)
-     * @param rowsWithoutMovement le righe del file senza un movimento: più recenti dell'ultimo aggiornamento, o
-     *                            più vecchie dello storico che la banca ha dato
+     * @param toAdd               le righe più vecchie dello storico della banca, che diventeranno movimenti
+     * @param alreadyComplete     le righe già fatte (movimenti con i testi, o aggiunti da un file caricato prima)
+     * @param rowsWithoutMovement le righe del file senza un movimento che non si aggiungono: più recenti
+     *                            dell'ultimo aggiornamento, o nel periodo della banca ma senza abbinamento
      * @param movementsWithoutRow i movimenti del periodo del file che nel file non ci sono
      */
-    public record CompletionPreview(LocalDate from, LocalDate to, int fileRows, int skippedRows,
-            List<Completion> toComplete, int alreadyComplete, List<FileRow> rowsWithoutMovement,
-            List<Movement> movementsWithoutRow) {
+    public record CompletionPreview(LocalDate from, LocalDate to, LocalDate bankFrom, int fileRows, int skippedRows,
+            List<Completion> toComplete, List<NewMovement> toAdd, int alreadyComplete,
+            List<FileRow> rowsWithoutMovement, List<Movement> movementsWithoutRow) {
+    }
+
+    /** Una riga del file che diventerà un movimento. */
+    public record NewMovement(LocalDate date, BigDecimal amount, String currency, String counterparty,
+            String description) {
     }
 
     /** Un movimento da completare, e i testi che riceve. */
@@ -70,7 +77,7 @@ public final class ImportDtos {
     public record Movement(long id, LocalDate date, BigDecimal amount, String currency) {
     }
 
-    /** Il risultato del completamento. */
-    public record CompletionResult(int completed, int alreadyComplete) {
+    /** Il risultato del completamento: movimenti completati, movimenti aggiunti, righe già fatte. */
+    public record CompletionResult(int completed, int added, int alreadyComplete) {
     }
 }

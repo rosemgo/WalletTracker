@@ -124,6 +124,61 @@ class CompletionControllerTest {
     }
 
     @Test
+    void rowsOlderThanTheBankHistoryBecomeMovements() {
+        // La banca ha dato i movimenti dal 1° luglio; il file parte da maggio.
+        assertThat(post("/api/imports/completion/preview", TradeRepublicCsvTest.LONG_CSV)).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.bankFrom").isEqualTo("2026-07-01");
+                    json.assertThat().extractingPath("$.toComplete.length()").isEqualTo(5);
+                    json.assertThat().extractingPath("$.toAdd.length()").isEqualTo(3);
+                    json.assertThat().extractingPath("$.toAdd[0].amount").isEqualTo(-1003.0);
+                    // Il 29 giugno è a due giorni dal 1° luglio: potrebbe essere un movimento della banca con la data
+                    // spostata, quindi non si aggiunge. Si mostra.
+                    json.assertThat().extractingPath("$.rowsWithoutMovement.length()").isEqualTo(1);
+                    json.assertThat().extractingPath("$.rowsWithoutMovement[0].date").isEqualTo("2026-06-29");
+                });
+
+        assertThat(post("/api/imports/completion", TradeRepublicCsvTest.LONG_CSV)).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.completed").isEqualTo(5);
+                    json.assertThat().extractingPath("$.added").isEqualTo(3);
+                });
+
+        BankTransaction buy = find("2026-05-04", "-1003.00");
+        assertThat(buy.getDedupKey()).isEqualTo("trcsv:id-10");            // l'identificativo di Trade Republic
+        assertThat(buy.getRawJson()).contains("\"symbol\"", "IT0000000002"); // la riga del file
+        assertThat(buy.getType()).isEqualTo(TransactionType.SECURITIES_BUY); // regola di V26
+        BankTransaction distribution = find("2026-05-20", "74.00");
+        assertThat(distribution.getCategory().getId()).isEqualTo(categoryId("Dividendi"));
+        assertThat(find("2026-06-01", "500.00").getCounterparty()).isNull();
+
+        // Ricaricato: niente di nuovo, niente di doppio.
+        assertThat(post("/api/imports/completion", TradeRepublicCsvTest.LONG_CSV)).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.completed").isEqualTo(0);
+                    json.assertThat().extractingPath("$.added").isEqualTo(0);
+                    json.assertThat().extractingPath("$.alreadyComplete").isEqualTo(8);
+                });
+        assertThat(transactionRepository.count()).isEqualTo(6 + 3);
+    }
+
+    @Test
+    void withoutMovementsFromTheBankNothingIsAdded() {
+        // Senza movimenti della banca non sappiamo dove inizia il suo storico: aggiungere potrebbe creare doppioni.
+        BankConnection connection = connectionRepository.save(new BankConnection("Trade Republic", "IT", "session-2",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account empty = accountRepository.save(new Account(connection, "key-2", "uid-2", null, "Conto", "EUR"));
+
+        assertThat(mvc.post().uri("/api/imports/completion/preview").multipart()
+                .file(csvPart(TradeRepublicCsvTest.LONG_CSV)).param("accountId", empty.getId().toString()))
+                .hasStatusOk().bodyJson().satisfies(json -> {
+                    json.assertThat().extractingPath("$.bankFrom").isNull();
+                    json.assertThat().extractingPath("$.toAdd.length()").isEqualTo(0);
+                    json.assertThat().extractingPath("$.rowsWithoutMovement.length()").isEqualTo(9);
+                });
+    }
+
+    @Test
     void whatTheBankSentIsNeverOverwritten() {
         BankTransaction withText = transactionRepository.save(new BankTransaction(tradeRepublic, "ref-x",
                 TransactionStatus.BOOKED, LocalDate.parse("2026-07-07"), null, new BigDecimal("-150.00"), "EUR",

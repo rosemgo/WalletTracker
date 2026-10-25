@@ -29,8 +29,9 @@ function account(id: number, source: Account['source'], bank: string): Account {
 }
 
 const PREVIEW: CompletionPreview = {
-  from: '2026-07-01',
+  from: '2026-05-04',
   to: '2026-07-20',
+  bankFrom: '2026-07-01',
   fileRows: 3,
   skippedRows: 1,
   toComplete: [
@@ -51,6 +52,15 @@ const PREVIEW: CompletionPreview = {
       description: 'Outgoing transfer for Mario Rossi',
     },
   ],
+  toAdd: [
+    {
+      date: '2026-05-04',
+      amount: -1003,
+      currency: 'EUR',
+      counterparty: 'Beta SpA',
+      description: 'Buy trade IT0000000002 BETA SPA',
+    },
+  ],
   alreadyComplete: 0,
   rowsWithoutMovement: [
     { line: 9, date: '2026-07-20', amount: 50, currency: 'EUR', description: 'Cash Dividend' },
@@ -69,7 +79,7 @@ describe('CompletionPage', () => {
     previews = [];
     completions = [];
     previewResponse = of(PREVIEW);
-    completeResponse = of({ completed: 2, alreadyComplete: 0 });
+    completeResponse = of({ completed: 2, added: 1, alreadyComplete: 0 });
     const fakeApi: Partial<WalletApi> = {
       accounts: () =>
         of([
@@ -123,10 +133,14 @@ describe('CompletionPage', () => {
     expect(options).toEqual(['ING · Conto 1 (EUR)', 'Trade Republic · Conto 2 (EUR)']);
     expect(previews).toEqual([2]); // scelto da solo: è Trade Republic
     expect(text(page)).toContain(
-      'Il file va dal 01/07/2026 al 20/07/2026: 3 movimenti di denaro (e 1 operazione sui titoli, che non muove denaro e viene saltata).',
+      'Il file va dal 04/05/2026 al 20/07/2026: 3 movimenti di denaro (e 1 operazione sui titoli, che non muove denaro e viene saltata).',
     );
     expect(text(page)).toContain('2 movimenti riceveranno controparte e causale');
-    expect(text(page)).toContain('1 riga del file non trova un movimento');
+    expect(text(page)).toContain('1 riga del file non trova un movimento e non viene aggiunta');
+    expect(text(page)).toContain(
+      '1 movimento verrà aggiunto: sono più vecchi del 01/07/2026, il primo giorno che la banca ha dato',
+    );
+    expect(text(page)).toContain('Buy trade IT0000000002 BETA SPA');
     expect(text(page)).toContain('Outgoing transfer for Mario Rossi');
   });
 
@@ -134,13 +148,13 @@ describe('CompletionPage', () => {
     const { fixture, page } = await openWithFile();
 
     const button = Array.from(page.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Completa 2 movimenti'),
+      b.textContent?.includes('Completa 2 movimenti e aggiungine 1'),
     ) as HTMLButtonElement;
     button.click();
     await fixture.whenStable();
 
     expect(completions).toEqual([2]);
-    expect(text(page)).toContain('2 movimenti completati');
+    expect(text(page)).toContain('2 movimenti completati, 1 aggiunto.');
   });
 
   it('shows why a file is refused', async () => {

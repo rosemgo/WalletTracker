@@ -1,11 +1,16 @@
 package it.wallettracker.csvimport;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +26,7 @@ import it.wallettracker.csvimport.ImportDtos.CompletionPreview;
 import it.wallettracker.csvimport.ImportDtos.CompletionResult;
 import it.wallettracker.csvimport.ImportDtos.FileRow;
 import it.wallettracker.csvimport.ImportDtos.Movement;
+import it.wallettracker.csvimport.ImportDtos.NewMovement;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
@@ -29,12 +35,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Completa i movimenti di un conto <b>collegato</b> con il file della banca (docs/31). Trade Republic, con Enable
- * Banking, manda solo data e importo: senza testo i movimenti restano "Da verificare". Il suo file di esportazione
- * ha controparte e causale; qui le copiamo nei movimenti già arrivati. Non aggiungiamo movimenti: sarebbero
- * doppioni di quelli che la sincronizzazione porta da sola.
+ * Completa un conto <b>collegato</b> con il file della banca (docs/31). Trade Republic, con Enable Banking, manda
+ * solo data e importo, e uno storico corto. Il suo file di esportazione ha controparte e causale, e può partire da
+ * molto prima. Qui:
+ * <ul>
+ *   <li>le righe che corrispondono a un movimento già arrivato gli danno <b>controparte e causale</b>;</li>
+ *   <li>le righe <b>più vecchie</b> del primo movimento arrivato dalla banca diventano <b>movimenti nuovi</b>: quei
+ *       mesi la banca non li ha mai dati. Quelle più recenti no: le porta la sincronizzazione, e aggiungerle
+ *       creerebbe doppioni. Quelle nel mezzo senza movimento si mostrano soltanto: sono un'anomalia da guardare.</li>
+ * </ul>
+ * I movimenti aggiunti hanno l'impronta {@code trcsv:<transaction_id di Trade Republic>}: ricaricando lo stesso
+ * file non si duplicano, e la sincronizzazione li riconosce (TransactionImportService.fileMovementFor).
  *
  * <p>Come per l'importazione, in due tempi: {@link #preview} mostra che cosa succederebbe, {@link #complete} lo fa,
  * tutto o niente. Il file non viene conservato.
@@ -48,6 +62,9 @@ public class CompletionService {
      * usare la data dell'operazione o quella di contabilizzazione.
      */
     static final int DAYS_TOLERANCE = 3;
+
+    /** Il prefisso dell'impronta dei movimenti aggiunti dal file di Trade Republic. */
+    static final String FILE_KEY_PREFIX = BankTransaction.FILE_KEY_PREFIX;
 
     /** Un movimento candidato all'abbinamento: solo quello che serve per abbinarlo. */
     record Candidate(long id, LocalDate date, BigDecimal amount, String currency) {
@@ -67,24 +84,34 @@ public class CompletionService {
     private final AccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
+    private final JsonMapper jsonMapper;
 
     public CompletionService(AccountRepository accountRepository, BankTransactionRepository transactionRepository,
-            ClassificationService classificationService) {
+            ClassificationService classificationService, JsonMapper jsonMapper) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
+        this.jsonMapper = jsonMapper;
     }
 
-    /** Il file letto e abbinato ai movimenti del conto. */
-    private record Plan(TradeRepublicCsv.Reading reading, LocalDate from, LocalDate to,
-            Map<Long, BankTransaction> movements, Matching matching) {
+    /**
+     * Il file letto e confrontato con il conto.
+     *
+     * @param bankFrom       il primo giorno dei movimenti arrivati dalla banca (null se non ce n'è nessuno)
+     * @param alreadyAdded   le righe già aggiunte da un file caricato prima (la loro impronta c'è già)
+     * @param toAdd          le righe più vecchie dello storico della banca, da aggiungere, con la loro impronta
+     * @param withoutMovement le righe senza movimento che non si aggiungono (recenti, o nel periodo della banca)
+     */
+    private record Plan(Account account, TradeRepublicCsv.Reading reading, LocalDate from, LocalDate to,
+            LocalDate bankFrom, Map<Long, BankTransaction> movements, Matching matching, int alreadyAdded,
+            Map<TradeRepublicCsv.Row, String> toAdd, List<TradeRepublicCsv.Row> withoutMovement) {
     }
 
     @Transactional(readOnly = true)
     public CompletionPreview preview(byte[] content, Long accountId) {
         Plan plan = plan(content, accountId);
         List<Completion> toComplete = new ArrayList<>();
-        int alreadyComplete = 0;
+        int alreadyComplete = plan.alreadyAdded();
         for (Map.Entry<TradeRepublicCsv.Row, Long> pair : plan.matching().pairs().entrySet()) {
             BankTransaction t = plan.movements().get(pair.getValue());
             TradeRepublicCsv.Row row = pair.getKey();
@@ -97,7 +124,10 @@ public class CompletionService {
             }
         }
         toComplete.sort(Comparator.comparing(Completion::date).thenComparing(Completion::transactionId));
-        List<FileRow> rowsWithoutMovement = plan.matching().unmatchedRows().stream()
+        List<NewMovement> toAdd = plan.toAdd().keySet().stream()
+                .map(r -> new NewMovement(r.date(), r.amount(), r.currency(), r.counterparty(), r.description()))
+                .toList();
+        List<FileRow> rowsWithoutMovement = plan.withoutMovement().stream()
                 .map(r -> new FileRow(r.line(), r.date(), r.amount(), r.currency(), r.description()))
                 .toList();
         List<Movement> movementsWithoutRow = plan.matching().unusedIds().stream()
@@ -105,16 +135,20 @@ public class CompletionService {
                 .filter(t -> !t.getBookingDate().isBefore(plan.from()) && !t.getBookingDate().isAfter(plan.to()))
                 .map(t -> new Movement(t.getId(), t.getBookingDate(), t.getAmount(), t.getCurrency()))
                 .toList();
-        return new CompletionPreview(plan.from(), plan.to(), plan.reading().rows().size(), plan.reading().skipped(),
-                toComplete, alreadyComplete, rowsWithoutMovement, movementsWithoutRow);
+        return new CompletionPreview(plan.from(), plan.to(), plan.bankFrom(), plan.reading().rows().size(),
+                plan.reading().skipped(), toComplete, toAdd, alreadyComplete, rowsWithoutMovement,
+                movementsWithoutRow);
     }
 
-    /** Completa i movimenti abbinati, poi li riclassifica: con il testo, regole e suggerimenti possono lavorare. */
+    /**
+     * Completa i movimenti abbinati e aggiunge quelli più vecchi dello storico della banca, poi riclassifica: con il
+     * testo, regole e suggerimenti possono lavorare.
+     */
     @Transactional
     public CompletionResult complete(byte[] content, Long accountId) {
         Plan plan = plan(content, accountId);
         int completed = 0;
-        int alreadyComplete = 0;
+        int alreadyComplete = plan.alreadyAdded();
         for (Map.Entry<TradeRepublicCsv.Row, Long> pair : plan.matching().pairs().entrySet()) {
             TradeRepublicCsv.Row row = pair.getKey();
             if (plan.movements().get(pair.getValue()).completeDetails(row.counterparty(), row.description())) {
@@ -123,11 +157,17 @@ public class CompletionService {
                 alreadyComplete++;
             }
         }
+        List<BankTransaction> added = plan.toAdd().entrySet().stream()
+                .map(e -> new BankTransaction(plan.account(), e.getValue(), TransactionStatus.BOOKED, e.getKey().date(),
+                        null, e.getKey().amount(), e.getKey().currency(), e.getKey().counterparty(),
+                        e.getKey().description(), jsonMapper.writeValueAsString(e.getKey().cells())))
+                .toList();
+        transactionRepository.saveAll(added);
         transactionRepository.flush();
-        if (completed > 0) {
+        if (completed > 0 || !added.isEmpty()) {
             classificationService.classifyAll();
         }
-        return new CompletionResult(completed, alreadyComplete);
+        return new CompletionResult(completed, added.size(), alreadyComplete);
     }
 
     private static boolean missesDetails(BankTransaction t, TradeRepublicCsv.Row row) {
@@ -142,6 +182,49 @@ public class CompletionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Questo è un conto manuale: i suoi movimenti si caricano con \"Importa CSV\".");
         }
+        TradeRepublicCsv.Reading reading = read(content);
+        LocalDate from = reading.rows().stream().map(TradeRepublicCsv.Row::date).min(LocalDate::compareTo).orElseThrow();
+        LocalDate to = reading.rows().stream().map(TradeRepublicCsv.Row::date).max(LocalDate::compareTo).orElseThrow();
+
+        // Le righe già aggiunte da un file precedente: la loro impronta c'è già nel conto.
+        Set<String> existingKeys = transactionRepository.findDedupKeysByAccount(account);
+        Map<TradeRepublicCsv.Row, String> keys = fileKeys(reading.rows());
+        List<TradeRepublicCsv.Row> fresh = reading.rows().stream().filter(r -> !existingKeys.contains(keys.get(r)))
+                .toList();
+
+        // I movimenti arrivati dalla banca, solo contabilizzati: quelli in attesa vengono cancellati e riscaricati a
+        // ogni aggiornamento, e il testo aggiunto andrebbe perso. Quelli aggiunti da un file non si abbinano: la loro
+        // riga l'abbiamo già riconosciuta dall'impronta.
+        Map<Long, BankTransaction> movements = transactionRepository
+                .findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(account,
+                        TransactionStatus.BOOKED, from.minusDays(DAYS_TOLERANCE), to.plusDays(DAYS_TOLERANCE))
+                .stream()
+                .filter(t -> !t.getDedupKey().startsWith(FILE_KEY_PREFIX))
+                .collect(Collectors.toMap(BankTransaction::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+        List<Candidate> candidates = movements.values().stream()
+                .map(t -> new Candidate(t.getId(), t.getBookingDate(), t.getAmount(), t.getCurrency()))
+                .toList();
+        Matching matching = match(fresh, candidates);
+
+        // Le righe senza movimento: si aggiungono solo quelle più vecchie dello storico della banca (con il margine
+        // della tolleranza: una riga di 2 giorni prima potrebbe essere il primo movimento, con la data spostata).
+        LocalDate bankFrom = transactionRepository.findFirstBankDate(account, TransactionStatus.BOOKED,
+                FILE_KEY_PREFIX + "%");
+        Map<TradeRepublicCsv.Row, String> toAdd = new LinkedHashMap<>();
+        List<TradeRepublicCsv.Row> withoutMovement = new ArrayList<>();
+        for (TradeRepublicCsv.Row row : matching.unmatchedRows()) {
+            if (bankFrom != null && row.date().isBefore(bankFrom.minusDays(DAYS_TOLERANCE))) {
+                toAdd.put(row, keys.get(row));
+            } else {
+                withoutMovement.add(row);
+            }
+        }
+        return new Plan(account, reading, from, to, bankFrom, movements, matching,
+                reading.rows().size() - fresh.size(), toAdd, withoutMovement);
+    }
+
+    /** Legge il file, con i controlli: è di Trade Republic, non è troppo grande, ogni riga si legge. */
+    private static TradeRepublicCsv.Reading read(byte[] content) {
         String text = TextDecoder.decode(content);
         List<List<String>> all;
         try {
@@ -167,19 +250,37 @@ public class CompletionService {
         if (reading.rows().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il file non ha movimenti di denaro.");
         }
-        LocalDate from = reading.rows().stream().map(TradeRepublicCsv.Row::date).min(LocalDate::compareTo).orElseThrow();
-        LocalDate to = reading.rows().stream().map(TradeRepublicCsv.Row::date).max(LocalDate::compareTo).orElseThrow();
-        // Solo i movimenti contabilizzati: quelli in attesa vengono cancellati e riscaricati a ogni
-        // aggiornamento, e il testo aggiunto andrebbe perso.
-        Map<Long, BankTransaction> movements = transactionRepository
-                .findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(account,
-                        TransactionStatus.BOOKED, from.minusDays(DAYS_TOLERANCE), to.plusDays(DAYS_TOLERANCE))
-                .stream()
-                .collect(Collectors.toMap(BankTransaction::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new));
-        List<Candidate> candidates = movements.values().stream()
-                .map(t -> new Candidate(t.getId(), t.getBookingDate(), t.getAmount(), t.getCurrency()))
-                .toList();
-        return new Plan(reading, from, to, movements, match(reading.rows(), candidates));
+        return reading;
+    }
+
+    /**
+     * L'impronta che avrebbe ogni riga, se diventasse un movimento: {@code trcsv:} e l'identificativo di Trade
+     * Republic, unico per ogni operazione. Se mancasse, un hash dei dati della riga, con un numero progressivo per
+     * le righe identiche (come CsvImportService.dedupKey).
+     */
+    static Map<TradeRepublicCsv.Row, String> fileKeys(List<TradeRepublicCsv.Row> rows) {
+        Map<TradeRepublicCsv.Row, String> keys = new HashMap<>();
+        Map<String, Integer> occurrences = new HashMap<>();
+        for (TradeRepublicCsv.Row row : rows) {
+            if (row.transactionId() != null) {
+                keys.put(row, FILE_KEY_PREFIX + row.transactionId());
+            } else {
+                String base = row.date() + "|" + row.amount().toPlainString() + "|" + row.currency() + "|"
+                        + row.description();
+                int occurrence = occurrences.merge(base, 1, Integer::sum);
+                keys.put(row, FILE_KEY_PREFIX + sha256(base + "|" + occurrence));
+            }
+        }
+        return keys;
+    }
+
+    private static String sha256(String text) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e); // SHA-256 c'è in ogni Java: non succede
+        }
     }
 
     /**
