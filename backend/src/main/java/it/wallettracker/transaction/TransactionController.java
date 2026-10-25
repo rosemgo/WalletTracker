@@ -73,4 +73,17 @@ public class TransactionController {
     /** Il corpo della richiesta: l'id di una categoria dell'elenco, oppure null. */
     public record ManualCategoryChange(Long categoryId) {
     }
+
+    /**
+     * {@code PUT /api/transactions/{id}/note} con corpo {@code {"note": "regalo per Luca"}}: scrive la nota del
+     * movimento. Con {@code {"note": null}} o un testo vuoto la nota viene tolta.
+     */
+    @PutMapping("/{id}/note")
+    public TransactionDto changeNote(@PathVariable Long id, @RequestBody NoteChange change) {
+        return transactionService.changeNote(id, change.note());
+    }
+
+    /** Il corpo della richiesta: il testo della nota, oppure null. */
+    public record NoteChange(String note) {
+    }
 }

@@ -13,6 +13,7 @@ import java.time.LocalDate;
  * @param manualType       la correzione manuale, null se non c'è
  * @param manualCategoryId l'id della categoria scelta a mano, null se non c'è
  * @param transferPeerId per i trasferimenti: l'id del movimento sull'altro conto
+ * @param note           la nota scritta dall'utente, null se non c'è
  */
 public record TransactionDto(
         Long id,
@@ -29,7 +30,8 @@ public record TransactionDto(
         String category,
         TransactionType manualType,
         Long manualCategoryId,
-        Long transferPeerId) {
+        Long transferPeerId,
+        String note) {
 
     public static TransactionDto from(BankTransaction transaction) {
         return new TransactionDto(
@@ -47,6 +49,7 @@ public record TransactionDto(
                 transaction.getCategory() != null ? transaction.getCategory().getName() : null,
                 transaction.getManualType(),
                 transaction.getManualCategory() != null ? transaction.getManualCategory().getId() : null,
-                transaction.getTransferPeerId());
+                transaction.getTransferPeerId(),
+                transaction.getNote());
     }
 }

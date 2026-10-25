@@ -12,7 +12,7 @@
       [value]="text()"
       (input)="onSearch($event)"
       maxlength="100"
-      placeholder="una o più parole: esercente, causale, categoria, importo"
+      placeholder="una o più parole: esercente, causale, categoria, nota, importo"
     />
   </label>
   <label>
@@ -141,6 +141,40 @@
                   }
                   ·
                   <button type="button" class="link" (click)="openCategory(t)">modifica</button>
+                  @if (!t.note && editingNote() !== t.id) {
+                    ·
+                    <button type="button" class="link" (click)="editingNote.set(t.id)">
+                      aggiungi una nota
+                    </button>
+                  }
+                </div>
+              }
+              <!-- La nota: solo per l'utente. {{ }} mostra il testo così com'è, mai come HTML. -->
+              @if (editingNote() === t.id) {
+                <form
+                  class="note-edit"
+                  (submit)="$event.preventDefault(); saveNote(t, noteInput.value)"
+                >
+                  <input
+                    #noteInput
+                    type="text"
+                    [value]="t.note ?? ''"
+                    [maxLength]="maxNoteLength"
+                    [attr.aria-label]="'Nota del movimento ' + t.id"
+                    placeholder="per esempio: regalo per Luca"
+                    (keydown.escape)="editingNote.set(null)"
+                  />
+                  <button type="submit">Salva</button>
+                  <button type="button" class="link" (click)="editingNote.set(null)">
+                    annulla
+                  </button>
+                </form>
+              } @else if (t.note) {
+                <div class="note">
+                  Nota: {{ t.note }} ·
+                  <button type="button" class="link" (click)="editingNote.set(t.id)">
+                    modifica
+                  </button>
                 </div>
               }
             </td>

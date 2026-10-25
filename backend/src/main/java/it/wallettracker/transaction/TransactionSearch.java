@@ -24,7 +24,7 @@ import org.springframework.data.jpa.domain.Specification;
  * scritta una volta per tutte non lo può fare. Una Specification invece è una condizione <b>costruita in Java</b>, con
  * il Criteria API di JPA: aggiungiamo un pezzo per ogni filtro acceso e per ogni parola, e Hibernate ne ricava l'SQL.
  *
- * <p>Ogni parola deve esserci (AND), in un campo qualsiasi (OR): "netflix amsterdam" trova "NETFLIX.COM AMSTERDAM",
+ * <p>Ogni parola deve esserci (AND), in un campo qualsiasi (OR: causale, controparte, categoria, nota): "netflix amsterdam" trova "NETFLIX.COM AMSTERDAM",
  * e anche "amsterdam netflix"; "esselunga spesa" trova la causale "ESSELUNGA" nella categoria "Spesa alimentare".
  * Una parola che è un importo ("12,99") trova anche i movimenti con quell'importo, con i due segni.
  *
@@ -93,23 +93,24 @@ public final class TransactionSearch {
                 conditions.add(cb.lessThanOrEqualTo(root.get("bookingDate"), filter.to()));
             }
             for (String word : words) {
-                conditions.add(wordAnywhere(cb, word, root.get("description"), root.get("counterparty"),
-                        category.get("name"), root.get("amount")));
+                conditions.add(wordAnywhere(cb, word, List.of(root.get("description"), root.get("counterparty"),
+                        category.get("name"), root.get("note")), root.get("amount")));
             }
             return cb.and(conditions.toArray(Predicate[]::new));
         };
     }
 
     /**
-     * Una parola, in un campo qualsiasi: causale, controparte, nome della categoria; e, se è un importo, l'importo.
+     * Una parola, in un campo qualsiasi: causale, controparte, nome della categoria, nota; e, se è un importo,
+     * l'importo.
      * {@code lower(coalesce(campo, ''))}: senza badare a maiuscole e minuscole, e un campo vuoto (null) è testo vuoto
      * (altrimenti {@code null LIKE ...} non sarebbe né vero né falso).
      */
-    private static Predicate wordAnywhere(CriteriaBuilder cb, String word, Expression<String> description,
-            Expression<String> counterparty, Expression<String> categoryName, Expression<BigDecimal> amount) {
+    private static Predicate wordAnywhere(CriteriaBuilder cb, String word, List<Expression<String>> texts,
+            Expression<BigDecimal> amount) {
         String pattern = likePattern(word);
         List<Predicate> anyField = new ArrayList<>();
-        for (Expression<String> field : List.of(description, counterparty, categoryName)) {
+        for (Expression<String> field : texts) {
             anyField.add(cb.like(cb.lower(cb.coalesce(field, "")), pattern, '\\'));
         }
         BigDecimal value = amountIn(word);

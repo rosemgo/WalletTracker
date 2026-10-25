@@ -23,6 +23,7 @@ Il testo si cerca, **senza badare a maiuscole e minuscole**, in:
 - la **causale** (`description`): "PAGAMENTO CARTA NETFLIX.COM AMSTERDAM";
 - la **controparte** (`counterparty`): "Zalando SE";
 - il nome della **categoria** del movimento (quella che si vede: scelta a mano o messa da una regola).
+- la **nota** scritta dall'utente (aggiunta dopo, `docs/34`).
 
 Se il testo è un **importo** ("12,99", "12.99", "-12,99 €", "1.234,56"), si trovano anche i movimenti con quell'importo,
 **con qualsiasi segno**: cercando "12,99" escono l'abbonamento Netflix (−12,99) e il rimborso Zalando (+12,99).

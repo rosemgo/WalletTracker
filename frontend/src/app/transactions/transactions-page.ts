@@ -19,12 +19,15 @@ import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
 /** Quanti movimenti per pagina. */
 const PAGE_SIZE = 50;
 
+/** La nota più lunga, come nel backend (TransactionService.MAX_NOTE_LENGTH). */
+export const MAX_NOTE_LENGTH = 300;
+
 /** Quanto aspettare dopo l'ultimo tasto prima di cercare. */
 export const SEARCH_DELAY_MS = 300;
 
 /**
  * La pagina dei movimenti: filtri per conto e per tipo, elenco a pagine, correzione manuale del tipo e
- * della categoria, e "crea una regola" da una correzione.
+ * della categoria, "crea una regola" da una correzione, e la nota di un movimento.
  */
 @Component({
   selector: 'app-transactions-page',
@@ -41,6 +44,7 @@ export class TransactionsPage implements OnInit {
   protected readonly typeLabels = TYPE_LABELS;
   protected readonly periods = PERIODS;
   protected readonly periodLabels = PERIOD_LABELS;
+  protected readonly maxNoteLength = MAX_NOTE_LENGTH;
 
   protected readonly accounts = signal<Account[]>([]);
   protected readonly result = signal<TransactionPage | null>(null);
@@ -66,6 +70,8 @@ export class TransactionsPage implements OnInit {
   protected readonly categories = signal<Category[]>([]);
   /** Il movimento di cui si sta modificando la categoria; null = nessuno. */
   protected readonly editingCategory = signal<number | null>(null);
+  /** Il movimento di cui si sta scrivendo la nota; null = nessuno. */
+  protected readonly editingNote = signal<number | null>(null);
   /** Le categorie già usate per esercenti simili a quello del movimento in modifica: in cima al menu. */
   protected readonly usedCategories = signal<UsedCategories | null>(null);
 
@@ -289,6 +295,27 @@ export class TransactionsPage implements OnInit {
       return counterparty || '(nessuna descrizione)';
     }
     return `${counterparty} ${description}`.trim();
+  }
+
+  /**
+   * Salva la nota scritta nel campo (vuota la toglie). Aggiorniamo solo quel movimento nella pagina, senza
+   * ricaricarla: una nota non cambia né i totali né la classificazione degli altri.
+   */
+  saveNote(transaction: Transaction, note: string): void {
+    this.api.changeNote(transaction.id, note.trim() === '' ? null : note).subscribe({
+      next: (saved) => {
+        this.editingNote.set(null);
+        this.result.update((page) =>
+          page === null
+            ? page
+            : {
+                ...page,
+                items: page.items.map((t) => (t.id === saved.id ? { ...t, note: saved.note } : t)),
+              },
+        );
+      },
+      error: (response) => this.error.set(response.error?.detail ?? 'La nota non è stata salvata.'),
+    });
   }
 
   private loadCategories(): void {

@@ -303,6 +303,62 @@ class TransactionControllerTest {
                 .isEqualTo("La categoria 999999 non esiste: forse è stata eliminata. Ricarica la pagina.");
     }
 
+    @Test
+    void aNoteCanBeWrittenFoundAndRemoved() {
+        BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-9.98", "AMAZON");
+        BankTransaction other = transaction(account(), LocalDate.of(2026, 9, 2), "-5.00", "BAR");
+        classificationService.classifyAll();
+
+        // Gli spazi in più, anche gli a capo, diventano uno spazio solo.
+        assertThat(note(purchase, "\"  regalo per\\n  Luca  \""))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.note").isEqualTo("regalo per Luca");
+
+        // La classificazione (che riclassifica tutto) non la tocca, e la ricerca la trova.
+        assertThat(correct(purchase, "\"IGNORED\"")).hasStatusOk()
+                .bodyJson().extractingPath("$.note").isEqualTo("regalo per Luca");
+        assertThat(ids("luca")).containsExactly(purchase.getId().intValue());
+        assertThat(ids("amazon regalo")).containsExactly(purchase.getId().intValue());
+        assertThat(mvc.get().uri("/api/transactions"))
+                .bodyJson().extractingPath("$.items[?(@.id == " + other.getId() + ")].note").asArray()
+                .containsExactly((Object) null);
+
+        // Vuota o null: la nota viene tolta.
+        assertThat(note(purchase, "\"   \"")).hasStatusOk().bodyJson().extractingPath("$.note").isNull();
+        assertThat(note(purchase, "\"di nuovo\"")).hasStatusOk();
+        assertThat(note(purchase, "null")).hasStatusOk().bodyJson().extractingPath("$.note").isNull();
+        assertThat(ids("luca")).isEmpty();
+    }
+
+    @Test
+    void aWrongNoteIsRejected() {
+        BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-9.98", "AMAZON");
+
+        assertThat(note(purchase, "\"" + "a".repeat(TransactionService.MAX_NOTE_LENGTH) + "\"")).hasStatusOk();
+        assertThat(note(purchase, "\"" + "a".repeat(TransactionService.MAX_NOTE_LENGTH + 1) + "\""))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").isEqualTo("La nota è troppo lunga: al massimo 300 caratteri.");
+        assertThat(note(purchase, "\"suono\\u0007\""))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").isEqualTo("La nota contiene caratteri non validi.");
+        assertThat(mvc.put().uri("/api/transactions/999999/note")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": \"x\"}"))
+                .hasStatus(404);
+
+        // Le note rifiutate non hanno cambiato quella salvata.
+        assertThat(transactionRepository.findById(purchase.getId()).orElseThrow().getNote())
+                .isEqualTo("a".repeat(TransactionService.MAX_NOTE_LENGTH));
+    }
+
+    /** Manda la nota; {@code note} è già in formato JSON (es. {@code "\"ciao\""} oppure {@code "null"}). */
+    private MvcTestResult note(BankTransaction transaction, String note) {
+        return mvc.put().uri("/api/transactions/{id}/note", transaction.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": " + note + "}")
+                .exchange();
+    }
+
     /** Manda la categoria scelta a mano: il suo id, oppure null per togliere la scelta. */
     private MvcTestResult correctCategory(BankTransaction transaction, Long categoryId) {
         return mvc.put().uri("/api/transactions/{id}/manual-category", transaction.getId())

@@ -97,6 +97,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 31. [Fase 3: completare i movimenti di Trade Republic con il suo file](docs/31-fase-3-trade-republic-completa-movimenti.md)
 32. [La ricerca nei movimenti: testo, categoria, importo](docs/32-ricerca-movimenti.md)
 33. [Fase grafica, passo 1: il progetto (funzionalità, schermate, grafici, stile)](docs/33-fase-grafica-progetto.md)
+34. [La nota di un movimento (scriverla, vederla, ritrovarla con la ricerca)](docs/34-note-movimenti.md)
 
 ## Piano di lavoro
 

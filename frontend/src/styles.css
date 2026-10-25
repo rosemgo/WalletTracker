@@ -423,11 +423,22 @@ app-monthly-chart {
   vertical-align: middle;
 }
 
-.category-edit {
+.category-edit,
+.note-edit {
   display: flex;
   gap: 0.5rem;
   align-items: center;
   margin-top: 0.25rem;
+}
+
+.note-edit input {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.note {
+  margin-top: 0.25rem;
+  font-style: italic;
 }
 
 /* ---- Spese per categoria: una barra orizzontale per categoria, con l'importo scritto accanto ---- */

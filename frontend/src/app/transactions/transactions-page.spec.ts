@@ -32,6 +32,7 @@ const SETTLEMENT: Transaction = {
   manualType: null,
   manualCategoryId: null,
   transferPeerId: null,
+  note: null,
 };
 
 /** Un pezzo dell'elenco delle categorie, come lo restituisce GET /api/categories. */
@@ -46,6 +47,7 @@ describe('TransactionsPage', () => {
   const requests: TransactionFilter[] = [];
   const corrections: [number, TransactionType | null][] = [];
   const categoryChanges: [number, number | null][] = [];
+  const noteChanges: [number, string | null][] = [];
   let items: Transaction[];
   let suggestionLoads: number;
   let used: UsedCategories;
@@ -55,6 +57,7 @@ describe('TransactionsPage', () => {
     requests.length = 0;
     corrections.length = 0;
     categoryChanges.length = 0;
+    noteChanges.length = 0;
     items = [SETTLEMENT];
     suggestionLoads = 0;
     used = { word: null, categories: [] };
@@ -76,6 +79,10 @@ describe('TransactionsPage', () => {
       correctCategory: (id: number, categoryId: number | null) => {
         categoryChanges.push([id, categoryId]);
         return of({ ...SETTLEMENT, manualCategoryId: categoryId });
+      },
+      changeNote: (id: number, note: string | null) => {
+        noteChanges.push([id, note]);
+        return of({ ...SETTLEMENT, note: note === null ? null : note.trim() });
       },
       categories: () => of(CATEGORIES),
       usedCategories: () => of(used),
@@ -413,5 +420,44 @@ describe('TransactionsPage', () => {
 
     expect(options).toContain('Rimborso di una spesa');
     expect(options).not.toContain('Spesa');
+  });
+
+  it('a note is written, shown as plain text, changed and removed without reloading the page', async () => {
+    const fixture = TestBed.createComponent(TransactionsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const button = (label: string) =>
+      [...page.querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!;
+    const write = async (text: string) => {
+      const input = page.querySelector('.note-edit input') as HTMLInputElement;
+      expect(input.maxLength).toBe(300);
+      input.value = text;
+      button('Salva').click();
+      await fixture.whenStable();
+    };
+
+    button('aggiungi una nota').click();
+    await fixture.whenStable();
+    await write(' <b>regalo</b> per Luca ');
+
+    expect(noteChanges).toEqual([[449, ' <b>regalo</b> per Luca ']]);
+    expect(requests.length).toBe(1); // nessun ricaricamento
+    const note = page.querySelector('.note') as HTMLElement;
+    expect(note.textContent).toContain('Nota: <b>regalo</b> per Luca'); // testo, non HTML
+    expect(note.querySelector('b')).toBeNull();
+    expect(page.querySelector('.note-edit')).toBeNull();
+    expect(page.textContent).not.toContain('aggiungi una nota');
+
+    // "modifica" riapre il campo con la nota; svuotarlo la toglie.
+    (note.querySelector('button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect((page.querySelector('.note-edit input') as HTMLInputElement).value).toBe(
+      '<b>regalo</b> per Luca',
+    );
+    await write('   ');
+
+    expect(noteChanges[1]).toEqual([449, null]);
+    expect(page.querySelector('.note')).toBeNull();
+    expect(page.textContent).toContain('aggiungi una nota');
   });
 });

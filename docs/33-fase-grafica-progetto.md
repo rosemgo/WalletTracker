@@ -389,7 +389,7 @@ un elenco a tutto schermo, "Scegli una categoria", e vale solo per quel moviment
 4. **Da Amazon.it**: il riepilogo dell'esercente e gli ultimi movimenti.
 5. **Dettagli**: conto, controparte, causale completa, data contabile e data valuta, da dove è arrivato
    (sincronizzazione della banca, file CSV, file di Trade Republic); in fondo i dati originali, da aprire.
-6. **Aggiungi una nota** (vedi M4).
+6. **La nota**: "Aggiungi una nota", poi la nota con "Modifica" (vedi M4).
 
 La scelta della categoria è un **foglio dal basso** (bottom sheet): si chiude toccando fuori o con la ✕, resta a
 portata di pollice, e la pagina sotto non si perde.
@@ -398,9 +398,10 @@ portata di pollice, e la pagina sotto non si perde.
 
 - Già c'è: tutti i campi del movimento (anche `rawJson`), la categoria manuale (`PUT …/manual-category`), il tipo
   manuale (`PUT …/manual-type`), la regola che ha deciso (`ruleId`), le regole e i suggerimenti.
+- Fatte subito: le **note** (`docs/34`): una colonna nuova (V27), `PUT …/note`, cercabili con la ricerca, già
+  nella pagina Movimenti di oggi.
 - Manca: l'API del dettaglio con l'origine della categoria e il riepilogo dell'esercente; lo spostamento "anche i
-  simili" (con l'Annulla); le **note**, che chiedono una colonna nuova (una migrazione, testo breve, solo per te,
-  cercabile con la ricerca). Le note sono una proposta: si possono anche lasciare per dopo.
+  simili" (con l'Annulla).
 - Non prendiamo da N26 i **tag**: con categorie ben fatte e le note sono un terzo modo di classificare, e poco usato.
 
 Nota: alcune bozze precedenti usano nomi di categoria inventati ("Casa e utenze", "Abbonamenti"); le schermate vere

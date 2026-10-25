@@ -111,6 +111,10 @@ public class BankTransaction {
     @JoinColumn(name = "manual_category_id")
     private Category manualCategory;
 
+    /** La nota scritta dall'utente (V27): solo sua, la banca e la classificazione non la toccano. */
+    @Column(name = "note")
+    private String note;
+
     protected BankTransaction() {
     }
 
@@ -202,6 +206,15 @@ public class BankTransaction {
     /** Categoria scelta a mano (dalla dashboard): {@code null} la toglie. */
     public void setManualCategory(Category manualCategory) {
         this.manualCategory = manualCategory;
+    }
+
+    /** La nota, già ripulita da TransactionService (null = nessuna nota). */
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public String getNote() {
+        return note;
     }
 
     public Category getManualCategory() {

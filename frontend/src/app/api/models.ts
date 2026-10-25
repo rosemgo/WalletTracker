@@ -178,6 +178,7 @@ export interface Transaction {
   manualType: TransactionType | null;
   manualCategoryId: number | null; // la categoria scelta a mano, se c'è (vince su quella delle regole)
   transferPeerId: number | null;
+  note: string | null; // la nota scritta dall'utente, se c'è
 }
 
 /** Una pagina di movimenti. */

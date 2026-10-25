@@ -1,6 +1,7 @@
 package it.wallettracker.transaction;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
@@ -22,6 +23,12 @@ public class TransactionService {
 
     /** Il testo da cercare più lungo che accettiamo: nessuna causale ne ha bisogno di più. */
     static final int MAX_SEARCH_LENGTH = 100;
+
+    /** La nota più lunga: due righe sul telefono. Lo stesso limite è nel database (V27). */
+    static final int MAX_NOTE_LENGTH = 300;
+
+    /** I caratteri di controllo (tranne gli spazi, che diventano uno spazio solo): in una nota non hanno senso. */
+    private static final Pattern CONTROL = Pattern.compile("[\\p{Cntrl}&&[^\\s]]");
 
     private final BankTransactionRepository repository;
     private final ClassificationService classificationService;
@@ -95,6 +102,29 @@ public class TransactionService {
         transaction.setManualCategory(categoryService.require(categoryId));
         // Riclassifichiamo per ritrovare la categoria della regola quando la scelta manuale viene tolta.
         classificationService.classifyAll();
+        return TransactionDto.from(transaction);
+    }
+
+    /**
+     * Scrive la nota di un movimento ({@code null} o solo spazi la tolgono). Gli spazi in più, compresi gli a capo,
+     * diventano uno spazio solo: la nota è una riga. Oltre {@value #MAX_NOTE_LENGTH} caratteri, o con caratteri di
+     * controllo, risponde 400.
+     *
+     * <p>La nota si mostra nella pagina come testo: Angular la "scappa" ({@code {{ }}} non interpreta mai l'HTML),
+     * quindi una nota con dentro {@code <script>} resta una scritta innocua.
+     */
+    @Transactional
+    public TransactionDto changeNote(Long id, String note) {
+        BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
+        String cleaned = note == null ? "" : note.strip().replaceAll("\\s+", " ");
+        if (CONTROL.matcher(cleaned).find()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nota contiene caratteri non validi.");
+        }
+        if (cleaned.length() > MAX_NOTE_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La nota è troppo lunga: al massimo " + MAX_NOTE_LENGTH + " caratteri.");
+        }
+        transaction.setNote(cleaned.isEmpty() ? null : cleaned);
         return TransactionDto.from(transaction);
     }
 }

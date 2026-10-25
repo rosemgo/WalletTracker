@@ -155,6 +155,11 @@ export class WalletApi {
     });
   }
 
+  /** PUT /api/transactions/{id}/note; con `null` o un testo vuoto la nota viene tolta. */
+  changeNote(transactionId: number, note: string | null): Observable<Transaction> {
+    return this.http.put<Transaction>(`/api/transactions/${transactionId}/note`, { note });
+  }
+
   /** GET /api/categories: l'elenco delle categorie, per gruppo e nell'ordine dei menu. */
   categories(): Observable<Category[]> {
     return this.http.get<Category[]>('/api/categories');
