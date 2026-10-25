@@ -18,6 +18,7 @@ claude.ai (link privato, nella conversazione).
 | I | che cosa serve al backend |
 | J | le scelte tecniche da fare |
 | K | i passi successivi |
+| L | Esplora: come Revolut, ma meglio (telefono e PC) |
 
 ---
 
@@ -51,6 +52,8 @@ ma la spesa **accumulata** del mese contro quella di un mese tipico (la media de
 - Movimenti: elenco per giorno con il totale del giorno, ricerca, filtri rapidi a "pillole" (mese, da verificare,
   conto, entrate), categoria e suggerimenti direttamente nella riga;
 - Analisi: spese mese per mese, quanto metti da parte, categorie nel periodo, calendario dei giorni;
+- **Esplora**: spese, entrate o netto, per settimana, mese, 6 mesi o anno, raggruppate per categoria, esercente o
+  conto; si tocca una barra per vedere quel periodo e una categoria per vederne i movimenti (Parte L);
 - Dettaglio categoria: andamento, budget con il ritmo, dove (gli esercenti), movimenti;
 - Budget: le barre con il ritmo del mese (esistono già: vanno ridisegnate);
 - **Modalità discreta**: un tocco nasconde gli importi (in metro o in ufficio, qualcuno guarda lo schermo);
@@ -81,7 +84,7 @@ modello giusto è una **barra in basso** con cinque voci, raggiungibile con il p
 |---|---|
 | **Oggi** | la Home (Parte D1) |
 | **Movimenti** | elenco, ricerca, filtri, da verificare, suggerimenti |
-| **Analisi** | andamento, categorie, calendario; da qui il dettaglio di una categoria |
+| **Analisi** | andamento, categorie, calendario; da qui il dettaglio di una categoria e **Esplora** |
 | **Budget** | i budget del mese, con il ritmo |
 | **Altro** | abbonamenti, conti, regole, categorie, importa, impostazioni |
 
@@ -231,6 +234,7 @@ Le schermate chiedono dati già "pronti", calcolati dal backend, non migliaia di
 | `GET /api/overview?month=2026-10` | Oggi | speso finora; la spesa accumulata giorno per giorno; il mese tipico (media degli ultimi N mesi, giorno per giorno); categorie del mese con il "solito"; prossime uscite ricorrenti; conteggi da sistemare |
 | `GET /api/analysis?from=…&to=…` | Analisi | spese ed entrate per mese; categorie del periodo; spesa di ogni giorno di un mese |
 | `GET /api/categories/{id}/overview` | Una categoria | il mese, il solito, il budget e il ritmo, 12 mesi, gli esercenti |
+| `GET /api/explore?metric=…&period=…&at=…&by=…&category=…` | Esplora | le barre del periodo, la media per unità (al giorno, a settimana, al mese), i gruppi del periodo scelto con il loro "solito", e, con una categoria, i movimenti per giorno |
 
 Il "solito" va definito bene: per esempio la **media degli ultimi 6 mesi completi**, escludendo trasferimenti tra
 conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `docs/18`). Lo decideremo con i test.
@@ -258,8 +262,89 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
 2. **Le basi**: variabili CSS, caratteri, la barra in basso, i componenti comuni; la struttura a cinque sezioni.
 3. **Oggi**: l'API `overview` (con i test sul "solito"), poi la schermata.
 4. **Movimenti**: il nuovo elenco per giorno, le pillole, i suggerimenti nella riga.
-5. **Analisi** e **dettaglio categoria**: le API e i grafici.
+5. **Analisi**, **Esplora** e **dettaglio categoria**: le API e i grafici.
 6. **Budget** e **Altro**: ridisegnati con i componenti comuni.
 7. **PWA**, modalità discreta, tema scuro.
 
 Ogni passo con la sua guida e i suoi test, come sempre.
+
+---
+
+## Parte L: Esplora, come Revolut ma meglio
+
+Dai video dell'app Revolut viene la funzione più utile per capire **in ogni categoria** che cosa entra e che cosa
+esce: un **esploratore**. Nel canvas ci sono tre tavole nuove: **Esplora** (tema giorno e notte), da provare con il
+pulsante **Play** toccando come in un'app, e **PC · Analisi**, la stessa idea sullo schermo grande. Sulla schermata
+Analisi del telefono c'è il pulsante "Esplora" che ci porta.
+
+### L1. Che cosa fa Revolut
+
+- Una pagina di riepilogo con tre schede: quanto hai speso (con la linea accumulata del mese e la differenza dal mese
+  prima), le entrate, i movimenti netti.
+- Un esploratore con tre scelte combinabili: **che cosa** (spese, entrate, netto), **come raggruppare** (categoria,
+  esercente, paese, conto, valuta) e **che periodo** (settimana, mese, 6 mesi, anno, a scelta).
+- Toccando una barra si guarda quel periodo; toccando una categoria il grafico si filtra e sotto compaiono i suoi
+  movimenti per giorno, con il totale del giorno e un "Cancella" per togliere il filtro.
+- Una linea tratteggiata con la media ("Media di X € a settimana").
+
+### L2. Che cosa prendiamo
+
+Le tre scelte (che cosa, periodo, raggruppamento), il tocco sulla barra, il filtro su una categoria con i suoi
+movimenti per giorno, la media come linea di riferimento. Lasciamo "paese" e "valuta": per un conto italiano sono
+quasi sempre un solo valore.
+
+### L3. Dove WalletTracker fa meglio
+
+| | Revolut | WalletTracker |
+|---|---|---|
+| Quali conti | solo i conti Revolut | **tutte le banche** collegate, più Trade Republic dal file |
+| Trasferimenti | un bonifico a una persona o a un tuo conto può finire tra le spese | i **giroconti tra conti propri** sono esclusi, gli investimenti stanno a parte (`docs/18`) |
+| Confronto | con il mese prima | con il **solito** della categoria ("+46 € sul solito"), che dice di più di un solo mese |
+| Budget | separati dall'analisi | nel dettaglio categoria, con la **tacca del ritmo** |
+| Lettura | numeri e grafici | **frasi** che dicono la cosa importante ("Bar e ristoranti è la voce che cresce di più") |
+| Categorie | fisse | le **tue**, con le regole e i suggerimenti dell'IA |
+| PC | app solo per telefono | **due colonne**: grafico a sinistra, categorie a destra, sempre visibili insieme |
+
+### L4. La schermata Esplora (telefono)
+
+Dall'alto in basso:
+
+1. **Spese · Entrate · Netto**: un interruttore a tre posizioni.
+2. **La scheda della cifra**: "Spese · ottobre 2026", la cifra grande, sotto "Media di 1.550 € al mese". Con un
+   filtro attivo compare la pillola della categoria con la ✕ per toglierlo.
+3. **Il grafico a colonne**: la colonna scelta in blu (ambra di notte), le altre grigie, una **linea continua** per
+   la media. Si tocca una colonna e tutta la pagina passa a quel periodo. Il periodo non ancora iniziato (29–31
+   ottobre) non si tocca. In "Netto" le colonne vanno in su (risparmiato) o in giù (speso più di quanto è entrato).
+4. **Settimana · Mese · 6 mesi · Anno**: con "Settimana" le colonne sono i giorni, con "Mese" le settimane, con "6
+   mesi" e "Anno" i mesi.
+5. **Per Categoria · Esercente · Conto**.
+6. **L'elenco**: per ogni voce l'importo, la percentuale, una barra sottile e, per il mese, la differenza dal solito.
+   Toccando una categoria si filtra: il grafico mostra solo quella (con la sua media) e sotto compaiono "Gli ultimi
+   movimenti", per giorno con il totale del giorno.
+7. In **Netto** l'elenco diventa due sezioni, **Entrate** e **Uscite**, ognuna con il suo totale.
+
+Le regole restano quelle della Parte F: una sola cifra grande, un solo colore che "parla" (la colonna scelta), una
+sola scala, niente torte, aree toccabili di almeno 44 px.
+
+### L5. Il PC
+
+Sul PC le cinque sezioni diventano una **colonna a sinistra** (con Conti e Impostazioni a portata di clic) e la
+pagina ha spazio per mostrare tutto insieme:
+
+- in alto le **tre schede**: spese del mese (con "a questo punto del mese di solito sei a…"), entrate, quanto ti
+  resta finora (senza i giroconti);
+- a sinistra il **grafico dei 12 mesi** con la media e, sotto, due **frasi** sulle categorie che cambiano di più;
+- a destra le **categorie del mese**, con la differenza dal solito: un clic apre il dettaglio.
+
+Gli interruttori (che cosa, periodo, raggruppamento) sono gli stessi del telefono, in alto a destra: l'utente non
+deve imparare due app.
+
+### L6. Come lo costruiremo
+
+- Una sola API, `GET /api/explore` (Parte I): il telefono e il PC chiedono gli stessi dati, cambia solo come li
+  dispongono. I calcoli (somme, medie, "solito") stanno nel backend, con i test.
+- Un solo componente Angular per il grafico a colonne, con la colonna scelta, la media e il tocco; lo stesso nel
+  dettaglio categoria e in Analisi.
+- Lo stato della pagina (che cosa, periodo, colonna, filtro) nell'**indirizzo** (`/esplora?cosa=spese&periodo=mese`):
+  così il tasto "indietro" del telefono funziona e una vista si può salvare tra i preferiti.
+
