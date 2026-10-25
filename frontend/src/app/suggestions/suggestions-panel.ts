@@ -2,6 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, output, signal } from 
 
 import { AiSuggestionsStatus, CategorySuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { ReadablePipe } from '../text/readable';
 
 /** Ogni quanto chiedere lo stato mentre l'IA risponde. */
 const POLL_MS = 2000;
@@ -21,6 +22,7 @@ const POLL_MS = 2000;
  * finito, poi ricarica i suggerimenti. Quelli dell'IA hanno il segno "IA" e il nome del modello.
  */
 @Component({
+  imports: [ReadablePipe],
   selector: 'app-suggestions-panel',
   templateUrl: './suggestions-panel.html',
 })

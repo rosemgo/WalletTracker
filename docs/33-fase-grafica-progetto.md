@@ -204,6 +204,7 @@ app generate in serie. Dalla C si può prendere il **tema scuro** per la sera.
 notte; dei due piacciono di più il carattere e le schede arrotondate di C. Quindi:
 
 - **carattere**: Schibsted Grotesk (un grottesco con personalità, ma sobrio), cifre tabulari negli elenchi;
+  > Aggiornamento (`docs/41`, parte B): ora è Inter, per le cifre tabellari e la dimensione ottica.
 - **schede**: le sezioni sono schede arrotondate (16 px) su uno sfondo appena diverso, **piatte**: niente ombre,
   niente sfumature, niente bordi colorati. È questo che le tiene lontane dallo stile "da IA";
 - **due temi**, che il telefono sceglie da solo (`prefers-color-scheme`) e che si possono forzare dalle Impostazioni.
@@ -274,6 +275,8 @@ conti propri, investimenti e movimenti ignorati (come già fa il riepilogo, `doc
    pagina Analisi stessa.
 6. **Budget** e **Altro**: ridisegnati con i componenti comuni. **Fatto**, `docs/39`: il Budget con il totale e il
    ritmo in parole; sul telefono le tabelle di Altro diventano schede; gli errori di aggiornamento in parole.
+   Dopo il passo 6, un passo in più: **l'aspetto moderno** (`docs/41`): carattere Inter, campi e scelta del file
+   ridisegnati, nomi leggibili, grafici animati e da scorrere con il dito.
 7. **PWA** e modalità discreta (il tema scuro è già nel passo 2).
 
 Ogni passo con la sua guida e i suoi test, come sempre.

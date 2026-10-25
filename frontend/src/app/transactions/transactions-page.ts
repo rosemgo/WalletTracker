@@ -15,7 +15,7 @@ import { TYPES, TYPE_LABELS } from '../api/labels';
 import { Account, Transaction, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
-import { groupByDay, nameOf } from './day-groups';
+import { avatarHue, groupByDay, initialOf, nameOf } from './day-groups';
 import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
 import { TransactionsChanged } from './transactions-changed';
 
@@ -55,6 +55,8 @@ export class TransactionsPage implements OnInit {
   protected readonly periods = PERIODS;
   protected readonly periodLabels = PERIOD_LABELS;
   protected readonly nameOf = nameOf;
+  protected readonly initialOf = initialOf;
+  protected readonly avatarHue = avatarHue;
 
   protected readonly accounts = signal<Account[]>([]);
   /** I movimenti caricati finora (la prima pagina, più quelle di "Mostra altri"). */

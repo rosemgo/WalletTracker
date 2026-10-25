@@ -1,6 +1,6 @@
 <div class="shell">
   <nav class="app-nav" aria-label="Sezioni">
-    <span class="brand">WalletTracker</span>
+    <span class="brand"><span class="brand-mark" aria-hidden="true">W</span>WalletTracker</span>
     @for (section of sections; track section.path) {
       <a
         class="section"
@@ -8,7 +8,9 @@
         routerLinkActive="active"
         ariaCurrentWhenActive="page"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="section.icon" /></svg>
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="section.icon" /></svg>
+        </span>
         <span>{{ section.label }}</span>
       </a>
     }
@@ -19,7 +21,9 @@
       [class.active]="inMore()"
       [attr.aria-current]="inMore() ? 'page' : null"
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="more.icon" /></svg>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="more.icon" /></svg>
+      </span>
       <span>{{ more.label }}</span>
     </a>
     <div class="more-pages">

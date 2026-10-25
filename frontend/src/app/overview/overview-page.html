@@ -40,8 +40,10 @@
     }
 
     <section class="card hero">
-      <span class="secondary">{{ isCurrent() ? 'Speso finora' : 'Speso nel mese' }}</span>
-      <span class="big-figure">{{ o.spent | currency: o.currency : 'symbol' : '1.0-0' }}</span>
+      <span class="secondary">{{ figure()?.label }}</span>
+      <span class="big-figure">{{
+        figure()?.value ?? o.spent | currency: o.currency : 'symbol' : '1.0-0'
+      }}</span>
       <p class="comparison">{{ comparison() }}</p>
       <app-month-chart
         [spentByDay]="o.spentByDay"
@@ -49,6 +51,9 @@
         [daysInMonth]="o.daysInMonth"
         [monthShort]="monthShort()"
         [description]="chartDescription()"
+        [currency]="o.currency"
+        [live]="isCurrent()"
+        (scrubbed)="scrubDay.set($event)"
       />
       <div class="chart-keys">
         <span><span class="key month"></span>{{ monthTitle() }}</span>

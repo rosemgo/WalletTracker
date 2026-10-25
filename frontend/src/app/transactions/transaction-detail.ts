@@ -24,7 +24,7 @@ import {
   UsedCategories,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { nameOf } from './day-groups';
+import { avatarHue, initialOf, nameOf } from './day-groups';
 import { TransactionsChanged } from './transactions-changed';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
@@ -84,6 +84,8 @@ export class TransactionDetail implements OnInit {
   protected readonly typeHints = TYPE_HINTS;
   protected readonly origins = ORIGINS;
   protected readonly nameOf = nameOf;
+  protected readonly initialOf = initialOf;
+  protected readonly avatarHue = avatarHue;
   protected readonly maxNoteLength = 300;
 
   protected readonly detail = signal<Detail | null>(null);

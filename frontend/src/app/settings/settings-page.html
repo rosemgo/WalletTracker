@@ -55,13 +55,12 @@
   <div class="card">
     <h2>2. Inserisci le credenziali</h2>
     <div class="form-grid">
-      <label>
-        File della chiave privata (.pem)
-        <input type="file" accept=".pem" (change)="onFile($event)" />
-        @if (fileName()) {
-          <span class="secondary">{{ fileName() }}</span>
-        }
-      </label>
+      <app-file-drop
+        class="wide"
+        accept=".pem"
+        title="Scegli il file della chiave privata (.pem)"
+        (picked)="onFile($event)"
+      />
       <label>
         Application ID
         <input

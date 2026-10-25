@@ -208,7 +208,7 @@ describe('ExplorePage', () => {
       to: '2026-10-28',
     });
     expect(page.textContent).toContain('Spese · Spesa alimentare · ottobre 2026');
-    expect(page.textContent).toContain('PIZZERIA DA GINO');
+    expect(page.textContent).toContain('Pizzeria da Gino');
     expect(page.querySelector('.filter-chip a')?.getAttribute('href')).toBe(
       '/analisi/categoria/1?mese=2026-10',
     );

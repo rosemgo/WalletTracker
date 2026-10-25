@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 
 import { Frequency, SubscriptionOverview, SubscriptionSuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { ReadablePipe, readable } from '../text/readable';
 
 export const FREQUENCY_LABELS: Record<Frequency, string> = {
   MONTHLY: 'al mese',
@@ -17,7 +18,7 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
  */
 @Component({
   selector: 'app-subscriptions-page',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [CurrencyPipe, DatePipe, ReadablePipe],
   templateUrl: './subscriptions-page.html',
 })
 export class SubscriptionsPage implements OnInit {
@@ -35,7 +36,7 @@ export class SubscriptionsPage implements OnInit {
 
   /** "Sì, è un abbonamento", con il nome scritto (o lasciato) dall'utente. */
   confirm(suggestion: SubscriptionSuggestion, name: string): void {
-    const chosenName = name.trim() || suggestion.name;
+    const chosenName = name.trim() || readable(suggestion.name);
     this.api
       .confirmSubscription({
         merchantKey: suggestion.merchantKey,
@@ -58,7 +59,7 @@ export class SubscriptionsPage implements OnInit {
     this.api
       .dismissSubscription(suggestion.merchantKey, suggestion.currency, suggestion.typicalAmount)
       .subscribe({
-        next: () => this.done(`"${suggestion.name}" non verrà più suggerito.`),
+        next: () => this.done(`"${readable(suggestion.name)}" non verrà più suggerito.`),
         error: (response) => this.fail(response),
       });
   }

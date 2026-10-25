@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Account, CompletionPreview, CompletionResult } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MAX_FILE_BYTES } from './import-page';
+import { FileDrop } from '../ui/file-drop';
 
 /**
  * Completa i movimenti di un conto collegato con il file della banca (docs/31). Trade Republic, con Enable
@@ -20,7 +21,7 @@ import { MAX_FILE_BYTES } from './import-page';
  */
 @Component({
   selector: 'app-completion-page',
-  imports: [CurrencyPipe, DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink],
+  imports: [CurrencyPipe, DatePipe, FileDrop, NgTemplateOutlet, ReactiveFormsModule, RouterLink],
   templateUrl: './completion-page.html',
 })
 export class CompletionPage implements OnInit {

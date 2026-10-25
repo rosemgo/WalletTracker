@@ -135,6 +135,9 @@
                     routerLinkActive="selected"
                     ariaCurrentWhenActive="page"
                   >
+                    <span class="avatar" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
+                      initialOf(t)
+                    }}</span>
                     <span class="movement-text">
                       <span class="name">{{ nameOf(t) }}</span>
                       <span class="secondary">{{ metaOf(t) }}</span>

@@ -19,7 +19,7 @@
           <li>
             <span class="suggestion-text">
               <span>
-                {{ s.merchantName }}
+                {{ s.merchantName | readable }}
                 @if (s.model) {
                   <span class="ai-tag" title="Suggerito dall'intelligenza artificiale">IA</span>
                 }

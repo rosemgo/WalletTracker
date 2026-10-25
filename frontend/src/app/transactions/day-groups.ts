@@ -1,4 +1,5 @@
 import { Transaction } from '../api/models';
+import { readable } from '../text/readable';
 import { isoDate } from './period';
 
 /** Un giorno dell'elenco: il titolo, i movimenti e il totale delle spese e delle entrate vere. */
@@ -71,9 +72,30 @@ export function groupByDay(items: Transaction[], today: Date): DayGroup[] {
 
 /**
  * Il nome di un movimento nell'elenco: quello deciso dal backend (la controparte, o il nome scritto nella causale), o
- * la causale; spazi ripetuti ridotti a uno.
+ * la causale; spazi ripetuti ridotti a uno, e senza il maiuscolo continuo delle banche (readable, docs/41).
  */
 export function nameOf(transaction: Transaction): string {
   const text = transaction.name || transaction.counterparty || transaction.description || '';
-  return text.replace(/\s+/g, ' ').trim() || '(nessuna descrizione)';
+  return readable(text.replace(/\s+/g, ' ').trim()) || '(nessuna descrizione)';
+}
+
+/** L'iniziale del nome, per il cerchio colorato: la prima lettera o cifra ("·" se non ce n'è). */
+export function initialOf(transaction: Transaction): string {
+  return (
+    nameOf(transaction)
+      .match(/[\p{L}\p{N}]/u)?.[0]
+      .toUpperCase() ?? '·'
+  );
+}
+
+/**
+ * La tonalità del cerchio (da 0 a 360): calcolata dal nome, così lo stesso esercente ha sempre lo stesso colore. È un
+ * "hash" semplice: ogni lettera cambia il numero, e lettere uguali danno sempre lo stesso risultato.
+ */
+export function avatarHue(transaction: Transaction): number {
+  let hash = 0;
+  for (const char of nameOf(transaction).toUpperCase()) {
+    hash = (hash * 31 + char.codePointAt(0)!) % 360;
+  }
+  return hash;
 }

@@ -12,7 +12,8 @@ import {
   Transaction,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { groupByDay, nameOf } from '../transactions/day-groups';
+import { ReadablePipe } from '../text/readable';
+import { avatarHue, groupByDay, initialOf, nameOf } from '../transactions/day-groups';
 import { BarChart } from './bar-chart';
 import { barLabel, barName, lastPastBar, monthOfDay, perUnit } from './explore-labels';
 
@@ -54,7 +55,7 @@ interface Row {
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [BarChart, CurrencyPipe, NgTemplateOutlet, RouterLink],
+  imports: [BarChart, CurrencyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
   templateUrl: './explore-page.html',
 })
 export class ExplorePage implements OnInit {
@@ -67,6 +68,8 @@ export class ExplorePage implements OnInit {
   protected readonly periods = PERIODS;
   protected readonly groupings = GROUPINGS;
   protected readonly nameOf = nameOf;
+  protected readonly initialOf = initialOf;
+  protected readonly avatarHue = avatarHue;
 
   protected readonly metric = signal<Metric>('EXPENSES');
   protected readonly period = signal<ExplorePeriod>('YEAR');

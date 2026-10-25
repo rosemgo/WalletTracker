@@ -199,7 +199,7 @@ describe('SuggestionsPanel', () => {
       expect(page.textContent).toContain(
         "L'IA ha guardato 3 esercenti: 2 suggerimenti, per 1 non sa.",
       );
-      expect(page.textContent).toContain('CONAD SUPERSTORE');
+      expect(page.textContent).toContain('Conad Superstore');
       expect(vi.getTimerCount()).toBe(0);
     });
 

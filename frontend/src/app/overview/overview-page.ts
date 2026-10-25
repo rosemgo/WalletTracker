@@ -86,6 +86,22 @@ export class OverviewPage implements OnInit {
     return capitalized(formatDate(o.day, 'EEEE d', this.locale));
   });
 
+  /** Il giorno su cui si scorre nel grafico (null = nessuno): la cifra grande mostra quel giorno (docs/41, parte G). */
+  protected readonly scrubDay = signal<number | null>(null);
+
+  /** La cifra grande e la sua etichetta: il mese fino a oggi, o il giorno scelto scorrendo il grafico. */
+  protected readonly figure = computed(() => {
+    const o = this.overview();
+    if (o === null) {
+      return null;
+    }
+    const day = this.scrubDay();
+    if (day !== null && day <= o.spentByDay.length) {
+      return { label: `Speso fino al ${day} ${this.monthShort()}`, value: o.spentByDay[day - 1] };
+    }
+    return { label: this.isCurrent() ? 'Speso finora' : 'Speso nel mese', value: o.spent };
+  });
+
   /** La frase sotto la cifra grande: com'è il mese rispetto al solito. */
   protected readonly comparison = computed(() => {
     const o = this.overview();

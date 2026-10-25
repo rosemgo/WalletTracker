@@ -51,10 +51,13 @@
           }
         </select>
       </label>
-      <label>
-        File CSV di Trade Republic (al massimo 5 MB)
-        <input type="file" accept=".csv,text/csv,text/plain" (change)="onFile($event)" />
-      </label>
+      <app-file-drop
+        class="wide"
+        accept=".csv,text/csv,text/plain"
+        title="Scegli il file CSV di Trade Republic"
+        hint="o trascinalo qui · al massimo 5 MB"
+        (picked)="onFile($event)"
+      />
     </div>
     @if (busy() && !preview()) {
       <p class="secondary">Lettura del file...</p>

@@ -34,7 +34,7 @@
           @for (s of o.subscriptions; track s.id) {
             <tr [class.disabled]="s.late">
               <td class="card-title">
-                {{ s.name }}
+                {{ s.name | readable }}
                 @if (s.priceChanged) {
                   <div class="secondary">
                     <!-- Un rincaro si nota: era l'importo al momento della conferma. -->
@@ -93,9 +93,9 @@
         Nome
         <input
           #nameInput
-          [value]="suggestion.name"
+          [value]="suggestion.name | readable"
           maxlength="100"
-          [attr.aria-label]="'Nome di ' + suggestion.name"
+          [attr.aria-label]="'Nome di ' + (suggestion.name | readable)"
         />
       </label>
       <div>

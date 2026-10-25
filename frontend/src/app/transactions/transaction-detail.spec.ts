@@ -138,7 +138,7 @@ describe('TransactionDetail', () => {
     const { page } = await render();
     const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
 
-    expect(page.querySelector('h1')?.textContent?.trim()).toBe('PAGAMENTO POS AMAZON.IT');
+    expect(page.querySelector('h1')?.textContent?.trim()).toBe('Pagamento POS Amazon.it');
     expect(page.querySelector('.detail-amount')?.textContent).toMatch(/-9,98\s€/);
     expect(text).toContain('sabato 24 ottobre 2026 · Carta di credito');
     expect(text).toContain('Scelta da te: le regole non la cambiano.');

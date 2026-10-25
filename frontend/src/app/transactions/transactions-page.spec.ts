@@ -133,9 +133,12 @@ describe('TransactionsPage', () => {
       a.textContent?.replace(/\s+/g, ' ').trim(),
     );
 
-    expect(rows[0]).toMatch(/^ESSELUNGA MILANO\s*Spesa alimentare · Conto corrente\s*-56,30\s€$/);
+    // Prima l'iniziale nel cerchio colorato; il nome della banca, tutto maiuscolo, diventa leggibile (docs/41).
+    expect(rows[0]).toMatch(
+      /^E\s*Esselunga Milano\s*Spesa alimentare · Conto corrente\s*-56,30\s€$/,
+    );
     expect(rows[1]).toContain('trasferimento interno · Conto corrente'); // senza categoria: il tipo
-    expect(rows[2]).toMatch(/ACME SRL\s*Stipendio e pensione · Conto corrente\s*ottobre/);
+    expect(rows[2]).toMatch(/Acme SRL\s*Stipendio e pensione · Conto corrente\s*ottobre/);
     expect(rows[3]).toContain('senza categoria · Conto corrente · in attesa');
     // Un'entrata ha il colore delle entrate (il link al dettaglio lo prova il browser: docs/37, parte H).
     expect(page.querySelectorAll('a.movement .amount.positive').length).toBe(1);
@@ -238,7 +241,7 @@ describe('TransactionsPage', () => {
     answers[1].next(result(2, [movement(20, { description: 'RISULTATO 2' })])); // arriva tardi: ignorata
     answers[0].next(result(1, []));
     await fixture.whenStable();
-    expect(page.textContent).toContain('RISULTATO 3');
+    expect(page.textContent).toContain('Risultato 3');
     expect(page.textContent).not.toContain('RISULTATO 2');
   });
 

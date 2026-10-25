@@ -102,7 +102,8 @@ describe('OverviewPage', () => {
     const chart = page.querySelector('svg.month-chart') as SVGElement;
     expect(chart.getAttribute('role')).toBe('img');
     expect(chart.getAttribute('aria-label')).toMatch(/contro 1\.410\s€ di un mese tipico/);
-    expect(chart.querySelector('path.month')).not.toBeNull();
+    // La linea del mese sta in uno strato sopra (docs/41, parte G): la cerchiamo in tutto il grafico.
+    expect(page.querySelector('app-month-chart path.month')).not.toBeNull();
     expect(chart.querySelector('path.usual')).not.toBeNull();
   });
 

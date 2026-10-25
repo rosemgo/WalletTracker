@@ -1,13 +1,18 @@
 /*
- * Stili globali: valgono per tutta l'applicazione. Volutamente semplici, senza librerie (docs/35).
+ * Stili globali: valgono per tutta l'applicazione. Volutamente semplici, senza librerie (docs/35, rinnovati in docs/41).
  *
  * I colori sono VARIABILI CSS ("design token"): un nome che dice a che cosa serve il colore (--ink, il testo; --card,
  * lo sfondo delle schede...), non com'è fatto. Le regole qui sotto usano solo i nomi; i valori sono scritti una
  * volta sola, per ogni tema. Così il tema scuro è lo stesso elenco di nomi con altri valori (docs/33, parte H).
  */
 
-/* Il carattere, servito dalla nostra app (pacchetto npm): nessuna richiesta a Google, funziona anche senza rete. */
-@import '@fontsource-variable/schibsted-grotesk';
+/*
+ * Il carattere, servito dalla nostra app (pacchetto npm): nessuna richiesta a Google, funziona anche senza rete.
+ * Inter con l'asse "opsz" (dimensione ottica): il browser disegna le lettere più strette e nitide nei titoli grandi e
+ * più aperte nel testo piccolo, da solo (font-optical-sizing: auto). Le sue cifre "tabellari" hanno tutte la stessa
+ * larghezza: gli importi stanno in colonna (docs/41, parte B).
+ */
+@import '@fontsource-variable/inter/opsz.css';
 
 /*
  * Ogni colore ha due valori: light-dark(giorno, notte). Il browser sceglie quale usare guardando "color-scheme":
@@ -17,29 +22,52 @@
  */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#eeede9, #15171a); /* lo sfondo della pagina */
-  --card: light-dark(#ffffff, #1f2226); /* lo sfondo delle schede */
-  --ink: light-dark(#16171b, #ecedee); /* il testo */
-  --sec: light-dark(#5b5d64, #a3a8b0); /* il testo secondario: date, spiegazioni */
-  --line: light-dark(#e6e4de, #2c3036); /* linee di separazione, bordi dei campi */
-  --track: light-dark(#ecebe6, #2a2e33); /* il fondo di una barra, i pulsanti secondari */
+  --bg: light-dark(#f2f3f6, #0c0e12); /* lo sfondo della pagina */
+  --card: light-dark(#ffffff, #171a20); /* lo sfondo delle schede */
+  --raised: light-dark(
+    #ffffff,
+    #222731
+  ); /* sopra una scheda: la scelta attiva di un interruttore, un menu */
+  --ink: light-dark(#0f1115, #eef0f4); /* il testo */
+  --sec: light-dark(#5d6470, #9aa3b1); /* il testo secondario: date, spiegazioni */
+  --line: light-dark(#e7e9ee, #262b34); /* linee di separazione */
+  --field-line: light-dark(
+    #d5d9e1,
+    #343a45
+  ); /* il bordo dei campi: un po' più deciso delle linee */
+  --track: light-dark(#eef0f4, #232831); /* il fondo di una barra, i pulsanti secondari */
   --acc: light-dark(
-    #1f5fd6,
-    #e59a2e
-  ); /* l'accento: link, la sezione attiva, il valore che conta in un grafico */
-  --on-acc: light-dark(#ffffff, #15171a); /* il testo sopra l'accento */
-  --soft: light-dark(#e8eef9, #2b2419); /* un riquadro da notare (un avviso, un suggerimento) */
-  --bar: light-dark(
-    #a3a5ac,
-    #4a4f57
-  ); /* le barre "normali" dei grafici, accanto a quella in evidenza */
-  --pos: light-dark(#1f5fd6, #e59a2e); /* entrate, risparmio */
-  --neg: light-dark(#c8571b, #6e9cf0); /* uscite oltre le entrate, valori negativi da notare */
-  --ok: light-dark(#1e7f3c, #5cc27a); /* stati: tutto bene */
-  --warn: light-dark(#f2b21b, #f2c14e); /* stati: attenzione (solo come sfondo di un'icona) */
-  --bad: light-dark(#c2362f, #f07068); /* stati: errore, budget superato */
-  --nav: light-dark(#ffffff, #1b1d21); /* la barra in basso del telefono */
-  --side: light-dark(#e5e4df, #1b1d21); /* la colonna a sinistra del PC */
+    #3557ee,
+    #7d97ff
+  ); /* l'accento per testi e linee: link, la sezione attiva, i grafici */
+  --acc-2: light-dark(#7a4cf2, #b48cff); /* il secondo colore delle sfumature dei grafici (viola) */
+  --acc-strong: light-dark(
+    #3557ee,
+    #4566ff
+  ); /* l'accento come sfondo pieno (pulsanti): con il testo bianco */
+  --on-acc: #ffffff; /* il testo sopra l'accento pieno, in entrambi i temi */
+  --soft: light-dark(#ebefff, #1d2440); /* un riquadro da notare, la scelta attiva di una pillola */
+  --bar: light-dark(#c3c9d4, #3a404b); /* le linee "di confronto" dei grafici (il mese tipico) */
+  --pos: light-dark(#3557ee, #7d97ff); /* entrate, risparmio */
+  --neg: light-dark(#e2620f, #ff9a4d); /* uscite oltre le entrate, valori negativi da notare */
+  --ok: light-dark(#14894a, #4cc38a); /* stati: tutto bene */
+  --warn: light-dark(#f2ae0c, #f5c451); /* stati: attenzione (solo come sfondo di un'icona) */
+  --bad: light-dark(#d93b3b, #ff6b6b); /* stati: errore, budget superato */
+  --nav: light-dark(
+    rgb(255 255 255 / 0.82),
+    rgb(20 23 29 / 0.82)
+  ); /* la barra in basso: semitrasparente */
+  --side: light-dark(#ffffff, #12151a); /* la colonna a sinistra del PC */
+  /* L'anello intorno al campo attivo: l'accento, un po' trasparente (color-mix mescola due colori). */
+  --ring: color-mix(in srgb, var(--acc) 28%, transparent);
+  /* L'ombra delle schede: leggerissima di giorno; di notte niente ombra, le schede si staccano già dal fondo. */
+  --shadow:
+    0 1px 2px light-dark(rgb(16 24 40 / 0.04), transparent),
+    0 6px 20px -4px light-dark(rgb(16 24 40 / 0.07), transparent);
+  --radius: 20px; /* le schede */
+  --radius-s: 12px; /* campi e pulsanti */
+  /* La curva dei movimenti: parte veloce e rallenta alla fine, come un oggetto che si posa. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root[data-theme='giorno'] {
@@ -52,16 +80,24 @@
 
 :root {
   font-family:
-    'Schibsted Grotesk Variable',
+    'Inter Variable',
     system-ui,
     -apple-system,
     'Segoe UI',
     Roboto,
     sans-serif;
+  font-size: 15px; /* la misura di base: 1rem; i titoli e le cifre sono multipli di questa */
+  line-height: 1.5;
+  font-optical-sizing: auto;
+  /* Le varianti di Inter: "cv11" la "a" a un piano, più morbida; "ss03" le frecce e i simboli arrotondati. */
+  font-feature-settings: 'cv11', 'ss03';
   color: var(--ink);
   background: var(--bg);
-  accent-color: var(--acc); /* caselle, pulsanti di opzione, barre di avanzamento */
+  accent-color: var(--acc-strong); /* le barre di avanzamento */
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased; /* sul Mac il testo chiaro su fondo scuro resta sottile come deve */
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -70,6 +106,53 @@ body {
 
 a {
   color: var(--acc);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+::selection {
+  background: var(--ring);
+}
+
+/*
+ * Le cifre: tutte larghe uguali (tabellari), così gli importi uno sotto l'altro stanno in colonna e una cifra che
+ * cambia non fa "ballare" il testo. Con Inter si può: il punto e la virgola restano stretti.
+ */
+.amount,
+.big-figure,
+.detail-amount,
+.tile-value,
+.todo strong,
+.group-amount,
+.bar-label strong,
+ul.rows strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Il movimento (docs/41, parte F) ----
+   Ogni pagina entra salendo di poco e apparendo: si capisce che è cambiata. Chi ha chiesto al sistema di ridurre le
+   animazioni (prefers-reduced-motion) non le vede: qui e in tutto il foglio. */
+@media (prefers-reduced-motion: no-preference) {
+  main > * {
+    animation: page-in 0.4s var(--ease) both;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ---- La struttura: navigazione e pagina (docs/35, parte D) ----
@@ -86,7 +169,10 @@ a {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   /* env(safe-area-inset-bottom): lo spazio della "barretta" dei telefoni senza tasti, da non coprire. */
   padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  /* Vetro smerigliato: la barra è semitrasparente e sfoca quello che le scorre sotto. */
   background: var(--nav);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid var(--line);
 }
 
@@ -100,11 +186,24 @@ a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-height: 48px; /* almeno 44 pixel: si tocca con il pollice */
+  gap: 2px;
+  min-height: 52px; /* almeno 44 pixel: si tocca con il pollice */
   color: var(--sec);
   font-size: 11px;
+  font-weight: 500;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* L'icona sta in una "pillola": nella sezione attiva si colora (come nelle app Android e iOS recenti). */
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  transition: background-color 0.25s var(--ease);
 }
 
 .app-nav svg {
@@ -112,7 +211,7 @@ a {
   height: 22px;
   fill: none;
   stroke: currentColor; /* il colore del testo del link: grigio, o l'accento se attivo */
-  stroke-width: 1.7;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -123,24 +222,28 @@ a {
 
 .app-nav .section.active {
   color: var(--acc);
-  font-weight: 600;
+  font-weight: 650;
+}
+
+.app-nav .section.active .nav-icon {
+  background: var(--soft);
 }
 
 .page main {
-  padding: 16px 16px calc(88px + env(safe-area-inset-bottom)); /* in fondo, lo spazio della barra */
+  padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); /* in fondo, lo spazio della barra */
 }
 
 .banner {
   margin: 12px 16px 0;
   padding: 12px 16px;
   background: var(--soft);
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 @media (min-width: 900px) {
   .shell {
     display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-columns: 248px minmax(0, 1fr);
   }
 
   .app-nav {
@@ -154,25 +257,55 @@ a {
     padding: 24px 16px;
     overflow-y: auto;
     background: var(--side);
+    backdrop-filter: none;
     border-top: none;
+    border-right: 1px solid var(--line);
   }
 
   .app-nav .brand {
-    display: block;
-    padding: 0 12px 20px;
-    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px 24px;
+    font-size: 17px;
     font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  /* Il marchio: un quadrato arrotondato con la sfumatura dell'accento, come l'icona di un'app. */
+  .brand-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--acc-strong), var(--acc-2));
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
   }
 
   .app-nav .section {
     flex-direction: row;
     justify-content: flex-start;
-    gap: 12px;
+    gap: 10px;
     min-height: 44px;
-    padding: 0 12px;
-    border-radius: 12px;
+    padding: 0 10px;
+    border-radius: var(--radius-s);
     color: var(--ink);
-    font-size: 15px;
+    font-size: 14.5px;
+    transition: background-color 0.2s;
+  }
+
+  .app-nav .section:hover {
+    background: var(--track);
+  }
+
+  .app-nav .nav-icon {
+    width: 24px;
+    height: 24px;
+    background: none;
   }
 
   .app-nav .section svg {
@@ -182,8 +315,12 @@ a {
   }
 
   .app-nav .section.active {
-    background: var(--card);
-    color: var(--ink);
+    background: var(--soft);
+    color: var(--acc);
+  }
+
+  .app-nav .section.active .nav-icon {
+    background: none;
   }
 
   .app-nav .section.active svg {
@@ -198,8 +335,8 @@ a {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: 20px;
+    padding-top: 20px;
     border-top: 1px solid var(--line);
   }
 
@@ -212,21 +349,27 @@ a {
     color: var(--sec);
     font-size: 14px;
     text-decoration: none;
+    transition: background-color 0.2s;
+  }
+
+  .app-nav .more-pages a:hover {
+    background: var(--track);
+    color: var(--ink);
   }
 
   .app-nav .more-pages a.active {
-    background: var(--card);
-    color: var(--ink);
+    background: var(--soft);
+    color: var(--acc);
     font-weight: 600;
   }
 
   .page main {
-    padding: 28px 32px 48px;
+    padding: 32px 40px 56px;
     max-width: 1200px;
   }
 
   .banner {
-    margin: 16px 32px 0;
+    margin: 16px 40px 0;
   }
 }
 
@@ -236,7 +379,8 @@ a {
   margin: 0;
   padding: 0 16px;
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .link-list li + li {
@@ -248,8 +392,9 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 60px;
+  min-height: 62px;
   color: var(--ink);
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -257,6 +402,10 @@ a {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.link-list .secondary {
+  font-weight: 400;
 }
 
 .link-list svg {
@@ -289,7 +438,7 @@ fieldset.choices legend {
 fieldset.choices label {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   min-height: 44px;
 }
 
@@ -299,22 +448,53 @@ fieldset.choices label > span {
 }
 
 fieldset.choices input {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
+/*
+ * I titoli (docs/41, parte B). Grandi e stretti: la spaziatura negativa (letter-spacing) avvicina le lettere, che nei
+ * caratteri grandi sembrano altrimenti lontane. Il peso 700 per il titolo della pagina, 650 per quelli delle schede:
+ * con un carattere "variabile" si può scegliere qualsiasi peso, non solo normale e grassetto.
+ */
 h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 4px 0 16px;
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin: 4px 0 18px;
 }
 
-/* Le tabelle sono schede: sfondo pieno, angoli arrotondati, nessun bordo esterno né ombra (docs/33, parte F). */
+h2 {
+  font-size: 1.1rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin-top: 0;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+p {
+  text-wrap: pretty; /* il browser evita una parola sola sull'ultima riga di un paragrafo */
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance; /* i titoli su due righe: due righe di lunghezza simile */
+}
+
+/* Le tabelle sono schede: sfondo pieno, angoli arrotondati, un'ombra appena accennata (docs/41, parte C). */
 table {
   width: 100%;
   border-collapse: separate; /* con "collapse" gli angoli arrotondati non funzionano */
   border-spacing: 0;
   background: var(--card);
-  border-radius: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
@@ -324,7 +504,7 @@ table.loading {
 
 th,
 td {
-  padding: 0.65rem 0.75rem;
+  padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
@@ -334,16 +514,26 @@ tr:last-child > td {
   border-bottom: none;
 }
 
+/* Le intestazioni: piccole, maiuscole, spaziate. Si leggono come etichette, non come dati. */
 th {
   color: var(--sec);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-/*
- * Gli importi: allineati a destra. Niente cifre "tabellari" (font-variant-numeric: tabular-nums): in questo carattere
- * allargano anche il punto e la virgola, e "2.100,00" diventa "2 . 100 , 00".
- */
+tbody tr {
+  transition: background-color 0.15s;
+}
+
+@media (hover: hover) {
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--track) 50%, transparent);
+  }
+}
+
+/* Gli importi: allineati a destra, mai spezzati su due righe. */
 .amount {
   text-align: right;
   white-space: nowrap;
@@ -391,34 +581,18 @@ td.amount.negative {
   max-width: 100%;
 }
 
-/* La ricerca su una riga sua, sopra gli altri filtri: è il filtro più usato. */
-.filters label.search {
-  flex-basis: 100%;
-}
-
-.filters label.search input {
-  width: 100%;
-  max-width: 32rem;
-}
-
 .filters label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--sec);
 }
 
-/* La casella "Solo senza categoria": accanto al testo, allineata in basso con gli altri filtri. */
-.filters label.checkbox {
-  flex-direction: row;
-  align-items: center;
-  align-self: flex-end;
-  gap: 0.4rem;
-  min-height: 2rem;
-}
-
-/* I campi e i pulsanti: alti almeno 40 pixel, angoli arrotondati, i colori del tema. */
+/* ---- I campi (docs/41, parte D) ----
+   Alti 44 pixel (si toccano con il pollice), angoli arrotondati, un bordo leggero che diventa dell'accento con un
+   "anello" intorno quando il campo è attivo. */
 select,
 input,
 textarea,
@@ -428,34 +602,262 @@ button {
 }
 
 select,
-input:not([type='checkbox'], [type='radio'], [type='file']),
+input:not([type='checkbox'], [type='radio'], [type='file'], [type='range']),
 textarea {
   box-sizing: border-box;
-  min-height: 40px;
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  min-height: 44px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--field-line);
+  border-radius: var(--radius-s);
+  background-color: var(--card);
+  color: var(--ink);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--sec);
+  opacity: 0.75;
+}
+
+select:hover,
+input:not([type='checkbox'], [type='radio'], [type='file'], [type='range']):hover,
+textarea:hover {
+  border-color: color-mix(in srgb, var(--field-line) 50%, var(--sec));
+}
+
+/* Il campo attivo: il bordo dell'accento e l'anello. Al posto del contorno standard del browser. */
+select:focus-visible,
+input:not([type='checkbox'], [type='radio'], [type='file'], [type='range']):focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/*
+ * Il menu a tendina: senza l'aspetto del sistema (appearance: none), che su Windows è un rettangolo grigio "anni 90",
+ * e con una freccia nostra. La freccia è un piccolo disegno SVG scritto dentro l'indirizzo (data:): un grigio medio
+ * che si vede sia sul bianco sia sul fondo scuro. Il menu che si apre resta quello del sistema: sul telefono è la
+ * ruota o l'elenco a cui la persona è abituata.
+ */
+select {
+  appearance: none;
+  padding-right: 2.4rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23838a96' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.05rem;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+/* Le voci del menu aperto: i colori del tema (Chrome e Firefox li rispettano). */
+select option {
   background: var(--card);
   color: var(--ink);
 }
 
+/*
+ * Caselle e scelte: disegnate da noi, uguali in tutti i browser. La casella è un quadrato arrotondato; selezionata
+ * si riempie dell'accento e mostra il segno di spunta (un SVG bianco). Restano veri <input>: la tastiera, lo spazio
+ * per spuntare e i lettori di schermo funzionano come prima.
+ */
+input[type='checkbox'],
+input[type='radio'] {
+  appearance: none;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid var(--field-line);
+  background: var(--card) no-repeat center / 14px;
+  cursor: pointer;
+  vertical-align: -4px;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+input[type='checkbox'] {
+  border-radius: 6px;
+}
+
+input[type='radio'] {
+  border-radius: 50%;
+}
+
+input[type='checkbox']:checked {
+  border-color: var(--acc-strong);
+  background-color: var(--acc-strong);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+
+/* La scelta: un anello spesso dell'accento, con il centro del colore della scheda. */
+input[type='radio']:checked {
+  border: 6px solid var(--acc-strong);
+}
+
+input[type='checkbox']:focus-visible,
+input[type='radio']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+input[type='checkbox']:disabled,
+input[type='radio']:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- La scelta di un file (app-file-drop, docs/41 parte D) ----
+   Una zona tratteggiata: si tocca per scegliere il file, o ci si trascina sopra il file. Il vero campo è dentro,
+   trasparente e grande quanto la zona. */
+app-file-drop {
+  display: block;
+}
+
+/* Nei moduli a griglia occupa tutta la riga: è un bersaglio grande. */
+.form-grid > app-file-drop.wide {
+  grid-column: 1 / -1;
+}
+
+.file-drop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1.5px dashed var(--field-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--track) 45%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+/* Dentro un modulo a griglia non è un'etichetta come le altre (in colonna, piccola e grigia): resta in riga. */
+.form-grid label.file-drop {
+  flex-direction: row;
+  gap: 14px;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.file-drop input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0; /* invisibile, ma c'è: riceve il clic, il file trascinato e la tastiera */
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .file-drop:hover {
+    border-color: var(--acc);
+  }
+}
+
+/* Mentre si trascina un file sopra, o quando il campo è attivo con la tastiera. */
+.file-drop.dragging,
+.file-drop:focus-within {
+  border-color: var(--acc);
+  background: var(--soft);
+}
+
+.file-drop:focus-within {
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+.file-drop.chosen {
+  border-style: solid;
+}
+
+.file-drop-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--acc);
+}
+
+.file-drop-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.file-drop-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.file-drop-text strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---- I pulsanti ----
+   Secondario: grigio chiaro. Principale: l'accento pieno. Premendo si "abbassano" un poco (scale), come un tasto. */
 button {
-  min-height: 40px;
-  padding: 0.4rem 0.9rem;
+  min-height: 44px;
+  padding: 0.5rem 1.05rem;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-s);
   background: var(--track);
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 550;
   cursor: pointer;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s,
+    filter 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  button:not(:disabled):hover {
+    background-color: color-mix(in srgb, var(--track) 85%, var(--ink));
+  }
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
 }
 
 /* Il pulsante che conferma un modulo ("Salva", "Collega"...) è quello principale: l'accento. */
 button[type='submit'],
 button.primary {
-  background: var(--acc);
+  background: var(--acc-strong);
   color: var(--on-acc);
   font-weight: 600;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.1);
+}
+
+@media (hover: hover) {
+  button[type='submit']:not(:disabled):hover,
+  button.primary:not(:disabled):hover {
+    background-color: var(--acc-strong);
+    filter: brightness(1.08);
+  }
 }
 
 button:disabled {
@@ -482,34 +884,35 @@ button.link {
   color: var(--acc);
   cursor: pointer;
   font-size: inherit;
-  font-weight: inherit;
+  font-weight: 500;
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 1rem;
+@media (hover: hover) {
+  button.link:not(:disabled):hover {
+    background: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+button.link:not(:disabled):active {
+  transform: none;
 }
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem 1.5rem;
   margin-bottom: 1rem;
 }
 
-h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-top: 0;
-}
-
-/* La scheda: sfondo pieno, angoli arrotondati, nessun bordo e nessuna ombra (docs/33, parte F). */
+/* La scheda: sfondo pieno, angoli ampi, un'ombra appena accennata (docs/41, parte C). */
 .card {
   background: var(--card);
-  border-radius: 16px;
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.15rem 1.25rem;
   margin-bottom: 1rem;
 }
 
@@ -522,21 +925,26 @@ table + .card,
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: 0.75rem 1.25rem;
-  margin-bottom: 1rem;
+  gap: 0.9rem 1.25rem;
+  margin-bottom: 1.1rem;
 }
 
+/* L'etichetta sopra il campo: piccola, media, grigia. Il campo è la cosa da guardare. */
 .form-grid label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--sec);
 }
 
 .form-grid label.checkbox {
   flex-direction: row;
   align-items: center;
+  gap: 0.6rem;
+  color: var(--ink);
+  font-size: 0.95rem;
 }
 
 .form-grid .error {
@@ -559,9 +967,34 @@ tr.disabled {
 
 code {
   background: var(--track);
-  padding: 0.1rem 0.35rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.88em;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: 8px;
+  border: none;
   border-radius: 4px;
-  font-size: 0.9em;
+  overflow: hidden;
+  background: var(--track);
+}
+
+progress::-webkit-progress-bar {
+  background: var(--track);
+}
+
+progress::-webkit-progress-value {
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--acc-strong), var(--acc-2));
+}
+
+progress::-moz-progress-bar {
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--acc-strong), var(--acc-2));
 }
 
 /* ---- Riepilogo ---- */
@@ -570,158 +1003,11 @@ code {
   background: var(--soft);
 }
 
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.tiles.loading {
-  opacity: 0.5;
-}
-
-.tile {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 0.9rem 1rem;
-}
-
-.tile-label {
-  color: var(--sec);
-  font-size: 0.9rem;
-}
-
 .tile-value {
   font-size: 1.6rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   margin: 0.25rem 0;
-}
-
-/* ---- Grafico (app-monthly-chart) ----
-   I colori delle serie sono verificati per chi non distingue bene i colori (daltonismo): blu e arancione. */
-app-monthly-chart {
-  --series-income: var(--pos);
-  --series-expenses: var(--neg);
-  --grid: var(--line);
-  display: block;
-}
-
-.legend {
-  display: flex;
-  gap: 1.25rem;
-  font-size: 0.9rem;
-  color: var(--sec);
-  margin-bottom: 0.5rem;
-}
-
-.swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-right: 0.4rem;
-}
-
-.swatch.income,
-.key.income {
-  background: var(--series-income);
-}
-
-.swatch.expenses,
-.key.expenses {
-  background: var(--series-expenses);
-}
-
-.chart-scroll,
-.table-scroll {
-  overflow-x: auto; /* su un telefono scorre il riquadro, non tutta la pagina */
-}
-
-.chart {
-  position: relative; /* il riquadro dei valori si posiziona rispetto al grafico */
-  min-width: 560px; /* sotto questa larghezza il testo del grafico diventerebbe illeggibile */
-}
-
-.chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.chart .grid {
-  stroke: var(--grid);
-  stroke-width: 1;
-}
-
-.chart .baseline {
-  stroke: var(--bar);
-  stroke-width: 1;
-}
-
-.chart .axis {
-  fill: var(--sec);
-  font-size: 11px;
-}
-
-.chart .bar.income {
-  fill: var(--series-income);
-}
-
-.chart .bar.expenses {
-  fill: var(--series-expenses);
-}
-
-.chart .highlight {
-  fill: var(--track);
-}
-
-.chart .hit {
-  fill: transparent;
-  cursor: default;
-}
-
-.chart .hit:focus {
-  outline: none;
-}
-
-.chart .hit:focus-visible {
-  stroke: var(--acc);
-  stroke-width: 1;
-}
-
-.tooltip {
-  position: absolute;
-  top: 0;
-  transform: translateX(12px);
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
-  pointer-events: none; /* il mouse "passa attraverso" il riquadro */
-  white-space: nowrap;
-}
-
-.tooltip.right {
-  transform: translateX(calc(-100% - 12px));
-}
-
-.tooltip-title {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  text-transform: capitalize;
-}
-
-/* Nel riquadro, la serie si riconosce da un trattino colorato accanto al valore. */
-.key {
-  display: inline-block;
-  width: 10px;
-  height: 3px;
-  border-radius: 2px;
-  margin-right: 0.4rem;
-  vertical-align: middle;
 }
 
 .category-edit,
@@ -742,55 +1028,9 @@ app-monthly-chart {
   font-style: italic;
 }
 
-/* ---- Spese per categoria: una barra orizzontale per categoria, con l'importo scritto accanto ---- */
-.category-list {
-  display: grid;
-  grid-template-columns: minmax(8rem, 14rem) 1fr auto 3rem;
-  gap: 0.5rem 1rem;
-  align-items: center;
-}
-
-.category-row {
-  display: contents; /* le celle della riga partecipano direttamente alla griglia */
-}
-
-.category-row.muted .category-name {
-  color: var(--sec);
-  font-style: italic;
-}
-
-.category-track {
-  display: block;
-  height: 12px;
-}
-
-.category-bar {
-  display: block;
-  height: 100%;
-  background: var(--acc); /* una serie sola, un colore solo */
-  border-radius: 0 4px 4px 0; /* dritta all'inizio, arrotondata alla fine */
-}
-
-.category-row.muted .category-bar {
-  background: var(--bar);
-}
-
 /* ---- Budget ----
    I colori di stato (verde, giallo, rosso) sono riservati agli stati: non vengono mai usati per le serie
    dei grafici, e accanto c'è sempre un'icona con un'etichetta scritta. */
-.month-nav {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.month-name {
-  min-width: 10rem;
-  text-align: center;
-  text-transform: capitalize;
-}
-
 .budget-list.loading {
   opacity: 0.5;
 }
@@ -842,23 +1082,34 @@ app-monthly-chart {
 
 .meter {
   position: relative;
-  height: 12px;
+  height: 10px;
   background: var(--track);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
+/* La barra si riempie da sinistra quando la pagina si apre (scaleX: da larghezza zero alla sua). */
 .meter-fill {
   height: 100%;
-  border-radius: 6px;
+  border-radius: 5px;
+  transform-origin: left;
+  animation: grow-x 0.9s var(--ease) both;
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 .meter-today {
   position: absolute;
   top: -4px;
   bottom: -4px;
-  width: 2px;
-  margin-left: -1px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
   background: var(--ink);
+  box-shadow: 0 0 0 2px var(--card); /* un bordo del colore della scheda: si stacca dalla barra */
 }
 
 .budget-numbers {
@@ -882,9 +1133,10 @@ app-monthly-chart {
   display: flex;
   gap: 0.75rem;
   align-items: flex-start;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   background: var(--card);
-  border-radius: 14px;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
 }
 
 .alert .status-icon {
@@ -958,12 +1210,6 @@ app-monthly-chart {
   color: var(--bad);
 }
 
-progress {
-  display: block;
-  width: 100%;
-  max-width: 24rem;
-}
-
 /* Il risultato della misura della precisione, sotto il pulsante "Misura". */
 .evaluation {
   margin-top: 0.75rem;
@@ -973,19 +1219,21 @@ progress {
 .ai-tag {
   display: inline-block;
   margin-left: 0.4rem;
-  padding: 0 0.35rem;
-  border: 1px solid var(--acc);
-  border-radius: 0.25rem;
-  color: var(--acc);
-  font-size: 0.75rem;
-  vertical-align: middle;
+  padding: 0.05rem 0.45rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--acc-strong), var(--acc-2));
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
 }
 
 /* Un servizio cloud nelle Impostazioni (passo 7c): un riquadro dentro il riquadro dell'IA. */
 .cloud-section {
   margin: 0.75rem 0;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
   background: var(--soft);
 }
 
@@ -1032,8 +1280,16 @@ button.icon {
   width: 44px;
   height: 44px;
   padding: 0;
-  border-radius: 12px;
+  border-radius: 50%;
   background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+@media (hover: hover) {
+  button.icon:not(:disabled):hover {
+    background: var(--raised);
+    color: var(--acc);
+  }
 }
 
 button.icon svg {
@@ -1067,35 +1323,72 @@ button.icon svg {
 
 /* La cifra grande: una sola per schermata (docs/33, parte F). */
 .big-figure {
-  font-size: 3rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 2.9rem;
+  font-weight: 700;
+  letter-spacing: -0.045em;
   line-height: 1.05;
 }
 
+/* La cifra grande sul PC: c'è spazio, diventa ancora più grande. */
+@media (min-width: 900px) {
+  .big-figure {
+    font-size: 3.4rem;
+  }
+}
+
 .comparison {
-  margin: 2px 0 8px;
+  margin: 4px 0 8px;
+  color: var(--sec);
 }
 
 .hero .income {
   margin: 8px 0 0;
 }
 
+/* ---- Il grafico del mese (app-month-chart, docs/41 parte G) ---- */
+.month-chart-wrap {
+  position: relative;
+  margin: 30px -4px 4px; /* sopra, il posto per l'etichetta del giorno scelto */
+  border-radius: 12px;
+  touch-action: pan-y; /* il dito in orizzontale scorre i giorni; in verticale scorre la pagina, come sempre */
+  cursor: crosshair;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.month-chart-wrap:focus-visible {
+  outline-offset: 6px;
+}
+
 .month-chart {
   display: block;
   width: 100%;
   height: auto;
+  overflow: visible; /* l'alone del punto di oggi può uscire un poco dal disegno */
 }
 
-.month-chart .base,
+/* Gli strati sopra il primo: stessa misura, uno sull'altro. */
+.month-chart.layer {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.month-chart .base {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
 .month-chart .grid {
   stroke: var(--line);
   stroke-width: 1;
+  stroke-dasharray: 2 4; /* le linee di riferimento: puntinate, non devono competere con i dati */
 }
 
 .month-chart .axis {
   fill: var(--sec);
   font-size: 10px;
+  font-weight: 500;
 }
 
 /*
@@ -1109,31 +1402,134 @@ button.icon svg {
   }
 }
 
-.month-chart .usual,
-.month-chart .month {
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
+/* Il mese tipico: tratteggiato e grigio, è il termine di paragone. */
 .month-chart .usual {
+  fill: none;
   stroke: var(--bar);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 4;
+  stroke-linecap: round;
 }
 
-.month-chart .month {
-  stroke: var(--acc);
+/* La sfumatura: l'area è dell'accento pieno, e la maschera la fa svanire verso il basso. */
+.area-layer {
+  -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.38), rgb(0 0 0 / 0) 82%);
+  mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.38), rgb(0 0 0 / 0) 82%);
 }
 
 .month-chart .area {
   fill: var(--acc);
-  fill-opacity: 0.1;
+}
+
+/* L'alone sotto la linea: un'ombra dell'accento, che la fa "brillare" sulla scheda. */
+.line-layer {
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--acc) 35%, transparent));
+}
+
+.month-chart .month {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .month-chart .today {
   fill: var(--acc);
   stroke: var(--card);
-  stroke-width: 2;
+  stroke-width: 2.5;
+}
+
+.month-chart .usual-dot {
+  fill: var(--card);
+  stroke: var(--sec);
+  stroke-width: 1.5;
+}
+
+.month-chart .guide {
+  stroke: var(--sec);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.month-chart .halo {
+  fill: var(--acc);
+  pointer-events: none;
+}
+
+/*
+ * Le animazioni, solo per chi non ha chiesto di ridurle. La linea si disegna: è un tratteggio con un solo trattino
+ * lungo quanto la linea (pathLength="1"), spostato tutto fuori (dashoffset 1) e riportato a 0. Poi appare la
+ * sfumatura, e il punto di oggi comincia a pulsare.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .month-chart .month {
+    stroke-dasharray: 1;
+    animation: draw-line 1.1s var(--ease) both;
+  }
+
+  .area-layer {
+    animation: fade-in 0.8s 0.4s ease both;
+  }
+
+  .line-layer .today {
+    animation: fade-in 0.3s 0.9s ease both;
+  }
+
+  .month-chart .halo {
+    transform-box: fill-box; /* l'ingrandimento parte dal centro del cerchio, non dall'angolo del disegno */
+    transform-origin: center;
+    animation: halo 2.2s 1.1s ease-out infinite both;
+  }
+
+  /* Mentre si scorre, la linea è già tutta disegnata. */
+  .scrubbing .month-chart .month,
+  .scrubbing .line-layer .today {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes halo {
+  from {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+
+/* L'etichetta del giorno scelto: una pillola scura appena sopra il grafico. */
+.scrub-tip {
+  position: absolute;
+  top: -4px;
+  transform: translate(-50%, -100%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart-keys {
@@ -1145,17 +1541,17 @@ button.icon svg {
 }
 
 .chart-keys .key {
-  width: 14px;
-  height: 2px;
+  display: inline-block;
+  width: 16px;
+  height: 0;
   margin-right: 6px;
-}
-
-.chart-keys .key.month {
-  background: var(--acc);
+  vertical-align: middle;
+  border-top: 2.5px solid var(--acc);
+  border-radius: 2px;
 }
 
 .chart-keys .key.usual {
-  background: var(--bar);
+  border-top: 2px dashed var(--bar);
 }
 
 .card-head {
@@ -1210,11 +1606,15 @@ ul.rows strong {
   overflow: hidden;
 }
 
-.bar-line .fill {
+/* Le barre orizzontali ("Dove vanno", i gruppi di Analisi): la sfumatura dell'accento, e crescono all'apertura. */
+.bar-line .fill,
+.group-row .fill {
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: var(--acc);
+  background: linear-gradient(90deg, var(--acc-strong), var(--acc-2));
+  transform-origin: left;
+  animation: grow-x 0.9s var(--ease) both;
 }
 
 .bar-line .secondary {
@@ -1254,15 +1654,24 @@ ul.rows li > span {
   flex-direction: column;
   gap: 2px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--card);
+  box-shadow: var(--shadow);
   color: var(--ink);
   text-decoration: none;
+  transition: transform 0.2s var(--ease);
+}
+
+@media (hover: hover) {
+  .todo a:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .todo strong {
   font-size: 1.75rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .todo span {
@@ -1332,10 +1741,12 @@ ul.rows li > span {
   align-items: center;
   gap: 10px;
   height: 48px;
-  padding: 0 14px;
+  padding: 0 16px;
   margin-bottom: 12px;
-  border-radius: 14px;
+  border-radius: 24px;
   background: var(--card);
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.15s;
 }
 
 .search-field svg {
@@ -1358,13 +1769,16 @@ ul.rows li > span {
   font-size: 15px;
 }
 
+.search-field input:hover,
 .search-field input:focus-visible {
-  outline: none; /* il contorno lo disegna il riquadro intorno */
+  border: none;
+  box-shadow: none; /* l'anello lo disegna il riquadro intorno */
 }
 
 .search-field:focus-within {
-  outline: 2px solid var(--acc);
-  outline-offset: 2px;
+  box-shadow:
+    0 0 0 1px var(--acc),
+    0 0 0 5px var(--ring);
 }
 
 /* Le pillole dei filtri: scorrono di lato sul telefono, piene quando il filtro è acceso. */
@@ -1377,37 +1791,34 @@ ul.rows li > span {
   scrollbar-width: none;
 }
 
+/* Una pillola: bianca con un bordo sottile; accesa, del colore tenue dell'accento con il testo dell'accento. */
 .pill {
   flex-shrink: 0;
   min-height: 36px;
   height: 36px;
-  padding: 0 14px;
-  border: none;
+  padding: 0 15px;
+  border: 1px solid var(--line);
   border-radius: 18px;
-  background: var(--card);
+  background-color: var(--card);
   color: var(--ink);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 550;
   white-space: nowrap;
 }
 
-/* Un menu a pillola: la freccia disegnata con due sfumature nel colore del testo (currentColor). */
+/* Un menu a pillola: la stessa freccia dei menu (vedi select), più piccola. */
 select.pill {
-  appearance: none;
-  padding-right: 30px;
-  background-image:
-    linear-gradient(45deg, transparent 50%, currentColor 50%),
-    linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position:
-    calc(100% - 16px) 16px,
-    calc(100% - 11px) 16px;
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
+  min-height: 36px;
+  padding: 0 32px 0 15px;
+  border-color: var(--line);
+  background-position: right 10px center;
+  background-size: 0.95rem;
 }
 
 .pill.on {
-  background-color: var(--ink);
-  color: var(--bg);
+  border-color: transparent;
+  background-color: var(--soft);
+  color: var(--acc);
 }
 
 .dates {
@@ -1452,8 +1863,9 @@ select.pill {
   list-style: none;
   margin: 0;
   padding: 0 16px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--card);
+  box-shadow: var(--shadow);
 }
 
 .day li + li {
@@ -1462,29 +1874,63 @@ select.pill {
 
 a.movement {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  min-height: 56px;
+  min-height: 64px;
   box-sizing: border-box;
-  padding: 12px 0;
+  margin: 0 -16px;
+  padding: 10px 16px;
   color: var(--ink);
   text-decoration: none;
+  transition: background-color 0.15s;
+}
+
+@media (hover: hover) {
+  a.movement:hover {
+    background: color-mix(in srgb, var(--track) 55%, transparent);
+  }
 }
 
 /* Il movimento aperto nel dettaglio (sul PC si vedono insieme). */
 a.movement.selected {
-  margin: 0 -16px;
-  padding: 12px 16px;
   background: var(--soft);
 }
 
-.day li:first-child a.movement.selected {
-  border-radius: 16px 16px 0 0;
+.day li:first-child a.movement {
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
-.day li:last-child a.movement.selected {
-  border-radius: 0 0 16px 16px;
+.day li:last-child a.movement {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.day li:only-child a.movement {
+  border-radius: var(--radius);
+}
+
+/*
+ * L'iniziale dell'esercente in un cerchio colorato, come il logo nelle app delle banche. Il colore viene dal nome
+ * (--hue, una tonalità da 0 a 360 calcolata in avatarHue): lo stesso esercente ha sempre lo stesso colore. oklch()
+ * descrive un colore con luminosità, intensità e tonalità: a parità di luminosità tutte le tonalità sembrano
+ * ugualmente chiare, e il testo si legge su tutte (docs/41, parte E).
+ */
+.avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: light-dark(oklch(0.94 0.045 var(--hue, 260)), oklch(0.33 0.07 var(--hue, 260)));
+  color: light-dark(oklch(0.45 0.13 var(--hue, 260)), oklch(0.88 0.09 var(--hue, 260)));
+  font-size: 16px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+a.movement .movement-text {
+  flex: 1;
 }
 
 .movement-text {
@@ -1507,13 +1953,14 @@ a.movement.selected {
 }
 
 a.movement .amount {
-  font-weight: 600;
+  font-weight: 650;
 }
 
 button.more {
   width: 100%;
   min-height: 48px;
   background: var(--card);
+  box-shadow: var(--shadow);
 }
 
 .count {
@@ -1572,8 +2019,9 @@ ul.suggestion-list li {
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 50%;
   background: var(--card);
+  box-shadow: var(--shadow);
   color: var(--ink);
 }
 
@@ -1596,37 +2044,32 @@ button.icon svg {
   text-align: center;
 }
 
-.detail-head .initial {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 26px;
-  background: var(--track);
-  font-size: 22px;
-  font-weight: 600;
-  text-transform: uppercase;
+.avatar.large {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
 }
 
 .detail-head h1 {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 1.2rem;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
 .detail-amount {
-  font-size: 2.4rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 .chip {
-  margin-top: 4px;
-  padding: 4px 10px;
-  border-radius: 10px;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
   background: var(--track);
   font-size: 12px;
+  font-weight: 550;
 }
 
 .detail-rows {
@@ -1693,9 +2136,11 @@ button.detail-row .action {
   gap: 12px;
   margin-bottom: 1rem;
   padding: 12px 16px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--ink);
   color: var(--bg);
+  box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.4);
+  animation: page-in 0.35s var(--ease) both;
 }
 
 .done button.link {
@@ -1774,15 +2219,32 @@ dialog.sheet {
   color: var(--ink);
 }
 
+/* Il fondo dietro il foglio: scuro e sfocato, la pagina resta intuibile ma passa in secondo piano. */
 dialog.sheet::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: rgb(8 10 14 / 0.45);
+  backdrop-filter: blur(4px);
+}
+
+/* Il foglio sale dal basso quando si apre. */
+@media (prefers-reduced-motion: no-preference) {
+  dialog.sheet[open] {
+    animation: sheet-in 0.35s var(--ease);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
 }
 
 @media (min-width: 700px) {
   dialog.sheet {
     width: 480px;
     margin: auto;
-    border-radius: 20px;
+    border-radius: 24px;
+    box-shadow: 0 24px 60px -12px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -1867,6 +2329,7 @@ button.choice .check {
 /* ---- Analisi (docs/38) ---- */
 
 /* Un interruttore a più posizioni (Spese · Entrate · Netto): una riga di pulsanti, quello scelto pieno. */
+/* Il fondo è un "binario" grigio; la scelta attiva è una scheda bianca in rilievo che ci scorre sopra (come iOS). */
 .segmented {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
@@ -1875,20 +2338,33 @@ button.choice .check {
   margin-bottom: 12px;
   padding: 4px;
   border-radius: 14px;
-  background: var(--card);
+  background: light-dark(#e6e8ee, #1c2028);
 }
 
 .segmented button {
   min-height: 38px;
   padding: 0 6px;
+  border-radius: 10px;
   background: transparent;
-  font-weight: 400;
+  color: var(--sec);
+  font-weight: 550;
 }
 
-.segmented button[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--bg);
-  font-weight: 500;
+@media (hover: hover) {
+  .segmented button:not(:disabled):hover {
+    background: transparent;
+    color: var(--ink);
+  }
+}
+
+.segmented button[aria-pressed='true'],
+.segmented button[aria-pressed='true']:hover {
+  background: var(--raised);
+  color: var(--ink);
+  font-weight: 650;
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 0.08),
+    0 2px 8px -2px rgb(16 24 40 / 0.12);
 }
 
 .explore.loading,
@@ -1913,20 +2389,27 @@ button.chip-button {
   min-height: 34px;
   padding: 0 14px;
   border-radius: 17px;
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--soft);
+  color: var(--acc);
   font-size: 13px;
+  font-weight: 600;
 }
 
 .filter-chip a {
   font-size: 0.9rem;
 }
 
+/* ---- Il grafico a barre (app-bar-chart, docs/41 parte H) ---- */
+.bar-chart-wrap {
+  position: relative;
+  margin: 8px 0 4px;
+}
+
 .bar-chart {
   display: block;
   width: 100%;
   height: auto;
-  margin: 8px 0 4px;
+  overflow: visible;
 }
 
 .bar-chart .zero {
@@ -1934,52 +2417,102 @@ button.chip-button {
   stroke-width: 1;
 }
 
+/* Le barre: tutte dell'accento, tenue (color-mix con il colore della scheda); la scelta piena. */
 .bar-chart .bar {
-  fill: var(--bar);
+  fill: color-mix(in srgb, var(--acc) 24%, var(--card));
   pointer-events: none;
+  transition: fill 0.2s;
 }
 
 .bar-chart .bar.on {
   fill: var(--acc);
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--acc) 45%, transparent));
+}
+
+/* Con il mouse: la barra sotto il puntatore si accende un poco. */
+@media (hover: hover) {
+  .bar-chart .slot:hover .bar:not(.on) {
+    fill: color-mix(in srgb, var(--acc) 45%, var(--card));
+  }
 }
 
 /* Il netto: in su (risparmiato) e in giù (speso più delle entrate) in due colori; la barra scelta piena. */
 .bar-chart .bar.pos {
-  fill: var(--pos);
-  fill-opacity: 0.4;
+  fill: color-mix(in srgb, var(--pos) 30%, var(--card));
 }
 
 .bar-chart .bar.neg {
-  fill: var(--neg);
-  fill-opacity: 0.4;
+  fill: color-mix(in srgb, var(--neg) 35%, var(--card));
 }
 
-.bar-chart .bar.pos.on,
+.bar-chart .bar.pos.on {
+  fill: var(--pos);
+}
+
 .bar-chart .bar.neg.on {
-  fill-opacity: 1;
+  fill: var(--neg);
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--neg) 45%, transparent));
+}
+
+/* Le barre crescono dalla linea dello zero, una dopo l'altra (--i è il numero della barra: 25 ms di ritardo
+   ciascuna). transform-box: fill-box fa partire l'ingrandimento dalla barra stessa, non dall'angolo del disegno. */
+@media (prefers-reduced-motion: no-preference) {
+  .bar-chart .bar {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: grow-y 0.7s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 25ms);
+  }
+
+  .bar-chart .bar.neg {
+    transform-origin: 50% 0;
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
 }
 
 .bar-chart .axis {
   fill: var(--sec);
   font-size: 11px;
+  font-weight: 500;
   pointer-events: none;
 }
 
 .bar-chart .axis.on {
-  fill: var(--ink);
-  font-weight: 600;
+  fill: var(--acc);
+  font-weight: 700;
 }
 
 .bar-chart .average {
   stroke: var(--ink);
   stroke-width: 1;
+  stroke-dasharray: 3 3;
+  stroke-opacity: 0.55;
   pointer-events: none;
 }
 
-.bar-chart .average-label {
-  fill: var(--ink);
-  font-size: 10px;
+/* La legenda della media: in alto a destra, un trattino tratteggiato come la linea e la scritta. */
+.average-label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sec);
+  font-size: 11.5px;
+  font-weight: 550;
+  white-space: nowrap;
   pointer-events: none;
+}
+
+.average-label .key {
+  width: 14px;
+  border-top: 1.5px dashed var(--sec);
 }
 
 .bar-chart .hit {
@@ -1996,10 +2529,6 @@ button.chip-button {
 @media (min-width: 600px) {
   .bar-chart .axis {
     font-size: 8px;
-  }
-
-  .bar-chart .average-label {
-    font-size: 7px;
   }
 }
 
@@ -2071,13 +2600,6 @@ ul.groups > li.secondary {
   display: block;
 }
 
-.group-row .fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--acc);
-}
-
 .days-title {
   margin: 16px 4px 8px;
 }
@@ -2143,7 +2665,7 @@ app-budget-page {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 5px;
-  background: var(--acc);
+  background: linear-gradient(90deg, var(--acc-strong), var(--acc-2));
 }
 
 .pace-fill.over {
@@ -2167,17 +2689,24 @@ a.button {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  padding: 0 16px;
+  padding: 0 18px;
   border-radius: 14px;
   background: var(--card);
+  box-shadow: var(--shadow);
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 550;
   text-decoration: none;
+  transition: transform 0.1s;
+}
+
+a.button:active {
+  transform: scale(0.97);
 }
 
 a.button.primary {
-  background: var(--ink);
-  color: var(--bg);
+  background: var(--acc-strong);
+  color: var(--on-acc);
+  font-weight: 600;
 }
 
 .buttons.wide {
@@ -2204,7 +2733,18 @@ a.button.primary {
   table.cards {
     background: transparent;
     border-radius: 0;
+    box-shadow: none;
     overflow: visible;
+  }
+
+  table.cards tbody tr:hover {
+    background: var(
+      --card
+    ); /* sul telefono niente evidenziazione al passaggio: la scheda resta bianca */
+  }
+
+  table.cards.compact tbody tr:hover {
+    background: transparent;
   }
 
   /* Le intestazioni: nascoste alla vista (le scrive ogni cella), ma lette dai lettori di schermo. */
@@ -2220,9 +2760,10 @@ a.button.primary {
     display: flex;
     flex-direction: column;
     margin-bottom: 10px;
-    padding: 12px 16px;
-    border-radius: 16px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
     background: var(--card);
+    box-shadow: var(--shadow);
   }
 
   /* Il nome della colonna sta a sinistra (posizionato), il contenuto scorre normale accanto: anche le righe
@@ -2345,8 +2886,9 @@ table.cards.compact td {
 @media (max-width: 699px) {
   table.cards.compact tbody {
     padding: 0 16px;
-    border-radius: 16px;
+    border-radius: var(--radius);
     background: var(--card);
+    box-shadow: var(--shadow);
   }
 
   table.cards.compact tr {
@@ -2358,6 +2900,7 @@ table.cards.compact td {
     padding: 12px 0;
     border-radius: 0;
     background: transparent;
+    box-shadow: none;
   }
 
   table.cards.compact tr + tr {

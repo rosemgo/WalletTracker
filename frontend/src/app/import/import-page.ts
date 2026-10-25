@@ -14,6 +14,7 @@ import {
   ImportResult,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { FileDrop } from '../ui/file-drop';
 
 /** I separatori che il backend accetta, con un nome leggibile. */
 export const DELIMITERS: { value: string; label: string }[] = [
@@ -49,7 +50,7 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
  */
 @Component({
   selector: 'app-import-page',
-  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [CurrencyPipe, DatePipe, FileDrop, ReactiveFormsModule, RouterLink],
   templateUrl: './import-page.html',
 })
 export class ImportPage implements OnInit {

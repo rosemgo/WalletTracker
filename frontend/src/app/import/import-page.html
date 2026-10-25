@@ -59,10 +59,13 @@
           }
         </select>
       </label>
-      <label>
-        File CSV (al massimo 5 MB)
-        <input type="file" accept=".csv,text/csv,text/plain" (change)="onFile($event)" />
-      </label>
+      <app-file-drop
+        class="wide"
+        accept=".csv,text/csv,text/plain"
+        title="Scegli il file CSV"
+        hint="o trascinalo qui · al massimo 5 MB"
+        (picked)="onFile($event)"
+      />
     </div>
   </div>
 

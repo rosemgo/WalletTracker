@@ -21,7 +21,7 @@ e da qui in poi ogni schermata nuova usa le stesse basi.
 
 ## Parte A: che cosa cambia, in breve
 
-- Il carattere è **Schibsted Grotesk**, servito dall'app stessa.
+- Il carattere è **Schibsted Grotesk**, servito dall'app stessa (aggiornamento: ora è Inter, `docs/41`).
 - Tutti i colori sono **variabili CSS** con due valori, giorno e notte. Il tema segue il telefono o il computer
   (automatico), oppure si sceglie nelle Impostazioni.
 - Sul **telefono** la navigazione è una **barra in basso** con quattro voci: Riepilogo, Movimenti, Budget, Altro.

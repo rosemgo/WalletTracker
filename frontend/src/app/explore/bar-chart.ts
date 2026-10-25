@@ -2,14 +2,19 @@ import { Component, computed, input, output } from '@angular/core';
 
 const WIDTH = 340;
 const HEIGHT = 176;
-const TOP = 16; // spazio sopra la barra più alta, per la scritta della media
+const TOP = 22; // spazio sopra la barra più alta, per la legenda della media
 const BOTTOM = 150; // la base delle barre (sotto ci sono le etichette)
 const MAX_BAR = 22; // le barre non diventano mai più larghe di così: sottili si leggono meglio
 
 /**
- * Il grafico a barre di Analisi (docs/38, parte E): una barra per giorno, settimana o mese. La barra scelta ha
- * l'accento, le altre sono grigie; una linea continua segna la media di solito. Con `diverging` (il netto) le barre
- * vanno in su (risparmiato) o in giù (speso più di quanto è entrato), in due colori.
+ * Il grafico a barre di Analisi (docs/38, parte E; rinnovato in docs/41, parte H): una barra per giorno, settimana o
+ * mese. La barra scelta è dell'accento pieno, con un alone; le altre sono dello stesso colore ma tenue, così il
+ * grafico resta "uno" e si capisce subito quale si sta guardando. Una linea tratteggiata segna la media di solito.
+ * Con `diverging` (il netto) le barre vanno in su (risparmiato) o in giù (speso più di quanto è entrato), in due
+ * colori.
+ *
+ * All'apertura le barre crescono dal basso, una dopo l'altra. Con il mouse, la barra sotto il puntatore si accende un
+ * poco.
  *
  * Con `interactive` ogni barra è un pulsante: si tocca, o con la tastiera Tab e Invio. L'area toccabile è alta quanto
  * il grafico, così anche una barra bassa si prende con il pollice.
@@ -17,52 +22,64 @@ const MAX_BAR = 22; // le barre non diventano mai più larghe di così: sottili 
 @Component({
   selector: 'app-bar-chart',
   template: `
-    <svg
-      class="bar-chart"
-      [attr.viewBox]="'0 0 ' + width + ' ' + height"
-      role="img"
-      [attr.aria-label]="description()"
-    >
-      <line class="zero" x1="0" [attr.y1]="zeroY()" [attr.x2]="width" [attr.y2]="zeroY()" />
-      @for (b of shapes(); track $index) {
-        <path [attr.d]="b.d" [class]="b.cls" />
-        <text class="axis" [class.on]="b.selected" [attr.x]="b.cx" y="168" text-anchor="middle">
-          {{ labels()[$index] }}
-        </text>
-      }
-      @if (averageY() !== null) {
-        <line
-          class="average"
-          x1="0"
-          [attr.y1]="averageY()"
-          [attr.x2]="width"
-          [attr.y2]="averageY()"
-        />
-        <text class="average-label" [attr.x]="width" [attr.y]="averageY()! - 4" text-anchor="end">
-          {{ averageLabel() }}
-        </text>
-      }
-      @if (interactive()) {
-        @for (b of shapes(); track $index) {
-          @if (!b.future) {
-            <rect
-              class="hit"
-              [attr.x]="b.x"
-              y="0"
-              [attr.width]="b.slot"
-              [attr.height]="height"
-              role="button"
-              tabindex="0"
-              [attr.aria-label]="names()[$index]"
-              [attr.aria-pressed]="b.selected"
-              (click)="picked.emit($index)"
-              (keydown.enter)="picked.emit($index)"
-              (keydown.space)="$event.preventDefault(); picked.emit($index)"
+    <div class="bar-chart-wrap">
+      <!-- @for con una chiave sola: con dati nuovi il disegno si ricrea e le barre ricrescono. -->
+      @for (k of [animationKey()]; track k) {
+        <svg
+          class="bar-chart"
+          [attr.viewBox]="'0 0 ' + width + ' ' + height"
+          role="img"
+          [attr.aria-label]="description()"
+        >
+          <line class="zero" x1="0" [attr.y1]="zeroY()" [attr.x2]="width" [attr.y2]="zeroY()" />
+          @for (b of shapes(); track $index) {
+            <g class="slot" [class.future]="b.future">
+              <path [attr.d]="b.d" [class]="b.cls" [style.--i]="$index" />
+              <text
+                class="axis"
+                [class.on]="b.selected"
+                [attr.x]="b.cx"
+                y="168"
+                text-anchor="middle"
+              >
+                {{ labels()[$index] }}
+              </text>
+              @if (interactive() && !b.future) {
+                <rect
+                  class="hit"
+                  [attr.x]="b.x"
+                  y="0"
+                  [attr.width]="b.slot"
+                  [attr.height]="height"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="names()[$index]"
+                  [attr.aria-pressed]="b.selected"
+                  (click)="picked.emit($index)"
+                  (keydown.enter)="picked.emit($index)"
+                  (keydown.space)="$event.preventDefault(); picked.emit($index)"
+                />
+              }
+            </g>
+          }
+          @if (averageY() !== null) {
+            <line
+              class="average"
+              x1="0"
+              [attr.y1]="averageY()"
+              [attr.x2]="width"
+              [attr.y2]="averageY()"
             />
           }
-        }
+        </svg>
       }
-    </svg>
+      @if (averageY() !== null) {
+        <!-- La legenda della linea della media: in alto a destra, nello spazio sopra le barre più alte. -->
+        <span class="average-label"
+          ><span class="key" aria-hidden="true"></span>{{ averageLabel() }}</span
+        >
+      }
+    </div>
   `,
 })
 export class BarChart {
@@ -82,6 +99,11 @@ export class BarChart {
 
   protected readonly width = WIDTH;
   protected readonly height = HEIGHT;
+
+  /** Cambia con i dati (non con la barra scelta): allora le barre ricrescono. */
+  protected readonly animationKey = computed(
+    () => `${this.labels().join('|')}#${this.values().join(',')}#${this.diverging()}`,
+  );
 
   /** La scala: dal valore più basso (zero, o il più negativo) al più alto (contando anche la media). */
   private readonly scale = computed(() => {
@@ -133,14 +155,15 @@ export class BarChart {
 
 /**
  * Il tracciato di una barra arrotondata solo dal lato del valore (in alto se positiva, in basso se negativa): dritta
- * sulla linea dello zero, come in tutti i grafici dell'app.
+ * sulla linea dello zero. L'angolo è largo quanto mezza barra al massimo: le barre strette hanno la cima tonda, a
+ * "pillola".
  */
 function rounded(x: number, top: number, bottom: number, w: number, up: boolean): string {
   const h = bottom - top;
   if (h < 0.5) {
     return '';
   }
-  const r = Math.min(4, h / 2, w / 2);
+  const r = Math.min(7, h, w / 2);
   const f = (n: number) => n.toFixed(1);
   return up
     ? `M${f(x)} ${f(bottom)}V${f(top + r)}Q${f(x)} ${f(top)} ${f(x + r)} ${f(top)}H${f(x + w - r)}` +

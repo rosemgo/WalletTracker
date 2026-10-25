@@ -57,14 +57,14 @@ describe('day groups', () => {
 
   it('a movement is named by its name, counterparty or description, with single spaces', () => {
     expect(nameOf({ ...t(1, '2026-10-25', -1, 'EXPENSE'), counterparty: 'MAR  GROUP   SPA' })).toBe(
-      'MAR GROUP SPA',
+      'Mar Group SPA',
     );
     // Il nome deciso dal backend vince sulla causale lunga.
     const transfer = {
       ...t(1, '2026-10-25', 12, 'INCOME'),
       description: 'Bonifico N. 1 BIC Ordinante …',
     };
-    expect(nameOf({ ...transfer, name: 'ACME SRL' })).toBe('ACME SRL');
+    expect(nameOf({ ...transfer, name: 'ACME SRL' })).toBe('Acme SRL');
     expect(nameOf({ ...t(1, '2026-10-25', -1, 'EXPENSE'), description: '  ' })).toBe(
       '(nessuna descrizione)',
     );

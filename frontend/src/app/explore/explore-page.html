@@ -111,7 +111,7 @@
                 <li>
                   <div class="group-row simple">
                     <span class="group-text">
-                      <span>{{ r.name }}</span>
+                      <span>{{ r.name | readable }}</span>
                       <span class="secondary">{{ r.note }}</span>
                     </span>
                     <strong>{{
@@ -163,6 +163,9 @@
               @for (t of day.items; track t.id) {
                 <li>
                   <a class="movement" [routerLink]="['/movimenti', t.id]">
+                    <span class="avatar" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
+                      initialOf(t)
+                    }}</span>
                     <span class="movement-text">
                       <span class="name">{{ nameOf(t) }}</span>
                       @if (t.note) {
@@ -188,7 +191,7 @@
 <ng-template #row let-r>
   <span class="group-line">
     <span class="group-text">
-      <span>{{ r.name }}</span>
+      <span>{{ r.name | readable }}</span>
       <span class="secondary">{{ r.note }}</span>
     </span>
     <span class="group-amount">
