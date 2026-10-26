@@ -106,6 +106,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 40. [L'esercente scritto nella causale: bonifici e addebiti diretti riconosciuti dal nome (migrazione V28)](docs/40-esercente-nella-causale.md)
 41. [Fase grafica: un aspetto moderno, grafici vivi (Inter, campi, scelta del file, grafici animati e da scorrere)](docs/41-fase-grafica-aspetto-moderno.md)
 42. [Fase grafica, passo 7: l'app installabile (PWA) e la modalità discreta](docs/42-fase-grafica-pwa-e-modalita-discreta.md)
+43. [Ritocchi: "Senza categoria" porta ai movimenti, la categoria tra spese ed entrate, i menu aperti](docs/43-analisi-senza-categoria-e-menu.md)
 
 ## Piano di lavoro
 

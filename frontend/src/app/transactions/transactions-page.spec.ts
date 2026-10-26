@@ -9,7 +9,7 @@ import { Account, Category, Transaction, TransactionFilter, TransactionPage } fr
 import { WalletApi } from '../api/wallet-api';
 import { isoDate } from './period';
 import { TransactionsChanged } from './transactions-changed';
-import { TransactionsPage } from './transactions-page';
+import { TransactionsPage, isoDateParam } from './transactions-page';
 
 /** Un movimento inventato; `changes` cambia solo quello che serve al test. */
 function movement(id: number, changes: Partial<Transaction> = {}): Transaction {
@@ -273,6 +273,26 @@ describe('TransactionsPage', () => {
     expect(requests[0]).toMatchObject({ type: 'TO_REVIEW', text: 'amazon' });
     expect((page.querySelector('input[type="search"]') as HTMLInputElement).value).toBe('amazon');
     expect(pill(page, 'Da verificare').classList.contains('on')).toBe(true);
+  });
+
+  it('from Analisi: without category, of a type, in the dates of a bar', async () => {
+    routeParams = { uncategorized: 'true', type: 'EXPENSE', from: '2026-09-01', to: '2026-09-30' };
+    const { page } = await render();
+    expect(requests[0]).toMatchObject({
+      uncategorized: true,
+      type: 'EXPENSE',
+      from: '2026-09-01',
+      to: '2026-09-30',
+    });
+    expect(pill(page, 'Senza categoria').classList.contains('on')).toBe(true);
+    expect((page.querySelector('input[type="date"]') as HTMLInputElement).value).toBe('2026-09-01');
+  });
+
+  it('dates in the address that are not real dates are ignored', () => {
+    expect(isoDateParam('2026-09-30')).toBe('2026-09-30');
+    expect(isoDateParam('2026-02-30')).toBeNull(); // il 30 febbraio non esiste
+    expect(isoDateParam('30/09/2026')).toBeNull();
+    expect(isoDateParam(null)).toBeNull();
   });
 
   it('an unknown type in the address is ignored', async () => {

@@ -16,7 +16,7 @@ import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
 import { avatarHue, groupByDay, initialOf, nameOf } from './day-groups';
-import { PERIODS, PERIOD_LABELS, Period, periodRange } from './period';
+import { PERIODS, PERIOD_LABELS, Period, isoDate, periodRange } from './period';
 import { TransactionsChanged } from './transactions-changed';
 
 /** Quanti movimenti per volta: i primi all'apertura, altrettanti a ogni "Mostra altri". */
@@ -128,6 +128,15 @@ export class TransactionsPage implements OnInit {
       this.type.set(type as TransactionType);
     }
     this.text.set((params.get('text') ?? '').slice(0, 100));
+    // Da Analisi, "Senza categoria" (docs/43): ?uncategorized=true&from=2026-09-01&to=2026-09-30&type=EXPENSE.
+    this.uncategorized.set(params.get('uncategorized') === 'true');
+    const from = isoDateParam(params.get('from'));
+    const to = isoDateParam(params.get('to'));
+    if (from !== null || to !== null) {
+      this.period.set('CUSTOM');
+      this.from.set(from);
+      this.to.set(to);
+    }
     const categoryId = Number(params.get('categoryId'));
     if (Number.isInteger(categoryId) && categoryId > 0) {
       this.category.set({ id: categoryId, name: 'Una categoria' });
@@ -304,4 +313,13 @@ export class TransactionsPage implements OnInit {
     }
     return parts.filter((p) => p !== '').join(' · ');
   }
+}
+
+/** Una data dell'indirizzo ("2026-09-30"), o null se manca o non è una data vera. */
+export function isoDateParam(value: string | null): string | null {
+  if (value === null || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) || isoDate(date) !== value ? null : value;
 }

@@ -3,6 +3,7 @@ import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import {
+  CategoryKind,
   ExploreGroup,
   ExploreGroups,
   ExplorePeriod,
@@ -78,6 +79,8 @@ export class ExplorePage implements OnInit {
   protected readonly period = signal<ExplorePeriod>('YEAR');
   protected readonly by = signal<GroupBy>('CATEGORY');
   protected readonly category = signal<{ id: number; name: string } | null>(null);
+  /** Il tipo di ogni categoria (spesa, entrata...): una categoria di spesa non ha senso tra le entrate. */
+  private readonly kinds = signal(new Map<number, CategoryKind>());
   protected readonly currency = signal<string | null>(null);
   /** La barra scelta; null = l'ultima già successa. */
   protected readonly selected = signal<number | null>(null);
@@ -193,6 +196,29 @@ export class ExplorePage implements OnInit {
     () => this.metric() !== 'NET' && this.by() === 'CATEGORY' && this.category() === null,
   );
 
+  /**
+   * "Senza categoria" tra le spese o le entrate (docs/43): non si può guardare come una categoria (non è una), ma
+   * sono proprio i movimenti da sistemare. Il tocco apre Movimenti con quel filtro e il periodo della barra.
+   */
+  protected uncategorizedQuery(row: Row): Record<string, string> | null {
+    const b = this.bar();
+    const metric = this.metric();
+    if (
+      row.group.categoryId !== null ||
+      !this.canPickCategory() ||
+      b === null ||
+      metric === 'NET'
+    ) {
+      return null;
+    }
+    return {
+      uncategorized: 'true',
+      type: metric === 'EXPENSES' ? 'EXPENSE' : 'INCOME',
+      from: b.bar.from,
+      to: b.bar.to,
+    };
+  }
+
   /** Il mese per la pagina della categoria: quello della barra, se è un mese; altrimenti quello in corso. */
   protected readonly categoryMonth = computed(() => {
     const s = this.series();
@@ -220,14 +246,44 @@ export class ExplorePage implements OnInit {
       this.selected.set(bar);
     }
     this.loadSeries();
+    this.api.categories().subscribe({
+      next: (categories) => {
+        this.kinds.set(new Map(categories.map((c) => [c.id, c.kind])));
+        // Un indirizzo con una categoria di spesa e "entrate" (scritto a mano, o vecchio): la si toglie.
+        if (this.dropMismatchedCategory()) {
+          this.loadSeries();
+        }
+      },
+    });
   }
 
   chooseMetric(metric: Metric): void {
     this.metric.set(metric);
-    if (metric === 'NET') {
-      this.category.set(null);
-    }
+    this.dropMismatchedCategory();
     this.loadSeries();
+  }
+
+  /**
+   * Toglie la categoria scelta se non va con quello che si guarda (docs/43): una categoria di spesa tra le entrate
+   * darebbe sempre 0 €, e i suoi movimenti (spese) sotto il titolo "Entrate". Nel netto le categorie non si scelgono.
+   * Restituisce true se l'ha tolta.
+   */
+  private dropMismatchedCategory(): boolean {
+    const category = this.category();
+    if (category === null) {
+      return false;
+    }
+    const metric = this.metric();
+    const kind = this.kinds().get(category.id);
+    const expected = metric === 'EXPENSES' ? 'EXPENSE' : metric === 'INCOME' ? 'INCOME' : null;
+    if (metric !== 'NET' && (kind === undefined || kind === expected)) {
+      return false; // va bene (o non sappiamo ancora il tipo: lo controlliamo quando arriva)
+    }
+    this.category.set(null);
+    if (this.by() === 'MERCHANT') {
+      this.by.set('CATEGORY'); // si torna all'elenco delle categorie, come con la ✕
+    }
+    return true;
   }
 
   choosePeriod(period: ExplorePeriod): void {

@@ -767,6 +767,122 @@ select option {
 }
 
 /*
+ * Il menu aperto, disegnato da noi (docs/43). Chrome ed Edge (dalla versione 135) permettono di sostituire l'elenco
+ * del sistema con uno nostro: appearance: base-select sul campo e sull'elenco (::picker(select)). Restano un vero
+ * <select>: tastiera, lettori di schermo e moduli funzionano come prima. I browser che non lo conoscono saltano
+ * tutto il blocco (@supports) e mostrano l'elenco del sistema: è un miglioramento, non un requisito.
+ */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    font: inherit; /* base-select riparte dal carattere del browser: torniamo al nostro */
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-right: 0.75rem;
+    background-image: none; /* la freccia ora è ::picker-icon, qui sotto */
+  }
+
+  select.pill {
+    padding: 0 12px 0 15px;
+  }
+
+  /* La freccia: la stessa di prima, che si capovolge quando l'elenco è aperto. */
+  select::picker-icon {
+    content: '';
+    width: 1.05rem;
+    height: 1.05rem;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23838a96' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    transition: rotate 0.2s var(--ease);
+  }
+
+  select.pill::picker-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  /* L'elenco: una scheda in rilievo con gli angoli arrotondati, staccata dal campo, che scorre se è lungo. */
+  ::picker(select) {
+    min-width: anchor-size(width); /* largo almeno quanto il campo */
+    max-height: min(60dvh, 24rem);
+    margin-block: 6px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--raised);
+    color: var(--ink);
+    box-shadow:
+      0 12px 32px -8px rgb(16 24 40 / 0.22),
+      0 2px 6px rgb(16 24 40 / 0.08);
+    overflow-y: auto;
+    /* Appare scendendo un poco. @starting-style dice da dove parte la transizione quando l'elenco si apre;
+       transition-behavior: allow-discrete fa animare anche la comparsa (display) e la chiusura. */
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 0.15s,
+      translate 0.2s var(--ease),
+      display 0.2s allow-discrete,
+      overlay 0.2s allow-discrete;
+  }
+
+  @starting-style {
+    ::picker(select):popover-open {
+      opacity: 0;
+      translate: 0 -6px;
+    }
+  }
+
+  select option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  select option:hover,
+  select option:focus-visible {
+    outline: none;
+    background: var(--track);
+  }
+
+  /* La voce scelta: il colore tenue dell'accento e la spunta, a destra. */
+  select option:checked {
+    background: var(--soft);
+    color: var(--acc);
+    font-weight: 600;
+  }
+
+  select option::checkmark {
+    order: 1;
+    margin-left: auto;
+    content: '✓';
+    color: var(--acc);
+  }
+
+  /* Le voci "segnaposto" ("— scegli —", "— nessuna —"): grigie. */
+  select option[value=''],
+  select option:disabled {
+    color: var(--sec);
+  }
+}
+
+/*
  * Caselle e scelte: disegnate da noi, uguali in tutti i browser. La casella è un quadrato arrotondato; selezionata
  * si riempie dell'accento e mostra il segno di spunta (un SVG bianco). Restano veri <input>: la tastiera, lo spazio
  * per spuntare e i lettori di schermo funzionano come prima.
@@ -1043,6 +1159,29 @@ table + .card,
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--sec);
+}
+
+/* Il campo dentro l'etichetta: la misura e il colore del testo normale, non quelli piccoli e grigi dell'etichetta. */
+.form-grid label > select,
+.form-grid label > input,
+.form-grid label > textarea,
+.filters label > select,
+.filters label > input {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/*
+ * Sui telefoni (dito, non mouse) i campi hanno almeno 16 pixel: con meno, Safari su iPhone ingrandisce tutta la
+ * pagina quando si tocca un campo, e poi non torna indietro da solo.
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='file']),
+  select:not(.pill),
+  textarea {
+    font-size: max(16px, 1rem);
+  }
 }
 
 .form-grid label.checkbox {
@@ -2654,6 +2793,19 @@ ul.groups li + li {
 
 ul.groups > li.secondary {
   padding: 10px 0;
+}
+
+/* "Senza categoria" in Analisi: un link, con l'invito a sistemarli (docs/43). */
+a.group-row {
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+a.group-row .group-text > span:first-child::after {
+  content: ' · da sistemare ›';
+  color: var(--acc);
+  font-size: 0.85em;
+  font-weight: 600;
 }
 
 .group-row {

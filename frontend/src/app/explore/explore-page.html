@@ -128,7 +128,17 @@
           <ul class="groups">
             @for (r of rows(); track r.group.key) {
               <li>
-                @if (canPickCategory() && r.group.categoryId !== null) {
+                @if (uncategorizedQuery(r); as query) {
+                  <!-- "Senza categoria": i movimenti da sistemare, in Movimenti (docs/43). -->
+                  <a
+                    class="group-row"
+                    routerLink="/movimenti"
+                    [queryParams]="query"
+                    [attr.aria-label]="r.name + ': apri i movimenti, per dare loro una categoria'"
+                  >
+                    <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
+                  </a>
+                } @else if (canPickCategory() && r.group.categoryId !== null) {
                   <button
                     type="button"
                     class="group-row"

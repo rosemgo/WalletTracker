@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { of, throwError } from 'rxjs';
 
 import {
+  Category,
   ExploreGroup,
   ExploreGroups,
   ExploreSeries,
@@ -92,6 +93,12 @@ describe('ExplorePage', () => {
         };
         return of(answer);
       },
+      categories: () =>
+        of([
+          { id: 1, name: 'Spesa alimentare', kind: 'EXPENSE', builtin: true, uses: 0 },
+          { id: 2, name: 'Bar e ristoranti', kind: 'EXPENSE', builtin: true, uses: 0 },
+          { id: 9, name: 'Stipendio e pensione', kind: 'INCOME', builtin: true, uses: 0 },
+        ] as Category[]),
       transactions: (filter: TransactionFilter) => {
         transactionQueries.push(filter);
         const item = {
@@ -242,6 +249,42 @@ describe('ExplorePage', () => {
     expect(page.querySelector('.filter-chip button')?.textContent).toContain(
       'Stipendio e pensione',
     );
+  });
+
+  it('"Senza categoria" opens the movements to sort out, in the period of the bar', async () => {
+    const { page } = await render();
+    const link = page.querySelector('a.group-row') as HTMLAnchorElement;
+
+    expect(link.textContent).toContain('Senza categoria');
+    const url = new URL(link.href);
+    expect(url.pathname).toBe('/movimenti');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      uncategorized: 'true',
+      type: 'EXPENSE',
+      from: '2026-10-01',
+      to: '2026-10-28',
+    });
+    // Le categorie vere restano pulsanti: si guardano qui.
+    expect(page.querySelectorAll('button.group-row').length).toBe(2);
+  });
+
+  it('switching to the income drops an expense category, which would always be 0 there', async () => {
+    const { fixture, page, button } = await render();
+    (page.querySelector('button.group-row') as HTMLButtonElement).click(); // Spesa alimentare
+    await fixture.whenStable();
+    expect(seriesQueries.at(-1)).toMatchObject({ categoryId: 1 });
+
+    button('Entrate').click();
+    await fixture.whenStable();
+    expect(seriesQueries.at(-1)).toMatchObject({ metric: 'INCOME', categoryId: null });
+    expect(groupQueries.at(-1)).toMatchObject({ by: 'CATEGORY', categoryId: null });
+    expect(navigations.at(-1)).toMatchObject({ categoria: null, per: 'categoria' });
+  });
+
+  it('an address with an expense category among the income is corrected', async () => {
+    routeParams = { cosa: 'entrate', categoria: '1', nome: 'Spesa alimentare' };
+    await render();
+    expect(seriesQueries.at(-1)).toMatchObject({ metric: 'INCOME', categoryId: null });
   });
 
   it('puts the difference from the usual into words', () => {
