@@ -517,6 +517,42 @@ services:
     profiles: ["ia"]                         # parte solo se chiesto
 ```
 
+### E1. "Porta" vuol dire tre cose diverse
+
+Nel `docker-compose.yml` i numeri di porta compaiono in molti punti, ma solo **uno** apre qualcosa verso il PC:
+
+| Dove | Esempio | Che cosa vuol dire | Apre una porta sul PC? |
+|---|---|---|---|
+| `environment:` del backend | `SERVER_PORT: 8080` | "backend, **ascolta** sulla porta 8080 **dentro il tuo container**" | no |
+| `environment:` del backend | `POSTGRES_PORT: 5432` | "backend, il database **lo trovi** sulla porta 5432 di `db`" (è un indirizzo da chiamare, come un numero di telefono) | no |
+| `EXPOSE 8080` nel Dockerfile | | solo un promemoria: "questo programma ascolta sulla 8080" | no |
+| **`ports:`** di `web` | `"127.0.0.1:8000:8080"` | "**collega** la porta 8000 del PC alla porta 8080 del container" | **sì, l'unica** |
+
+Ogni programma che riceve richieste **ascolta** su una porta: PostgreSQL sulla 5432, il backend sulla 8080, nginx
+sulla 8080 del suo container. Ma quella porta esiste **dentro il container**, sulla rete privata di Docker: la
+raggiungono solo gli altri container. Diventa raggiungibile dal PC solo se la **pubblichi** con `ports:`. Il
+backend e il database non hanno `ports:`, e quindi dal PC non si raggiungono (prova: `curl http://localhost:8080`
+non risponde).
+
+### E2. Perché le credenziali del database compaiono due volte
+
+`POSTGRES_DB`, `POSTGRES_USER` e `POSTGRES_PASSWORD` sono sia in `db` sia in `backend`. Non è un doppione: ogni
+container è isolato e vede **solo** le variabili scritte nel suo blocco `environment:`, e i due le usano per
+due cose opposte.
+
+- **Nel `db` creano la serratura.** L'immagine di PostgreSQL le legge **al primo avvio**, quando il volume è
+  vuoto: "crea il database `wallettracker`, con l'utente `wallettracker` e questa password".
+- **Nel `backend` sono la chiave.** Spring Boot le usa per collegarsi (`spring.datasource` in `application.yml`):
+  "entra nel database `wallettracker` con questo utente e questa password".
+
+I valori arrivano dallo **stesso posto**, il `.env`: `${POSTGRES_PASSWORD}` vuol dire "metti qui il valore del
+`.env`". La password la scrivi una volta sola e Compose la consegna a entrambi, così serratura e chiave
+coincidono per forza.
+
+Una conseguenza da sapere: il `db` usa la password **solo al primo avvio**. Se poi la cambi nel `.env`, il
+backend riceve quella nuova, mentre il database tiene quella vecchia, e il backend non entra più ("password
+authentication failed"). Cambiare la password di un database già creato è un'operazione a parte (passo 2).
+
 - **Le variabili del backend una per una**, e non tutto il `.env` (`env_file`): si vede che cosa riceve, e un
   valore pensato per il PC (es. `POSTGRES_PORT=5433`) non finisce per sbaglio nel container.
 - **`depends_on` con `service_healthy`**: Flyway, all'avvio, deve già poter entrare nel database.
