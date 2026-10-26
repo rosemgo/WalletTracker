@@ -1,15 +1,28 @@
-# Docker Compose: descrive i "servizi" (container) dell'applicazione e come avviarli insieme.
-# Per ora c'è solo il database; nelle fasi successive aggiungeremo backend e frontend.
+# Docker Compose: descrive i "servizi" (container) dell'applicazione e come avviarli insieme (docs/44).
+#
+#   db       PostgreSQL, i dati in un volume
+#   backend  Spring Boot (backend/Dockerfile)
+#   web      nginx con la dashboard (frontend/Dockerfile): l'UNICO con una porta aperta, solo su questo PC
+#   ollama   l'IA locale, FACOLTATIVA: parte solo con --profile ia
+#
+#   telefono/PC ──▶ web (nginx) ──/api/──▶ backend ──▶ db
+#                                              └────▶ ollama (se c'è)
 #
 # Comandi principali (dalla cartella del progetto):
-#   docker compose up -d     avvia in background
-#   docker compose ps        mostra lo stato
-#   docker compose logs -f   segue i log
-#   docker compose down      ferma e rimuove i container (i dati restano nel volume)
+#   docker compose up -d --build        costruisce le immagini e avvia tutto in background
+#   docker compose --profile ia up -d   come sopra, con anche Ollama
+#   docker compose ps                   mostra lo stato (e se i controlli di salute sono "healthy")
+#   docker compose logs -f backend      segue i log di un servizio
+#   docker compose down                 ferma e rimuove i container (i dati restano nei volumi)
 #
-# I valori ${...} vengono letti dal file .env nella stessa cartella.
+# Per lo sviluppo (backend con ./mvnw e dashboard con ng serve) serve solo il database, raggiungibile dal PC:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+#
+# I valori ${...} vengono letti dal file .env nella stessa cartella. ${NOME:-valore}: se NOME manca o è vuoto,
+# vale "valore".
 
-# Nome del progetto: Docker lo usa come prefisso per volumi e reti (es. wallettracker_db-data).
+# Nome del progetto: Docker lo usa come prefisso per volumi e reti (es. wallettracker_db-data). È lo stesso delle
+# fasi precedenti: il volume del database è quello di prima, e i dati ci sono già.
 name: wallettracker
 
 services:
@@ -23,11 +36,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      # "indirizzo:porta-sul-tuo-pc:porta-nel-container". 127.0.0.1 = raggiungibile solo dal tuo PC.
-      # La porta sul PC si sceglie nel .env (POSTGRES_PORT, se manca vale 5432);
-      # quella nel container resta 5432, perché è la porta su cui ascolta PostgreSQL.
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      TZ: ${TZ:-Europe/Rome}
+    # Nessuna porta pubblicata: il database lo raggiunge solo il backend, nella rete interna di Docker.
+    # (Per lo sviluppo la apre docker-compose.dev.yml, sempre e solo su 127.0.0.1.)
     volumes:
       # I dati del database vivono in un volume, fuori dal container:
       # se il container viene cancellato e ricreato, i dati restano.
@@ -38,6 +49,112 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    build: ./backend
+    container_name: wallettracker-backend
+    restart: unless-stopped
+    depends_on:
+      # Il backend parte solo quando il database risponde: Flyway, all'avvio, ci deve già entrare.
+      db:
+        condition: service_healthy
+    # Le variabili una per una, e non tutto il .env (env_file): così si vede che cosa riceve il backend, e
+    # nessun valore pensato per il PC (es. POSTGRES_PORT=5433) finisce per sbaglio nel container.
+    environment:
+      # Nella rete di Docker il database si chiama "db" e ascolta sulla sua porta di sempre, 5432.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # 0.0.0.0 = tutte le "schede di rete" del container, altrimenti nginx non lo raggiungerebbe. Il backend
+      # resta chiuso lo stesso: qui sotto non c'è "ports", nessuna porta del PC porta a lui.
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8080
+      # I nomi con cui si apre l'app nel browser (vedi LocalOnlyRequestFilter). Con Tailscale (passo 4) si
+      # aggiunge il nome del PC nella rete privata.
+      WALLETTRACKER_ALLOWED_HOSTS: ${WALLETTRACKER_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      # La chiave di cifratura e la chiave di Enable Banking: nelle cartelle montate qui sotto (volumes).
+      WALLETTRACKER_KEY_FILE: /app/.data/encryption.key
+      ENABLE_BANKING_PRIVATE_KEY_PATH: /app/secrets/enable-banking.pem
+      ENABLE_BANKING_APP_ID: ${ENABLE_BANKING_APP_ID:-}
+      ENABLE_BANKING_REDIRECT_URL: ${ENABLE_BANKING_REDIRECT_URL:-https://localhost:8443/callback}
+      SYNC_INTERVAL: ${SYNC_INTERVAL:-6h}
+      # Il servizio "ollama" qui sotto. Se Ollama è installato sul PC (docs/44, parte G), nel .env:
+      # OLLAMA_URL=http://host.docker.internal:11434
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      # Il fuso orario: un container di serie vive in UTC, e "oggi", "questo mese", la scadenza di un consenso
+      # sarebbero sbagliati di un paio d'ore vicino alla mezzanotte.
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      # .data/ del progetto, con la chiave di cifratura: la stessa di quando il backend girava sul PC, così i
+      # segreti già salvati (credenziali di Enable Banking, chiave di Gemini) si leggono ancora. Se manca, il
+      # backend la crea al primo avvio. Va nei backup, separata dal database (docs/17).
+      - ./.data:/app/.data
+      # secrets/, in sola lettura (":ro"): solo se le credenziali di Enable Banking sono nel .env e non salvate
+      # dalla pagina Impostazioni.
+      - ./secrets:/app/secrets:ro
+    # Il file system del container è in sola lettura: un attaccante non potrebbe modificare il programma né
+    # lasciarci file. Scrivibili restano solo .data (sopra) e /tmp (in memoria: Tomcat ci tiene i file caricati).
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Nessun "potere speciale" di Linux (capabilities): al backend non servono.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # /actuator/health risponde {"status":"UP"} quando il backend e il database funzionano (docs/44, parte C).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # All'avvio Spring Boot e Flyway hanno bisogno di qualche decina di secondi: in questo tempo un controllo
+      # fallito non conta.
+      start_period: 90s
+
+  web:
+    build: ./frontend
+    container_name: wallettracker-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # L'unica porta aperta. 127.0.0.1 = raggiungibile solo da questo PC: dalla rete di casa no. Dal telefono ci
+      # si arriva con Tailscale (passo 4), che parla con nginx da qui, dal PC stesso.
+      # L'app: http://localhost:8000 (WEB_PORT nel .env per cambiarla).
+      - "127.0.0.1:${WEB_PORT:-8000}:8080"
+    read_only: true
+    tmpfs:
+      # nginx-unprivileged scrive qui i file temporanei e il file con il suo numero di processo.
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  ollama:
+    # L'IA locale (docs/27). "profiles": parte solo con docker compose --profile ia up -d. Senza, l'app funziona
+    # lo stesso: i suggerimenti con l'IA si spengono, o si usa Gemini (Impostazioni).
+    profiles: ["ia"]
+    image: ollama/ollama:0.40.11
+    container_name: wallettracker-ollama
+    restart: unless-stopped
+    # Nessuna porta pubblicata: lo raggiunge solo il backend, come "ollama:11434". Il modello si scarica dalla
+    # pagina Impostazioni e resta nel volume.
+    volumes:
+      - ollama-data:/root/.ollama
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   db-data:
+  ollama-data:

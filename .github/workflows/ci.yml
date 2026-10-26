@@ -90,3 +90,25 @@ jobs:
       # La build di produzione: se il codice o i template hanno errori, fallisce qui.
       - name: Compila
         run: npm run build
+
+  # Le immagini Docker (Fase 4, docs/44): se un Dockerfile o la configurazione di nginx hanno un errore, ce ne
+  # accorgiamo qui e non sul PC di chi installa. Si costruiscono e basta: i test girano già nei due job sopra.
+  docker:
+    name: Immagini Docker (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      # Il .env di esempio: Compose lo legge per riempire i ${...} di docker-compose.yml.
+      - name: Prepara il .env
+        run: cp .env.example .env
+
+      - name: Costruisci le immagini
+        run: docker compose build
+
+      # nginx -t controlla la configurazione senza avviare il server.
+      - name: Controlla la configurazione di nginx
+        run: docker compose run --rm --no-deps --entrypoint nginx web -t

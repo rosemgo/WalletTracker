@@ -27,8 +27,10 @@ spring:
       max-request-size: 6MB
 
   # Connessione al database PostgreSQL avviato con Docker Compose (stessi valori del .env).
+  # POSTGRES_HOST: avviando il backend a mano è "localhost"; nel container (Fase 4) è "db", il nome del servizio
+  # nel docker-compose.yml, che la rete interna di Docker trasforma nell'indirizzo del container del database.
   datasource:
-    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:wallettracker}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:wallettracker}
     username: ${POSTGRES_USER:wallettracker}
     password: ${POSTGRES_PASSWORD:}
 
@@ -49,9 +51,24 @@ spring:
 
 # Server web (Fase 2). Ascolta SOLO su questo PC (127.0.0.1): le API non hanno ancora un login, e
 # senza questa riga chiunque sulla stessa rete Wi-Fi (a casa, in un bar...) potrebbe leggere i tuoi movimenti.
+# Nel container (Fase 4) SERVER_ADDRESS è 0.0.0.0: dentro un container 127.0.0.1 è il container stesso, e nginx
+# (un altro container) non arriverebbe al backend. Resta chiuso lo stesso: docker-compose.yml non pubblica la
+# porta del backend, che si raggiunge solo dalla rete interna di Docker (vedi docs/44).
 server:
-  address: 127.0.0.1
+  address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8080}
+
+# Actuator (Fase 4): solo /actuator/health, che dice se il backend e il database rispondono ("UP"). Lo usa il
+# controllo di salute di Docker (healthcheck nel docker-compose.yml). Non passa da nginx, che inoltra solo /api/:
+# da fuori non si raggiunge. I dettagli (quale controllo è fallito, lo spazio su disco) non si mostrano mai.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 enable-banking:
   base-url: https://api.enablebanking.com
@@ -63,7 +80,8 @@ enable-banking:
 wallettracker:
   # I nomi con cui si può raggiungere il backend (header Host, e Origin per le richieste che modificano dati).
   # Protezione contro DNS rebinding e richieste da altri siti: vedi LocalOnlyRequestFilter e docs/17.
-  allowed-hosts: localhost,127.0.0.1
+  # Con Tailscale (Fase 4) si aggiunge il nome del PC nella rete privata (es. pc-casa.esempio.ts.net).
+  allowed-hosts: ${WALLETTRACKER_ALLOWED_HOSTS:localhost,127.0.0.1}
   encryption:
     # Il file con la chiave che cifra i segreti nel database (vedi SecretCipher e docs/17). Se non esiste viene
     # creato al primo avvio. Sta FUORI dal database, nella cartella .data/ (esclusa da Git): includilo nei

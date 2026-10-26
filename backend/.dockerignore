@@ -1,0 +1,5 @@
+# Quello che la build Docker non deve ricevere (docs/44): la compilazione la rifà lei.
+target/
+.mvn/
+mvnw
+mvnw.cmd

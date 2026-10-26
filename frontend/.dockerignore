@@ -1,0 +1,5 @@
+# Quello che la build Docker non deve ricevere (docs/44): le dipendenze le riscarica lei con npm ci,
+# e una build vecchia non deve finire nell'immagine.
+node_modules/
+dist/
+.angular/

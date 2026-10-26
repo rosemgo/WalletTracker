@@ -40,7 +40,7 @@ Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`S
 
 | # | Protezione | Contro cosa | Dove |
 |---|---|---|---|
-| 1 | backend e database ascoltano **solo su 127.0.0.1** | altri dispositivi in rete | `server.address` in `application.yml`; porta del database in `docker-compose.yml` |
+| 1 | backend e database ascoltano **solo su 127.0.0.1**; con Docker Compose (Fase 4) **non pubblicano nessuna porta**: si raggiungono solo dalla rete interna di Docker, e l'unica porta aperta (nginx) è su 127.0.0.1 | altri dispositivi in rete | `server.address` in `application.yml`; `docker-compose.yml` (e `docker-compose.dev.yml` per lo sviluppo); `docs/44` |
 | 2 | **controllo dell'header `Host`**: solo `localhost` e `127.0.0.1` | DNS rebinding | `web/LocalOnlyRequestFilter` |
 | 3 | **controllo dell'header `Origin`** sulle richieste che modificano dati | CSRF (richieste da altri siti) | `web/LocalOnlyRequestFilter` |
 | 4 | parametro **`state`** monouso (30 minuti) nel collegamento delle banche | CSRF sul ritorno dal login | `connection/BankLinkService`, `docs/13` |
@@ -67,6 +67,9 @@ Va aggiornato a ogni passo. Le vulnerabilità si segnalano come descritto in [`S
 | 25 | Modalità discreta: le cifre degli importi **sostituite** ("••• €", segno compreso), non sfocate: non restano nella pagina né nel testo copiato; la scelta resta solo nel browser del dispositivo | qualcuno che guarda lo schermo, cifre lette da una sfocatura | `privacy/privacy-store`, `privacy/money.pipe`, `privacy.spec.ts`, `docs/42` |
 | 26 | App installabile: il service worker tiene in memoria solo le **letture** delle pagine principali (strategia `freshness`: la rete prima), al massimo 7 giorni; mai Impostazioni, IA, collegamenti, sincronizzazione; avviso "Senza rete"; `index.html`, `ngsw.json` e il worker sempre ricontrollati | dati sensibili lasciati sul dispositivo più del necessario, dati vecchi presi per attuali, una versione vecchia che non se ne va | `ngsw-config.json`, `pwa/app-status`, `app-status.spec.ts`, `docs/42` |
 | 27 | Server locale della build (`scripts/serve-dist.mjs`): ascolta solo su `127.0.0.1`; il percorso richiesto deve restare dentro la cartella della build (anche con `%2F`), altrimenti 404; `nosniff` | lettura di file fuori dalla build (path traversal), server raggiungibile dalla rete | `frontend/scripts/serve-dist.mjs`, `docs/42` (parte G) |
+| 28 | Container (Fase 4): backend e nginx girano con un **utente senza privilegi**, file system in **sola lettura** (scrivibili solo `/tmp` in memoria e `.data/`), **nessuna capability** di Linux, `no-new-privileges`; immagini multi-stage senza compilatori né codice sorgente; `secrets/` montata in sola lettura | un attaccante che riesce a eseguire codice nel backend o in nginx: niente root, niente programmi modificati, pochi strumenti a disposizione | `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`, `docs/44` |
+| 29 | Intestazioni di sicurezza della dashboard da nginx: `Content-Security-Policy` (solo script nostri, nessuno script dentro la pagina, nessuna chiamata verso altri siti, niente riquadri), `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `X-Frame-Options`; `server_tokens off`; le API con `Cache-Control: no-store` | cross-site scripting che esegue codice o manda i dati altrove, clickjacking, indirizzi delle pagine passati ad altri siti | `frontend/nginx/security-headers.conf`, `frontend/nginx/default.conf`, `angular.json` (`inlineCritical: false`), `docs/44` |
+| 30 | Controllo di salute: di Actuator è acceso **solo** `/actuator/health`, senza dettagli; nginx inoltra solo `/api/`, quindi da fuori non si raggiunge nemmeno quello. nginx limita i file caricati a 6 MB (413) prima del backend | configurazione, password o memoria del backend lette da un endpoint di Actuator, richieste enormi | `application.yml` (`management`), `HealthEndpointTest`, `frontend/nginx/default.conf`, `docs/44` |
 
 ### Approfondimento: la cifratura dei segreti (n. 5)
 
@@ -122,8 +125,7 @@ Il principio guida: **nessun accesso da fuori dal PC finché non c'è il login.*
 |---|---|
 | **Fase 4, prima di qualsiasi accesso remoto** | **login** con Spring Security: password salvata con un hash lento (Argon2 o bcrypt), sessione in un cookie `HttpOnly`, `Secure`, `SameSite=Strict`, protezione CSRF con token, blocco dopo troppi tentativi |
 | Fase 4 | **HTTPS** con un certificato vero (Tailscale), invece del certificato autofirmato di sviluppo |
-| Fase 4 | **container sicuri**: utente non root, file system in sola lettura, solo le porte necessarie; password del database **generata a caso** all'installazione |
-| Fase 4 | **header di sicurezza** per la dashboard: `Content-Security-Policy`, `X-Content-Type-Options`, `Referrer-Policy` |
+| Fase 4 | **container sicuri**: password del database **generata a caso** all'installazione (utente non root, sola lettura e porte: fatti, n. 28 e 1) |
 | Fase 3–4 | **backup cifrati** del database, con una procedura guidata |
 | Fase 3–4 | **rotazione** della chiave di cifratura (il prefisso `v1:` serve proprio a questo) |
 | Fase 3–4 | **minimizzazione dei dati**: oggi salviamo il JSON originale di ogni movimento (`raw_json`, anche la riga dei file CSV), che contiene nomi e IBAN delle controparti. Valutare cosa tenere e per quanto |

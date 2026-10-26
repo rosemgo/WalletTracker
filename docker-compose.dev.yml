@@ -1,0 +1,16 @@
+# Aggiunte per lo SVILUPPO (docs/44, parte E): si usa insieme a docker-compose.yml, che resta la base.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+#
+# Docker Compose unisce i due file: qui si aggiunge solo la porta del database, perché il backend avviato a mano
+# (./mvnw spring-boot:run) e i tuoi strumenti (psql, DBeaver) lo raggiungano dal PC. Nell'installazione normale
+# questa porta non serve, e resta chiusa.
+#
+# Attenzione: non tenere accesi insieme il backend del PC e quello nel container. Sono due programmi che
+# aggiornano gli stessi conti: le letture dalle banche raddoppierebbero, oltre il limite di 4 al giorno (PSD2).
+services:
+  db:
+    ports:
+      # "indirizzo:porta-sul-tuo-pc:porta-nel-container". 127.0.0.1 = raggiungibile solo dal tuo PC.
+      # La porta sul PC si sceglie nel .env (POSTGRES_PORT, se manca vale 5432).
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"

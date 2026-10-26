@@ -60,7 +60,8 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 .env        configurazione personale (ignorato da Git; parti da .env.example)
 ```
 
-`docker-compose.yml` (nella radice) avvia il database PostgreSQL.
+`docker-compose.yml` (nella radice) avvia l'app completa: database, backend, nginx con la dashboard e, se vuoi,
+Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per lo sviluppo.
 
 ## Guide
 
@@ -107,6 +108,7 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 41. [Fase grafica: un aspetto moderno, grafici vivi (Inter, campi, scelta del file, grafici animati e da scorrere)](docs/41-fase-grafica-aspetto-moderno.md)
 42. [Fase grafica, passo 7: l'app installabile (PWA) e la modalità discreta](docs/42-fase-grafica-pwa-e-modalita-discreta.md)
 43. [Ritocchi: "Senza categoria" porta ai movimenti, la categoria tra spese ed entrate, i menu aperti](docs/43-analisi-senza-categoria-e-menu.md)
+44. [Fase 4, passo 1: l'app in tre container (Dockerfile multi-stage, nginx, Docker Compose)](docs/44-fase-4-passo-1-docker-nginx.md)
 
 ## Piano di lavoro
 
@@ -137,14 +139,28 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
 - [x] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`, i Movimenti in `docs/37`, Analisi in `docs/38`, Budget e Altro in `docs/39`, l'aspetto moderno e i grafici vivi in `docs/41`, l'app installabile e la modalità discreta in `docs/42`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
+  - [x] passo 1: tre container (`db`, `backend`, `web` con nginx) più Ollama facoltativo, avviati con `docker compose up -d` (`docs/44`)
+  - [ ] passo 2: configurazione e segreti (password del database generata, primo avvio guidato)
+  - [ ] passo 3: il PIN per aprire l'app (Spring Security)
+  - [ ] passo 4: Tailscale, l'app dal telefono con https vero
+  - [ ] passo 5: backup e ripristino (provato davvero)
+  - [ ] passo 6: aggiornamenti e la guida per chi non è informatico
 
 ## Comandi utili
 
 Dalla radice del progetto:
 
 ```bash
-docker compose up -d      # avvia il database (serve anche ai test: Docker Desktop deve essere avviato)
+docker compose up -d --build                  # l'app completa su http://localhost:8000 (docs/44)
+docker compose --profile ia up -d --build     # la stessa, con anche Ollama (l'IA locale)
+docker compose down                           # ferma tutto (i dati restano)
+
+# Per lo sviluppo: solo il database, raggiungibile dal PC (poi backend con ./mvnw e dashboard con npm start).
+# Non insieme all'app completa: due backend leggerebbero due volte le banche.
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
 ```
+
+I test del backend non hanno bisogno di Compose (usano Testcontainers), ma Docker Desktop deve essere avviato.
 
 Dalla cartella `backend/` (su Windows usa `mvnw.cmd` al posto di `./mvnw`):
 

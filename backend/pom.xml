@@ -51,6 +51,12 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
+        <!-- Actuator (Fase 4): /actuator/health, il controllo di salute usato da Docker -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Validazione della configurazione con annotazioni come @NotBlank -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
