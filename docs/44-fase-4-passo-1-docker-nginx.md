@@ -20,6 +20,7 @@ usa anche dal telefono, in sicurezza.
 > (`./mvnw spring-boot:run`) e `npm start`** (parte E: perché).
 
 **Indice**
+- **Prima di tutto: tre domande** (i tre container, perché il database non ha più la porta, a che cosa serve nginx)
 - Parte A: il quadro (perché un server web tra browser e backend; Tailscale, Cloudflare, il PIN)
 - Parte B: Docker in cinque parole (immagine, container, volume, rete, Compose)
 - Parte C: il backend in un container
@@ -31,6 +32,109 @@ usa anche dal telefono, in sicurezza.
 - Parte I: test e verifiche fatte
 - Parte J: problemi comuni
 - Esercizi guidati
+
+---
+
+## Prima di tutto: tre domande
+
+Se leggi solo questa sezione, hai capito il passo 1. Il resto della guida entra nei dettagli.
+
+### 1. Quali sono i container, e che cosa fa ognuno?
+
+Un **container** è un programma che gira in una "scatola" isolata, con dentro tutto quello che gli serve. Tutti i
+container dell'app sono descritti in **un solo file**, `docker-compose.yml`, e partono insieme con
+`docker compose up -d`.
+
+| Container | Che cosa c'è dentro | Che cosa fa | Porta aperta sul PC | Dove tiene i dati |
+|---|---|---|---|---|
+| `db` | PostgreSQL 18 | conserva conti, movimenti, regole, budget | **nessuna** | il volume `wallettracker_db-data` |
+| `backend` | Java 21 (solo per eseguire) e il jar di Spring Boot | la "logica": le API `/api/...`, la sincronizzazione con le banche ogni 6 ore, l'IA | **nessuna** | non ne tiene: usa il database, più la chiave di cifratura in `.data/` |
+| `web` | nginx e la build della dashboard Angular | è la **porta d'ingresso**: manda la dashboard al browser e passa le richieste `/api/` al backend | **`127.0.0.1:8000`, l'unica** | nessuno |
+| `ollama` *(facoltativo)* | Ollama | risponde alle domande sulle categorie | nessuna | il volume `ollama-data` |
+
+I container si parlano attraverso una **rete privata** che Docker crea per il progetto. Su quella rete ognuno si
+chiama con il **nome del servizio**: `db`, `backend`, `web`, `ollama`. È come un condominio: gli appartamenti si
+raggiungono dai corridoi interni, e verso la strada c'è un solo portone.
+
+```
+         Il tuo PC                    │                 Docker (rete privata "wallettracker")
+                                      │
+   browser ── http://localhost:8000 ──┼──▶ [ web: nginx ] ──/api/──▶ [ backend ] ──▶ [ db ]
+                                      │     (unico portone)               │
+                                      │                                   └──────▶ [ ollama ]
+   (nessun'altra porta)               │
+```
+
+### 2. Perché il database non ha più bisogno della porta aperta?
+
+Una **porta pubblicata** (`ports:` nel `docker-compose.yml`) è una porta tra il **tuo PC** e un container. Serve
+solo a chi sta **fuori** da Docker e vuole entrare.
+
+- **Prima**, il backend girava **sul PC** (`./mvnw spring-boot:run`), cioè fuori da Docker. Per arrivare al
+  database, che era dentro Docker, gli serviva quella porta: `localhost:5432`.
+- **Adesso** il backend è anche lui un container, nella **stessa rete privata** del database. Lo raggiunge
+  dall'interno, con il nome `db:5432` (è `POSTGRES_HOST: db` nel `docker-compose.yml`). La porta verso il PC non
+  la usa più nessuno.
+
+E **una porta che non serve è meglio chiuderla**, perché ogni porta aperta è un posto in più da cui tentare di
+entrare. Con la porta del database aperta, qualsiasi programma sul PC (anche uno malevolo) potrebbe provare a
+collegarsi e a indovinare la password. Senza porta, al database arriva **solo** il backend.
+
+Quando invece sviluppi (backend con `./mvnw`, oppure DBeaver o `psql` per guardare le tabelle) sei di nuovo
+"fuori" da Docker, e la porta serve. Per questo c'è `docker-compose.dev.yml`, che la riapre, sempre e solo su
+`127.0.0.1`:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+```
+
+Vale lo stesso per il backend: anche lui non ha porte aperte, perché da fuori ci si arriva solo passando da nginx.
+
+### 3. nginx: a che cosa serve, perché sta nella cartella del frontend, perché è fondamentale
+
+**A che cosa serve.** nginx è un **server web**: un programma che risponde alle richieste del browser. Qui fa
+quattro lavori:
+
+1. **Manda la dashboard al browser.** Dopo `ng build`, il frontend Angular è solo una cartella di file
+   (`index.html`, `.js`, `.css`, icone). Non è un programma che gira da solo: qualcuno deve consegnarli al
+   browser quando li chiede. Durante lo sviluppo lo faceva `ng serve`; ora lo fa nginx, che è fatto per restare
+   acceso giorno e notte.
+2. **Passa le richieste `/api/...` al backend** (si chiama *reverse proxy*) e restituisce la risposta al
+   browser. Durante lo sviluppo lo faceva `proxy.conf.json`.
+3. **Fa da unico portone.** È l'unico container con una porta aperta. Backend e database restano chiusi dentro.
+4. **Aggiunge le regole di cache** (perché la PWA veda le versioni nuove) e le **intestazioni di sicurezza**.
+   Dal passo 4 sarà anche il punto dove arriva l'https di Tailscale.
+
+**Perché sta nella cartella del frontend.** Il container `web` è "nginx **più** la build della dashboard": il suo
+contenuto è il frontend. Per questo il suo Dockerfile è `frontend/Dockerfile`: prima compila Angular, poi mette
+il risultato dentro nginx. Anche la configurazione (`frontend/nginx/default.conf`) parla soprattutto di come
+servire i file del frontend. Il codice Angular invece **non cambia**: nginx non fa parte dell'app, è il modo di
+consegnarla.
+
+**Perché è fondamentale per entrambi.** Il punto da capire è che **il frontend e il backend non si parlano tra
+loro "da server a server": a parlare con il backend è il browser.** Il codice Angular gira *dentro il browser*, e
+da lì chiama `/api/...`. Quindi:
+
+- **Per il frontend**: senza nginx, nessuno manderebbe al browser i file della dashboard (`ng serve` è solo per
+  lo sviluppo, e non ha il service worker).
+- **Per il backend**: senza nginx, il browser dovrebbe raggiungere il backend direttamente, e bisognerebbe
+  aprirgli una porta. In più, la dashboard (`http://localhost:8000`) e il backend (es. `http://localhost:8080`)
+  sarebbero due **origini** diverse: il browser bloccherebbe le chiamate, a meno di configurare il **CORS** nel
+  backend. Con nginx davanti, tutto ha **un solo indirizzo**: `/api/...` e la dashboard arrivano da
+  `localhost:8000`, e il problema non esiste.
+
+**Un esempio passo per passo.** Apri `http://localhost:8000/movimenti/12`:
+
+1. il browser chiede `/movimenti/12` a nginx. Non è un file: è una pagina dell'app. nginx manda `index.html`;
+2. il browser legge `index.html` e chiede `main-….js` e `styles-….css`. nginx li manda dalla cartella della
+   build, con "tienili un anno";
+3. parte Angular, nel browser. Il router vede `/movimenti/12` e chiede i dati: `GET /api/transactions/12`
+   a `localhost:8000`;
+4. nginx vede che l'indirizzo comincia con `/api/` e lo passa a `http://backend:8080`, nella rete privata;
+5. il backend legge dal database (`db:5432`), risponde con il JSON, e nginx lo riporta al browser;
+6. Angular disegna la pagina.
+
+Il browser ha parlato **sempre e solo con nginx**. Del backend e del database non sa nemmeno l'indirizzo.
 
 ---
 
