@@ -23,6 +23,7 @@ usa anche dal telefono, in sicurezza.
 - **Prima di tutto: tre domande** (i tre container, perché il database non ha più la porta, a che cosa serve nginx)
 - Parte A: il quadro (perché un server web tra browser e backend; Tailscale, Cloudflare e che cosa leggerebbe, il PIN)
 - Parte B: Docker in cinque parole (immagine, container, volume, rete, Compose)
+- Parte B1: come si agganciano `docker-compose.yml` e i Dockerfile (Docker Hub, `image:` e `build:`, che cosa succede con `up --build`)
 - Parte B2: il Dockerfile, istruzione per istruzione (che cos'è, perché è importante, i due Dockerfile riga per riga)
 - Parte C: il backend in un container
 - Parte D: nginx, riga per riga
@@ -326,6 +327,118 @@ Il nostro piano: Docker Desktop, più la guida passo passo e lo script con il do
 **Docker Compose** descrive tutti i servizi in un file (`docker-compose.yml`) e li avvia insieme, nell'ordine
 giusto. Ogni servizio ha `image:` (un'immagine già pronta, es. `postgres:18-alpine`) oppure `build:` (la cartella
 con il Dockerfile, es. `./backend`).
+
+---
+
+## Parte B1: come si agganciano `docker-compose.yml` e i Dockerfile
+
+### Le immagini esistono già: Docker Hub
+
+Un'immagine non va per forza costruita da te. Esiste un "negozio" pubblico di immagini pronte, **Docker Hub**
+(hub.docker.com), dove chi sviluppa un programma pubblica la sua: il team di PostgreSQL pubblica `postgres`,
+quello di Node pubblica `node`, l'azienda di nginx pubblica `nginxinc/nginx-unprivileged`. È l'equivalente di
+**Maven Central** per i jar: nel `pom.xml` scrivi il nome e la versione di una libreria, e Maven la scarica.
+
+Il nome di un'immagine si legge così:
+
+```
+nginxinc / nginx-unprivileged : 1.29-alpine
+   │              │                 │
+   chi la         il nome           il "tag": la versione (nginx 1.29, su Linux Alpine)
+   pubblica
+```
+
+Quando il nome non ha la prima parte (`postgres:18-alpine`, `node:24-alpine`) è un'immagine **ufficiale**,
+controllata da Docker stessa.
+
+La prima volta che Docker incontra un nome che non ha sul PC, lo **scarica** da Docker Hub (`docker pull`). Dopo,
+lo tiene in memoria e lo riusa. Le vedi con `docker images`.
+
+### Due modi di dire a Compose da dove prendere un'immagine
+
+Nel `docker-compose.yml` ogni servizio dice da dove arriva la sua immagine, in uno di due modi:
+
+| Servizio | Riga | Che cosa vuol dire |
+|---|---|---|
+| `db` | `image: postgres:18-alpine` | "**scaricala pronta** da Docker Hub". Nessun Dockerfile nostro |
+| `ollama` | `image: ollama/ollama:0.40.11` | come sopra |
+| `backend` | `build: ./backend` | "**costruiscila tu**, con il Dockerfile che trovi in `backend/`" |
+| `web` | `build: ./frontend` | come sopra, con `frontend/Dockerfile` |
+
+**L'aggancio è la riga `build:`.** Compose va nella cartella indicata e cerca un file che si chiama esattamente
+`Dockerfile`: è il nome predefinito, per questo non lo scriviamo. Con un nome diverso bisognerebbe dirlo:
+
+```yaml
+build:
+  context: ./backend           # la cartella
+  dockerfile: Dockerfile.prod  # il file, se non si chiama "Dockerfile"
+```
+
+La cartella (il **contesto**) è anche l'unica cosa che la build può vedere: `COPY src ./src` nel Dockerfile vuol
+dire `backend/src` del progetto. Fuori da `backend/` il Dockerfile non può prendere niente.
+
+L'immagine costruita prende il nome `<progetto>-<servizio>`: `wallettracker-backend` e `wallettracker-web`.
+
+### Chi decide che cosa
+
+| | Dockerfile | `docker-compose.yml` |
+|---|---|---|
+| Domanda | **che cosa c'è dentro** la scatola | **come si usa** la scatola |
+| Quando conta | quando si **costruisce** l'immagine | quando si **avvia** il container |
+| Esempi | Java, il jar, l'utente `wallettracker`, nginx con la dashboard | le variabili (`environment`), le porte (`ports`), le cartelle condivise (`volumes`), l'ordine di avvio (`depends_on`), il riavvio automatico, la sola lettura |
+
+Paragone: il Dockerfile è la ricetta che produce la torta; il Compose è la disposizione del buffet, dove mettere
+ogni torta e con quali piatti. La stessa immagine potrebbe girare con un altro Compose e altre variabili.
+
+### Che cosa succede con `docker compose up -d --build`, passo per passo
+
+1. **Compose legge `docker-compose.yml`** e il `.env`, e sostituisce i `${...}` con i valori.
+2. **`db` e `ollama` hanno `image:`**: se sul PC non ci sono, Docker le scarica da Docker Hub.
+3. **`backend` ha `build: ./backend`**: Compose manda la cartella `backend/` a Docker (meno ciò che è in
+   `.dockerignore`) e Docker esegue `backend/Dockerfile`:
+   1. `FROM maven:3.10-eclipse-temurin-21-alpine`: scarica da Docker Hub un'immagine con Maven e Java 21;
+   2. ci copia `pom.xml` e `src`, ed esegue `mvn package`: ottiene il jar;
+   3. `FROM eclipse-temurin:21-jre-alpine`: scarica un'altra immagine pronta, con il solo Java per eseguire;
+   4. aggiunge l'utente, le cartelle e il jar preso dallo stadio 1;
+   5. il risultato è l'immagine `wallettracker-backend`. Lo stadio 1 non entra nell'immagine finale.
+4. **`web` ha `build: ./frontend`**: stessa cosa con `frontend/Dockerfile`. Scarica `node:24-alpine`, compila
+   Angular; poi scarica `nginxinc/nginx-unprivileged:1.29-alpine` (nginx **già installato e funzionante**), ci
+   aggiunge i file della build e `default.conf`. Il risultato è `wallettracker-web`.
+5. **Compose crea la rete privata** del progetto.
+6. **Compose avvia i container nell'ordine** dei `depends_on`: prima `db`, aspetta che sia `healthy`, poi
+   `backend`, poi `web`. A ognuno dà le sue variabili, le sue cartelle e, solo a `web`, la porta.
+
+Senza `--build`, se le immagini esistono già, Compose salta i passi 3 e 4 e le riusa così come sono: per questo,
+dopo una modifica al codice, serve `--build`.
+
+### "Partire da" un'immagine: i layer
+
+`FROM nginxinc/nginx-unprivileged:1.29-alpine` vuol dire: "prendi quell'immagine così com'è e aggiungici sopra le
+mie righe". Un'immagine è fatta a **strati** (*layer*), come una pila di fogli trasparenti:
+
+```
+ wallettracker-web
+ ┌──────────────────────────────────────────┐
+ │ i file della build di Angular            │  ← aggiunti dalle nostre righe COPY
+ │ default.conf, security-headers.conf      │
+ ├──────────────────────────────────────────┤
+ │ nginx installato e configurato           │  ← dall'immagine nginxinc/nginx-unprivileged
+ │ Linux Alpine                             │     (scaricata da Docker Hub, non la tocchiamo)
+ └──────────────────────────────────────────┘
+```
+
+Per questo non abbiamo dovuto installare nginx: il lavoro l'ha già fatto chi pubblica l'immagine. Noi aggiungiamo
+solo i nostri strati. Quando esce una versione nuova di nginx (es. per una correzione di sicurezza), basta
+cambiare il tag nel `FROM` e ricostruire.
+
+### Vederlo con i tuoi occhi
+
+```bash
+docker images                                 # le immagini sul PC: quelle scaricate e le nostre due
+docker compose config                         # il docker-compose.yml con i ${...} già sostituiti
+docker history wallettracker-web              # gli strati dell'immagine web: in alto i nostri, sotto quelli di nginx
+docker compose build web                      # costruisce solo l'immagine web, senza avviare niente
+```
 
 ---
 
