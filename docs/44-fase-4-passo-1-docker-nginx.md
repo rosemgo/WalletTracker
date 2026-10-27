@@ -465,6 +465,65 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
 - `-XX:MaxRAMPercentage=75`: Java usa al massimo il 75% della memoria data al container. Di serie, in un
   container, ne userebbe solo un quarto.
 
+### Approfondimento: perché il backend ha un suo utente, e che cos'è l'id 1000
+
+**A che cosa serve un utente.** Su Linux ogni programma che gira appartiene a **un utente**, e quell'utente decide
+che cosa il programma può fare: quali file leggere, quali scrivere, quali comandi eseguire. È come sul tuo PC: con
+il tuo account non puoi cancellare i file di sistema, con l'account amministratore sì. Su Linux l'amministratore
+si chiama **root** e può fare **tutto**. Se un Dockerfile non dice niente, il programma nel container gira come
+root.
+
+**Perché non root.** Immagina che un giorno nel backend ci sia una vulnerabilità (per esempio in una libreria), e
+che un attaccante riesca a fargli eseguire comandi suoi:
+- **come root**, potrebbe installare programmi, modificare il backend, leggere e scrivere ovunque nel container,
+  e avrebbe più possibilità di "evadere" verso il PC;
+- **come utente normale**, è chiuso in un recinto: non installa niente, non modifica il programma, scrive solo
+  nelle cartelle che gli abbiamo dato.
+
+È il **principio del minimo privilegio**: a ogni programma solo i permessi che gli servono. Il backend deve leggere
+il suo jar e scrivere la chiave di cifratura, niente di più.
+
+**Che cos'è l'id 1000.** Linux non riconosce gli utenti dal **nome** ma da un **numero**, l'id (UID): il nome è
+solo un'etichetta per noi. Accanto a ogni file Linux scrive il **numero** del proprietario.
+- **0** è sempre root;
+- **1000** è, per convenzione, il **primo utente "normale"** di un Linux: sul PC Linux di quasi tutti, il tuo
+  account ha id 1000.
+
+Conta perché la cartella `.data/` del PC è **condivisa** con il container (`./.data:/app/.data` nel
+`docker-compose.yml`): è la stessa cartella vista da due parti, e Linux confronta i numeri.
+
+```
+ nel container: il backend (utente 1000) crea encryption.key  → il file appartiene all'id 1000
+ sul tuo PC:    il tuo account (id 1000) apre .data/           → "il file è mio": lo leggi, lo copi nei backup
+```
+
+Con un altro numero (per esempio 5000) sul PC il file sarebbe di un utente sconosciuto, e per farne il backup
+servirebbe `sudo`; con root, sarebbe di root. Su **Windows e Mac** Docker Desktop traduce i permessi da solo e il
+numero conta poco; conta su **Linux**, dove molti installerebbero l'app (per esempio su un mini PC).
+
+**Le righe, una per una:**
+
+| Riga | Che cosa fa |
+|---|---|
+| `addgroup -S -g 1000 wallettracker` | crea il **gruppo** `wallettracker` con id 1000. I gruppi danno permessi a più utenti insieme; qui c'è un utente solo, ma Linux vuole che ognuno ne abbia uno |
+| `adduser -S -u 1000 -G wallettracker wallettracker` | crea l'**utente** `wallettracker`, id 1000 (`-u`), nel gruppo appena creato (`-G`). `-S`: utente "di sistema", senza password e senza login: esiste solo per far girare un programma |
+| `&&` | "poi, se il comando prima è andato bene" |
+| `WORKDIR /app/backend` | la cartella di lavoro, come `backend/` nel progetto. Se non esiste, Docker la crea |
+| `mkdir -p /app/.data /app/secrets` | crea le due cartelle (`-p`: nessun errore se esistono già) |
+| `chown wallettracker:wallettracker /app/.data` | "change owner": dà `.data` all'utente e al gruppo `wallettracker`, perché ci deve scrivere la chiave di cifratura. `secrets` resta di root: il backend la può solo leggere |
+| `COPY --from=build /src/app.jar app.jar` | prende **solo** il jar dallo stadio di compilazione |
+| `USER wallettracker` | **da qui in poi si è `wallettracker`, non più root**: per le righe successive e soprattutto per il programma, quando il container parte |
+| `ENTRYPOINT [...]` | il comando di ogni avvio, eseguito come `wallettracker` |
+
+**Perché l'ordine conta.** `addgroup`, `mkdir` e `chown` girano ancora **come root**: servono i permessi
+dell'amministratore per creare utenti e cambiare proprietari. Per questo stanno tutti **prima** di `USER`: dopo,
+non si potrebbero più fare. Root prepara la casa, consegna le chiavi di una stanza (`.data`) e se ne va.
+
+**Una precisazione su `.data` e `secrets`.** Quelle create con `mkdir` sono le cartelle **dell'immagine**. Quando
+il container parte, Compose ci "appoggia sopra" le cartelle del PC (`./.data` e `./secrets`): da quel momento
+il proprietario che vedi è quello delle cartelle sul PC. È per questo che su Linux `.data/` deve essere del tuo
+utente (id 1000); vedi la parte J.
+
 ### `frontend/Dockerfile`, riga per riga
 
 ```dockerfile
@@ -1031,3 +1090,10 @@ raggiunge `registry.ollama.ai`); il collegamento di una banca vera.
    è `tailscale cert`, che crea i file del certificato da dare a nginx (`listen 443 ssl;`, `ssl_certificate`,
    `ssl_certificate_key`). Cerca nella documentazione di nginx come si scrive, e pensa a che cosa succede dopo 90
    giorni, quando il certificato scade.
+8. **Chi sono, nel container?** Con l'app avviata, `docker compose exec backend id`: risponde
+   `uid=1000(wallettracker) gid=1000(wallettracker)`, quindi il backend non è root. Poi
+   `docker compose exec backend ls -ln /app`: con `-n` Linux mostra i **numeri** dei proprietari invece dei nomi.
+   Di chi risultano `backend`, `.data` e `secrets`? Confrontalo con `ls -ln` della cartella del progetto sul PC
+   (su Windows, in WSL o in Git Bash). Infine prova `docker compose exec backend touch /app/.data/prova` (riesce:
+   è la stanza del backend; poi cancella il file) e `docker compose exec backend touch /app/secrets/prova` (non
+   riesce: è in sola lettura).
