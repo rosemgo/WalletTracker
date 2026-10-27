@@ -1,0 +1,3 @@
+# Le fini riga dei file (docs/45). Git, su Windows, di solito trasforma i "a capo" in quelli di Windows (CRLF).
+# Uno script per macOS/Linux con i CRLF non parte ("bad interpreter"): installa.sh resta sempre con quelli di Unix.
+*.sh text eol=lf

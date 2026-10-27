@@ -1232,7 +1232,7 @@ coincidono per forza.
 
 Una conseguenza da sapere: il `db` usa la password **solo al primo avvio**. Se poi la cambi nel `.env`, il
 backend riceve quella nuova, mentre il database tiene quella vecchia, e il backend non entra più ("password
-authentication failed"). Cambiare la password di un database già creato è un'operazione a parte (passo 2).
+authentication failed"). Cambiare la password di un database già creato è un'operazione a parte: la fa lo script di installazione (`docs/45`, parte E).
 
 - **Le variabili del backend una per una**, e non tutto il `.env` (`env_file`): si vede che cosa riceve, e un
   valore pensato per il PC (es. `POSTGRES_PORT=5433`) non finisce per sbaglio nel container.
