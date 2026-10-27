@@ -885,6 +885,8 @@ nginx fa due lavori diversi a seconda dell'indirizzo:
 - `/api/...` → **la passa al backend** (reverse proxy): è questo blocco;
 - tutto il resto (`/`, `/movimenti/12`, `main-….js`) → **risponde da solo** con i file della build (parte D4).
 
+![nginx fa da reverse proxy](img/reverse-proxy.svg)
+
 #### Il viaggio di una richiesta
 
 Quando la pagina Movimenti chiede i dati:
@@ -1020,6 +1022,22 @@ suo container) non conta: il CORS lo controlla il **browser**, e il browser quel
 
 È lo stesso trucco che usavamo già in sviluppo: `ng serve` su `https://localhost:8443` con `proxy.conf.json`, che
 passava `/api` al backend sulla 8080. nginx fa la stessa cosa in produzione.
+
+![Il CORS: perché con nginx non c'è](img/cors.svg)
+
+#### E se scrivo l'indirizzo dell'API direttamente nella barra?
+
+Niente CORS: vedi il JSON. Il CORS scatta solo quando **il JavaScript di una pagina** legge la risposta di
+**un'altra origine**. Scrivere un indirizzo nella barra è una **navigazione**: il browser apre quell'indirizzo come
+pagina nuova, e non c'è nessuna "pagina A" che cerca di leggere i dati di B.
+
+| Cosa scrivi nella barra | Risultato | Perché |
+|---|---|---|
+| `http://localhost:8000/api/accounts` | il JSON dei conti | passa da nginx; è una navigazione, niente CORS |
+| `http://localhost:8080/api/accounts` | "impossibile raggiungere il sito" | **non** è il CORS: la porta del backend non è pubblicata, dal PC non esiste |
+| `http://localhost:8000/actuator/health` | la dashboard, non il JSON | nginx passa al backend solo `/api/` |
+
+![Quando si applica il CORS](img/cors-quando.svg)
 
 #### Una precisazione: il CORS non protegge il backend
 
