@@ -857,7 +857,9 @@ server {
 }
 ```
 
-### D3. Le richieste `/api/` al backend
+### D3. Le richieste `/api/` al backend, riga per riga
+
+Ecco il pezzo di `default.conf`:
 
 ```nginx
 resolver 127.0.0.11 valid=10s ipv6=off;
@@ -869,22 +871,161 @@ location /api/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_read_timeout 120s;
-    ...
 }
 ```
 
-- **`proxy_pass`** è il cuore di un *reverse proxy*: nginx riceve la richiesta, la rifà al backend e ti restituisce
-  la risposta. È quello che faceva `proxy.conf.json` per `ng serve`.
-- **Perché il nome in una variabile.** Con `proxy_pass http://backend:8080;` nginx cercherebbe l'indirizzo di
-  `backend` **una volta sola, all'avvio**: se il backend non c'è ancora, nginx non parte ("host not found in
-  upstream"); se il backend viene ricreato e cambia indirizzo, nginx continua a cercarlo al vecchio. Con una
-  variabile e un `resolver` (il DNS interno di Docker, sempre `127.0.0.11`), nginx chiede l'indirizzo quando
-  serve, al massimo ogni 10 secondi. L'abbiamo provato: ricreato il backend, l'app torna a rispondere da sola.
-- **`proxy_set_header Host $host`**: senza, nginx manderebbe al backend `Host: backend`, e il nostro buttafuori la
-  rifiuterebbe ("indirizzo backend non consentito"). Così arriva il nome che ha usato il browser (`localhost`).
-  L'header `Origin` passa da solo.
-- **`proxy_read_timeout 120s`**: "Aggiorna ora" e "Prova la connessione" dell'IA possono durare decine di
-  secondi; di serie nginx rinuncia dopo 60.
+#### Prima l'idea: che cos'è un reverse proxy
+
+Un **proxy** è un intermediario: riceve una richiesta, la rifà a qualcun altro, prende la risposta e la
+restituisce. Il **reverse proxy** sta davanti ai server: il browser crede di parlare con un solo server (nginx),
+che invece passa alcune richieste a un altro programma (il backend). È come la reception di un ufficio: tu parli
+solo con la reception, che telefona all'ufficio giusto e ti riporta la risposta.
+
+nginx fa due lavori diversi a seconda dell'indirizzo:
+- `/api/...` → **la passa al backend** (reverse proxy): è questo blocco;
+- tutto il resto (`/`, `/movimenti/12`, `main-….js`) → **risponde da solo** con i file della build (parte D4).
+
+#### Il viaggio di una richiesta
+
+Quando la pagina Movimenti chiede i dati:
+
+```
+ 1. browser  ── GET http://localhost:8000/api/transactions ──▶  nginx  (container web, porta 8080)
+ 2. nginx    ── GET http://backend:8080/api/transactions   ──▶  backend (container backend, porta 8080)
+ 3. backend  ── risposta JSON ──▶ nginx
+ 4. nginx    ── la stessa risposta ──▶ browser
+```
+
+Il browser fa **una sola** richiesta, a `localhost:8000`. La seconda (punto 2) la fa nginx, dentro la rete di
+Docker: il browser non sa nemmeno che esiste.
+
+(La porta 8000 del PC arriva alla porta 8080 del container `web` grazie a `ports: "127.0.0.1:8000:8080"`; il
+backend ascolta sulla 8080 del **suo** container. Sono due container diversi, quindi due porte 8080 diverse che
+non si scontrano.)
+
+#### Riga per riga
+
+**`location /api/ { ... }`**
+"Per gli indirizzi che **cominciano** con `/api/`, fai quello che c'è tra le graffe." `/api/transactions`,
+`/api/accounts/3/role` entrano qui; `/movimenti/12` no.
+
+**`proxy_pass $backend;`**
+Il cuore del reverse proxy: "rifai questa richiesta a `$backend`", cioè `http://backend:8080`. Il percorso resta
+lo stesso: `/api/transactions` diventa `http://backend:8080/api/transactions`. Anche il metodo (GET, PUT, POST) e
+il corpo (il JSON di una modifica, il file CSV) passano così come sono.
+
+**`set $backend http://backend:8080;`**
+Crea una **variabile** di nginx (i nomi delle variabili cominciano con `$`) con l'indirizzo del backend:
+- `backend` è il **nome del servizio** nel `docker-compose.yml`. Nella rete privata di Docker ogni container si
+  raggiunge con il suo nome, come un computer in una rete aziendale;
+- `8080` è la porta su cui il backend ascolta **dentro il suo container** (`SERVER_PORT: 8080`).
+
+**`resolver 127.0.0.11 valid=10s ipv6=off;`**
+Per collegarsi, nginx deve trasformare il nome `backend` in un indirizzo numerico (es. `172.18.0.3`). È il lavoro
+di un **DNS**, l'"elenco telefonico" della rete. Docker ne ha uno interno, sempre all'indirizzo `127.0.0.11`, che
+conosce i nomi di tutti i container del progetto.
+- `resolver 127.0.0.11`: "per i nomi, chiedi al DNS di Docker";
+- `valid=10s`: "ricorda la risposta per 10 secondi, poi richiedi";
+- `ipv6=off`: "chiedi solo indirizzi IPv4": la rete di Docker usa quelli.
+
+**Perché una variabile e un resolver, invece di scrivere direttamente `proxy_pass http://backend:8080;`?**
+Funzionerebbe, ma con due difetti. Scritto così, nginx cerca l'indirizzo di `backend` **una volta sola,
+all'avvio**, e poi lo usa per sempre:
+1. se all'avvio il container `backend` non c'è ancora, nginx si rifiuta di partire ("host not found in upstream");
+2. se il backend viene ricreato (per un aggiornamento), Docker può dargli un indirizzo nuovo, e nginx
+   continuerebbe a chiamare quello vecchio, che non risponde più.
+
+Con l'indirizzo in una variabile, invece, nginx lo chiede al DNS **quando serve** (al massimo ogni 10 secondi).
+Così parte anche senza backend e lo ritrova da solo quando cambia. L'abbiamo provato: ricreato il backend, l'app
+torna a rispondere da sola in pochi secondi.
+
+**`proxy_set_header Host $host;`**
+Ogni richiesta HTTP ha un'intestazione `Host`: il nome del sito che si sta chiamando. Il browser manda
+`Host: localhost` (il nome che hai scritto nella barra degli indirizzi; `$host` è la variabile di nginx che lo
+contiene).
+
+Quando nginx rifà la richiesta al punto 2, di suo scriverebbe `Host: backend`, il nome a cui si sta collegando.
+Ma il backend ha un "buttafuori", `LocalOnlyRequestFilter` (`docs/17`), che accetta solo i nomi in
+`WALLETTRACKER_ALLOWED_HOSTS` (`localhost`, `127.0.0.1`), e risponderebbe 403 "indirizzo backend non consentito".
+Con questa riga nginx passa al backend il nome **originale** che ha usato il browser. (L'esercizio 4 lo mostra:
+chiamando il backend direttamente con il nome `backend`, risponde proprio 403.)
+
+**`proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`**
+Visto dal backend, chi chiama è sempre nginx. Questa intestazione aggiunge "per conto di chi": l'indirizzo del
+browser originale. Oggi serve solo ai log; con il login (passo 3) servirà per riconoscere chi sbaglia il PIN
+troppe volte.
+
+**`proxy_set_header X-Forwarded-Proto $scheme;`**
+Dice al backend se il browser ha usato `http` o `https` (`$scheme`). Il backend riceve sempre `http` da nginx,
+quindi da solo non lo saprebbe. Servirà al passo 3: il cookie della sessione va segnato `Secure` (solo su https)
+quando l'app è aperta con Tailscale.
+
+**`proxy_read_timeout 120s;`**
+Quanto nginx aspetta la risposta del backend prima di rinunciare (con errore 504). Di serie sono 60 secondi, ma
+"Aggiorna ora" (che interroga le banche) o "Prova la connessione" dell'IA possono durare di più: due minuti
+bastano.
+
+### D3b. Il CORS: perché qui non c'è
+
+#### Che cos'è un'origine
+
+Per il browser, un'**origine** è la terna **protocollo + nome + porta** dell'indirizzo:
+
+| Indirizzo | Origine |
+|---|---|
+| `http://localhost:8000/movimenti` | `http` + `localhost` + `8000` |
+| `http://localhost:8000/api/transactions` | `http` + `localhost` + `8000` → **la stessa** |
+| `http://localhost:8080/api/transactions` | `http` + `localhost` + `8080` → **un'altra** (cambia la porta) |
+| `https://localhost:8000/...` | un'altra (cambia il protocollo) |
+
+#### La regola del browser
+
+Per sicurezza, il browser applica la **same-origin policy** ("stessa origine"): il codice JavaScript di una pagina
+può leggere liberamente le risposte **della sua origine**. Se chiama un'origine **diversa**, il browser blocca la
+risposta, a meno che il server dell'altra origine non lo autorizzi esplicitamente con intestazioni come
+`Access-Control-Allow-Origin`. Questo sistema di autorizzazioni si chiama **CORS** (*Cross-Origin Resource
+Sharing*, "condivisione tra origini diverse").
+
+Il motivo: senza questa regola, una pagina qualsiasi che visiti potrebbe leggere, dal tuo browser, i dati di altri
+siti in cui sei entrato (la posta, la banca) o di programmi sul tuo PC (come il nostro backend).
+
+#### Se non ci fosse nginx
+
+```
+ pagina caricata da    http://localhost:8000      (chi manda i file della dashboard)
+ chiamate API verso    http://localhost:8080/api  (il backend, con una porta aperta)
+                       → due origini diverse: il browser blocca le risposte
+```
+
+Per farla funzionare dovremmo:
+1. **aprire la porta del backend** verso il PC;
+2. **configurare il CORS nel backend** (in Spring, `@CrossOrigin` o un `CorsConfigurationSource`), dicendo "accetto
+   chiamate dalla pagina di `localhost:8000`";
+3. tenere allineata quella configurazione con ogni nome con cui si apre l'app: `localhost`, poi il nome Tailscale,
+   poi magari un altro.
+
+Ed è una configurazione facile da sbagliare: un CORS troppo largo (`*`) permetterebbe a **qualsiasi sito** di
+leggere le nostre API dal tuo browser.
+
+#### Con nginx
+
+```
+ pagina caricata da    http://localhost:8000
+ chiamate API verso    http://localhost:8000/api   → stessa origine: nessun blocco, nessun CORS da configurare
+```
+
+Il browser vede **un solo indirizzo** per tutto. Che dietro nginx il backend stia su un'altra porta (la 8080 del
+suo container) non conta: il CORS lo controlla il **browser**, e il browser quella porta non la vede mai. Il
+"salto" da nginx al backend avviene dentro Docker, fra due programmi, dove la regola non esiste.
+
+È lo stesso trucco che usavamo già in sviluppo: `ng serve` su `https://localhost:8443` con `proxy.conf.json`, che
+passava `/api` al backend sulla 8080. nginx fa la stessa cosa in produzione.
+
+#### Una precisazione: il CORS non protegge il backend
+
+Il CORS è una regola **del browser**: protegge te, quando visiti un sito malevolo. Non ferma chi chiama le API
+senza browser (un programma, `curl`). Per questo il backend ha le sue difese, che valgono sempre: il buttafuori
+(`Host` e `Origin` consentiti) e, dal passo 3, il PIN.
 
 ### D4. I file della build e la cache
 
