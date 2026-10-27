@@ -21,8 +21,9 @@ usa anche dal telefono, in sicurezza.
 
 **Indice**
 - **Prima di tutto: tre domande** (i tre container, perché il database non ha più la porta, a che cosa serve nginx)
-- Parte A: il quadro (perché un server web tra browser e backend; Tailscale, Cloudflare, il PIN)
+- Parte A: il quadro (perché un server web tra browser e backend; Tailscale, Cloudflare e che cosa leggerebbe, il PIN)
 - Parte B: Docker in cinque parole (immagine, container, volume, rete, Compose)
+- Parte B2: il Dockerfile, istruzione per istruzione (che cos'è, perché è importante, i due Dockerfile riga per riga)
 - Parte C: il backend in un container
 - Parte D: nginx, riga per riga
 - Parte E: `docker-compose.yml`
@@ -217,6 +218,77 @@ Cloudflare Tunnel pubblica un servizio di casa senza aprire porte, ma lo pubblic
 
 In breve: Cloudflare è fatto per **pubblicare** siti; Tailscale per **non pubblicarli** e raggiungerli lo stesso.
 
+#### Che cosa leggerebbe Cloudflare, se il collegamento con Enable Banking è già cifrato?
+
+I collegamenti sono **due**, e Cloudflare si metterebbe sul secondo:
+
+```
+                       Collegamento 1                       Collegamento 2
+ Enable Banking ◀═════ TLS diretto ═════▶ backend ──▶ nginx ◀═══ ? ═══▶ browser del telefono
+                  (Cloudflare non c'è)          (il tuo PC)
+```
+
+- **Collegamento 1, backend ↔ Enable Banking.** Ogni 6 ore il backend chiama `https://api.enablebanking.com`
+  con un **TLS diretto**. Cloudflare qui non passa, in nessun caso.
+- **Collegamento 2, telefono ↔ il tuo PC.** È qui che si sceglie tra Cloudflare e Tailscale. Su questo
+  collegamento non viaggia la risposta di Enable Banking, ma **le pagine della tua app**: quando apri "Movimenti",
+  il browser chiede `/api/transactions` e il backend risponde con un JSON nuovo, preso **dal tuo database**.
+
+**Il JWT autorizza, HTTPS cifra.** Sono due protezioni diverse:
+
+| | Che cosa fa | Paragone |
+|---|---|---|
+| **HTTPS (TLS)** | **cifra** tutta la conversazione: la richiesta, il JWT, la risposta con i movimenti | il furgone blindato |
+| **JWT (token Bearer)** | dice **chi sei**: è firmato con la chiave privata (`.pem`), quindi non si può falsificare | il documento allo sportello |
+
+Il JWT **non cifra niente**: il suo contenuto è solo codificato in Base64, e chiunque lo veda lo può leggere
+(provalo incollandone uno su jwt.io). Anche i movimenti arrivano come JSON normale: è HTTPS a proteggerli
+durante il viaggio.
+
+**Perché il TLS del collegamento 1 non protegge il collegamento 2.** Un tunnel TLS finisce dove finisce. Quello
+con Enable Banking termina **nel backend**, che lo decifra, perché deve leggere i movimenti per salvarli e
+classificarli. Da lì sono dati normali nel tuo database. Quando il telefono li chiede, partono in un viaggio
+**nuovo**, con una protezione **nuova**. È come un pacco che arriva a casa tua blindato: lo apri, e poi lo
+rispedisci a te stesso in ufficio con un altro corriere.
+
+**Che cosa vedrebbe Cloudflare, sul collegamento 2:**
+
+```
+telefono ══TLS══▶ [ server di Cloudflare ] ══TLS══▶ tunnel ══▶ nginx ──▶ backend
+                    qui il TLS si apre:
+                    dati in chiaro
+```
+
+Con Cloudflare il telefono apre l'https **con Cloudflare**, non con il tuo PC: il certificato del tuo indirizzo
+ce l'ha Cloudflare. Così Cloudflare decifra, guarda dove va la richiesta e la rimanda a casa tua in un secondo
+tunnel. In quella tappa vedrebbe in chiaro:
+- i movimenti che apri, con importi, causali e IBAN delle controparti;
+- i saldi e il riepilogo;
+- il PIN che digiti al login, quando ci sarà (passo 3);
+- se le inserisci dal telefono, le credenziali di Enable Banking e la chiave di Gemini.
+
+Con **Tailscale**, invece, cifra il telefono e decifra solo il tuo PC: in mezzo non c'è nessuna tappa che apra il
+pacco.
+
+```
+telefono ══════════ cifrato dal telefono fino al tuo PC ══════════▶ nginx ──▶ backend
+```
+
+| Tratto | Cifrato | Chi lo può aprire |
+|---|---|---|
+| backend ↔ Enable Banking | sì, sempre | solo il backend ed Enable Banking |
+| Enable Banking ↔ la tua banca | sì | Enable Banking e la banca |
+| telefono ↔ PC con Cloudflare | sì, ma in due pezzi | anche Cloudflare, a metà strada |
+| telefono ↔ PC con Tailscale | sì, in un pezzo solo | solo il telefono e il PC |
+| browser del PC ↔ nginx, oggi (`http://localhost:8000`) | no | nessuno: la richiesta non esce dal PC |
+
+Enable Banking stessa vede i movimenti in chiaro: è inevitabile, è il fornitore autorizzato PSD2 che li legge
+dalla banca per te. È un soggetto regolamentato, scelto apposta. Con Cloudflare si aggiungerebbe un terzo che non
+ha nessun motivo per vederli.
+
+Il problema di Cloudflare, quindi, non riguarda come scarichi i movimenti dalla banca, ma come li guardi dal
+telefono.
+
 ### A4. Il PIN (passo 3)
 
 Tailscale decide quali **dispositivi** entrano, non quali **persone**. Un telefono perso e sbloccato, o un PC
@@ -254,6 +326,191 @@ Il nostro piano: Docker Desktop, più la guida passo passo e lo script con il do
 **Docker Compose** descrive tutti i servizi in un file (`docker-compose.yml`) e li avvia insieme, nell'ordine
 giusto. Ogni servizio ha `image:` (un'immagine già pronta, es. `postgres:18-alpine`) oppure `build:` (la cartella
 con il Dockerfile, es. `./backend`).
+
+---
+
+## Parte B2: il Dockerfile, istruzione per istruzione
+
+### Che cos'è e perché è importante
+
+Un **Dockerfile** è la **ricetta** per costruire un'immagine: un file di testo, un'istruzione per riga, che Docker
+esegue dall'alto in basso. Il risultato è un'immagine con dentro un sistema minimo, il programma e tutto ciò che
+gli serve.
+
+È importante perché rende l'installazione **ripetibile**. Senza Dockerfile, per far girare WalletTracker
+bisognerebbe installare a mano sul PC la versione giusta di Java, di Maven e di Node, compilare, e sperare che
+sul PC di un altro utente sia tutto uguale. Con il Dockerfile la ricetta è scritta una volta, sta su Git insieme
+al codice, e chiunque ottiene **la stessa identica immagine** con un comando. Sul PC di chi installa basta
+Docker: niente Java, niente Node, niente Maven.
+
+Ne abbiamo due:
+- `backend/Dockerfile`: l'immagine del backend;
+- `frontend/Dockerfile`: l'immagine `web`, nginx con la dashboard.
+
+Non si usano a mano: `docker compose up -d --build` li trova grazie a `build: ./backend` e `build: ./frontend`
+nel `docker-compose.yml`.
+
+### Le istruzioni
+
+| Istruzione | Che cosa fa | Quando succede |
+|---|---|---|
+| `FROM immagine AS nome` | parte da un'immagine già pronta (la "base"). `AS nome` dà un nome allo stadio, per richiamarlo dopo | build |
+| `WORKDIR /cartella` | la cartella di lavoro: le istruzioni successive (e il programma, quando gira) partono da lì. Se non esiste, la crea | build |
+| `COPY origine destinazione` | copia file **dal tuo progetto** dentro l'immagine | build |
+| `COPY --from=stadio ...` | copia file **da uno stadio precedente**, invece che dal progetto | build |
+| `RUN comando` | esegue un comando **mentre si costruisce** l'immagine (compilare, creare utenti), e ne tiene il risultato | build |
+| `USER nome` | da qui in poi, e quando il container gira, si è questo utente e non root | build e avvio |
+| `EXPOSE porta` | un promemoria: "il programma ascolta su questa porta". **Non apre niente**: lo fa solo `ports:` nel Compose | — |
+| `ENV NOME=valore` | una variabile d'ambiente sempre presente | build e avvio |
+| `ENTRYPOINT [...]` | il comando che parte **quando si avvia il container** | avvio |
+
+La differenza da tenere a mente: `RUN` succede **una volta, durante la build**; `ENTRYPOINT` succede **a ogni
+avvio** del container.
+
+**I "layer" e la cache.** Ogni istruzione produce uno strato dell'immagine. Se ricostruisci e i file usati da
+un'istruzione non sono cambiati, Docker **riusa** lo strato di prima invece di rifarlo. Per questo l'ordine delle
+istruzioni conta: le cose che cambiano di rado (le dipendenze) vanno prima, quelle che cambiano spesso (il codice)
+dopo.
+
+**`.dockerignore`.** Come `.gitignore`, ma per la build: i file elencati non vengono mandati a Docker
+(`target/`, `node_modules/`, `dist/`). La build è più veloce, e una compilazione vecchia non finisce per sbaglio
+nell'immagine.
+
+### Multi-stage: due immagini in un file
+
+Entrambi i Dockerfile hanno **due** `FROM`: sono "multi-stage". Il primo stadio compila, il secondo esegue.
+
+```
+ stadio "build"                                stadio finale (quello che gira)
+ ┌───────────────────────────────────┐         ┌──────────────────────────────┐
+ │ Maven + JDK, codice, dipendenze   │──jar──▶ │ solo JRE + app.jar           │
+ │ (centinaia di MB, poi si butta)   │         │                              │
+ └───────────────────────────────────┘         └──────────────────────────────┘
+```
+
+Per compilare servono Maven, il JDK completo, il codice sorgente e centinaia di MB di dipendenze; per eseguire
+basta il JRE e il jar. Il secondo stadio prende **solo** il risultato (`COPY --from=build`), e il primo si butta.
+L'immagine finale è più piccola (backend: circa 170 MB invece di oltre 500) e, soprattutto, più sicura: niente
+compilatore e niente codice sorgente a disposizione di chi riuscisse a entrare.
+
+### `backend/Dockerfile`, riga per riga
+
+```dockerfile
+FROM maven:3.10-eclipse-temurin-21-alpine AS build
+```
+- `maven:3.10-eclipse-temurin-21-alpine` è il nome dell'immagine base, nel formato `nome:tag`. Il **tag** dice la
+  versione: Maven 3.10 (la stessa del wrapper `mvnw`), Java 21 nella distribuzione Eclipse **Temurin** (la stessa
+  che usi sul PC), su **Alpine**, un Linux molto piccolo (pochi MB).
+- `AS build` chiama questo stadio "build".
+
+```dockerfile
+WORKDIR /src
+COPY pom.xml .
+COPY src ./src
+```
+- si lavora nella cartella `/src` dell'immagine;
+- si copiano il `pom.xml` e il codice (`backend/src`). Il punto `.` vuol dire "la cartella di lavoro", cioè `/src`.
+
+```dockerfile
+RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests package \
+    && cp target/backend-*.jar /src/app.jar
+```
+- `mvn package` compila e crea il jar, come `./mvnw package` sul PC;
+- `-B` (batch): senza colori e barre di avanzamento, illeggibili nei log; `-q` (quiet): scrive solo gli errori;
+- `-DskipTests`: i test usano Testcontainers, che ha bisogno di Docker, e dentro una build Docker non c'è. I test
+  girano prima (`./mvnw test`) e nella CI;
+- `--mount=type=cache,target=/root/.m2`: la cartella dove Maven tiene le dipendenze scaricate resta **tra una
+  build e l'altra**, fuori dall'immagine. La seconda volta Maven non riscarica niente;
+- `&& cp ...`: il jar ha la versione nel nome (`backend-0.1.0-SNAPSHOT.jar`); lo copiamo con un nome fisso,
+  `app.jar`, così il secondo stadio non deve conoscere la versione. La `\` a fine riga dice "il comando continua
+  sotto".
+
+```dockerfile
+FROM eclipse-temurin:21-jre-alpine
+```
+Il **secondo stadio**: Java 21, ma il **JRE** (per eseguire), non il JDK (per compilare). Da qui ricomincia
+un'immagine vuota: di tutto quello sopra resta solo ciò che copiamo esplicitamente.
+
+```dockerfile
+RUN addgroup -S -g 1000 wallettracker && adduser -S -u 1000 -G wallettracker wallettracker
+```
+Crea un gruppo e un utente `wallettracker`, senza privilegi:
+- `-S`: utente "di sistema", senza password e senza accesso;
+- `-g 1000` e `-u 1000`: gli id numerici. Linux ragiona per numeri, non per nomi. Il 1000 è quello del primo
+  utente su quasi tutti i Linux, così i file che il backend crea in `.data/` (montata dal PC) restano tuoi.
+
+```dockerfile
+WORKDIR /app/backend
+RUN mkdir -p /app/.data /app/secrets && chown wallettracker:wallettracker /app/.data
+COPY --from=build /src/app.jar app.jar
+```
+- la cartella di lavoro è `/app/backend`, come `backend/` nel progetto;
+- `mkdir -p` crea `/app/.data` e `/app/secrets`, come nel progetto; `chown` dà `.data` all'utente
+  `wallettracker`, che ci deve scrivere la chiave di cifratura;
+- con questa disposizione i percorsi relativi di `application.yml` (`../.data/encryption.key`) valgono uguali sul
+  PC e nel container;
+- `COPY --from=build` prende **solo** il jar dallo stadio di compilazione.
+
+```dockerfile
+USER wallettracker
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+```
+- `USER`: il backend gira come `wallettracker`, non come root. Se qualcuno riuscisse a fargli eseguire codice, non
+  avrebbe i poteri dell'amministratore nel container;
+- `EXPOSE 8080`: solo un promemoria (vedi parte E1);
+- `ENTRYPOINT`: a ogni avvio parte `java -jar app.jar`, come `java -jar` sul PC. La forma tra parentesi quadre (un
+  elenco) avvia Java direttamente, senza una shell in mezzo: così Java riceve il segnale di `docker compose stop`
+  e si chiude in ordine;
+- `-XX:MaxRAMPercentage=75`: Java usa al massimo il 75% della memoria data al container. Di serie, in un
+  container, ne userebbe solo un quarto.
+
+### `frontend/Dockerfile`, riga per riga
+
+```dockerfile
+FROM node:24-alpine AS build
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+```
+- Node 24, la versione che vuole il progetto, su Alpine;
+- **prima solo** `package.json` e `package-lock.json`, poi `npm ci`. È il trucco dei layer: se cambi solo il codice
+  e non le dipendenze, Docker riusa lo strato di `npm ci` e non reinstalla tutto (che richiede un minuto);
+- `npm ci` installa **esattamente** le versioni scritte in `package-lock.json`, come nella CI;
+- `--no-audit --no-fund`: niente controlli e messaggi superflui durante la build; la cache di npm resta fuori
+  dall'immagine, come quella di Maven.
+
+```dockerfile
+COPY . .
+RUN NG_CLI_ANALYTICS=false npx ng build
+```
+- ora tutto il resto del frontend (tranne ciò che è in `.dockerignore`);
+- `ng build` crea la build di produzione in `dist/frontend/browser`;
+- `NG_CLI_ANALYTICS=false`: Angular non chiede se mandare statistiche d'uso, perché nella build non c'è nessuno a
+  rispondere e resterebbe ad aspettare.
+
+```dockerfile
+FROM nginxinc/nginx-unprivileged:1.29-alpine
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY --from=build /src/dist/frontend/browser /usr/share/nginx/html
+EXPOSE 8080
+```
+- il secondo stadio è **nginx**, nella versione ufficiale "unprivileged": gira senza root e per questo ascolta
+  sulla 8080 (le porte sotto la 1024 le può aprire solo root);
+- le due configurazioni vanno dove nginx le cerca: `conf.d/` per i siti, e una cartella `snippets/` per i pezzi
+  da includere;
+- dallo stadio `build` si prende **solo** la cartella della build e la si mette in `/usr/share/nginx/html`, la
+  cartella che `default.conf` indica con `root`. Node, `node_modules` (centinaia di MB) e il codice sorgente
+  restano nello stadio che si butta: l'immagine finale pesa circa 24 MB;
+- qui non c'è `ENTRYPOINT`: lo eredita dall'immagine di nginx, che avvia nginx.
+
+### Perché le versioni sono scritte (i tag)
+
+`postgres:18-alpine`, `node:24-alpine`, `nginx-unprivileged:1.29-alpine`, `ollama/ollama:0.40.11`: ogni immagine ha
+la sua versione. Senza tag Docker prende `latest`, "l'ultima uscita", e un giorno l'app potrebbe rompersi da sola,
+con una versione nuova che nessuno ha provato. Con il tag si sa sempre che cosa gira, e l'aggiornamento è una
+scelta (passo 6).
 
 ---
 
