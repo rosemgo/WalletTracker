@@ -674,6 +674,50 @@ mostra la dashboard, non il JSON).
 
 ## Parte D: nginx, riga per riga
 
+### D0. Come entra nginx nel progetto, e chi sta dentro chi
+
+**nginx non si "installa" nel progetto.** Non è una libreria: non c'è in `package.json` né nel `pom.xml`, e il
+codice Angular non cambia di una riga. nginx arriva **già pronto**, come immagine ufficiale scaricata da Docker
+Hub. Lo sceglie **una sola riga**, il secondo `FROM` di `frontend/Dockerfile`:
+
+```dockerfile
+FROM nginxinc/nginx-unprivileged:1.29-alpine
+```
+
+La scelta "nginx o Caddy" è stata implementata con **tre file nuovi e una riga del Compose**:
+
+| File | Che cosa fa |
+|---|---|
+| `frontend/Dockerfile` | prima compila Angular, poi parte dall'immagine di nginx e ci copia dentro la build e la configurazione |
+| `frontend/nginx/default.conf` | dice a nginx che cosa fare: servire i file, passare `/api/` al backend, la cache |
+| `frontend/nginx/security-headers.conf` | le intestazioni di sicurezza, incluse in ogni `location` |
+| `docker-compose.yml`, servizio `web` | `build: ./frontend`: "costruisci l'immagine con il Dockerfile di quella cartella", e la porta `127.0.0.1:8000` |
+
+Con Caddy sarebbe cambiato solo questo: `FROM caddy:2-alpine` al posto di nginx, e un file `Caddyfile` al posto
+di `default.conf`. Il resto (Angular, il backend, il Compose) sarebbe rimasto uguale.
+
+**Chi sta dentro chi.** Il **frontend** sta davvero dentro nginx; il **backend** no.
+
+```
+ ┌─ container "web" ─────────────────────┐          ┌─ container "backend" ─┐     ┌─ "db" ─┐
+ │  nginx (il programma)                  │          │  Java + app.jar        │     │Postgres│
+ │  + i file della build di Angular       │──/api/──▶│                        │────▶│        │
+ │    (/usr/share/nginx/html)             │  inoltra │                        │     │        │
+ │  + default.conf                        │          └────────────────────────┘     └────────┘
+ └────────────────────────────────────────┘
+```
+
+- **Il frontend è dentro nginx**: dopo `ng build` è solo una cartella di file, e il Dockerfile la **copia
+  fisicamente** dentro l'immagine di nginx. Container `web` = nginx + dashboard.
+- **Il backend è fuori**, in un container suo, con Java. nginx non lo contiene: gli **passa** le richieste
+  `/api/...` attraverso la rete di Docker e riporta indietro le risposte, come un centralino che passa le
+  telefonate a un altro ufficio.
+
+**Perché i file stanno nella cartella `frontend/`.** È solo una scelta di ordine: il Dockerfile del container `web`
+sta vicino a ciò che quel container contiene, cioè il frontend. Il Dockerfile deve poter leggere `package.json`
+e `src/`, e Docker vede solo i file della cartella indicata in `build:` (il "contesto"). Si poteva fare anche una
+cartella `web/` separata, con un `build:` che punta al frontend: il risultato sarebbe identico.
+
 ### D1. L'immagine
 
 `frontend/Dockerfile` è multi-stage anche lui: `node:24-alpine` fa `npm ci` e `ng build`; l'immagine finale è
