@@ -905,6 +905,55 @@ Docker: il browser non sa nemmeno che esiste.
 backend ascolta sulla 8080 del **suo** container. Sono due container diversi, quindi due porte 8080 diverse che
 non si scontrano.)
 
+#### Chi ha scritto questi file, e da dove vengono le variabili
+
+**I due file li abbiamo scritti noi.** L'immagine `nginxinc/nginx-unprivileged` arriva con un suo
+`default.conf` di serie, che mostra solo la pagina "Welcome to nginx!". Nel Dockerfile la riga
+
+```dockerfile
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+```
+
+lo **sostituisce** con il nostro (stesso percorso, stesso nome). `security-headers.conf` è un file nuovo. Le
+istruzioni dentro però non sono inventate: `proxy_pass`, `proxy_set_header`, `try_files`, `add_header` sono
+**direttive standard** di nginx, descritte nella documentazione ufficiale (nginx.org). Noi abbiamo scelto quali
+usare e con quali valori.
+
+**Le variabili sono di due tipi.** Nel file trovi dichiarata solo `$backend`, con `set`. Le altre (`$host`,
+`$scheme`, `$proxy_add_x_forwarded_for`, e più sotto `$uri`) non si dichiarano: sono **variabili incorporate**
+(*embedded variables*), che nginx crea da solo **a ogni richiesta**, leggendo la richiesta stessa. È come in
+Spring, dove i dati della richiesta li trovi in `HttpServletRequest` senza averli scritti tu.
+
+```nginx
+set $backend http://backend:8080;            # ← dichiarata da NOI, con "set": un valore fisso
+proxy_pass $backend;                         # ← usa la nostra
+proxy_set_header Host $host;                 # ← $host:   di nginx, riempita a ogni richiesta
+proxy_set_header X-Forwarded-Proto $scheme;  # ← $scheme: di nginx, riempita a ogni richiesta
+```
+
+| Variabile | Da dove la prende nginx | Valore per `http://localhost:8000/api/accounts` |
+|---|---|---|
+| `$host` | l'intestazione `Host` mandata dal browser, senza la porta | `localhost` |
+| `$scheme` | il protocollo con cui è arrivata la richiesta | `http` |
+| `$remote_addr` | l'indirizzo di chi si è collegato | l'indirizzo del PC, visto dalla rete di Docker |
+| `$proxy_add_x_forwarded_for` | l'intestazione `X-Forwarded-For` ricevuta (se c'è), più `$remote_addr` in coda | come `$remote_addr`: il browser non la manda |
+| `$uri` | il percorso dell'indirizzo | `/api/accounts` |
+
+Siccome cambiano a ogni richiesta, con Tailscale (passo 4) `$host` varrà il nome del PC nella tailnet e
+`$scheme` varrà `https`, senza toccare la configurazione. L'elenco completo è nella documentazione di nginx,
+pagina *Alphabetical index of variables*.
+
+**Come si legge una riga `proxy_set_header`:**
+
+```nginx
+proxy_set_header  Host  $host;
+#     │            │      │
+#  direttiva   nome dell'  valore: la variabile di nginx
+#  di nginx    intestazione con il nome usato dal browser
+```
+
+"Quando rifai la richiesta al backend, metti l'intestazione `Host` con il valore di `$host`."
+
 #### Riga per riga
 
 **`location /api/ { ... }`**
