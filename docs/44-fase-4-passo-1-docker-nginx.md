@@ -390,7 +390,7 @@ Entrambi i Dockerfile hanno **due** `FROM`: sono "multi-stage". Il primo stadio 
 
 Per compilare servono Maven, il JDK completo, il codice sorgente e centinaia di MB di dipendenze; per eseguire
 basta il JRE e il jar. Il secondo stadio prende **solo** il risultato (`COPY --from=build`), e il primo si butta.
-L'immagine finale è più piccola (backend: circa 170 MB invece di oltre 500) e, soprattutto, più sicura: niente
+L'immagine finale è più piccola (il backend circa 170 MB: lo stadio di compilazione, con Maven, il JDK e le dipendenze, è molto più grande) e, soprattutto, più sicura: niente
 compilatore e niente codice sorgente a disposizione di chi riuscisse a entrare.
 
 ### `backend/Dockerfile`, riga per riga
