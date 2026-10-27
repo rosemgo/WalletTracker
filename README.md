@@ -109,6 +109,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 42. [Fase grafica, passo 7: l'app installabile (PWA) e la modalità discreta](docs/42-fase-grafica-pwa-e-modalita-discreta.md)
 43. [Ritocchi: "Senza categoria" porta ai movimenti, la categoria tra spese ed entrate, i menu aperti](docs/43-analisi-senza-categoria-e-menu.md)
 44. [Fase 4, passo 1: l'app in tre container (Dockerfile multi-stage, nginx, Docker Compose)](docs/44-fase-4-passo-1-docker-nginx.md)
+45. [Fase 4, passo 2: lo script di installazione, la password del database generata e come cambiarla](docs/45-fase-4-passo-2-installazione-e-segreti.md)
 
 ## Piano di lavoro
 
@@ -140,7 +141,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 - [x] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`, i Movimenti in `docs/37`, Analisi in `docs/38`, Budget e Altro in `docs/39`, l'aspetto moderno e i grafici vivi in `docs/41`, l'app installabile e la modalità discreta in `docs/42`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
   - [x] passo 1: tre container (`db`, `backend`, `web` con nginx) più Ollama facoltativo, avviati con `docker compose up -d` (`docs/44`)
-  - [ ] passo 2: configurazione e segreti (password del database generata, primo avvio guidato)
+  - [x] passo 2: lo script di installazione (`installa.ps1` / `installa.sh`): `.env` con la password del database generata a caso, cambio della password, avvio e attesa del backend (`docs/45`)
   - [ ] passo 3: il PIN per aprire l'app (Spring Security)
   - [ ] passo 4: Tailscale, l'app dal telefono con https vero
   - [ ] passo 5: backup e ripristino (provato davvero)
@@ -151,6 +152,8 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 Dalla radice del progetto:
 
 ```bash
+./installa.sh                                 # primo avvio e avvii successivi: crea il .env se manca e avvia (docs/45)
+                                              # su Windows: powershell -ExecutionPolicy Bypass -File installa.ps1
 docker compose up -d --build                  # l'app completa su http://localhost:8000 (docs/44)
 docker compose --profile ia up -d --build     # la stessa, con anche Ollama (l'IA locale)
 docker compose down                           # ferma tutto (i dati restano)

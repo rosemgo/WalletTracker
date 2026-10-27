@@ -91,24 +91,42 @@ jobs:
       - name: Compila
         run: npm run build
 
-  # Le immagini Docker (Fase 4, docs/44): se un Dockerfile o la configurazione di nginx hanno un errore, ce ne
-  # accorgiamo qui e non sul PC di chi installa. Si costruiscono e basta: i test girano già nei due job sopra.
+  # L'installazione vera (Fase 4, docs/44 e docs/45): lo script installa.sh crea il .env con una password a caso,
+  # costruisce le immagini e avvia i container, come sul PC di chi installa. Poi controlliamo che l'app risponda,
+  # cambiamo la password del database e ricontrolliamo. Se un Dockerfile, la configurazione di nginx o lo script
+  # hanno un errore, ce ne accorgiamo qui. I test girano già nei due job sopra.
   docker:
-    name: Immagini Docker (build)
+    name: Installazione con Docker (installa.sh)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Scarica il codice
         uses: actions/checkout@v7
 
-      # Il .env di esempio: Compose lo legge per riempire i ${...} di docker-compose.yml.
-      - name: Prepara il .env
-        run: cp .env.example .env
+      # Sulla macchina di GitHub l'utente ha id 1001, il backend nel container 1000 (docs/45, parte F): la
+      # cartella della chiave di cifratura va data all'utente 1000, come farebbe chi installa su un Linux così.
+      - name: Prepara la cartella .data
+        run: mkdir .data && sudo chown 1000:1000 .data
 
-      - name: Costruisci le immagini
-        run: docker compose build
+      - name: Installa e avvia
+        run: ./installa.sh --senza-browser
 
-      # nginx -t controlla la configurazione senza avviare il server.
+      # -f: curl fallisce se la risposta è un errore (4xx, 5xx).
+      - name: Controlla che l'app risponda
+        run: |
+          curl -fsS http://localhost:8000/ | grep -q '<app-root>'
+          curl -fsS http://localhost:8000/api/accounts
+
+      - name: Cambia la password del database e ricontrolla
+        run: |
+          ./installa.sh --cambia-password-db --senza-browser
+          curl -fsS http://localhost:8000/api/accounts
+
+      # nginx -t controlla la configurazione senza riavviare il server.
       - name: Controlla la configurazione di nginx
-        run: docker compose run --rm --no-deps --entrypoint nginx web -t
+        run: docker compose exec -T web nginx -t
+
+      - name: Log dei container
+        if: failure()
+        run: docker compose logs --tail 200

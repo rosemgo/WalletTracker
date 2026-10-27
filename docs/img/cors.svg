@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+</defs>
+<rect width="1200" height="800" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il CORS: perché con nginx non c'è</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">origine = protocollo + nome + porta. Il browser consegna alla pagina solo le risposte della SUA origine</text>
+
+<!-- Panel 1 -->
+<rect x="30" y="95" width="1140" height="320" rx="16" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+<text x="55" y="128" font-size="20" font-weight="700" fill="#b91c1c">✗  Senza nginx: due origini diverse</text>
+<rect x="55" y="150" width="520" height="240" rx="12" fill="#ffffff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="75" y="178" font-size="17" font-weight="700" fill="#1d4ed8">Browser</text>
+<rect x="75" y="192" width="480" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+<text x="90" y="215" font-size="14" fill="#0f172a">pagina caricata da</text>
+<text x="90" y="237" font-size="16" font-weight="700" fill="#1d4ed8">http://localhost:8000     → origine A</text>
+<rect x="75" y="258" width="480" height="56" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="90" y="281" font-size="14" fill="#0f172a">il JavaScript chiama</text>
+<text x="90" y="303" font-size="16" font-weight="700" fill="#b91c1c">http://localhost:8080/api  → origine B</text>
+<rect x="75" y="324" width="480" height="54" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+<text x="90" y="347" font-size="15" font-weight="700" fill="#991b1b">A ≠ B: il browser NON dà la risposta</text>
+<text x="90" y="368" font-size="14" fill="#991b1b">alla pagina (salvo permessi CORS del backend)</text>
+<rect x="830" y="200" width="300" height="130" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="980" y="235" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">backend :8080</text>
+<text x="980" y="262" text-anchor="middle" font-size="14" fill="#0f172a">porta aperta verso il PC</text>
+<text x="980" y="285" text-anchor="middle" font-size="14" fill="#0f172a">+ CORS da configurare</text>
+<text x="980" y="308" text-anchor="middle" font-size="14" fill="#0f172a">in Spring</text>
+<line x1="560" y1="286" x2="825" y2="240" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="690" y="245" text-anchor="middle" font-size="13" fill="#1d4ed8">la richiesta parte</text>
+<line x1="825" y1="300" x2="562" y2="345" stroke="#b91c1c" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ar)"/>
+<text x="700" y="350" text-anchor="middle" font-size="13" fill="#b91c1c">la risposta arriva, ma è bloccata</text>
+
+<!-- Panel 2 -->
+<rect x="30" y="440" width="1140" height="335" rx="16" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="55" y="473" font-size="20" font-weight="700" fill="#15803d">✓  Con nginx: una sola origine</text>
+<rect x="55" y="495" width="520" height="240" rx="12" fill="#ffffff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="75" y="523" font-size="17" font-weight="700" fill="#1d4ed8">Browser</text>
+<rect x="75" y="537" width="480" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+<text x="90" y="560" font-size="14" fill="#0f172a">pagina caricata da</text>
+<text x="90" y="582" font-size="16" font-weight="700" fill="#1d4ed8">http://localhost:8000      → origine A</text>
+<rect x="75" y="603" width="480" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+<text x="90" y="626" font-size="14" fill="#0f172a">il JavaScript chiama</text>
+<text x="90" y="648" font-size="16" font-weight="700" fill="#1d4ed8">http://localhost:8000/api  → origine A</text>
+<rect x="75" y="669" width="480" height="54" rx="8" fill="#dcfce7" stroke="#86efac"/>
+<text x="90" y="692" font-size="15" font-weight="700" fill="#166534">A = A: stessa origine, nessun controllo</text>
+<text x="90" y="713" font-size="14" fill="#166534">niente CORS da configurare</text>
+<rect x="650" y="560" width="160" height="110" rx="12" fill="#ffffff" stroke="#15803d" stroke-width="2.5"/>
+<text x="730" y="600" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">nginx</text>
+<text x="730" y="625" text-anchor="middle" font-size="14" fill="#0f172a">:8000</text>
+<rect x="930" y="560" width="200" height="110" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="1030" y="600" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">backend</text>
+<text x="1030" y="625" text-anchor="middle" font-size="14" fill="#0f172a">:8080, nessuna porta</text>
+<text x="1030" y="645" text-anchor="middle" font-size="14" fill="#0f172a">aperta sul PC</text>
+<line x1="560" y1="631" x2="645" y2="615" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<line x1="810" y1="615" x2="925" y2="615" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<rect x="830" y="690" width="320" height="60" rx="8" fill="#ffffff" stroke="#86efac"/>
+<text x="990" y="715" text-anchor="middle" font-size="14" fill="#166534">questo passaggio avviene dentro Docker:</text>
+<text x="990" y="736" text-anchor="middle" font-size="14" fill="#166534">il browser non lo vede, il CORS non c'entra</text>
+</svg>

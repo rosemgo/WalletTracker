@@ -8,6 +8,11 @@
 #   telefono/PC ──▶ web (nginx) ──/api/──▶ backend ──▶ db
 #                                              └────▶ ollama (se c'è)
 #
+# Il modo più semplice: lo script di installazione (docs/45), che al primo avvio crea il .env con una password
+# del database generata a caso, e poi avvia tutto:
+#   Windows:      powershell -ExecutionPolicy Bypass -File installa.ps1
+#   macOS/Linux:  ./installa.sh
+#
 # Comandi principali (dalla cartella del progetto):
 #   docker compose up -d --build        costruisce le immagini e avvia tutto in background
 #   docker compose --profile ia up -d   come sopra, con anche Ollama
@@ -35,7 +40,9 @@ services:
       # Al primo avvio PostgreSQL crea questo database e questo utente.
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # ":?" = se POSTGRES_PASSWORD manca o è vuota, Compose si ferma con questo messaggio invece di partire con un
+      # database senza password. La crea a caso lo script di installazione (docs/45).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?manca POSTGRES_PASSWORD nel .env - avvia installa.ps1 o installa.sh (docs/45)}
       TZ: ${TZ:-Europe/Rome}
     # Nessuna porta pubblicata: il database lo raggiunge solo il backend, nella rete interna di Docker.
     # (Per lo sviluppo la apre docker-compose.dev.yml, sempre e solo su 127.0.0.1.)
@@ -68,7 +75,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?manca POSTGRES_PASSWORD nel .env - avvia installa.ps1 o installa.sh (docs/45)}
       # 0.0.0.0 = tutte le "schede di rete" del container, altrimenti nginx non lo raggiungerebbe. Il backend
       # resta chiuso lo stesso: qui sotto non c'è "ports", nessuna porta del PC porta a lui.
       SERVER_ADDRESS: 0.0.0.0
