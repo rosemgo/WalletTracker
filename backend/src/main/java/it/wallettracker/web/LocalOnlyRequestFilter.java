@@ -13,6 +13,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -37,6 +39,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * controller: può lasciarla passare ({@code chain.doFilter}) o rispondere subito con un errore.
  */
 @Component
+// Prima di Spring Security (che lavora a -100, docs/46): una richiesta con un nome falso si rifiuta prima di tutto il
+// resto, anche prima di dire "serve il PIN".
+@Order(Ordered.HIGHEST_PRECEDENCE + 50)
 public class LocalOnlyRequestFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(LocalOnlyRequestFilter.class);

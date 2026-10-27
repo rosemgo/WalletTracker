@@ -2,15 +2,18 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { SetupStatus } from './api/models';
+import { AuthStatus, SetupStatus } from './api/models';
 import { WalletApi } from './api/wallet-api';
 import { App } from './app';
 
 describe('App', () => {
   let configured = true;
+  let authenticated = true;
 
   beforeEach(() => {
     const fakeApi: Partial<WalletApi> = {
+      // Il PIN è già stato inserito: si vede l'app (la pagina del PIN ha i suoi test, pin-page.spec.ts).
+      authStatus: () => of<AuthStatus>({ pinSet: true, authenticated, canCreatePin: false }),
       setupStatus: () =>
         of<SetupStatus>({
           configured,
@@ -26,6 +29,17 @@ describe('App', () => {
         { provide: WalletApi, useValue: fakeApi },
       ],
     });
+  });
+
+  it('without the PIN shows only the PIN page, not the app', async () => {
+    authenticated = false;
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('h1')?.textContent).toBe('Inserisci il PIN');
+    expect(page.querySelector('nav')).toBeNull();
+    authenticated = true;
   });
 
   it('shows the main sections, "Altro" and, for the PC column, the service pages', async () => {

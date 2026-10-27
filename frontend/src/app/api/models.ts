@@ -261,6 +261,13 @@ export interface RulePreview {
 }
 
 /** Lo stato della configurazione di Enable Banking (GET /api/setup). */
+/** GET /api/auth/status (Fase 4, passo 3: docs/46): il PIN c'è? Sei dentro? Da qui si può creare? */
+export interface AuthStatus {
+  pinSet: boolean;
+  authenticated: boolean;
+  canCreatePin: boolean; // il PIN non c'è ancora, e l'app è aperta dal PC (localhost)
+}
+
 export interface SetupStatus {
   configured: boolean;
   source: 'DASHBOARD' | 'ENV' | null; // da dove arrivano le credenziali in uso

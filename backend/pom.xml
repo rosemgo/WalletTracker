@@ -57,6 +57,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Spring Security (Fase 4, passo 3): il PIN per aprire l'app, la sessione, la protezione CSRF -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
         <!-- Validazione della configurazione con annotazioni come @NotBlank -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -119,6 +125,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Test con Spring Security: richieste "come un utente che ha inserito il PIN" (user(), csrf()) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 

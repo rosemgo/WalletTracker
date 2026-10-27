@@ -112,6 +112,7 @@ in Git); se il sistema dice *permission denied*, `chmod +x installa.sh` lo rende
 |---|---|---|
 | `-Ia` | `--ia` | avvia anche Ollama (il profilo `ia`, `docs/44` parte G) |
 | `-CambiaPasswordDb` | `--cambia-password-db` | genera una password nuova per il database (parte E) |
+| `-ReimpostaPin` | `--reimposta-pin` | PIN dimenticato: lo azzera e chiude le sessioni aperte (dal passo 3, `docs/46` parte G) |
 | `-SenzaBrowser` | `--senza-browser` | non apre il browser alla fine (lo usa la CI) |
 | | `--aiuto` | mostra le opzioni |
 
@@ -519,6 +520,7 @@ errori dei programmi esterni). Se vedi qualcosa di strano, mandami il testo che 
 | `permission denied: ./installa.sh` | il file non è eseguibile | `chmod +x installa.sh` |
 | `bad interpreter: /usr/bin/env: bash^M` | lo script ha le fini riga di Windows | `git checkout -- installa.sh` (con il `.gitattributes` torna con quelle di Unix) |
 | backend non pronto dopo 4 minuti | un errore all'avvio | `docker compose logs backend` e leggi le prime righe con `ERROR` |
+| "Manca il file .env, ma c'è già il database di un'installazione precedente" | hai cancellato il `.env` (o hai scaricato il progetto in un'altra cartella), ma i dati di prima sono ancora in Docker, con la loro password | rimetti il vecchio `.env` e rilancia lo script. **Solo** se vuoi ripartire da zero, perdendo tutti i dati di prima: `docker rm -f wallettracker-backend wallettracker-web wallettracker-db` e poi `docker volume rm wallettracker_db-data` |
 
 ---
 

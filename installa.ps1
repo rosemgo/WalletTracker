@@ -6,6 +6,7 @@
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ia                  con anche Ollama (l'IA locale)
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -CambiaPasswordDb    password nuova per il database
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -SenzaBrowser        non apre il browser alla fine
+#   powershell -ExecutionPolicy Bypass -File installa.ps1 -ReimpostaPin        PIN dimenticato: lo azzera
 #
 # "-ExecutionPolicy Bypass": Windows, di serie, non esegue gli script scaricati. Così il permesso vale solo per
 # questo comando, senza cambiare le impostazioni del PC.
@@ -16,6 +17,7 @@
 param(
     [switch]$Ia,
     [switch]$CambiaPasswordDb,
+    [switch]$ReimpostaPin,
     [switch]$SenzaBrowser
 )
 
@@ -115,6 +117,12 @@ if (-not (Test-Path $EnvFile)) {
     if (-not (Test-Path '.env.example')) {
         Errore 'Manca .env.example: lo script va lanciato dalla cartella del progetto scaricato.'
     }
+    # Il .env manca, ma il database di un'installazione precedente c'è ancora: ha la SUA password, scritta nel
+    # vecchio .env. Con una password nuova il backend non entrerebbe (installa.sh spiega lo stesso).
+    & docker volume inspect wallettracker_db-data *> $null
+    if ($LASTEXITCODE -eq 0) {
+        Errore 'Manca il file .env, ma c''è già il database di un''installazione precedente, con la sua password. Rimetti qui il vecchio .env (dal backup) e rilancia lo script. Se invece vuoi ripartire da zero, CANCELLANDO tutti i dati di prima, i comandi sono in docs/45, parte M.'
+    }
     Copy-Item '.env.example' $EnvFile
     Scrivi-Env 'POSTGRES_PASSWORD' (Nuova-Password)
     Write-Host 'Creato il file .env, con una password del database generata a caso.'
@@ -153,11 +161,28 @@ if ($CambiaPasswordDb) {
     Write-Host 'Password cambiata nel database e salvata nel .env. Il backend la riceve al riavvio, qui sotto.'
 }
 
+# --- 4b. Azzerare il PIN (solo con -ReimpostaPin) ---------------------------------------------------------
+# Il PIN dimenticato non si recupera (nel database c'è solo il suo hash, docs/46): si cancella, e alla prossima
+# apertura dal PC l'app chiede di crearne uno nuovo. Si fa solo da qui, dal PC.
+if ($ReimpostaPin) {
+    Passo 'Azzero il PIN'
+    $utente = Valore-Env 'POSTGRES_USER'
+    $database = Valore-Env 'POSTGRES_DB'
+    & docker compose up -d db | Out-Null
+    Aspetta-Salute 'db' 60
+    & docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U $utente -d $database -c 'DELETE FROM app_pin'
+    if ($LASTEXITCODE -ne 0) { Errore 'Non sono riuscito ad azzerare il PIN (l''app è già stata avviata almeno una volta?).' }
+    Write-Host 'PIN azzerato. Apri l''app da questo PC (http://localhost) per crearne uno nuovo.'
+}
+
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
 Passo 'Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)'
 if ($Ia) { & docker compose --profile ia up -d --build }
 else { & docker compose up -d --build }
 if ($LASTEXITCODE -ne 0) { Errore 'docker compose non è riuscito ad avviare l''app: leggi il messaggio qui sopra.' }
+
+# Dopo aver azzerato il PIN, il backend si riavvia: le sessioni aperte (anche su dispositivi persi) si chiudono.
+if ($ReimpostaPin) { & docker compose restart backend | Out-Null }
 
 Passo 'Aspetto che il backend sia pronto'
 Aspetta-Salute 'backend' 240
