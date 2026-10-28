@@ -112,16 +112,30 @@ jobs:
       - name: Installa e avvia
         run: ./installa.sh --senza-browser
 
-      # -f: curl fallisce se la risposta è un errore (4xx, 5xx).
-      - name: Controlla che l'app risponda
+      # -f: curl fallisce se la risposta è un errore (4xx, 5xx). Dal passo 3 (docs/46) le API vogliono il PIN: senza,
+      # 401. Poi facciamo quello che fa la dashboard: lo stato (che dà il cookie XSRF-TOKEN), il PIN creato dal PC
+      # con il gettone CSRF, e le API con la sessione aperta (i cookie restano nel file "biscotti").
+      - name: Controlla che l'app risponda, e che senza PIN le API siano chiuse
         run: |
           curl -fsS http://localhost:8000/ | grep -q '<app-root>'
-          curl -fsS http://localhost:8000/api/accounts
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/accounts)" = 401
+          curl -fsS -c biscotti -b biscotti http://localhost:8000/api/auth/status | grep -q '"canCreatePin":true'
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' biscotti)
+          curl -fsS -c biscotti -b biscotti -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/pin
+          curl -fsS -b biscotti http://localhost:8000/api/accounts
 
       - name: Cambia la password del database e ricontrolla
         run: |
           ./installa.sh --cambia-password-db --senza-browser
-          curl -fsS http://localhost:8000/api/accounts
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":true'
+
+      # Il PIN dimenticato: lo script lo azzera e chiude le sessioni (la vecchia non vale più).
+      - name: Azzera il PIN
+        run: |
+          ./installa.sh --reimposta-pin --senza-browser
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b biscotti http://localhost:8000/api/accounts)" = 401
 
       # nginx -t controlla la configurazione senza riavviare il server.
       - name: Controlla la configurazione di nginx

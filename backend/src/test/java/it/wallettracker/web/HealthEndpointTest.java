@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import it.wallettracker.IntegrationTestConfiguration;
+import it.wallettracker.auth.TestSession;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -37,12 +38,19 @@ class HealthEndpointTest {
         assertThat(response.body()).contains("\"status\":\"UP\"").doesNotContain("components", "details");
     }
 
-    /** Gli endpoint che mostrerebbero la configurazione (password comprese) o i log restano spenti. */
+    /**
+     * Gli endpoint che mostrerebbero la configurazione (password comprese) o i log restano spenti: anche con il PIN
+     * non ci sono (404). Senza PIN non si arriva nemmeno a chiederli (401, docs/46).
+     */
     @Test
     void theOtherActuatorEndpointsAreNotExposed() throws Exception {
-        for (String path : new String[] {"/actuator/env", "/actuator/configprops", "/actuator/loggers",
-                "/actuator/heapdump", "/actuator/beans"}) {
-            assertThat(get(path).statusCode()).as(path).isEqualTo(404);
+        try (TestSession session = TestSession.open(port)) {
+            for (String path : new String[] {"/actuator/env", "/actuator/configprops", "/actuator/loggers",
+                    "/actuator/heapdump", "/actuator/beans"}) {
+                assertThat(get(path).statusCode()).as(path + " senza PIN").isEqualTo(401);
+                assertThat(session.send(session.request(path).GET()).statusCode()).as(path + " con il PIN")
+                        .isEqualTo(404);
+            }
         }
     }
 

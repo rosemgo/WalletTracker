@@ -5,6 +5,7 @@
 #   ./installa.sh                        primo avvio, e tutte le volte dopo: prepara ciò che manca e avvia
 #   ./installa.sh --ia                   come sopra, con anche Ollama (l'IA locale)
 #   ./installa.sh --cambia-password-db   genera una password nuova per il database e la mette dove serve
+#   ./installa.sh --reimposta-pin        PIN dimenticato: lo cancella, e l'app chiede di crearne uno nuovo (dal PC)
 #   ./installa.sh --senza-browser        non apre il browser alla fine (per la CI)
 #
 # Si può rilanciare quante volte si vuole: quello che c'è già (il .env, la chiave, i dati) non viene toccato.
@@ -13,7 +14,7 @@
 #   1. controlla che Docker sia avviato;
 #   2. se manca il .env, lo crea da .env.example con una password del database generata a caso;
 #   3. crea la cartella .data (la chiave di cifratura) come tuo utente;
-#   4. se richiesto, cambia la password del database;
+#   4. se richiesto, cambia la password del database o azzera il PIN;
 #   5. docker compose up -d --build, e aspetta che il backend sia pronto;
 #   6. apre l'app nel browser.
 
@@ -26,14 +27,16 @@ cd "$(dirname "$0")"
 
 CON_IA=false
 CAMBIA_PASSWORD=false
+REIMPOSTA_PIN=false
 APRI_BROWSER=true
 for argomento in "$@"; do
   case "$argomento" in
     --ia) CON_IA=true ;;
     --cambia-password-db) CAMBIA_PASSWORD=true ;;
+    --reimposta-pin) REIMPOSTA_PIN=true ;;
     --senza-browser) APRI_BROWSER=false ;;
     -h | --aiuto | --help)
-      sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -99,6 +102,11 @@ echo "Docker è avviato."
 passo "Configurazione (.env)"
 if [ ! -f .env ]; then
   [ -f .env.example ] || errore "Manca .env.example: lo script va lanciato dalla cartella del progetto scaricato."
+  # Il .env manca, ma il database di un'installazione precedente c'è ancora (il volume resta anche se si cancella la
+  # cartella del progetto). Ha la SUA password, scritta nel vecchio .env: con una nuova il backend non entrerebbe.
+  if docker volume inspect wallettracker_db-data >/dev/null 2>&1; then
+    errore "Manca il file .env, ma c'è già il database di un'installazione precedente, con la sua password. Rimetti qui il vecchio .env (dal backup) e rilancia lo script. Se invece vuoi ripartire da zero, CANCELLANDO tutti i dati di prima, i comandi sono in docs/45, parte M."
+  fi
   cp .env.example .env
   # 600 = leggibile e scrivibile solo dal tuo utente: dentro c'è la password del database.
   chmod 600 .env
@@ -160,6 +168,20 @@ if [ "$CAMBIA_PASSWORD" = true ]; then
   echo "Password cambiata nel database e salvata nel .env. Il backend la riceve al riavvio, qui sotto."
 fi
 
+# --- 4b. Azzerare il PIN (solo con --reimposta-pin) -------------------------------------------------------
+# Il PIN dimenticato non si recupera (nel database c'è solo il suo hash, docs/46): si cancella, e alla prossima
+# apertura dal PC l'app chiede di crearne uno nuovo. Si fa solo da qui, dal PC: chi non ha il PC non può farlo.
+if [ "$REIMPOSTA_PIN" = true ]; then
+  passo "Azzero il PIN"
+  utente=$(valore_env POSTGRES_USER)
+  database=$(valore_env POSTGRES_DB)
+  docker compose up -d db >/dev/null
+  aspetta_salute db 60
+  docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U "$utente" -d "$database" -c "DELETE FROM app_pin" ||
+    errore "Non sono riuscito ad azzerare il PIN (l'app è già stata avviata almeno una volta?)."
+  echo "PIN azzerato. Apri l'app da questo PC (http://localhost) per crearne uno nuovo."
+fi
+
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
 passo "Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)"
 profilo=""
@@ -168,6 +190,11 @@ profilo=""
 # shellcheck disable=SC2086
 docker compose $profilo up -d --build ||
   errore "docker compose non è riuscito ad avviare l'app: leggi il messaggio qui sopra."
+
+# Dopo aver azzerato il PIN, il backend si riavvia: le sessioni aperte (anche su dispositivi persi) si chiudono.
+if [ "$REIMPOSTA_PIN" = true ]; then
+  docker compose restart backend >/dev/null
+fi
 
 passo "Aspetto che il backend sia pronto"
 aspetta_salute backend 240

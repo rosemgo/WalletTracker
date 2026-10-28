@@ -57,6 +57,27 @@ spring:
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8080}
+  # nginx dice al backend con quale protocollo è arrivata la richiesta (X-Forwarded-Proto, docs/44 parte D3). Con
+  # "native" Tomcat lo crede, ma solo se la richiesta arriva da un indirizzo interno (la rete di Docker): così, con
+  # Tailscale e https (passo 4), il cookie della sessione prende da solo l'attributo Secure.
+  forward-headers-strategy: native
+  # La sessione aperta dal PIN (Fase 4, passo 3: docs/46, parte B).
+  servlet:
+    session:
+      # Dopo 12 ore senza richieste la sessione si chiude, e l'app chiede di nuovo il PIN. Le sessioni stanno nella
+      # memoria del backend: anche un riavvio (un aggiornamento) le chiude.
+      timeout: 12h
+      # La sessione si riconosce solo dal cookie, mai da un ";jsessionid=..." scritto negli indirizzi (finirebbe nella
+      # cronologia, nei log, nei link copiati).
+      tracking-modes: cookie
+      cookie:
+        name: WALLETTRACKER_SESSION
+        # HttpOnly: il JavaScript della pagina non può leggerlo. Uno script infilato nella pagina non lo ruberebbe.
+        http-only: true
+        # SameSite=Strict: il browser non lo manda nelle richieste che partono da un altro sito (CSRF).
+        same-site: strict
+        # "Secure" (solo su https) non si scrive qui: Tomcat lo aggiunge da solo quando la richiesta è https. Su
+        # http://localhost non ci sarebbe, e il browser non manderebbe il cookie.
 
 # Actuator (Fase 4): solo /actuator/health, che dice se il backend e il database rispondono ("UP"). Lo usa il
 # controllo di salute di Docker (healthcheck nel docker-compose.yml). Non passa da nginx, che inoltra solo /api/:

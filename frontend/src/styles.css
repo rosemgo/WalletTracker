@@ -178,7 +178,8 @@ ul.rows strong {
 
 .app-nav .brand,
 .app-nav .more-pages,
-.app-nav .nav-eye {
+.app-nav .nav-eye,
+.app-nav .nav-logout {
   display: none;
 }
 
@@ -428,6 +429,25 @@ button.eye[aria-checked='true'] {
     font-size: 14px;
     font-weight: 500;
     text-align: left;
+  }
+
+  /* "Esci", sotto la modalità discreta: discreto come le pagine di servizio. */
+  .app-nav .nav-logout {
+    display: block;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sec);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .app-nav .nav-logout:hover {
+    background: var(--track);
+    color: var(--ink);
   }
 
   .app-nav .nav-eye .nav-icon {
@@ -3191,4 +3211,52 @@ table.cards.compact td {
   table.cards.compact td.actions {
     margin-left: auto;
   }
+}
+
+/* La pagina del PIN (docs/46): al posto dell'app, una colonna stretta al centro. */
+.pin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 24rem;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 2rem;
+}
+
+.pin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.pin-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pin-page label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sec);
+}
+
+/* Le cifre del PIN un po' distanziate, più facili da contare. */
+.pin-page input {
+  color: var(--ink);
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+}
+
+/* "Esci" in fondo alla pagina "Altro" del telefono. */
+button.logout {
+  margin-top: 1.5rem;
+  width: 100%;
 }

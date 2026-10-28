@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import {
   Account,
   AiCloudProvider,
+  AuthStatus,
   AiConnectionTest,
   AiProvider,
   AiSettingsChange,
@@ -256,6 +257,26 @@ export class WalletApi {
   }
 
   /** GET /api/setup */
+  /** GET /api/auth/status: lo stato del PIN. Dà anche il cookie XSRF-TOKEN, che Angular rimanda da solo. */
+  authStatus(): Observable<AuthStatus> {
+    return this.http.get<AuthStatus>('/api/auth/status');
+  }
+
+  /** POST /api/auth/pin: crea il PIN (solo dal PC, solo se non c'è) e apre la sessione. */
+  createPin(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/pin', { pin });
+  }
+
+  /** POST /api/auth/login: controlla il PIN e apre la sessione (401 sbagliato, 429 bloccato). */
+  login(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/login', { pin });
+  }
+
+  /** POST /api/auth/logout: chiude la sessione. */
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', {});
+  }
+
   setupStatus(): Observable<SetupStatus> {
     return this.http.get<SetupStatus>('/api/setup');
   }
