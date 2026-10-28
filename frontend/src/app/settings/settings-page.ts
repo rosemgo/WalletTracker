@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AiSettingsPanel } from '../ai/ai-settings-panel';
+import { AccessSection } from '../auth/access-section';
 import { SetupStore } from '../api/setup-store';
 import { WalletApi } from '../api/wallet-api';
 import { ThemeSection } from '../theme/theme-section';
@@ -19,7 +20,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [AiSettingsPanel, FileDrop, RouterLink, ThemeSection],
+  imports: [AccessSection, AiSettingsPanel, FileDrop, RouterLink, ThemeSection],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {

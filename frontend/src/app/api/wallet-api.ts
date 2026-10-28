@@ -6,6 +6,7 @@ import {
   Account,
   AiCloudProvider,
   AuthStatus,
+  RecoveryCode,
   AiConnectionTest,
   AiProvider,
   AiSettingsChange,
@@ -262,14 +263,29 @@ export class WalletApi {
     return this.http.get<AuthStatus>('/api/auth/status');
   }
 
-  /** POST /api/auth/pin: crea il PIN (solo dal PC, solo se non c'è) e apre la sessione. */
-  createPin(pin: string): Observable<void> {
-    return this.http.post<void>('/api/auth/pin', { pin });
+  /** POST /api/auth/no-pin: la scelta "senza PIN", alla prima apertura (solo dal PC). */
+  chooseWithoutPin(): Observable<void> {
+    return this.http.post<void>('/api/auth/no-pin', {});
   }
 
-  /** POST /api/auth/login: controlla il PIN e apre la sessione (401 sbagliato, 429 bloccato). */
+  /** POST /api/auth/pin: crea il PIN (solo dal PC) e apre la sessione; risponde con il codice di recupero. */
+  createPin(pin: string): Observable<RecoveryCode> {
+    return this.http.post<RecoveryCode>('/api/auth/pin', { pin });
+  }
+
+  /** POST /api/auth/login: controlla il PIN e apre la sessione (401 sbagliato, 429 in pausa). */
   login(pin: string): Observable<void> {
     return this.http.post<void>('/api/auth/login', { pin });
+  }
+
+  /** POST /api/auth/recover: con il codice di recupero sceglie un PIN nuovo; risponde con il codice nuovo. */
+  recover(code: string, pin: string): Observable<RecoveryCode> {
+    return this.http.post<RecoveryCode>('/api/auth/recover', { code, pin });
+  }
+
+  /** POST /api/auth/pin/remove: toglie il PIN (solo dal PC, con il PIN di adesso). */
+  removePin(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/pin/remove', { pin });
   }
 
   /** POST /api/auth/logout: chiude la sessione. */

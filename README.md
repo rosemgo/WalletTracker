@@ -110,7 +110,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 43. [Ritocchi: "Senza categoria" porta ai movimenti, la categoria tra spese ed entrate, i menu aperti](docs/43-analisi-senza-categoria-e-menu.md)
 44. [Fase 4, passo 1: l'app in tre container (Dockerfile multi-stage, nginx, Docker Compose)](docs/44-fase-4-passo-1-docker-nginx.md)
 45. [Fase 4, passo 2: lo script di installazione, la password del database generata e come cambiarla](docs/45-fase-4-passo-2-installazione-e-segreti.md)
-46. [Fase 4, passo 3: il PIN per aprire l'app (Spring Security, sessione, CSRF, blocco dopo gli errori)](docs/46-fase-4-passo-3-pin.md)
+46. [Fase 4, passo 3: il PIN per aprire l'app, facoltativo dal PC (Spring Security dalle basi: filtri, sessione, CSRF, hash, blocco, codice di recupero)](docs/46-fase-4-passo-3-pin.md)
 
 ## Piano di lavoro
 
@@ -143,7 +143,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
   - [x] passo 1: tre container (`db`, `backend`, `web` con nginx) più Ollama facoltativo, avviati con `docker compose up -d` (`docs/44`)
   - [x] passo 2: lo script di installazione (`installa.ps1` / `installa.sh`): `.env` con la password del database generata a caso, cambio della password, avvio e attesa del backend (`docs/45`)
-  - [x] passo 3: il PIN per aprire l'app (Spring Security): creato dal PC, sessione di 12 ore, blocco dopo 5 errori, CSRF, copia dei dati sul telefono solo a sessione aperta (`docs/46`)
+  - [x] passo 3: il PIN per aprire l'app (Spring Security), facoltativo dal PC: due porte per distinguere il PC dagli altri dispositivi, codice di recupero, sessione di 12 ore, blocco dopo 5 errori, CSRF, copia dei dati sul telefono solo a sessione aperta (`docs/46`)
   - [ ] passo 4: Tailscale, l'app dal telefono con https vero
   - [ ] passo 5: backup e ripristino (provato davvero)
   - [ ] passo 6: aggiornamenti e la guida per chi non è informatico

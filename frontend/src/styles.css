@@ -3260,3 +3260,27 @@ button.logout {
   margin-top: 1.5rem;
   width: 100%;
 }
+
+/* Il pulsante di un modulo in griglia (es. "Togli il PIN"): in basso, allineato ai campi. */
+.form-grid .form-button {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Il codice di recupero (docs/46): grande, a spaziatura fissa, facile da ricopiare a mano. */
+.recovery-code {
+  margin: 0.5rem 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+  user-select: all;
+}
+
+.recovery {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}

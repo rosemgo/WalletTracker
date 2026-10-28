@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7e22ce"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+</defs>
+<rect width="1200" height="640" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Due porte: "dal PC" o "da un altro dispositivo"</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">il backend non guarda il nome scritto nella richiesta (lo sceglie chi la manda), ma da quale porta è entrata in nginx</text>
+
+<!-- PC box -->
+<rect x="30" y="95" width="770" height="510" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="55" y="125" font-size="18" font-weight="700" fill="#334155">Il tuo PC</text>
+
+<rect x="60" y="150" width="230" height="80" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="175" y="182" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">Browser del PC</text>
+<text x="175" y="206" text-anchor="middle" font-size="13" fill="#334155">http://localhost:8000</text>
+
+<rect x="60" y="380" width="230" height="90" rx="12" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="175" y="412" text-anchor="middle" font-size="16" font-weight="700" fill="#7e22ce">Tailscale (passo 4)</text>
+<text x="175" y="436" text-anchor="middle" font-size="13" fill="#334155">tailscale serve</text>
+<text x="175" y="456" text-anchor="middle" font-size="13" fill="#334155">→ 127.0.0.1:8001</text>
+
+<!-- nginx -->
+<rect x="420" y="140" width="340" height="360" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2.5"/>
+<text x="590" y="172" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">nginx (container web)</text>
+<rect x="445" y="190" width="290" height="110" rx="10" fill="#ffffff" stroke="#15803d"/>
+<text x="590" y="218" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">server 8080  (sul PC: 8000)</text>
+<text x="590" y="244" text-anchor="middle" font-size="13" fill="#334155">proxy_set_header</text>
+<text x="590" y="266" text-anchor="middle" font-size="14" font-weight="700" fill="#1d4ed8">X-WalletTracker-Access: local</text>
+<text x="590" y="288" text-anchor="middle" font-size="12" fill="#475569">(sostituisce quello del browser)</text>
+<rect x="445" y="360" width="290" height="110" rx="10" fill="#ffffff" stroke="#15803d"/>
+<text x="590" y="388" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">server 8081  (sul PC: 8001)</text>
+<text x="590" y="414" text-anchor="middle" font-size="13" fill="#334155">proxy_set_header</text>
+<text x="590" y="436" text-anchor="middle" font-size="14" font-weight="700" fill="#7e22ce">X-WalletTracker-Access: remote</text>
+<text x="590" y="458" text-anchor="middle" font-size="12" fill="#475569">(sostituisce quello del browser)</text>
+
+<line x1="290" y1="190" x2="440" y2="230" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="360" y="198" text-anchor="middle" font-size="13" fill="#1d4ed8">127.0.0.1:8000</text>
+<line x1="290" y1="425" x2="440" y2="415" stroke="#7e22ce" stroke-width="2.5" marker-end="url(#ap)"/>
+<text x="362" y="408" text-anchor="middle" font-size="13" fill="#7e22ce">127.0.0.1:8001</text>
+
+<!-- telefono -->
+<rect x="840" y="380" width="320" height="90" rx="12" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="1000" y="412" text-anchor="middle" font-size="16" font-weight="700" fill="#7e22ce">Telefono</text>
+<text x="1000" y="436" text-anchor="middle" font-size="13" fill="#334155">https://pc-casa.&lt;rete&gt;.ts.net</text>
+<text x="1000" y="456" text-anchor="middle" font-size="12" fill="#475569">raggiunge solo Tailscale, non le porte del PC</text>
+<path d="M840,440 C700,560 300,560 230,472" fill="none" stroke="#7e22ce" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ap)"/>
+<text x="540" y="572" text-anchor="middle" font-size="13" fill="#7e22ce">rete privata cifrata (WireGuard)</text>
+
+<!-- backend -->
+<rect x="840" y="150" width="320" height="170" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="1000" y="180" text-anchor="middle" font-size="16" font-weight="700" fill="#c2410c">backend (RequestOrigin)</text>
+<text x="860" y="210" font-size="13" fill="#334155">"local" vuol dire: dal PC. Serve per</text>
+<text x="860" y="232" font-size="13" fill="#334155">• creare il PIN, o scegliere "senza PIN"</text>
+<text x="860" y="254" font-size="13" fill="#334155">• togliere il PIN</text>
+<text x="860" y="276" font-size="13" fill="#334155">• entrare senza PIN (se scelto)</text>
+<text x="860" y="302" font-size="13" font-weight="700" fill="#b91c1c">senza header = "remote" (prudenza)</text>
+<line x1="760" y1="245" x2="835" y2="235" stroke="#c2410c" stroke-width="2.5" marker-end="url(#ao)"/>
+<line x1="760" y1="415" x2="835" y2="300" stroke="#c2410c" stroke-width="2.5" marker-end="url(#ao)"/>
+</svg>

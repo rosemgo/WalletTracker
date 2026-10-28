@@ -21,6 +21,9 @@ public final class TestSession implements AutoCloseable {
     /** Il PIN dei test: inventato, solo per i test. */
     public static final String TEST_PIN = "135792";
 
+    /** L'header con cui nginx dice "dalla porta del PC" ({@link RequestOrigin}). */
+    public static final String LOCAL_HEADER = RequestOrigin.HEADER;
+
     private final String base;
     private final CookieManager cookies = new CookieManager();
     private final HttpClient client = HttpClient.newBuilder().cookieHandler(cookies).build();
@@ -34,10 +37,12 @@ public final class TestSession implements AutoCloseable {
         TestSession session = new TestSession(port);
         String status = session.send(session.request("/api/auth/status").GET()).body();
         String path = status.contains("\"pinSet\":true") ? "/api/auth/login" : "/api/auth/pin";
+        // Il PIN si crea solo "dal PC": l'header che in produzione scrive nginx (docs/46, parte C).
         HttpResponse<String> answer = session.send(session.request(path)
                 .header("Content-Type", "application/json")
+                .header(LOCAL_HEADER, "local")
                 .POST(HttpRequest.BodyPublishers.ofString("{\"pin\":\"" + TEST_PIN + "\"}")));
-        if (answer.statusCode() != 204) {
+        if (answer.statusCode() / 100 != 2) {
             throw new IllegalStateException("Sessione dei test non aperta: " + answer.statusCode() + " " + answer.body());
         }
         return session;

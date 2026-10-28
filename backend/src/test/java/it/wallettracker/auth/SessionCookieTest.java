@@ -10,6 +10,7 @@ import java.util.List;
 
 import it.wallettracker.IntegrationTestConfiguration;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -25,6 +26,37 @@ class SessionCookieTest {
 
     @LocalServerPort
     int port;
+
+    @Autowired
+    AppPinRepository repository;
+
+    /**
+     * "Senza PIN" dal PC si entra senza sessione: nessun cookie WALLETTRACKER_SESSION, quindi niente da rubare. Il test
+     * parte da "nessuna scelta" e alla fine la cancella, perché gli altri test con il server vero vogliono il PIN.
+     */
+    @Test
+    void withoutPinThePcGetsNoSessionCookie() throws Exception {
+        repository.deleteAll();
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            HttpResponse<String> status = client.send(HttpRequest.newBuilder(
+                    URI.create("http://localhost:" + port + "/api/auth/status")).build(), HttpResponse.BodyHandlers.ofString());
+            String token = cookieValue(status.headers().allValues("Set-Cookie"), "XSRF-TOKEN");
+            HttpResponse<String> choice = client.send(HttpRequest.newBuilder(
+                    URI.create("http://localhost:" + port + "/api/auth/no-pin"))
+                    .header("Cookie", "XSRF-TOKEN=" + token).header("X-XSRF-TOKEN", token)
+                    .header(TestSession.LOCAL_HEADER, "local")
+                    .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+            assertThat(choice.statusCode()).as(choice.body()).isEqualTo(204);
+
+            HttpResponse<String> accounts = client.send(HttpRequest.newBuilder(
+                    URI.create("http://localhost:" + port + "/api/accounts"))
+                    .header(TestSession.LOCAL_HEADER, "local").build(), HttpResponse.BodyHandlers.ofString());
+            assertThat(accounts.statusCode()).isEqualTo(200);
+            assertThat(accounts.headers().allValues("Set-Cookie")).noneMatch(c -> c.startsWith("WALLETTRACKER_SESSION="));
+        } finally {
+            repository.deleteAll();
+        }
+    }
 
     @Test
     void theSessionCookieIsHttpOnlyAndSameSiteStrict() throws Exception {
@@ -60,12 +92,13 @@ class SessionCookieTest {
                     .header("Content-Type", "application/json")
                     .header("Cookie", "XSRF-TOKEN=" + token)
                     .header("X-XSRF-TOKEN", token)
+                    .header(TestSession.LOCAL_HEADER, "local")
                     .POST(HttpRequest.BodyPublishers.ofString("{\"pin\":\"" + TestSession.TEST_PIN + "\"}"));
             if (forwardedProto != null) {
                 login.header("X-Forwarded-Proto", forwardedProto);
             }
             HttpResponse<String> in = client.send(login.build(), HttpResponse.BodyHandlers.ofString());
-            assertThat(in.statusCode()).as(in.body()).isEqualTo(204);
+            assertThat(in.statusCode() / 100).as(in.body()).isEqualTo(2);
             return in.headers().allValues("Set-Cookie").stream()
                     .filter(header -> header.startsWith("WALLETTRACKER_SESSION="))
                     .findFirst().orElseThrow();

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1060" viewBox="0 0 1200 1060" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="1060" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il viaggio di una richiesta dentro il backend</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">ogni filtro può lasciarla passare (freccia in giù) o rispondere subito con un errore (a destra) · semplificata: solo i filtri che contano qui</text>
+
+<!-- ingresso -->
+<rect x="250" y="90" width="420" height="56" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="460" y="114" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">GET /api/transactions</text>
+<text x="460" y="135" text-anchor="middle" font-size="13" fill="#334155">da nginx: Host, Origin, cookie, X-WalletTracker-Access</text>
+<line x1="460" y1="146" x2="460" y2="178" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<!-- Tomcat / LocalOnly -->
+<rect x="250" y="180" width="420" height="70" rx="10" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+<text x="460" y="207" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">LocalOnlyRequestFilter (il "buttafuori")</text>
+<text x="460" y="230" text-anchor="middle" font-size="13" fill="#475569">Host consentito? una modifica da un altro sito (Origin)?</text>
+<line x1="670" y1="215" x2="850" y2="215" stroke="#b91c1c" stroke-width="2" marker-end="url(#ar)"/>
+<text x="860" y="220" font-size="14" font-weight="700" fill="#b91c1c">403 "non consentito"</text>
+<line x1="460" y1="250" x2="460" y2="290" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<!-- Spring Security box -->
+<rect x="200" y="292" width="900" height="610" rx="16" fill="#fff7ed" stroke="#c2410c" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="225" y="320" font-size="17" font-weight="700" fill="#c2410c">Spring Security: la catena di filtri (SecurityConfig)</text>
+
+<rect x="250" y="340" width="420" height="70" rx="10" fill="#ffffff" stroke="#c2410c" stroke-width="2"/>
+<text x="460" y="367" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">SecurityContextHolderFilter</text>
+<text x="460" y="390" text-anchor="middle" font-size="13" fill="#475569">legge dalla sessione (il cookie) "chi è dentro"</text>
+<line x1="460" y1="410" x2="460" y2="438" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<rect x="250" y="440" width="420" height="70" rx="10" fill="#ffffff" stroke="#c2410c" stroke-width="2"/>
+<text x="460" y="467" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">CsrfFilter</text>
+<text x="460" y="490" text-anchor="middle" font-size="13" fill="#475569">POST, PUT, DELETE: header X-XSRF-TOKEN = cookie?</text>
+<line x1="670" y1="475" x2="850" y2="475" stroke="#b91c1c" stroke-width="2" marker-end="url(#ar)"/>
+<text x="860" y="480" font-size="14" font-weight="700" fill="#b91c1c">403 "ricarica la pagina"</text>
+<line x1="460" y1="510" x2="460" y2="538" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<rect x="250" y="540" width="420" height="70" rx="10" fill="#ffffff" stroke="#c2410c" stroke-width="2"/>
+<text x="460" y="567" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">AnonymousAuthenticationFilter</text>
+<text x="460" y="590" text-anchor="middle" font-size="13" fill="#475569">nessuno dentro? allora "anonimo"</text>
+<line x1="460" y1="610" x2="460" y2="638" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<rect x="250" y="640" width="420" height="40" rx="10" fill="#ffffff" stroke="#c2410c" stroke-width="2"/>
+<text x="460" y="666" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">ExceptionTranslationFilter</text>
+<line x1="460" y1="680" x2="460" y2="698" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<rect x="250" y="700" width="420" height="90" rx="10" fill="#fef9c3" stroke="#ca8a04" stroke-width="2.5"/>
+<text x="460" y="727" text-anchor="middle" font-size="16" font-weight="700" fill="#713f12">PinAccessFilter (il nostro)</text>
+<text x="460" y="750" text-anchor="middle" font-size="13" fill="#713f12">sessione di un PIN vecchio (generazione)? → la chiude</text>
+<text x="460" y="772" text-anchor="middle" font-size="13" fill="#713f12">"senza PIN" e dalla porta del PC? → dentro, solo per questa</text>
+<line x1="460" y1="790" x2="460" y2="818" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<rect x="250" y="820" width="420" height="70" rx="10" fill="#ffffff" stroke="#c2410c" stroke-width="2.5"/>
+<text x="460" y="847" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">AuthorizationFilter</text>
+<text x="460" y="870" text-anchor="middle" font-size="13" fill="#475569">/api/auth/** e /actuator/health: sempre; il resto: dentro?</text>
+<line x1="670" y1="855" x2="850" y2="855" stroke="#b91c1c" stroke-width="2" marker-end="url(#ar)"/>
+<text x="860" y="860" font-size="14" font-weight="700" fill="#b91c1c">401 "Inserisci il PIN."</text>
+<line x1="460" y1="890" x2="460" y2="938" stroke="#334155" stroke-width="2.5" marker-end="url(#ad)"/>
+
+<rect x="250" y="940" width="420" height="70" rx="10" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="460" y="967" text-anchor="middle" font-size="16" font-weight="700" fill="#15803d">DispatcherServlet → TransactionController</text>
+<text x="460" y="990" text-anchor="middle" font-size="13" fill="#334155">la richiesta arriva al nostro codice: 200 con i movimenti</text>
+</svg>

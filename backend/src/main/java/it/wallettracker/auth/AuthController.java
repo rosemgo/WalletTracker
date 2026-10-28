@@ -2,8 +2,6 @@ package it.wallettracker.auth;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,9 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -27,12 +23,15 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Le richieste del PIN (docs/46, parte C). Sono le uniche API raggiungibili senza sessione ({@link SecurityConfig}).
+ * Le richieste per entrare (docs/46, parte D). Sono le uniche API raggiungibili senza sessione ({@link SecurityConfig}).
  *
  * <ul>
- *   <li>{@code GET  /api/auth/status}: c'è il PIN? Sei dentro? Puoi crearlo da qui?</li>
- *   <li>{@code POST /api/auth/pin}: crea il PIN (solo se non c'è, e solo dal PC) ed entra;</li>
+ *   <li>{@code GET  /api/auth/status}: com'è protetta l'app, se sei dentro, se arrivi dal PC;</li>
+ *   <li>{@code POST /api/auth/no-pin}: la scelta "senza PIN", alla prima apertura (solo dal PC);</li>
+ *   <li>{@code POST /api/auth/pin}: crea il PIN (solo dal PC) ed entra; risponde con il codice di recupero;</li>
  *   <li>{@code POST /api/auth/login}: controlla il PIN ed entra;</li>
+ *   <li>{@code POST /api/auth/recover}: con il codice di recupero sceglie un PIN nuovo ed entra;</li>
+ *   <li>{@code POST /api/auth/pin/remove}: toglie il PIN (solo dal PC, con il PIN di adesso);</li>
  *   <li>{@code POST /api/auth/logout}: esce.</li>
  * </ul>
  */
@@ -40,13 +39,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    /**
-     * I nomi con cui si apre l'app dal PC stesso. Il PIN si crea solo da qui: quando l'app sarà raggiungibile dal
-     * telefono (Tailscale, passo 4) nessuno potrà "arrivare prima" a crearlo da un altro dispositivo.
-     */
-    private static final Set<String> LOCAL_NAMES = Set.of("localhost", "127.0.0.1");
-
-    /** Il nome di chi è entrato. È uno solo, sempre lo stesso: l'app è per una persona sola. */
+    /** Il nome di chi è entrato con il PIN. È uno solo, sempre lo stesso: l'app è per una persona sola. */
     private static final String OWNER = "proprietario";
 
     private final PinService pins;
@@ -58,14 +51,22 @@ public class AuthController {
     }
 
     /**
-     * @param pinSet        il PIN c'è già
-     * @param authenticated questo browser ha inserito il PIN (la sessione è aperta)
-     * @param canCreatePin  il PIN non c'è, e la richiesta arriva dal PC: la pagina può proporre di crearlo
+     * @param pinSet        il PIN c'è
+     * @param withoutPin    il proprietario ha scelto "senza PIN": si entra solo dal PC
+     * @param authenticated questa richiesta è "dentro" (sessione aperta, o senza PIN dal PC)
+     * @param local         la richiesta arriva dal PC (la porta 8000 di nginx)
      */
-    public record AuthStatus(boolean pinSet, boolean authenticated, boolean canCreatePin) {
+    public record AuthStatus(boolean pinSet, boolean withoutPin, boolean authenticated, boolean local) {
     }
 
     public record PinRequest(String pin) {
+    }
+
+    public record RecoverRequest(String code, String pin) {
+    }
+
+    /** Il codice di recupero, da mostrare una sola volta. */
+    public record RecoveryCode(String recoveryCode) {
     }
 
     /**
@@ -75,33 +76,72 @@ public class AuthController {
     @GetMapping("/status")
     public AuthStatus status(HttpServletRequest request, CsrfToken csrfToken) {
         csrfToken.getToken();
-        boolean pinSet = pins.isSet();
-        return new AuthStatus(pinSet, isAuthenticated(), !pinSet && isLocal(request));
+        PinService.Mode mode = pins.state().mode();
+        return new AuthStatus(mode == PinService.Mode.WITH_PIN, mode == PinService.Mode.WITHOUT_PIN,
+                PinAccessFilter.isAuthenticated(), RequestOrigin.isLocal(request));
+    }
+
+    @PostMapping("/no-pin")
+    public ResponseEntity<Void> withoutPin(HttpServletRequest request) {
+        requireLocal(request, "La scelta si fa solo dal PC su cui è installata l'app.");
+        pins.chooseWithoutPin();
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/pin")
-    public ResponseEntity<Void> create(@RequestBody PinRequest body, HttpServletRequest request,
-            HttpServletResponse response) {
-        if (!isLocal(request)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Il PIN si crea solo dal PC su cui è installata l'app (http://localhost).");
-        }
-        pins.create(body.pin());
-        openSession(request, response);
-        return ResponseEntity.noContent().build();
+    public RecoveryCode create(@RequestBody PinRequest body, HttpServletRequest request, HttpServletResponse response) {
+        requireLocal(request, "Il PIN si crea solo dal PC su cui è installata l'app (http://localhost:8000).");
+        PinService.Created created = pins.createPin(body.pin());
+        openSession(created.generation(), request, response);
+        return new RecoveryCode(created.recoveryCode());
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody PinRequest body, HttpServletRequest request,
             HttpServletResponse response) {
-        return switch (pins.check(body.pin())) {
+        return answer(pins.check(body.pin()), "PIN sbagliato", request, response);
+    }
+
+    /** Il PIN dimenticato. Da qualsiasi dispositivo: senza il codice non serve a niente, e conta come un errore. */
+    @PostMapping("/recover")
+    public ResponseEntity<?> recover(@RequestBody RecoverRequest body, HttpServletRequest request,
+            HttpServletResponse response) {
+        return answer(pins.recover(body.code(), body.pin()), "Codice di recupero sbagliato", request, response);
+    }
+
+    /** Toglie il PIN. Solo dal PC: dal telefono, senza PIN, non si entrerebbe più. */
+    @PostMapping("/pin/remove")
+    public ResponseEntity<?> remove(@RequestBody PinRequest body, HttpServletRequest request) {
+        requireLocal(request, "Il PIN si toglie solo dal PC su cui è installata l'app.");
+        PinService.Attempt attempt = pins.removePin(body.pin());
+        if (attempt instanceof PinService.Attempt.Correct) {
+            closeSession(request); // dal PC si entra ora senza PIN; le altre sessioni le chiude la generazione
+            return ResponseEntity.noContent().build();
+        }
+        return answer(attempt, "PIN sbagliato", request, null);
+    }
+
+    /** Esce: la sessione si chiude, e il cookie che la indicava non vale più niente. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        closeSession(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** La risposta a un tentativo: 200/204 dentro, 401 sbagliato (quanti ne restano), 429 in pausa (quanto manca). */
+    private ResponseEntity<?> answer(PinService.Attempt attempt, String wrongMessage, HttpServletRequest request,
+            HttpServletResponse response) {
+        return switch (attempt) {
             case PinService.Attempt.Correct correct -> {
-                openSession(request, response);
-                yield ResponseEntity.noContent().build();
+                if (response != null) {
+                    openSession(correct.generation(), request, response);
+                }
+                yield correct.recoveryCode() == null ? ResponseEntity.noContent().build()
+                        : ResponseEntity.ok(new RecoveryCode(correct.recoveryCode()));
             }
             case PinService.Attempt.Wrong wrong -> {
                 ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,
-                        "PIN sbagliato. " + (wrong.attemptsLeft() == 1 ? "Ancora 1 tentativo"
+                        wrongMessage + ". " + (wrong.attemptsLeft() == 1 ? "Ancora 1 tentativo"
                                 : "Ancora " + wrong.attemptsLeft() + " tentativi") + " prima di una pausa.");
                 problem.setProperty("attemptsLeft", wrong.attemptsLeft());
                 yield ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem);
@@ -109,7 +149,7 @@ public class AuthController {
             case PinService.Attempt.Locked locked -> {
                 long seconds = Math.max(1, locked.retryAfter().toSeconds());
                 ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
-                        "Troppi PIN sbagliati: riprova tra " + readable(locked.retryAfter()) + ".");
+                        "Troppi tentativi sbagliati: riprova tra " + readable(locked.retryAfter()) + ".");
                 problem.setProperty("retryAfterSeconds", seconds);
                 yield ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                         .header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds))
@@ -118,25 +158,15 @@ public class AuthController {
         };
     }
 
-    /** Esce: la sessione si chiude, e il cookie che la indicava non vale più niente. */
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
-        SecurityContextHolder.clearContext();
-        return ResponseEntity.noContent().build();
-    }
-
     /**
      * Apre la sessione: da qui in poi le richieste con il cookie di questo browser sono "dentro".
      *
      * <p>Se il browser aveva già una sessione, prima le si cambia il numero ({@code changeSessionId}). È la difesa
      * dalla <i>session fixation</i>: un attaccante che fosse riuscito a far usare al tuo browser una sessione scelta da
-     * lui non se la ritroverebbe aperta dopo il tuo PIN.
+     * lui non se la ritroverebbe aperta dopo il tuo PIN. Nella sessione si scrive anche la generazione del PIN
+     * ({@link PinAccessFilter}): se il PIN cambia, questa sessione si chiude.
      */
-    private void openSession(HttpServletRequest request, HttpServletResponse response) {
+    private void openSession(int generation, HttpServletRequest request, HttpServletResponse response) {
         if (request.getSession(false) != null) {
             request.changeSessionId();
         }
@@ -144,17 +174,21 @@ public class AuthController {
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of()));
         SecurityContextHolder.setContext(context);
         contextRepository.saveContext(context, request, response);
+        request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);
     }
 
-    private static boolean isAuthenticated() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken);
+    private static void closeSession(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
     }
 
-    /** La richiesta arriva dal PC stesso? (Il nome è quello che ha usato il browser: nginx lo passa così com'è.) */
-    private static boolean isLocal(HttpServletRequest request) {
-        return LOCAL_NAMES.contains(request.getServerName().toLowerCase(Locale.ROOT));
+    private static void requireLocal(HttpServletRequest request, String message) {
+        if (!RequestOrigin.isLocal(request)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, message);
+        }
     }
 
     /** "45 secondi", "1 minuto", "15 minuti", "1 ora". */

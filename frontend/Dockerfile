@@ -21,11 +21,13 @@ RUN NG_CLI_ANALYTICS=false npx ng build
 
 # --- 2. L'immagine che gira ---------------------------------------------------------------------------------
 # nginx-unprivileged è nginx ufficiale, già pronto per girare senza root: ascolta sulla porta 8080 (le porte sotto
-# la 1024 le può aprire solo root) e scrive i suoi file temporanei in /tmp.
+# la 1024 le può aprire solo root) e scrive i suoi file temporanei in /tmp. Le porte sono due: 8080 per il PC, 8081
+# per Tailscale (nginx/default.conf).
 FROM nginxinc/nginx-unprivileged:1.29-alpine
 
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY nginx/wallettracker.conf /etc/nginx/snippets/wallettracker.conf
 COPY nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /src/dist/frontend/browser /usr/share/nginx/html
 
-EXPOSE 8080
+EXPOSE 8080 8081

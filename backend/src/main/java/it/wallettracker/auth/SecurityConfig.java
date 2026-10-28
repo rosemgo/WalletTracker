@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
@@ -25,7 +26,8 @@ import org.springframework.security.web.context.SecurityContextRepository;
  * {@code LocalOnlyRequestFilter}. Qui diciamo che cosa deve fare:
  * <ul>
  *   <li><b>chi può entrare</b>: le richieste del PIN ({@code /api/auth/...}) e il controllo di salute di Docker
- *       sempre; tutto il resto solo con una sessione aperta. Senza: 401;</li>
+ *       sempre; tutto il resto solo "dentro": con una sessione aperta dal PIN, o senza PIN dal PC se il proprietario
+ *       l'ha scelto ({@link PinAccessFilter}). Altrimenti: 401;</li>
  *   <li><b>la sessione</b>: dopo il PIN giusto, il backend ricorda "questo browser ha inserito il PIN" in una
  *       sessione, riconosciuta da un cookie (le regole del cookie sono in application.yml, {@code server.servlet.session});</li>
  *   <li><b>CSRF</b>: ogni richiesta che modifica qualcosa deve portare un "gettone" che solo le nostre pagine possono
@@ -38,8 +40,8 @@ import org.springframework.security.web.context.SecurityContextRepository;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository,
+            PinService pins) throws Exception {
         http
                 .authorizeHttpRequests(requests -> requests
                         // Le pagine di errore interne di Spring (una richiesta già controllata che finisce in errore):
@@ -53,6 +55,9 @@ public class SecurityConfig {
                 // header (X-XSRF-TOKEN). Angular lo fa da solo.
                 .csrf(csrf -> csrf.spa())
                 .securityContext(context -> context.securityContextRepository(contextRepository))
+                // Il nostro filtro (le sessioni di un PIN vecchio non valgono; "senza PIN" dal PC si entra), subito
+                // prima di AuthorizationFilter, l'ultimo della catena, quello che decide "dentro o 401".
+                .addFilterBefore(new PinAccessFilter(pins), AuthorizationFilter.class)
                 // Spring offre una pagina di login, il login "Basic" del browser e un suo /logout: non li usiamo.
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
