@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 
 import { AuthStatus } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -17,30 +17,31 @@ export const SESSION_SEEN_FOR_MS = 12 * 60 * 60 * 1000;
 /**
  * Che cosa mostrare:
  * - `checking`: si sta chiedendo al backend (all'apertura);
- * - `create`: il PIN non c'è ancora, e l'app è aperta dal PC: si crea;
- * - `create-elsewhere`: il PIN non c'è ancora, ma l'app è aperta da un altro dispositivo: si crea dal PC;
+ * - `choose`: la prima apertura, dal PC: con un PIN o senza;
+ * - `elsewhere`: non c'è un PIN e l'app è aperta da un altro dispositivo: da qui non si entra (si crea dal PC);
  * - `login`: il PIN c'è, e questo browser non l'ha ancora inserito (o la sessione è scaduta);
  * - `unreachable`: il backend non risponde, e non c'è una sessione recente;
  * - `inside`: si usa l'app.
  */
-export type AuthState =
-  'checking' | 'create' | 'create-elsewhere' | 'login' | 'unreachable' | 'inside';
+export type AuthState = 'checking' | 'choose' | 'elsewhere' | 'login' | 'unreachable' | 'inside';
 
 /**
- * Lo stato del PIN, condiviso da tutta l'app (Fase 4, passo 3: docs/46, parte E).
+ * Come si entra, condiviso da tutta l'app (Fase 4, passo 3: docs/46, parte F).
  *
  * **Senza rete** (il PC spento, il telefono fuori copertura) il backend non può dire se la sessione è aperta. Allora
  * decidiamo così: se il backend ha confermato "sei dentro" nelle ultime 12 ore, l'app si apre con la copia dei dati
  * che il service worker tiene sul dispositivo (docs/42). Altrimenti chiede di collegarsi.
  *
  * **La copia dei dati** sul dispositivo si cancella quando si esce, quando la sessione scade e quando il backend
- * risponde "serve il PIN": così senza PIN non resta niente da vedere.
+ * risponde "non sei dentro": così senza PIN non resta niente da vedere.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(WalletApi);
 
   readonly state = signal<AuthState>('checking');
+  /** L'ultimo stato detto dal backend (null finché non risponde): c'è il PIN? Siamo sul PC? */
+  readonly status = signal<AuthStatus | null>(null);
 
   /** Chiede lo stato al backend e decide che cosa mostrare. */
   refresh(): void {
@@ -50,49 +51,99 @@ export class AuthStore {
     });
   }
 
-  /** Crea il PIN ed entra. Gli errori (400, 403, 409) li mostra la pagina del PIN. */
-  create(pin: string): Observable<void> {
-    return this.api.createPin(pin).pipe(tap(() => this.enter()));
+  /** La prima apertura dal PC: "senza PIN". Poi si entra subito. */
+  chooseWithoutPin(): Observable<void> {
+    return this.api.chooseWithoutPin().pipe(tap(() => this.refresh()));
   }
 
-  /** Inserisce il PIN ed entra. Gli errori (401 sbagliato, 429 bloccato) li mostra la pagina del PIN. */
+  /**
+   * Crea il PIN (alla prima apertura, o da Impostazioni per chi era senza) e restituisce il codice di recupero. Non
+   * fa ancora entrare: prima la pagina mostra il codice, e chiama {@link enter} quando l'hai salvato.
+   */
+  create(pin: string): Observable<string> {
+    return this.api.createPin(pin).pipe(
+      tap(() => this.update({ pinSet: true, withoutPin: false, authenticated: true })),
+      map((answer) => answer.recoveryCode),
+    );
+  }
+
+  /** Inserisce il PIN ed entra. Gli errori (401 sbagliato, 429 in pausa) li mostra la pagina del PIN. */
   login(pin: string): Observable<void> {
-    return this.api.login(pin).pipe(tap(() => this.enter()));
+    return this.api.login(pin).pipe(
+      tap(() => {
+        this.update({ authenticated: true });
+        this.enter();
+      }),
+    );
+  }
+
+  /** Il PIN dimenticato: codice di recupero e PIN nuovo. Restituisce il codice nuovo (poi {@link enter}). */
+  recover(code: string, pin: string): Observable<string> {
+    return this.api.recover(code, pin).pipe(
+      tap(() => this.update({ authenticated: true })),
+      map((answer) => answer.recoveryCode),
+    );
+  }
+
+  /** Toglie il PIN (da Impostazioni, sul PC): da qui in poi dal PC si entra senza. */
+  removePin(pin: string): Observable<void> {
+    return this.api.removePin(pin).pipe(tap(() => this.refresh()));
   }
 
   /** Esce: chiude la sessione nel backend e cancella dal dispositivo la copia dei dati. */
   logout(): void {
     const done = () => {
       void forget();
+      this.update({ authenticated: false });
       this.state.set('login');
     };
     this.api.logout().subscribe({ next: done, error: done });
   }
 
-  /** Il backend ha risposto 401 a una richiesta qualsiasi: la sessione è scaduta (o il backend è ripartito). */
+  /** Il backend ha risposto 401 a una richiesta qualsiasi: la sessione è scaduta, o il PIN è cambiato altrove. */
   sessionLost(): void {
     if (this.state() === 'inside') {
       void forget();
-      this.state.set('login');
+      this.refresh(); // che cosa mostrare lo dice il backend: il PIN, o "da qui non si entra"
     }
   }
 
-  private apply(status: AuthStatus): void {
-    if (status.authenticated) {
-      this.enter();
-    } else {
-      void forget();
-      this.state.set(status.pinSet ? 'login' : status.canCreatePin ? 'create' : 'create-elsewhere');
-    }
-  }
-
-  private enter(): void {
+  /** Si entra nell'app (dopo il PIN, o dopo aver salvato il codice di recupero). */
+  enter(): void {
     try {
       localStorage.setItem(SESSION_SEEN_KEY, String(Date.now()));
     } catch {
       // Non ricordata: senza rete l'app chiederà di collegarsi.
     }
     this.state.set('inside');
+  }
+
+  private apply(status: AuthStatus): void {
+    this.status.set(status);
+    if (status.authenticated) {
+      this.enter();
+      return;
+    }
+    void forget();
+    if (status.pinSet) {
+      this.state.set('login');
+    } else if (status.local && !status.withoutPin) {
+      this.state.set('choose');
+    } else {
+      // Nessun PIN, e da qui non si può scegliere né entrare: o si è su un altro dispositivo, o (caso raro) sul PC
+      // senza PIN ma da una porta non sua.
+      this.state.set('elsewhere');
+    }
+  }
+
+  private update(change: Partial<AuthStatus>): void {
+    const current = this.status() ?? {
+      pinSet: false,
+      withoutPin: false,
+      authenticated: false,
+      local: false,
+    };
+    this.status.set({ ...current, ...change });
   }
 }
 

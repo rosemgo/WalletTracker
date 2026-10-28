@@ -5,7 +5,7 @@
 #   ./installa.sh                        primo avvio, e tutte le volte dopo: prepara ciò che manca e avvia
 #   ./installa.sh --ia                   come sopra, con anche Ollama (l'IA locale)
 #   ./installa.sh --cambia-password-db   genera una password nuova per il database e la mette dove serve
-#   ./installa.sh --reimposta-pin        PIN dimenticato: lo cancella, e l'app chiede di crearne uno nuovo (dal PC)
+#   ./installa.sh --reimposta-pin        PIN e codice di recupero persi: li cancella, e dal PC si sceglie di nuovo
 #   ./installa.sh --senza-browser        non apre il browser alla fine (per la CI)
 #
 # Si può rilanciare quante volte si vuole: quello che c'è già (il .env, la chiave, i dati) non viene toccato.
@@ -169,8 +169,8 @@ if [ "$CAMBIA_PASSWORD" = true ]; then
 fi
 
 # --- 4b. Azzerare il PIN (solo con --reimposta-pin) -------------------------------------------------------
-# Il PIN dimenticato non si recupera (nel database c'è solo il suo hash, docs/46): si cancella, e alla prossima
-# apertura dal PC l'app chiede di crearne uno nuovo. Si fa solo da qui, dal PC: chi non ha il PC non può farlo.
+# Il PIN dimenticato, e perso anche il codice di recupero: il PIN non si legge (nel database c'è solo il suo hash,
+# docs/46), si cancella. Alla prossima apertura dal PC l'app chiede di nuovo: con un PIN o senza. Si fa solo da qui, dal PC: chi non ha il PC non può farlo.
 if [ "$REIMPOSTA_PIN" = true ]; then
   passo "Azzero il PIN"
   utente=$(valore_env POSTGRES_USER)
@@ -179,7 +179,7 @@ if [ "$REIMPOSTA_PIN" = true ]; then
   aspetta_salute db 60
   docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U "$utente" -d "$database" -c "DELETE FROM app_pin" ||
     errore "Non sono riuscito ad azzerare il PIN (l'app è già stata avviata almeno una volta?)."
-  echo "PIN azzerato. Apri l'app da questo PC (http://localhost) per crearne uno nuovo."
+  echo "PIN azzerato. Apri l'app da questo PC (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza."
 fi
 
 # --- 5. Avvio ----------------------------------------------------------------------------------------------

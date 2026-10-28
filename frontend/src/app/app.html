@@ -53,7 +53,9 @@
         <span class="switch" aria-hidden="true"></span>
       </button>
       <!-- Esci: chiude la sessione, e l'app chiederà di nuovo il PIN (sul telefono è nella pagina "Altro"). -->
-      <button type="button" class="nav-logout" (click)="auth.logout()">Esci</button>
+      @if (auth.status()?.pinSet) {
+        <button type="button" class="nav-logout" (click)="auth.logout()">Esci</button>
+      }
     </nav>
 
     <div class="page">

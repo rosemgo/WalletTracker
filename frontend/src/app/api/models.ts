@@ -261,11 +261,17 @@ export interface RulePreview {
 }
 
 /** Lo stato della configurazione di Enable Banking (GET /api/setup). */
-/** GET /api/auth/status (Fase 4, passo 3: docs/46): il PIN c'è? Sei dentro? Da qui si può creare? */
+/** GET /api/auth/status (Fase 4, passo 3: docs/46): com'è protetta l'app, sei dentro, arrivi dal PC? */
 export interface AuthStatus {
-  pinSet: boolean;
-  authenticated: boolean;
-  canCreatePin: boolean; // il PIN non c'è ancora, e l'app è aperta dal PC (localhost)
+  pinSet: boolean; // il PIN c'è: si chiede su ogni dispositivo
+  withoutPin: boolean; // il proprietario ha scelto "senza PIN": si entra solo dal PC
+  authenticated: boolean; // questa richiesta è "dentro"
+  local: boolean; // l'app è aperta dal PC (la porta 8000 di nginx)
+}
+
+/** Il codice di recupero, mostrato una sola volta (alla creazione del PIN, e dopo un recupero). */
+export interface RecoveryCode {
+  recoveryCode: string;
 }
 
 export interface SetupStatus {

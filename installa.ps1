@@ -162,8 +162,8 @@ if ($CambiaPasswordDb) {
 }
 
 # --- 4b. Azzerare il PIN (solo con -ReimpostaPin) ---------------------------------------------------------
-# Il PIN dimenticato non si recupera (nel database c'è solo il suo hash, docs/46): si cancella, e alla prossima
-# apertura dal PC l'app chiede di crearne uno nuovo. Si fa solo da qui, dal PC.
+# Il PIN dimenticato, e perso anche il codice di recupero: il PIN non si legge (nel database c'è solo il suo hash,
+# docs/46), si cancella. Alla prossima apertura dal PC l'app chiede di nuovo: con un PIN o senza. Si fa solo da qui, dal PC.
 if ($ReimpostaPin) {
     Passo 'Azzero il PIN'
     $utente = Valore-Env 'POSTGRES_USER'
@@ -172,7 +172,7 @@ if ($ReimpostaPin) {
     Aspetta-Salute 'db' 60
     & docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U $utente -d $database -c 'DELETE FROM app_pin'
     if ($LASTEXITCODE -ne 0) { Errore 'Non sono riuscito ad azzerare il PIN (l''app è già stata avviata almeno una volta?).' }
-    Write-Host 'PIN azzerato. Apri l''app da questo PC (http://localhost) per crearne uno nuovo.'
+    Write-Host 'PIN azzerato. Apri l''app da questo PC (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza.'
 }
 
 # --- 5. Avvio ----------------------------------------------------------------------------------------------

@@ -14,7 +14,7 @@ class AppPinTest {
 
     @Test
     void fiveWrongPinsAreFreeThenTheWaitGrowsUpToAnHour() {
-        AppPin pin = new AppPin("{bcrypt}hash-finto", NOW);
+        AppPin pin = AppPin.withPin("{bcrypt}hash-finto", "{bcrypt}codice-finto", NOW);
 
         for (int i = 1; i <= 4; i++) {
             pin.failed(NOW);
@@ -33,7 +33,7 @@ class AppPinTest {
 
     @Test
     void theLockEndsByItselfAndTheRightPinStartsTheCountAgain() {
-        AppPin pin = new AppPin("{bcrypt}hash-finto", NOW);
+        AppPin pin = AppPin.withPin("{bcrypt}hash-finto", "{bcrypt}codice-finto", NOW);
         for (int i = 0; i < 5; i++) {
             pin.failed(NOW);
         }
@@ -45,5 +45,22 @@ class AppPinTest {
         assertThat(pin.failedAttempts()).isZero();
         assertThat(pin.attemptsBeforeLock()).isEqualTo(5);
         assertThat(pin.lockedFor(NOW.plusSeconds(61))).isZero();
+    }
+
+    @Test
+    void changingOrRemovingThePinStartsANewGenerationAndForgetsTheErrors() {
+        AppPin pin = AppPin.withPin("{bcrypt}hash-finto", "{bcrypt}codice-finto", NOW);
+        assertThat(pin.generation()).isEqualTo(1);
+        pin.failed(NOW);
+        pin.failed(NOW);
+
+        pin.changePin("{bcrypt}nuovo", "{bcrypt}codice-nuovo", NOW);
+        assertThat(pin.generation()).isEqualTo(2);
+        assertThat(pin.failedAttempts()).isZero();
+
+        pin.removePin(NOW);
+        assertThat(pin.generation()).isEqualTo(3);
+        assertThat(pin.isWithoutPin()).isTrue();
+        assertThat(pin.recoveryHash()).isNull();
     }
 }

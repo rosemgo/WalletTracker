@@ -114,16 +114,31 @@ jobs:
 
       # -f: curl fallisce se la risposta è un errore (4xx, 5xx). Dal passo 3 (docs/46) le API vogliono il PIN: senza,
       # 401. Poi facciamo quello che fa la dashboard: lo stato (che dà il cookie XSRF-TOKEN), il PIN creato dal PC
-      # con il gettone CSRF, e le API con la sessione aperta (i cookie restano nel file "biscotti").
+      # con il gettone CSRF, e le API con la sessione aperta (i cookie restano nel file "biscotti"). La porta 8001 è
+      # quella "da un altro dispositivo": lì nginx scrive "remote", anche se chi chiama prova a scrivere "local".
       - name: Controlla che l'app risponda, e che senza PIN le API siano chiuse
         run: |
           curl -fsS http://localhost:8000/ | grep -q '<app-root>'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/accounts)" = 401
-          curl -fsS -c biscotti -b biscotti http://localhost:8000/api/auth/status | grep -q '"canCreatePin":true'
+          curl -fsS http://localhost:8001/api/auth/status | grep -q '"local":false'
+          curl -fsS -H 'X-WalletTracker-Access: local' http://localhost:8001/api/auth/status | grep -q '"local":false'
+          curl -fsS -c biscotti -b biscotti http://localhost:8000/api/auth/status | grep -q '"local":true'
           gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' biscotti)
           curl -fsS -c biscotti -b biscotti -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
-            -d '{"pin":"135792"}' http://localhost:8000/api/auth/pin
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/pin > risposta.json
+          grep -oE '"recoveryCode":"[A-Z0-9-]{19}"' risposta.json | cut -d'"' -f4 > codice
           curl -fsS -b biscotti http://localhost:8000/api/accounts
+
+      # Il PIN dimenticato, "dal telefono" (porta 8001): con il codice di recupero si sceglie un PIN nuovo, si entra,
+      # e la sessione aperta prima (biscotti) non vale più.
+      - name: Recupera il PIN con il codice, da un altro dispositivo
+        run: |
+          curl -fsS -c telefono -b telefono http://localhost:8001/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' telefono)
+          curl -fsS -c telefono -b telefono -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d "{\"code\":\"$(cat codice)\",\"pin\":\"246810\"}" http://localhost:8001/api/auth/recover | grep -q recoveryCode
+          curl -fsS -b telefono http://localhost:8001/api/accounts
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b biscotti http://localhost:8000/api/accounts)" = 401
 
       - name: Cambia la password del database e ricontrolla
         run: |
@@ -134,8 +149,8 @@ jobs:
       - name: Azzera il PIN
         run: |
           ./installa.sh --reimposta-pin --senza-browser
-          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false'
-          test "$(curl -s -o /dev/null -w '%{http_code}' -b biscotti http://localhost:8000/api/accounts)" = 401
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false,"withoutPin":false'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b telefono http://localhost:8001/api/accounts)" = 401
 
       # nginx -t controlla la configurazione senza riavviare il server.
       - name: Controlla la configurazione di nginx

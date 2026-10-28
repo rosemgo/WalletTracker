@@ -2,7 +2,7 @@
 #
 #   db       PostgreSQL, i dati in un volume
 #   backend  Spring Boot (backend/Dockerfile)
-#   web      nginx con la dashboard (frontend/Dockerfile): l'UNICO con una porta aperta, solo su questo PC
+#   web      nginx con la dashboard (frontend/Dockerfile): l'UNICO con porte aperte, solo su questo PC
 #   ollama   l'IA locale, FACOLTATIVA: parte solo con --profile ia
 #
 #   telefono/PC ──▶ web (nginx) ──/api/──▶ backend ──▶ db
@@ -134,6 +134,10 @@ services:
       # si arriva con Tailscale (passo 4), che parla con nginx da qui, dal PC stesso.
       # L'app: http://localhost:8000 (WEB_PORT nel .env per cambiarla).
       - "127.0.0.1:${WEB_PORT:-8000}:8080"
+      # La stessa app, sulla porta che userà Tailscale (passo 4) per i dispositivi della tua rete: nginx la segna come
+      # "da un altro dispositivo" (docs/46, parte C), quindi lì serve sempre il PIN. Anche questa solo su 127.0.0.1:
+      # la raggiunge Tailscale, che gira sul PC, e non la rete di casa.
+      - "127.0.0.1:${REMOTE_PORT:-8001}:8081"
     read_only: true
     tmpfs:
       # nginx-unprivileged scrive qui i file temporanei e il file con il suo numero di processo.

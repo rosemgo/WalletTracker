@@ -13,7 +13,8 @@ describe('App', () => {
   beforeEach(() => {
     const fakeApi: Partial<WalletApi> = {
       // Il PIN è già stato inserito: si vede l'app (la pagina del PIN ha i suoi test, pin-page.spec.ts).
-      authStatus: () => of<AuthStatus>({ pinSet: true, authenticated, canCreatePin: false }),
+      authStatus: () =>
+        of<AuthStatus>({ pinSet: true, withoutPin: false, authenticated, local: true }),
       setupStatus: () =>
         of<SetupStatus>({
           configured,

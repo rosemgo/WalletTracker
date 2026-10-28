@@ -26,8 +26,11 @@ import { MORE_PAGES } from './more-pages';
         </li>
       }
     </ul>
-    <!-- Esci: chiude la sessione, e l'app chiederà di nuovo il PIN (docs/46). Sul PC è in fondo alla colonna. -->
-    <button type="button" class="logout" (click)="auth.logout()">Esci</button>
+    <!-- Esci: chiude la sessione, e l'app chiederà di nuovo il PIN (docs/46). Solo con il PIN: senza, dal PC si
+         rientrerebbe subito. Sul PC è in fondo alla colonna. -->
+    @if (auth.status()?.pinSet) {
+      <button type="button" class="logout" (click)="auth.logout()">Esci</button>
+    }
   `,
 })
 export class MorePage {

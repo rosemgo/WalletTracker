@@ -1,82 +1,108 @@
-# 46. Fase 4, passo 3: il PIN per aprire l'app
+# 46. Fase 4, passo 3: entrare nell'app (PIN facoltativo, codice di recupero) e la sicurezza con Spring Security
 
-**Obiettivo di questo passo:** prima di rendere l'app raggiungibile dal telefono (passo 4, Tailscale), serve una
-porta chiusa a chiave. Da qui in poi l'app si apre solo con un **PIN**:
-- il PIN si crea la prima volta **dal PC**;
-- su ogni dispositivo si inserisce una volta, e vale finché lo si usa: dopo **12 ore** senza usarlo, o dopo un
-  riavvio del backend, lo richiede;
-- dopo **5 PIN sbagliati** di fila, le prove si fermano per un po';
-- se lo dimentichi, si azzera **solo dal PC**, con lo script di installazione.
+**Obiettivo di questo passo:** prima di rendere l'app raggiungibile dal telefono (passo 4, Tailscale), decidere
+**chi può entrare, e da dove**.
+- Alla prima apertura, **dal PC**, scegli: **con un PIN** o **senza PIN**.
+- **Senza PIN** si entra subito, ma **solo dal PC**. Da un altro dispositivo (il telefono) non si entra finché non
+  crei un PIN.
+- **Con il PIN**, l'app lo chiede su ogni dispositivo, PC compreso. Vale 12 ore: dopo 12 ore senza usare l'app, o
+  dopo un riavvio del backend, lo richiede.
+- Dopo **5 errori** di fila, le prove si fermano per un po'.
+- Se dimentichi il PIN, c'è il **codice di recupero**, mostrato una volta sola quando crei il PIN. Se perdi anche
+  quello, lo **script** di installazione azzera tutto, ma solo dal PC.
+
+È anche il passo in cui si studia la sicurezza di un'applicazione web Java: questa guida spiega **Spring Security
+dalle basi**, con i pezzi di WalletTracker come esempi.
 
 | Passo | Che cosa | Stato |
 |---|---|---|
 | 1 | tre container + Ollama facoltativo, nginx (`docs/44`) | fatto |
 | 2 | lo script di installazione, la password del database (`docs/45`) | fatto |
-| **3** | **il PIN per aprire l'app** | **questa guida** |
+| **3** | **entrare nell'app: PIN facoltativo, codice di recupero** | **questa guida** |
 | 4 | Tailscale: l'app dal telefono con https vero, redirect di Enable Banking | da fare |
 | 5 | backup e ripristino, provato davvero | da fare |
 | 6 | aggiornamenti, la guida per chi non è informatico, il doppio clic | da fare |
 
-> Prerequisiti: i passi 1 e 2 e `git pull`. Al primo avvio Flyway applica la migrazione **V29**. Poi lancia lo
-> script come sempre (`docs/45`): le immagini si ricostruiscono da sole.
+> Prerequisiti: i passi 1 e 2 e `git pull`. Al primo avvio Flyway applica le migrazioni **V29** e **V30**. Poi
+> lancia lo script come sempre (`docs/45`): le immagini si ricostruiscono da sole.
 
 **Le scelte fatte insieme:**
 
 | Domanda | Scelta |
 |---|---|
+| il PIN è obbligatorio? | no: **facoltativo, ma solo dal PC**. Dal telefono serve sempre |
 | quanto è lungo il PIN | da 6 a 10 cifre |
 | ogni quanto lo richiede | dopo 12 ore senza usare l'app (e dopo un riavvio del backend) |
+| se lo dimentico | il **codice di recupero**; niente email |
 | la copia dei dati sul telefono | solo a sessione aperta: si cancella quando si esce o la sessione scade |
-| come si crea la prima volta | nell'app, solo dal PC |
 
 **Indice**
-- Parte A: come funziona un login con PIN
-- Parte B: Spring Security e la sessione
-- Parte C: il PIN nel backend
-- Parte D: CSRF, il gettone
-- Parte E: il frontend
-- Parte F: la copia dei dati sul telefono
-- Parte G: il PIN dimenticato
-- Parte H: i test
-- Parte I: la sicurezza di questo passo
-- Parte J: prova
-- Parte K: verifiche fatte e difetti trovati
-- Parte L: problemi comuni
+- Parte A: le idee di base (autenticazione, autorizzazione, da chi ci difendiamo)
+- Parte B: Spring Security dalle basi
+- Parte C: "dal PC" o "da un altro dispositivo": le due porte
+- Parte D: le tre situazioni e le API
+- Parte E: PIN, hash e codice di recupero
+- Parte F: il blocco dopo gli errori
+- Parte G: la sessione e il suo cookie
+- Parte H: CSRF, il gettone
+- Parte I: il frontend
+- Parte J: la copia dei dati sul telefono
+- Parte K: il PIN dimenticato
+- Parte L: i test
+- Parte M: verifiche fatte e difetti trovati
+- Parte N: la sicurezza di questo passo, e i limiti
+- Parte O: prova
+- Parte P: problemi comuni
 - Esercizi guidati
 
 ---
 
-## Parte A: come funziona un login con PIN
+## Parte A: le idee di base
 
-![Il PIN e la sessione, passo per passo](img/pin-sessione.svg)
+### A1. Autenticazione e autorizzazione
 
-1. **La dashboard chiede lo stato** (`GET /api/auth/status`): c'è un PIN? Questo browser è già dentro?
-2. Non è dentro: Angular mostra **"Inserisci il PIN"** al posto dell'app.
-3. **Il PIN parte verso il backend** (`POST /api/auth/login`). Il backend lo controlla e, se è giusto, apre una
-   **sessione**: si ricorda "questo browser ha inserito il PIN" e gli dà un **cookie** con il numero della sessione.
-4. Da qui in poi il browser **aggiunge da solo il cookie** a ogni richiesta, e il backend riconosce la sessione.
-5. Dopo 12 ore senza richieste (o a un riavvio) la sessione si chiude. La richiesta successiva riceve **401**, e
-   l'app torna alla pagina del PIN.
+Due parole che si confondono, e che Spring Security tiene ben separate:
 
-Tre idee da avere chiare:
+| | Domanda | Da noi |
+|---|---|---|
+| **autenticazione** (*authentication*) | **chi sei?** | hai inserito il PIN giusto? (o: sei sul PC e hai scelto "senza PIN"?) |
+| **autorizzazione** (*authorization*) | **che cosa puoi fare?** | le API dei movimenti solo a chi è "dentro"; creare o togliere il PIN solo dal PC |
 
-- **Il PIN non si salva mai.** Si salva il suo **hash**: il risultato di un calcolo che non si può fare al
-  contrario. Per controllare un PIN, il backend rifà il calcolo sul PIN scritto e confronta i risultati. Chi
-  rubasse il database troverebbe `{bcrypt}$2a$12$...`, non `135792`.
-- **La sessione è come il braccialetto di un concerto.** All'ingresso mostri il biglietto (il PIN) una volta, e ti
-  danno un braccialetto (il cookie). Poi ti basta il braccialetto. Il braccialetto scade (12 ore), e si può tagliare
-  (Esci).
-- **Una persona sola.** L'app è per una persona sola (`docs/03`), quindi c'è un PIN solo, niente nomi utente.
+Negli errori HTTP si vedono così:
+- **401 Unauthorized** vuol dire, nonostante il nome, "**non so chi sei**": manca l'autenticazione. Da noi:
+  "Inserisci il PIN.";
+- **403 Forbidden** vuol dire "**so chi sei** (o non importa), **ma questo no**". Da noi: una modifica senza
+  gettone CSRF, o creare il PIN da un altro dispositivo.
+
+### A2. Da chi ci difendiamo (il modello di minaccia)
+
+La sicurezza comincia dalla domanda "contro chi?". Per WalletTracker, dopo questo passo e il prossimo:
+
+| Chi | Da dove arriva | Che cosa lo ferma |
+|---|---|---|
+| un sito malevolo aperto nel tuo browser | il tuo browser stesso | il buttafuori (`Host`, `Origin`), il gettone CSRF, `SameSite` (parte H) |
+| chi trova il tuo telefono sbloccato | il telefono, via Tailscale | il PIN, la sessione che scade, il recupero che lo chiude fuori (parte G6) |
+| un dispositivo della tua rete Tailscale (un vecchio tablet, un PC infetto) | la rete Tailscale | il PIN; la porta "remota" che non può fingersi il PC (parte C) |
+| chi ruba il database (un backup copiato) | — | gli hash bcrypt di PIN e codice (parte E), la cifratura dei segreti (`docs/17`) |
+| chi è seduto davanti al tuo PC sbloccato | il PC | la password del tuo account di Windows, il blocco dello schermo, BitLocker. **Non il PIN** |
+
+L'ultima riga è il motivo della scelta "senza PIN dal PC": chi è già dentro il PC può leggere il database
+direttamente, quindi lì il PIN protegge poco, ed è giusto lasciarlo facoltativo. Dalla rete invece il PIN è la porta.
+
+### A3. La difesa in profondità
+
+Nessuna protezione è perfetta: ognuna ha casi limite (un browser vecchio, una configurazione sbagliata, un errore nel
+codice). Per questo se ne mettono diverse, una sopra l'altra, in modo che se una cede ci sia ancora l'altra. In
+questa guida lo vedrai più volte: per esempio contro CSRF ci sono tre difese (parte H), e contro chi prova i PIN ci
+sono l'hash lento e le pause.
 
 ---
 
-## Parte B: Spring Security e la sessione
+## Parte B: Spring Security dalle basi
 
-### B1. Che cos'è Spring Security
+### B1. Che cos'è
 
-È la libreria standard di Spring per la sicurezza. Lavora come il nostro "buttafuori" `LocalOnlyRequestFilter`
-(`docs/17`): una **catena di filtri** che guarda ogni richiesta **prima** dei controller. Si aggiunge al progetto con
-una dipendenza:
+È la libreria standard di Spring per la sicurezza delle applicazioni web. Si aggiunge con una dipendenza:
 
 ```xml
 <dependency>
@@ -85,109 +111,371 @@ una dipendenza:
 </dependency>
 ```
 
-Appena aggiunta, Spring Security **chiude tutto**: è la scelta prudente. Poi gli si dice che cosa aprire, in una
-classe di configurazione, `auth/SecurityConfig.java`:
+Appena aggiunta, Spring Security **chiude tutto**: ogni richiesta riceve 401, e compare una pagina di login di Spring
+con una password stampata nei log. È la scelta prudente: si parte chiusi, e si apre solo quello che si decide. Poi
+gli si dice che cosa fare in una classe di configurazione, `auth/SecurityConfig.java`.
+
+### B2. La catena di filtri
+
+Spring Security è una **catena di filtri**: oggetti che guardano ogni richiesta HTTP **prima** che arrivi ai
+controller. Ognuno fa un controllo e poi, o lascia passare la richiesta al filtro successivo (`chain.doFilter`), o
+risponde subito con un errore. È lo stesso meccanismo del nostro "buttafuori" `LocalOnlyRequestFilter` (`docs/17`).
+
+![Il viaggio di una richiesta dentro il backend](img/catena-filtri.svg)
+
+L'elenco vero dei filtri di WalletTracker, nell'ordine in cui lavorano. L'abbiamo stampato chiedendolo a Spring
+stesso (`FilterChainProxy.getFilterChains()`):
+
+| # | Filtro | Che cosa fa |
+|---|---|---|
+| 1 | `DisableEncodeUrlFilter` | impedisce che il numero di sessione finisca negli indirizzi (`;jsessionid=...`) |
+| 2 | `WebAsyncManagerIntegrationFilter` | porta "chi è dentro" anche nelle richieste asincrone |
+| 3 | **`SecurityContextHolderFilter`** | **legge dalla sessione** chi è dentro (il cookie dice quale sessione) |
+| 4 | `HeaderWriterFilter` | aggiunge intestazioni di sicurezza alle risposte (`X-Content-Type-Options`, `Cache-Control`…) |
+| 5 | **`CsrfFilter`** | per le richieste che modificano: **controlla il gettone CSRF** (parte H). Se manca: 403 |
+| 6 | `RequestCacheAwareFilter` | ricorderebbe una pagina da riaprire dopo il login (con la sua pagina di login, che non usiamo) |
+| 7 | `SecurityContextHolderAwareRequestFilter` | fa rispondere `request.isUserInRole(...)` e simili |
+| 8 | `AnonymousAuthenticationFilter` | se nessuno è dentro, mette un "anonimo": così i filtri dopo trovano sempre qualcuno |
+| 9 | `ExceptionTranslationFilter` | trasforma gli errori di sicurezza nelle risposte giuste (401 o 403) |
+| 10 | **`PinAccessFilter`** | **il nostro** (parte B5): chiude le sessioni di un PIN vecchio; senza PIN, dal PC, fa entrare |
+| 11 | **`AuthorizationFilter`** | l'ultimo: **decide** se la richiesta può passare, secondo le regole di `SecurityConfig` |
+
+Mancano i filtri della pagina di login e di "logout" di Spring, perché li abbiamo spenti (parte B4).
+
+### B3. `SecurityContext`, `Authentication`, sessione
+
+Tre oggetti da conoscere:
+
+- **`Authentication`**: "chi è dentro" (il *principal*, cioè il nome, e i suoi permessi). Da noi c'è una persona
+  sola: si chiama `"proprietario"` (con il PIN) o `"proprietario-dal-pc"` (senza PIN, dal PC). Un
+  `AnonymousAuthenticationToken` vuol dire "nessuno";
+- **`SecurityContext`**: la scatola che contiene l'`Authentication` della richiesta in corso. Si legge e si scrive
+  con `SecurityContextHolder.getContext()`, da qualsiasi punto del codice, perché è legata al thread della richiesta;
+- **la sessione** (`HttpSession`): dove il `SecurityContext` si conserva **tra una richiesta e l'altra**. La salva e
+  la rilegge un `SecurityContextRepository`, da noi un `HttpSessionSecurityContextRepository`.
+
+Il percorso, in pratica:
+1. **login**: il nostro `AuthController` crea un `Authentication`, lo mette in un `SecurityContext` e lo **salva**
+   nella sessione (`saveContext`). Il browser riceve il cookie della sessione;
+2. **richieste successive**: il filtro n. 3 rilegge il `SecurityContext` dalla sessione indicata dal cookie;
+3. **il filtro n. 11** guarda se c'è un `Authentication` vero (non anonimo): sì → avanti; no → 401.
+
+**Le richieste "senza PIN dal PC" non hanno sessione.** Il nostro filtro mette l'`Authentication` nel
+`SecurityContext` **solo per quella richiesta**, senza salvarlo. Dalla versione 6, Spring Security non salva più da
+solo il `SecurityContext` a fine richiesta: lo salva solo chi chiama `saveContext`, cioè il login. Quindi niente
+cookie di sessione da rubare. Lo prova `SessionCookieTest`.
+
+### B4. `SecurityConfig`, riga per riga
 
 ```java
-http
-    .authorizeHttpRequests(requests -> requests
-        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-        .requestMatchers("/api/auth/**").permitAll()
-        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-        .anyRequest().authenticated())
-    .csrf(csrf -> csrf.spa())
-    .formLogin(AbstractHttpConfigurer::disable)
-    .httpBasic(AbstractHttpConfigurer::disable)
-    .logout(AbstractHttpConfigurer::disable)
-    .exceptionHandling(errors -> errors
-        .authenticationEntryPoint((request, response, e) -> problem(response, 401, "Inserisci il PIN."))
-        .accessDeniedHandler((request, response, e) -> problem(response, 403,
-                "Richiesta rifiutata: ricarica la pagina e riprova.")));
+@Bean
+SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository,
+        PinService pins) throws Exception {
+    http
+        .authorizeHttpRequests(requests -> requests
+            .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+            .requestMatchers("/api/auth/**").permitAll()
+            .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+            .anyRequest().authenticated())
+        .csrf(csrf -> csrf.spa())
+        .securityContext(context -> context.securityContextRepository(contextRepository))
+        .addFilterBefore(new PinAccessFilter(pins), AuthorizationFilter.class)
+        .formLogin(AbstractHttpConfigurer::disable)
+        .httpBasic(AbstractHttpConfigurer::disable)
+        .logout(AbstractHttpConfigurer::disable)
+        .exceptionHandling(errors -> errors
+            .authenticationEntryPoint((request, response, e) -> problem(response, 401, "Inserisci il PIN."))
+            .accessDeniedHandler((request, response, e) -> problem(response, 403,
+                    "Richiesta rifiutata: ricarica la pagina e riprova.")));
+    return http.build();
+}
 ```
-
-Riga per riga:
 
 | Riga | Che cosa vuol dire |
 |---|---|
-| `.requestMatchers("/api/auth/**").permitAll()` | le richieste del PIN sono aperte a tutti: senza, non si potrebbe nemmeno inserirlo |
-| `.requestMatchers("/actuator/health", ...).permitAll()` | il controllo di salute di Docker (`docs/44`, parte C3) non ha un PIN |
-| `.anyRequest().authenticated()` | **tutto il resto** solo con una sessione aperta; senza, 401 |
+| `@Bean SecurityFilterChain` | la catena di filtri è un bean: Spring la costruisce da questa descrizione |
+| `HttpSecurity http` | il "costruttore" della catena: ogni metodo aggiunge o configura un filtro |
+| `authorizeHttpRequests(...)` | le regole del filtro n. 11, **in ordine**: vince la prima che corrisponde |
 | `.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()` | quando una richiesta già controllata finisce in errore (es. file troppo grande, 413), Spring la "rigira" a una pagina di errore interna: senza questa riga, l'errore vero diventerebbe un 401 |
-| `.csrf(csrf -> csrf.spa())` | la protezione CSRF per le app con il frontend separato: parte D |
-| `.formLogin(...disable)`, `.httpBasic(...)`, `.logout(...)` | Spring offre di serie una sua pagina di login, il login "Basic" (la finestrella grigia del browser con utente e password) e un suo `/logout`: non li usiamo, il PIN lo chiede la dashboard |
-| `.exceptionHandling(...)` | che cosa rispondere quando manca la sessione (401) o il gettone CSRF (403): un JSON con il motivo in `detail`, come gli altri errori delle API (`docs/09`) |
+| `.requestMatchers("/api/auth/**").permitAll()` | le richieste per entrare sono aperte a tutti: senza, non si potrebbe nemmeno inserire il PIN |
+| `.requestMatchers("/actuator/health", ...).permitAll()` | il controllo di salute di Docker (`docs/44`, parte C3) non ha un PIN |
+| `.anyRequest().authenticated()` | **tutto il resto** solo a chi è "dentro"; altrimenti 401 |
+| `.csrf(csrf -> csrf.spa())` | la protezione CSRF pensata per le app con il frontend separato (parte H) |
+| `.securityContext(...)` | dove si conserva "chi è dentro": nella sessione. È lo stesso oggetto che usa `AuthController` per il login |
+| `.addFilterBefore(new PinAccessFilter(pins), AuthorizationFilter.class)` | aggiunge il nostro filtro **subito prima** di `AuthorizationFilter` (parte B5) |
+| `.formLogin(...disable)` | niente pagina di login di Spring: il PIN lo chiede la dashboard |
+| `.httpBasic(...disable)` | niente login "Basic" (la finestrella grigia del browser con utente e password) |
+| `.logout(...disable)` | niente `/logout` di Spring: c'è il nostro, `POST /api/auth/logout` |
+| `.exceptionHandling(...)` | che cosa rispondere quando manca l'autenticazione (401) o qualcosa è rifiutato (403): un JSON con il motivo in `detail`, come gli altri errori delle API (`docs/09`) |
 
-**L'ordine dei filtri.** Il buttafuori `LocalOnlyRequestFilter` ora ha `@Order(Ordered.HIGHEST_PRECEDENCE + 50)`:
-lavora **prima** di Spring Security, che sta a -100. Una richiesta con un nome falso (DNS rebinding) viene rifiutata
-prima di tutto il resto, anche prima di sentirsi dire "serve il PIN".
+Due altri bean nella stessa classe:
+- **`PasswordEncoder`**: come si calcola l'hash del PIN (parte E3);
+- **`Clock`**: l'orologio, un bean perché i test possano usarne uno finto (parte L3).
 
-### B2. La sessione e il suo cookie
+### B5. Il nostro filtro: `PinAccessFilter`
 
-Le regole della sessione sono in `application.yml`:
+```java
+class PinAccessFilter extends OncePerRequestFilter {
 
-```yaml
-server:
-  forward-headers-strategy: native
-  servlet:
-    session:
-      timeout: 12h
-      tracking-modes: cookie
-      cookie:
-        name: WALLETTRACKER_SESSION
-        http-only: true
-        same-site: strict
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        PinService.State state = pins.state();
+
+        HttpSession session = request.getSession(false);
+        Object opened = session == null ? null : session.getAttribute(GENERATION);
+        if (opened instanceof Integer generation && generation != state.generation()) {
+            session.invalidate();
+            SecurityContextHolder.clearContext();
+        }
+
+        if (state.mode() == PinService.Mode.WITHOUT_PIN && RequestOrigin.isLocal(request) && !isAuthenticated()) {
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(LOCAL_OWNER, null, List.of()));
+            SecurityContextHolder.setContext(context);
+        }
+
+        chain.doFilter(request, response);
+    }
+}
 ```
 
-| Impostazione | Che cosa fa | Contro che cosa |
-|---|---|---|
-| `timeout: 12h` | dopo 12 ore **senza richieste** la sessione si chiude (ogni richiesta fa ripartire il conto) | un telefono perso con l'app aperta |
-| sessioni in memoria | le sessioni stanno nella memoria del backend: un riavvio (un aggiornamento) le chiude tutte | — è una conseguenza, non una scelta: comoda per azzerare tutto (parte G) |
-| `tracking-modes: cookie` | la sessione si riconosce **solo** dal cookie, mai da un `;jsessionid=...` nell'indirizzo | numeri di sessione finiti nella cronologia, nei log, in un link copiato |
-| `name` | il nome del cookie (di serie sarebbe `JSESSIONID`) | — |
-| `http-only: true` | il JavaScript della pagina **non può leggerlo** | uno script infilato nella pagina (XSS) che ruba il cookie |
-| `same-site: strict` | il browser **non lo manda** nelle richieste partite da un altro sito | CSRF (parte D) |
+- **`OncePerRequestFilter`** è la classe di Spring da cui partire per scrivere un filtro: garantisce che giri una
+  volta sola per richiesta, anche quando la richiesta viene "rigirata" all'interno del server;
+- **la prima parte chiude le sessioni vecchie** (la *generazione*, parte G6);
+- **la seconda fa entrare "senza PIN"**: solo se il proprietario l'ha scelto, la richiesta arriva dalla porta del
+  PC (parte C) e nessuno è già dentro;
+- **`chain.doFilter(...)`** passa la richiesta al filtro successivo, `AuthorizationFilter`, che troverà (o non
+  troverà) qualcuno dentro e deciderà.
 
-**E `Secure`?** Un cookie `Secure` viaggia **solo su https**. Non lo scriviamo fisso, perché oggi l'app è su
-`http://localhost:8000`: con `Secure` il browser non rimanderebbe il cookie, e non si entrerebbe mai. Tomcat lo
-aggiunge da solo **quando la richiesta è https**. Ma la richiesta al backend arriva da nginx, sempre in http: come fa
-Tomcat a saperlo? Gliel'ha detto nginx, con l'intestazione `X-Forwarded-Proto` (`docs/44`, parte D3).
-`forward-headers-strategy: native` dice a Tomcat di crederci, ma **solo** se la richiesta arriva da un indirizzo
-interno (la rete di Docker, 127.0.0.1): un estraneo che scrivesse `X-Forwarded-Proto` a mano non conterebbe. Al
-passo 4, con Tailscale e https, il cookie diventerà `Secure` senza toccare niente. Lo prova `SessionCookieTest`.
+**Perché subito prima di `AuthorizationFilter`?** Perché deve lavorare **dopo** che il filtro n. 3 ha riletto la
+sessione (altrimenti non saprebbe se c'è una sessione da controllare), e **prima** della decisione finale.
 
-**Il cookie in pratica**, come lo manda il backend (si vede in F12 → Application → Cookies):
+**Perché non è un `@Component`?** Spring Boot registra da solo ogni `Filter` che trova come bean, come filtro
+"normale" del server. Lo troverebbe due volte: nella catena di Spring Security **e** fuori. Lo crea
+`SecurityConfig` con `new`, e così sta solo nella catena.
 
-```
-WALLETTRACKER_SESSION=3F2A...; Path=/; HttpOnly; SameSite=Strict
-XSRF-TOKEN=8c1d...; Path=/
-```
+**Una lettura del database per richiesta.** `pins.state()` legge la riga del PIN a ogni richiesta. È una ricerca per
+chiave primaria su una tabella di una riga: costa una frazione di millisecondo. In cambio non c'è nessuna copia in
+memoria che potrebbe restare vecchia, per esempio dopo che lo script ha azzerato il PIN direttamente nel database.
+È una scelta voluta: la semplicità e la correttezza prima di un'ottimizzazione che non serve.
 
-Il secondo è il gettone CSRF: **non** è `HttpOnly`, di proposito (parte D).
+### B6. Il buttafuori viene prima
+
+`LocalOnlyRequestFilter` (il controllo di `Host` e `Origin`, `docs/17`) non fa parte di Spring Security: è un filtro
+normale del server. Ha `@Order(Ordered.HIGHEST_PRECEDENCE + 50)`, quindi lavora **prima** di tutta la catena di Spring
+Security, che sta a -100. Una richiesta con un nome falso (DNS rebinding) viene rifiutata prima di tutto il resto.
 
 ---
 
-## Parte C: il PIN nel backend
+## Parte C: "dal PC" o "da un altro dispositivo": le due porte
 
-### C1. La tabella (V29)
+### C1. Il problema
 
-```sql
-CREATE TABLE app_pin (
-    id              INT         PRIMARY KEY CHECK (id = 1),
-    pin_hash        TEXT        NOT NULL,
-    failed_attempts INT         NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
-    locked_until    TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+"Senza PIN, solo dal PC" e "il PIN si crea solo dal PC" hanno bisogno di una cosa: **sapere da dove arriva una
+richiesta**. Sembra facile, e non lo è.
+
+- **L'header `Host`** (`localhost` o `pc-casa.<rete>.ts.net`) lo scrive **chi manda la richiesta**. Un dispositivo
+  della rete Tailscale programmato apposta potrebbe scrivere `Host: localhost` e passare per il PC.
+- **L'indirizzo di chi si collega** non aiuta: al backend arriva sempre quello di nginx; e a nginx arriva sempre dal
+  PC stesso, sia dal browser del PC, sia da Tailscale, che al passo 4 girerà sul PC.
+
+### C2. La soluzione: due porte
+
+![Due porte: dal PC o da un altro dispositivo](img/due-porte.svg)
+
+nginx ascolta su **due porte**, con lo stesso sito:
+
+| Nel container | Sul PC | Chi la usa | Che cosa scrive nginx al backend |
+|---|---|---|---|
+| 8080 | `127.0.0.1:8000` | il browser del PC | `X-WalletTracker-Access: local` |
+| 8081 | `127.0.0.1:8001` | Tailscale (passo 4), per i dispositivi della tua rete | `X-WalletTracker-Access: remote` |
+
+Tutte e due sono pubblicate solo su `127.0.0.1`: dalla rete di casa non si raggiungono. Al passo 4, Tailscale farà
+arrivare il telefono **solo** alla seconda. Il telefono non potrà mai entrare dalla prima, qualunque cosa scriva
+nelle sue richieste.
+
+In `frontend/nginx/default.conf`:
+
+```nginx
+server {
+    listen 8080;
+    set $wallettracker_access local;
+    include /etc/nginx/snippets/wallettracker.conf;
+}
+
+server {
+    listen 8081;
+    set $wallettracker_access remote;
+    include /etc/nginx/snippets/wallettracker.conf;
+}
 ```
 
-Al massimo una riga (`CHECK (id = 1)`), come `ai_settings` (`docs/27`). Ma qui **nessuna riga** ha un significato:
-"il PIN non c'è ancora". Azzerare il PIN vuol dire cancellare la riga (parte G).
+e nella parte comune, `frontend/nginx/wallettracker.conf`, dentro `location /api/`:
 
-Il conteggio degli errori sta **nel database**, non in memoria: altrimenti basterebbe far riavviare il backend per
-ricominciare da zero.
+```nginx
+proxy_set_header X-WalletTracker-Access $wallettracker_access;
+```
 
-### C2. Il blocco (`AppPin`)
+- **`set`** crea una variabile di nginx, diversa per ciascun blocco `server`;
+- **`include`** copia lì il resto della configurazione, uguale per le due porte (prima stava tutta in
+  `default.conf`, `docs/44` parte D);
+- **`proxy_set_header`** non **aggiunge** l'header: lo **sostituisce**. Se il browser ne avesse mandato uno suo,
+  magari con "local", nginx lo butta e scrive il proprio. È il punto su cui si regge tutto; la CI lo prova a ogni
+  push (parte L4).
+
+### C3. Il backend: `RequestOrigin`
+
+```java
+static boolean isLocal(HttpServletRequest request) {
+    return "local".equals(request.getHeader(HEADER));
+}
+```
+
+Due regole:
+1. **"local" solo se nginx l'ha scritto.** Senza header, o con un valore diverso, la richiesta conta come "da un altro
+   dispositivo". Nel dubbio si sceglie la cosa più prudente (*secure by default*);
+2. **"local" serve solo a tre cose**: scegliere "senza PIN" e creare il PIN la prima volta; togliere il PIN; entrare
+   senza PIN, se scelto. Tutto il resto (inserire il PIN, il codice di recupero, le API) vale uguale da tutte e due le
+   porte.
+
+### C4. Il confine di fiducia
+
+Il backend crede all'header perché **solo nginx può parlargli**: il backend non ha porte pubblicate (`docs/44`),
+quindi le richieste gli arrivano solo dalla rete interna di Docker. Questo è un **confine di fiducia** (*trust
+boundary*): dentro il confine (nginx → backend) un header è un'informazione affidabile, fuori (browser → nginx) no.
+Conoscere i propri confini di fiducia è una delle idee più importanti della sicurezza: un'informazione vale quanto
+chi l'ha scritta.
+
+### C5. In sviluppo
+
+Con `npm start` (ng serve) o `npm run pwa` non c'è nginx. L'header lo aggiungono loro, che girano sul PC e
+ascoltano solo su `127.0.0.1`:
+- `frontend/proxy.conf.json`: `"headers": { "X-WalletTracker-Access": "local" }`;
+- `frontend/scripts/serve-dist.mjs`: `'x-wallettracker-access': 'local'` nelle richieste inoltrate al backend.
+
+---
+
+## Parte D: le tre situazioni e le API
+
+### D1. Le tre situazioni (V30)
+
+La riga della tabella `app_pin` dice come si entra:
+
+| Riga | Situazione | Dal PC | Da un altro dispositivo |
+|---|---|---|---|
+| nessuna | prima apertura | "Come vuoi proteggere WalletTracker?" | "Crea il PIN dal PC" |
+| `pin_hash` vuoto | **senza PIN** | si entra subito | "Da qui serve un PIN" |
+| `pin_hash` presente | **con il PIN** | "Inserisci il PIN" | "Inserisci il PIN" |
+
+La V30 rende `pin_hash` facoltativo e aggiunge due colonne:
+- `recovery_hash`: l'hash del codice di recupero (parte E5);
+- `generation`: il numero che cresce a ogni cambio del PIN (parte G6).
+
+Le migrazioni già applicate non si modificano mai (`docs/05`): la V29 è già nel repository, quindi le modifiche
+stanno in una migrazione nuova, `ALTER TABLE`.
+
+### D2. Le API (`AuthController`)
+
+| Richiesta | Da dove | Risposte |
+|---|---|---|
+| `GET /api/auth/status` | ovunque | `{"pinSet", "withoutPin", "authenticated", "local"}` più il cookie `XSRF-TOKEN` |
+| `POST /api/auth/no-pin` | **solo dal PC** | 204; 409 se la scelta è già fatta |
+| `POST /api/auth/pin` `{"pin"}` | **solo dal PC** | 200 `{"recoveryCode"}` e la sessione aperta; 409 se il PIN c'è già; 400 se non è di 6-10 cifre |
+| `POST /api/auth/login` `{"pin"}` | ovunque | 204 e la sessione aperta; 401 sbagliato (con `attemptsLeft`); 429 in pausa (con `retryAfterSeconds` e `Retry-After`) |
+| `POST /api/auth/recover` `{"code", "pin"}` | ovunque | 200 `{"recoveryCode"}` (il codice nuovo) e la sessione aperta; 401, 429 come il login; 400 se il codice non ha 16 simboli |
+| `POST /api/auth/pin/remove` `{"pin"}` | **solo dal PC** | 204; 401, 429 come il login |
+| `POST /api/auth/logout` | ovunque | 204: la sessione è chiusa |
+
+`POST /api/auth/pin` serve in due momenti: alla prima apertura, e più tardi da **Impostazioni → Accesso**, per chi
+aveva scelto "senza PIN".
+
+**Il risultato di un tentativo** (`PinService.Attempt`) è una `sealed interface` con tre `record`:
+`Correct`, `Wrong`, `Locked`. Il controller li distingue con uno `switch` sui tipi, e il compilatore controlla che
+non ne manchi nessuno: se domani si aggiungesse un quarto caso, il codice non compilerebbe finché non lo gestisci.
+
+---
+
+## Parte E: PIN, hash e codice di recupero
+
+### E1. Hash, non cifratura
+
+| | Cifratura | Hash |
+|---|---|---|
+| si torna indietro? | sì, con la chiave | **no**, mai |
+| a che cosa serve | conservare un segreto da **riusare** (la chiave di Enable Banking, `docs/17`) | **controllare** un segreto senza conservarlo (il PIN) |
+| come si controlla | — | si rifà l'hash di quello scritto e si confrontano i risultati |
+
+Il PIN non serve a niente, una volta controllato: quindi non lo conserviamo, nemmeno cifrato. Chi rubasse il
+database troverebbe `{bcrypt}$2a$12$...`, non `135792`.
+
+### E2. Il sale
+
+Se l'hash di `135792` fosse sempre lo stesso, un attaccante potrebbe preparare in anticipo l'elenco "hash →
+PIN" di tutti i PIN possibili (una *rainbow table*) e leggere il tuo in un attimo. Per questo bcrypt aggiunge a ogni
+hash un **sale** (*salt*): un valore casuale, diverso ogni volta, salvato dentro l'hash stesso. Due installazioni con
+lo stesso PIN hanno hash diversi, e gli elenchi pronti non servono più.
+
+```
+{bcrypt}$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW
+ │        │  │  └─ 22 caratteri di sale, poi 31 di hash
+ │        │  └──── il costo: 12
+ │        └─────── la versione di bcrypt
+ └──────────────── l'algoritmo (DelegatingPasswordEncoder)
+```
+
+### E3. bcrypt e il costo
+
+```java
+@Bean
+PasswordEncoder passwordEncoder() {
+    return new DelegatingPasswordEncoder("bcrypt", Map.of("bcrypt", new BCryptPasswordEncoder(12)));
+}
+```
+
+- **bcrypt è lento apposta.** Un hash "veloce" come SHA-256 si calcola miliardi di volte al secondo con una scheda
+  video: un milione di PIN in un istante. bcrypt con **costo 12** fa 2¹² giri di calcolo: circa un quarto di secondo
+  per tentativo. Per chi entra non si nota, per chi prova un milione di PIN sono giorni di calcolo;
+- **il costo si può alzare** con gli anni, quando i computer diventano più veloci;
+- **`DelegatingPasswordEncoder`** scrive davanti all'hash il nome dell'algoritmo (`{bcrypt}`). Se un giorno
+  passassimo ad Argon2, i PIN già salvati con bcrypt si riconoscerebbero ancora, e quelli nuovi userebbero Argon2.
+
+### E4. Un PIN di 6 cifre basta?
+
+Un PIN di 6 cifre ha 10⁶ = un milione di combinazioni. Contro chi **prova dall'app**, le pause (parte F) bastano:
+più di cent'anni per provarle tutte. Contro chi ha **rubato il database**, il milione di combinazioni si prova "in
+casa", senza pause, e bcrypt lo rallenta a qualche giorno. Per questo il PIN è "da 6 **a 10** cifre": chi vuole
+dormire più tranquillo ne sceglie uno più lungo. E per questo la pagina dice "non usare il PIN del bancomat": se il
+database finisse in mani sbagliate, il PIN che vale anche altrove sarebbe in pericolo.
+
+### E5. Il codice di recupero
+
+Quando crei il PIN, l'app mostra **una sola volta** un codice come `K7QM-2XPA-9RWD-4TNE`.
+
+```java
+private static final String RECOVERY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+private static final int RECOVERY_LENGTH = 16;
+private final SecureRandom random = new SecureRandom();
+```
+
+- **32 simboli, senza quelli che si confondono**: niente `I` e `1`, niente `O` e `0`. Chi lo ricopia a mano da un
+  foglio non sbaglia;
+- **16 simboli scelti tra 32** sono 32¹⁶ = 2⁸⁰ combinazioni. Impossibile da indovinare anche senza pause, quindi
+  anche se qualcuno rubasse il database e lo provasse "in casa";
+- **`SecureRandom`** è il generatore casuale crittografico di Java (prende la casualità dal sistema operativo):
+  `Math.random()` o `new Random()` sarebbero prevedibili;
+- **si salva solo l'hash**, come il PIN. Per questo l'app non può mostrarlo una seconda volta: non lo conosce più;
+- **vale una volta**: dopo un recupero se ne crea un altro, da salvare di nuovo;
+- **si scrive come si vuole**: maiuscole o minuscole, con i trattini, con gli spazi o tutto attaccato. Il backend lo
+  "normalizza" (`normalize`) prima di confrontarlo;
+- **un codice malformato** (non 16 simboli) riceve 400 e **non conta** come errore; un codice ben fatto ma
+  sbagliato conta, con lo stesso conteggio del PIN.
+
+---
+
+## Parte F: il blocco dopo gli errori
+
+### F1. La regola (`AppPin`)
 
 ```java
 static final int FREE_ATTEMPTS = 5;
@@ -211,74 +499,89 @@ void failed(Instant now) {
 | 6 | pausa di 5 minuti |
 | 7 | pausa di 15 minuti |
 | 8 e oltre | pausa di **1 ora**, ogni volta |
-| il PIN giusto | il conteggio torna a zero |
+| il PIN (o il codice) giusto | il conteggio torna a zero |
 
-**Perché basta.** Un PIN di 6 cifre ha un milione di combinazioni. Con 5 tentativi liberi e poi circa uno all'ora,
-provarle tutte richiederebbe più di cent'anni. Il conteggio è **unico per l'app**, non per dispositivo: chi prova i
-PIN da cento telefoni non ottiene cento volte i tentativi. Il rovescio: chi sbaglia apposta può farti aspettare. Per
-un'app personale dentro la tua rete Tailscale è il compromesso giusto.
+La regola sta nella classe dell'entità, vicino ai dati che usa, ed è provata da sola, senza database
+(`AppPinTest`).
 
-La regola sta nella classe dell'entità, vicino ai dati che usa, ed è provata da sola, senza database (`AppPinTest`).
+### F2. Le scelte dietro la regola
 
-### C3. Il controllo (`PinService`)
+- **Un conteggio solo, per tutta l'app**, non per dispositivo: chi prova i PIN da cento telefoni non ottiene cento
+  volte i tentativi. Il rovescio: chi sbaglia apposta può farti aspettare. Per un'app personale dentro la tua rete
+  Tailscale è il compromesso giusto;
+- **PIN e codice di recupero contano insieme**: provare i codici non dà tentativi in più;
+- **nel database**, non in memoria: un riavvio del backend non azzera il conteggio;
+- **durante la pausa il PIN non si guarda nemmeno**: se lo controllassimo, chi prova capirebbe lo stesso, dalla
+  risposta, se ha indovinato.
+
+### F3. Due trappole evitate (`PinService`)
 
 ```java
-@Transactional
-public Attempt check(String pin) {
-    requireValid(pin);
-    AppPin saved = repository.findForUpdate().orElseThrow(...);
-    Instant now = clock.instant();
-    Duration locked = saved.lockedFor(now);
-    if (!locked.isZero()) {
-        return new Attempt.Locked(locked);
-    }
-    if (encoder.matches(pin, saved.pinHash())) {
-        saved.succeeded(now);
-        return new Attempt.Correct();
-    }
-    saved.failed(now);
-    ...
+AppPin saved = repository.findForUpdate()...;
+Instant now = clock.instant();
+Duration locked = saved.lockedFor(now);
+if (!locked.isZero()) {
+    return new Attempt.Locked(locked);
 }
+if (encoder.matches(value, savedHash.apply(saved))) { ... }
+saved.failed(now);
 ```
 
-Le idee:
+1. **La corsa** (*race condition*). Senza precauzioni, chi prova i PIN potrebbe mandarne cento **nello stesso
+   istante**: tutti leggerebbero "0 errori finora", e il blocco verrebbe scavalcato. `findForUpdate()` è un
+   `SELECT ... FOR UPDATE` (`@Lock(PESSIMISTIC_WRITE)` nel repository): la riga resta bloccata fino alla fine della
+   transazione, e i tentativi fanno la fila;
+2. **Un solo istante** per tutto il tentativo. Leggendo l'orologio due volte, a qualche millisecondo di distanza, la
+   pausa di un minuto appena iniziata risultava "59 secondi". L'abbiamo visto provando (parte M).
 
-- **Durante la pausa il PIN non si guarda nemmeno.** Se lo controllassimo, chi prova i PIN capirebbe lo stesso,
-  dalla risposta, se ha indovinato: la pausa non servirebbe a niente.
-- **`findForUpdate()`** è un `SELECT ... FOR UPDATE` (l'annotazione `@Lock(PESSIMISTIC_WRITE)` nel repository): la
-  riga resta "bloccata" fino alla fine della transazione. Senza, chi prova i PIN potrebbe mandarne cento **nello
-  stesso istante**: tutti leggerebbero "0 errori finora", e il blocco verrebbe scavalcato.
-- **`encoder.matches`** rifà l'hash del PIN scritto e lo confronta con quello salvato. L'encoder è **bcrypt con costo
-  12** (`SecurityConfig`): 2¹² giri di calcolo, circa un quarto di secondo. Per chi entra non si nota; per chi avesse
-  il database e volesse provare un milione di PIN sono giorni di calcolo invece di secondi. Il
-  `DelegatingPasswordEncoder` scrive davanti all'hash il nome dell'algoritmo (`{bcrypt}`): se un giorno lo
-  cambiassimo, i PIN già salvati si riconoscerebbero ancora.
-- **Un solo istante** (`Instant now = clock.instant()`) per tutto il tentativo. L'abbiamo aggiunto **dopo averlo
-  visto sbagliare** (parte K): leggendo l'orologio due volte, a qualche millisecondo di distanza, la pausa di un
-  minuto appena iniziata risultava "59 secondi".
-- **L'orologio è un bean** (`Clock`): nei test ne usiamo uno fermo e lo spostiamo avanti di 61 secondi, invece di
-  aspettare davvero (parte H).
-- **`sealed interface Attempt`**: i tre risultati possibili (`Correct`, `Wrong`, `Locked`) sono `record`. Il
-  controller li distingue con uno `switch` sui tipi, e il compilatore controlla che non ne manchi nessuno.
+---
 
-### C4. Le API (`AuthController`)
+## Parte G: la sessione e il suo cookie
 
-| Richiesta | Risposta |
-|---|---|
-| `GET /api/auth/status` | `{"pinSet":..., "authenticated":..., "canCreatePin":...}` più il cookie `XSRF-TOKEN` |
-| `POST /api/auth/pin` `{"pin":"..."}` | 204 e la sessione aperta; 403 se non dal PC; 409 se il PIN c'è già; 400 se non è di 6-10 cifre |
-| `POST /api/auth/login` `{"pin":"..."}` | 204 e la sessione aperta; 401 sbagliato (con `attemptsLeft`); 429 in pausa (con `retryAfterSeconds` e l'intestazione `Retry-After`) |
-| `POST /api/auth/logout` | 204: la sessione è chiusa |
+### G1. Il percorso
 
-**Il PIN si crea solo dal PC.** `POST /api/auth/pin` controlla il nome con cui è stata aperta l'app (l'header
-`Host`, che nginx passa così com'è): deve essere `localhost` o `127.0.0.1`. Quando al passo 4 l'app sarà
-raggiungibile anche come `pc-casa.<rete>.ts.net`, da lì il PIN non si potrà creare: nessuno potrà "arrivare prima di
-te". Una precisazione onesta: l'header `Host` lo scrive chi fa la richiesta, quindi questo controllo protegge da un
-errore o da un dispositivo distratto della tua rete, non da un dispositivo della tua rete Tailscale programmato
-apposta. La vera protezione è che il PIN lo crei **adesso**, dal PC, prima di accendere Tailscale; e dopo, una volta
-che c'è, non si può più creare da nessuna parte.
+![Il PIN e la sessione, passo per passo](img/pin-sessione.svg)
 
-**Aprire la sessione** (`openSession`):
+La sessione è come il braccialetto di un concerto: all'ingresso mostri il biglietto (il PIN) una volta, e ti danno
+un braccialetto (il cookie). Poi ti basta il braccialetto. Scade (12 ore), si può tagliare ("Esci"), e se cambia il
+biglietto valgono solo i braccialetti nuovi (la generazione, G6).
+
+### G2. Le regole della sessione (`application.yml`)
+
+```yaml
+server:
+  forward-headers-strategy: native
+  servlet:
+    session:
+      timeout: 12h
+      tracking-modes: cookie
+      cookie:
+        name: WALLETTRACKER_SESSION
+        http-only: true
+        same-site: strict
+```
+
+| Impostazione | Che cosa fa | Contro che cosa |
+|---|---|---|
+| `timeout: 12h` | dopo 12 ore **senza richieste** la sessione si chiude (ogni richiesta fa ripartire il conto) | un telefono perso con l'app aperta |
+| sessioni in memoria | stanno nella memoria del backend: un riavvio le chiude tutte | — è una conseguenza, utile per l'azzeramento (parte K3) |
+| `tracking-modes: cookie` | la sessione si riconosce **solo** dal cookie, mai da un `;jsessionid=...` nell'indirizzo | numeri di sessione nella cronologia, nei log, in un link copiato |
+| `http-only: true` | il JavaScript della pagina **non può leggerlo** | uno script infilato nella pagina (XSS) che ruba il cookie |
+| `same-site: strict` | il browser **non lo manda** nelle richieste partite da un altro sito | CSRF (parte H) |
+
+### G3. Il cookie `Secure`, che si accende da solo
+
+Un cookie `Secure` viaggia **solo su https**. Non lo scriviamo fisso, perché oggi l'app è su `http://localhost:8000`:
+con `Secure` il browser non rimanderebbe il cookie, e non si entrerebbe mai. Tomcat lo aggiunge da solo **quando la
+richiesta è https**.
+
+Ma la richiesta al backend arriva da nginx, sempre in http: come fa Tomcat a saperlo? Gliel'ha detto nginx, con
+l'intestazione `X-Forwarded-Proto` (`docs/44`, parte D3). `forward-headers-strategy: native` dice a Tomcat di crederci,
+**ma solo** se la richiesta arriva da un indirizzo interno (la rete di Docker, 127.0.0.1): è ancora un confine di
+fiducia (parte C4). Un estraneo che scrivesse `X-Forwarded-Proto` a mano non conterebbe. Al passo 4, con Tailscale e
+https, il cookie diventerà `Secure` senza toccare niente. Lo prova `SessionCookieTest`.
+
+### G4. Aprire la sessione (`AuthController.openSession`)
 
 ```java
 if (request.getSession(false) != null) {
@@ -288,31 +591,52 @@ SecurityContext context = SecurityContextHolder.createEmptyContext();
 context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of()));
 SecurityContextHolder.setContext(context);
 contextRepository.saveContext(context, request, response);
+request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);
 ```
 
-- **`changeSessionId()`** è la difesa dalla *session fixation*. Un attaccante che fosse riuscito a far usare al tuo
+- **`changeSessionId()`**: la difesa dalla *session fixation*. Un attaccante che fosse riuscito a far usare al tuo
   browser un numero di sessione scelto da lui aspetterebbe che tu inserisca il PIN, per usare poi lo stesso numero.
   Cambiando il numero al momento del PIN, il suo resta "fuori";
-- **`SecurityContext`** è il modo in cui Spring Security ricorda "chi è dentro" per la richiesta in corso;
-  **`saveContext`** lo salva nella sessione (`HttpSessionSecurityContextRepository`), così vale anche per le
-  richieste successive.
+- **`UsernamePasswordAuthenticationToken.authenticated(...)`**: un `Authentication` "già controllato" (il PIN
+  l'abbiamo controllato noi, in `PinService`). Di solito Spring lo crea dentro un suo `AuthenticationManager`; qui,
+  con un PIN solo e senza nomi utente, lo creiamo noi: più semplice da leggere;
+- **`saveContext`**: lo salva nella sessione (parte B3);
+- **la generazione** (G6) si scrive nella sessione.
 
-**Lo stato prepara il gettone CSRF.** Il metodo `status` riceve un parametro `CsrfToken csrfToken` e chiama
-`csrfToken.getToken()`, anche se non lo usa: è il modo per chiedere a Spring di preparare il gettone e mandarlo nel
-cookie `XSRF-TOKEN`. È la prima richiesta della dashboard, quindi da lì in poi Angular ce l'ha.
+### G5. Uscire
+
+`POST /api/auth/logout` chiude la sessione (`session.invalidate()`) e svuota il `SecurityContext`. Il cookie che il
+browser ha ancora non vale più niente: indica una sessione che non esiste. "Esci" c'è solo **con il PIN**: senza PIN,
+dal PC si rientrerebbe subito, quindi non avrebbe senso.
+
+### G6. La generazione: quando il PIN cambia, le sessioni vecchie si chiudono
+
+Il problema: hai perso il telefono, con l'app aperta. Dal PC usi il codice di recupero e scegli un PIN nuovo. Ma il
+telefono ha **una sessione già aperta**, che varrebbe ancora 12 ore.
+
+La soluzione:
+- nella riga del PIN c'è un numero, `generation`, che **cresce a ogni cambio**: PIN creato, recuperato, tolto,
+  azzerato;
+- ogni sessione ricorda il numero di quando è stata aperta (`openSession` lo scrive);
+- `PinAccessFilter`, a ogni richiesta, confronta i due numeri: se sono diversi, la sessione si chiude e la richiesta
+  riceve 401.
+
+Il telefono perso, alla prossima richiesta, si ritrova fuori. È un'idea che si ritrova in molti sistemi: invece di
+cercare e cancellare una per una le sessioni sparse, si cambia il "numero di versione" delle credenziali, e tutte le
+sessioni vecchie smettono di valere insieme.
 
 ---
 
-## Parte D: CSRF, il gettone
+## Parte H: CSRF, il gettone
 
-### D1. L'attacco
+### H1. L'attacco
 
 CSRF (*Cross-Site Request Forgery*, "richiesta falsificata da un altro sito"): mentre sei dentro WalletTracker,
 apri in un'altra scheda un sito malevolo. Quel sito fa partire dal **tuo** browser una richiesta verso
 `http://localhost:8000/api/...` per modificare qualcosa. Il browser, di suo, aggiungerebbe il cookie della sessione:
 la richiesta sembrerebbe tua.
 
-### D2. Tre difese, una sopra l'altra
+### H2. Tre difese, una sopra l'altra
 
 | Difesa | Come funziona | Dal passo |
 |---|---|---|
@@ -320,34 +644,33 @@ la richiesta sembrerebbe tua.
 | `SameSite=Strict` | il browser non manda il cookie della sessione nelle richieste partite da un altro sito | questo |
 | **il gettone CSRF** | ogni modifica deve portare un valore che solo le nostre pagine possono leggere | questo |
 
-Perché tre? Perché ognuna ha dei casi limite (browser vecchi, configurazioni particolari), e il costo di aggiungerle
-è piccolo. È il principio della **difesa in profondità**.
+Con "senza PIN" dal PC non c'è nemmeno un cookie di sessione: lì le difese sono l'`Origin` e il gettone.
 
-### D3. Come funziona il gettone
+### H3. Come funziona il gettone
 
 ```
  1. il backend manda il cookie   XSRF-TOKEN=8c1d...        (leggibile dal JavaScript: niente HttpOnly)
  2. Angular lo legge e lo rimanda come header, nelle richieste che modificano (POST, PUT, DELETE):
                                  X-XSRF-TOKEN: 8c1d...
- 3. Spring Security confronta header e cookie: diversi o mancanti → 403
+ 3. Spring Security (CsrfFilter) confronta header e cookie: diversi o mancanti → 403
 ```
 
-Il trucco: un altro sito può far partire una richiesta verso di noi, ma **non può leggere i nostri cookie** (la
-regola della stessa origine, `docs/44` parte D3b). Quindi non può scrivere l'header giusto.
+Il trucco: un altro sito può far partire una richiesta verso di noi, ma **non può leggere i nostri cookie** (la regola
+della stessa origine, `docs/44` parte D3b). Quindi non può scrivere l'header giusto.
 
-**Angular lo fa da solo.** `HttpClient` ha la protezione XSRF accesa di serie: per le richieste che modificano,
-verso il nostro stesso indirizzo, legge il cookie `XSRF-TOKEN` e aggiunge l'header `X-XSRF-TOKEN`. Sono proprio i
-nomi che usa Spring Security con `csrf().spa()`: nel frontend non c'è niente da scrivere.
-
-L'abbiamo provato nel browser: la stessa modifica con il gettone risponde 200, senza il gettone 403.
+- **`csrf().spa()`** è la configurazione di Spring Security per le *Single-Page Application*: il gettone in un cookie
+  leggibile, da rimandare in un header;
+- **lo stato prepara il gettone**: `GET /api/auth/status` riceve un parametro `CsrfToken csrfToken` e chiama
+  `csrfToken.getToken()`, anche se non lo usa. È il modo per chiedere a Spring di preparare il gettone e mandarlo nel
+  cookie: è la prima richiesta della dashboard, quindi da lì in poi Angular ce l'ha;
+- **Angular lo fa da solo**: `HttpClient` ha la protezione XSRF accesa di serie, con proprio i nomi che usa Spring
+  (`XSRF-TOKEN` e `X-XSRF-TOKEN`).
 
 ---
 
-## Parte E: il frontend
+## Parte I: il frontend
 
-### E1. L'app o la pagina del PIN
-
-`app.html` ora comincia così:
+### I1. L'app, o la pagina per entrare
 
 ```html
 @if (auth.state() !== 'inside') {
@@ -358,30 +681,49 @@ L'abbiamo provato nel browser: la stessa modifica con il gettone risponde 200, s
 ```
 
 Finché non si è dentro, l'app **non c'è nemmeno**: niente navigazione, niente pagine, nessuna richiesta di dati. Il
-router intanto **ricorda l'indirizzo** aperto: dopo il PIN si arriva proprio lì. Conta per due casi:
-- aprendo un link diretto, come `http://localhost:8000/movimenti`;
-- al ritorno dalla banca (`/callback?code=...&state=...`, `docs/13`), se nel frattempo la sessione era scaduta.
+router intanto **ricorda l'indirizzo** aperto: dopo il PIN si arriva proprio lì, per esempio un link diretto a
+`/movimenti`, o il ritorno dalla banca (`/callback?code=...`, `docs/13`).
 
-L'abbiamo provato: aperta `/movimenti`, inserito il PIN, si è su Movimenti.
-
-### E2. Lo stato condiviso (`AuthStore`)
-
-`auth/auth-store.ts` è un servizio con un signal, come `SetupStore` (`docs/16`):
+### I2. Lo stato condiviso (`AuthStore`)
 
 | Stato | Quando | Che cosa si vede |
 |---|---|---|
 | `checking` | all'apertura, finché il backend non risponde | "Un attimo…" |
-| `create` | il PIN non c'è, e l'app è aperta dal PC | "Crea il tuo PIN" (due campi) |
-| `create-elsewhere` | il PIN non c'è, e l'app è aperta da un altro dispositivo | "Crea il PIN dal PC" |
-| `login` | il PIN c'è, e questo browser non è dentro | "Inserisci il PIN" |
+| `choose` | prima apertura, dal PC | "Come vuoi proteggere WalletTracker?": con un PIN, o "Continua senza PIN" |
+| `elsewhere` | nessun PIN, e da un altro dispositivo | "Crea il PIN dal PC" (prima apertura) o "Da qui serve un PIN" (senza PIN) |
+| `login` | il PIN c'è, e questo browser non è dentro | "Inserisci il PIN", con "Ho dimenticato il PIN" |
 | `unreachable` | il backend non risponde, e non c'è una sessione recente | "Il PC non risponde" e "Riprova" |
 | `inside` | dentro | l'app |
 
-### E3. La sessione scaduta: l'intercettore
+Accanto allo stato, `auth.status()` tiene l'ultima risposta del backend: serve per mostrare "Esci" solo con il PIN,
+e per la sezione "Accesso" di Impostazioni.
 
-Dopo 12 ore, o dopo un riavvio del backend, la prossima richiesta riceve 401. Invece di gestirlo in ogni pagina, c'è
-un **intercettore** (`auth/auth-interceptor.ts`): una funzione che HttpClient chiama per **ogni** richiesta e
-risposta dell'app.
+### I3. La pagina per entrare (`auth/pin-page.ts`)
+
+- I campi del PIN sono `type="password"` (le cifre non si vedono) con `inputmode="numeric"`: sul telefono si apre
+  la **tastierina dei numeri**. `autocomplete="new-password"` alla creazione e `current-password` all'inserimento:
+  i gestori di password capiscono che cosa sono;
+- un PIN nuovo si scrive **due volte**, e la pagina controlla subito che sia di 6-10 cifre e che i due siano
+  uguali, prima di mandarlo (lo ricontrolla comunque il backend: il frontend aiuta, ma decide il backend);
+- il motivo di un errore è quello scritto dal backend; un PIN sbagliato **si cancella** dal campo;
+- durante una pausa il pulsante è spento e dice quanto manca: "Aspetta 1 min", poi i secondi.
+
+### I4. Il codice di recupero (`auth/recovery-code.ts`)
+
+Dopo aver creato il PIN (o dopo un recupero) **non si entra subito**: prima compare "Salva il codice di recupero",
+con il codice in grande, "Copia il codice" e "L'ho salvato, continua". Solo dopo si entra. È un componente a sé,
+usato in tre posti: la prima apertura, il recupero, Impostazioni.
+
+### I5. Impostazioni → Accesso (`auth/access-section.ts`)
+
+| Situazione | Dal PC | Da un altro dispositivo |
+|---|---|---|
+| senza PIN | "Proteggi con un PIN" (due campi), poi il codice di recupero | — (da lì non si entra) |
+| con il PIN | "Togli il PIN" (serve il PIN di adesso) | "Il PIN si toglie solo dal PC" |
+
+Togliere il PIN dal telefono non si può: dopo, dal telefono, non si entrerebbe più.
+
+### I6. La sessione finita: l'intercettore
 
 ```ts
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
@@ -391,6 +733,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       if (error instanceof HttpErrorResponse && error.status === 401
           && request.url.startsWith('/api/') && !request.url.startsWith('/api/auth/')) {
         auth.sessionLost();
+        return EMPTY;
       }
       return throwError(() => error);
     }),
@@ -398,88 +741,66 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 };
 ```
 
-- `next(request)` lascia proseguire la richiesta; `catchError` guarda gli errori che tornano;
-- un 401 da `/api/auth/login` **non** conta: lì vuol dire "PIN sbagliato", e lo mostra la pagina del PIN;
-- `throwError` fa proseguire l'errore verso chi aveva fatto la richiesta: l'intercettore osserva, non nasconde.
-
-Si registra in `app.config.ts`: `provideHttpClient(withFetch(), withInterceptors([authInterceptor]))`.
-
-Dopo un riavvio del backend, nel browser: un tocco su "Analisi" porta alla pagina del PIN; inserito il PIN, si è su
-Analisi.
-
-### E4. La pagina del PIN (`auth/pin-page.ts`)
-
-- I campi sono `type="password"` (le cifre non si vedono) con `inputmode="numeric"`: sul telefono si apre la
-  **tastierina dei numeri**;
-- `autocomplete="new-password"` alla creazione e `current-password` all'inserimento: i gestori di password capiscono
-  che cosa sono;
-- alla creazione il PIN si scrive **due volte**, e la pagina controlla subito che sia di 6-10 cifre e che i due siano
-  uguali, prima di mandarlo;
-- il motivo di un errore è quello scritto dal backend ("PIN sbagliato. Ancora 3 tentativi prima di una pausa.");
-- un PIN sbagliato **si cancella** dal campo;
-- durante una pausa (429) il pulsante è spento e dice quanto manca: "Aspetta 1 min", poi i secondi.
-
-### E5. Esci
-
-"Esci" è in fondo alla colonna sul PC, e in fondo alla pagina "Altro" sul telefono. Chiude la sessione nel backend
-(`POST /api/auth/logout`) e cancella dal dispositivo la copia dei dati (parte F).
+Un **intercettore** è una funzione che HttpClient chiama per **ogni** richiesta e risposta dell'app.
+- Un 401 da un'API qualsiasi vuol dire che la sessione è finita (12 ore, un riavvio, un PIN cambiato altrove):
+  `sessionLost()` svuota la copia dei dati e richiede lo stato al backend, che dice che cosa mostrare;
+- **`return EMPTY`**: la richiesta si chiude senza risultato e senza errore. La pagina che l'aveva fatta sta per
+  sparire, sostituita da quella del PIN. Prima lasciavamo proseguire l'errore, e finiva come "errore non gestito"
+  nella console del browser (parte M);
+- un 401 da `/api/auth/login` **non** conta: lì vuol dire "PIN sbagliato", e lo mostra la pagina.
 
 ---
 
-## Parte F: la copia dei dati sul telefono
-
-### F1. Il problema
+## Parte J: la copia dei dati sul telefono
 
 Con l'app installata, il service worker tiene una **copia** delle ultime letture, fino a 7 giorni (`docs/42`), per
 mostrarle a PC spento o senza rete. Ma senza rete il backend non può dire se la sessione è aperta: chi avesse in mano
-il tuo telefono sbloccato potrebbe aprire l'app offline e vedere la copia, **senza PIN**.
+il tuo telefono sbloccato potrebbe aprire l'app offline e vedere la copia, **senza PIN**. La scelta: **la copia vale
+solo a sessione aperta.**
 
-La scelta: **la copia vale solo a sessione aperta.**
+- **Quando si cancella**: con "Esci"; quando il backend risponde 401; all'apertura, se il backend dice "non sei
+  dentro";
+- **senza rete**, l'app si apre sulla copia **solo** se il backend ha confermato "sei dentro" nelle **ultime 12
+  ore** (ricordato in `localStorage`, `wallettracker.session-seen`); altrimenti: "Il PC non risponde".
 
-### F2. Come
+**Svuotare il cassetto, non buttarlo.** Le copie stanno nella Cache Storage del browser, in "cassetti" con un nome
+(F12 → Application → Cache Storage): le risposte del gruppo "dati" in `ngsw:/:1:data:dati:cache`. Il primo
+tentativo **buttava** il cassetto, ma il service worker acceso lo tiene **aperto**, e continuava a usarlo, invisibile.
+La soluzione è **svuotarlo**: cancellare una per una le risposte che contiene. Accanto ci sono due cassetti di servizio
+(`...:lru`, `...:age`) con gli **indirizzi** in copia, senza i dati: il service worker li riscrive dalla sua memoria,
+quindi restano. Chi ha il telefono può vedere *quali* pagine hai aperto di recente, non i loro dati.
 
-1. **Quando la copia si cancella:**
-   - quando premi "Esci";
-   - quando il backend risponde 401 (sessione scaduta);
-   - all'apertura dell'app, se il backend dice "non sei dentro".
-2. **Senza rete**, l'app si apre sulla copia **solo** se il backend ha confermato "sei dentro" nelle **ultime 12
-   ore**, la stessa durata della sessione. L'ultima conferma è ricordata nel browser (`localStorage`,
-   `wallettracker.session-seen`); altrimenti: "Il PC non risponde".
-
-### F3. Svuotare il cassetto, non buttarlo
-
-Le copie stanno nella **Cache Storage** del browser, in "cassetti" con un nome (F12 → Application → Cache Storage).
-Le risposte del gruppo "dati" di `ngsw-config.json` stanno in `ngsw:/:1:data:dati:cache`.
-
-Il primo tentativo **buttava** il cassetto (`caches.delete(nome)`). Provando, abbiamo scoperto che non bastava: il
-service worker acceso tiene il cassetto **aperto**, e continuava a usarlo, invisibile, finché non si spegneva.
-Dopo un nuovo PIN la copia sembrava vuota, eppure senza rete i dati comparivano. La soluzione è **svuotarlo**:
-cancellare una per una le risposte che contiene. Così spariscono anche per il service worker.
-
-```ts
-for (const name of names) {
-  const drawer = await caches.open(name);
-  const saved = await drawer.keys();
-  await Promise.all(saved.map((request) => drawer.delete(request)));
-}
-```
-
-Accanto ci sono due cassetti "di servizio" del service worker (`...:lru` e `...:age`), dove tiene il suo registro:
-quali **indirizzi** ha in copia e da quando, **senza** i dati. Li lasciamo: il service worker li riscrive dalla sua
-memoria, quindi svuotarli non servirebbe. È il rischio che resta: chi ha il telefono può vedere *quali* pagine hai
-aperto di recente (per esempio una ricerca), non i loro dati.
-
-### F4. Il rischio che resta, in chiaro
-
-Telefono rubato **sbloccato**, con una sessione usata nelle ultime 12 ore, e messo subito **senza rete**: si vedono
-gli ultimi dati scaricati. È il prezzo della funzione "a PC spento vedi gli ultimi dati". Il blocco dello schermo del
-telefono resta la prima difesa.
+**Il rischio che resta:** telefono rubato **sbloccato**, con una sessione usata nelle ultime 12 ore, e messo subito
+**senza rete**. Si vedono gli ultimi dati scaricati. Il blocco dello schermo del telefono resta la prima difesa.
 
 ---
 
-## Parte G: il PIN dimenticato
+## Parte K: il PIN dimenticato
 
-Il PIN non si recupera: nel database c'è solo il suo hash. Si **azzera**, e lo si ricrea:
+### K1. Con il codice di recupero (il modo normale)
+
+Da qualsiasi dispositivo, anche dal telefono:
+1. **Inserisci il PIN → Ho dimenticato il PIN**;
+2. scrivi il **codice di recupero** e un PIN nuovo (due volte);
+3. compare il **codice nuovo**: salvalo, il vecchio non vale più;
+4. sei dentro. Tutte le altre sessioni (un telefono perso) si chiudono (parte G6).
+
+### K2. Perché niente email
+
+L'email sembra comoda, ma per un'app che gira sul tuo PC aggiunge più problemi di quanti ne risolva:
+1. **serve un server di posta**: un account SMTP, una password per spedire, un altro segreto da proteggere, messaggi
+   che finiscono nello spam;
+2. **è una seconda porta**: chi entra nella tua email entrerebbe nell'app. La sicurezza dell'app diventerebbe quella
+   della tua casella;
+3. **il link porterebbe comunque a `localhost` o alla rete Tailscale**: non aiuta proprio nel caso "sono lontano e
+   l'ho dimenticato".
+
+Il codice di recupero dà lo stesso aiuto senza nessuna di queste cose: è lo stesso schema dei codici di riserva della
+verifica in due passaggi di Google o di GitHub.
+
+### K3. Persi PIN e codice: lo script, dal PC
+
+L'ultima strada. Lo script di installazione, sul PC:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File installa.ps1 -ReimpostaPin     # Windows
@@ -488,24 +809,24 @@ powershell -ExecutionPolicy Bypass -File installa.ps1 -ReimpostaPin     # Window
 ./installa.sh --reimposta-pin                                         # macOS / Linux
 ```
 
-Lo script:
-1. cancella la riga del PIN (`DELETE FROM app_pin`), dentro il container del database;
-2. **riavvia il backend**: le sessioni, che stanno nella sua memoria, si chiudono tutte, anche quelle di un
-   telefono perso;
-3. alla prossima apertura dal PC (`http://localhost:8000`), l'app chiede "Crea il tuo PIN".
+1. cancella la riga del PIN (`DELETE FROM app_pin`) dentro il container del database: i dati restano tutti;
+2. **riavvia il backend**: le sessioni, che stanno nella sua memoria, si chiudono tutte;
+3. alla prossima apertura dal PC l'app chiede di nuovo "Come vuoi proteggere WalletTracker?".
 
-**Perché niente domanda segreta o email.** Ogni modo di recuperare il PIN "da fuori" sarebbe una seconda porta, da
-difendere anche lei. Così l'unica strada è avere in mano il PC: chi ce l'ha, ha comunque già tutto.
+**Portare lo script sul PC di un altro non serve a niente.** Lo script non contiene niente di segreto: alla fine
+esegue un comando SQL dentro Docker. Per farlo bisogna già poter usare Docker su quel PC, cioè averne il controllo, e
+chi ce l'ha può già leggere tutto il database. Lo script rende comoda, per il proprietario, una cosa che chi controlla
+il PC può fare comunque (parte A2, ultima riga).
 
 ---
 
-## Parte H: i test
+## Parte L: i test
 
-### H1. I test di prima, con il PIN
+### L1. I test di prima, con il PIN
 
 Con Spring Security, i test delle API avrebbero ricevuto tutti 401. Invece di toccarli uno per uno, in
-`IntegrationTestConfiguration` c'è una configurazione che fa partire **ogni** richiesta di MockMvc "come chi ha già
-inserito il PIN":
+`IntegrationTestConfiguration` c'è una configurazione che fa partire **ogni** richiesta di MockMvc "come chi è già
+dentro":
 
 ```java
 @Bean
@@ -515,142 +836,170 @@ MockMvcBuilderCustomizer authenticatedRequests() {
 ```
 
 `user(...)` e `csrf()` vengono da `spring-security-test` (la dipendenza `spring-boot-starter-security-test`). I test
-che usano il server web vero (`UploadLimitTest`, `HealthEndpointTest`) aprono invece una sessione vera, con
-`auth/TestSession`: un piccolo "browser" che fa quello che fa la dashboard (stato, PIN, cookie, gettone).
+con il server vero (`UploadLimitTest`, `HealthEndpointTest`) aprono invece una sessione vera con `auth/TestSession`:
+un piccolo "browser" che fa quello che fa la dashboard (stato, PIN dalla porta del PC, cookie, gettone).
 
-### H2. I test nuovi
+### L2. I test nuovi
 
 | Test | Che cosa prova |
 |---|---|
-| `AppPinTest` (2) | la regola del blocco, da sola: 4 errori liberi, poi 1, 5, 15 minuti, un'ora; il PIN giusto azzera il conteggio |
-| `AuthControllerTest` (9) | senza PIN 401; lo stato dà il gettone; il PIN si crea solo dal PC e una volta sola; 6-10 cifre; senza gettone CSRF 403; 5 errori, poi pausa (429, `Retry-After: 60`) anche con il PIN giusto, finita la pausa si entra; la seconda pausa è di 5 minuti; il numero di sessione cambia al login; Esci chiude la sessione; il controllo di salute resta aperto; il PIN si salva come `{bcrypt}$2a$12$...` |
-| `SessionCookieTest` (2) | con il server vero: il cookie è `HttpOnly` e `SameSite=Strict`, senza `Secure` su http; con `X-Forwarded-Proto: https` diventa `Secure` |
+| `AppPinTest` (3) | la regola del blocco: 4 errori liberi, poi 1, 5, 15 minuti, un'ora; il PIN giusto azzera il conteggio; cambiare o togliere il PIN fa crescere la generazione |
+| `AuthControllerTest` (14) | la prima apertura; da un altro dispositivo non si sceglie, nemmeno scrivendo `Host: localhost`; senza PIN il PC entra (senza sessione), gli altri no; il PIN aggiunto dopo vale anche per il PC; PIN e codice salvati come hash; 6-10 cifre; senza gettone CSRF 403; 5 errori, poi pausa (429, `Retry-After: 60`) anche con il PIN giusto; la seconda pausa di 5 minuti; il numero di sessione che cambia al login; Esci; il codice di recupero (scritto in minuscolo e con gli spazi) che dà un PIN nuovo e un codice nuovo, chiude il "telefono perso" e non vale una seconda volta; il codice malformato (400, non conta); il PIN tolto solo dal PC, con il PIN, che chiude le altre sessioni; il controllo di salute aperto |
+| `SessionCookieTest` (3) | con il server vero: cookie `HttpOnly` e `SameSite=Strict`, senza `Secure` su http; con `X-Forwarded-Proto: https` diventa `Secure`; senza PIN, dal PC, **nessun** cookie di sessione |
 | `HealthEndpointTest` | gli endpoint di Actuator nascosti: senza PIN 401, con il PIN 404 |
-| `auth-store.spec.ts` (6) | gli stati; l'invio del PIN; senza rete, la copia solo con una conferma recente; un 401 chiude la sessione, un 401 del PIN no; Esci |
-| `pin-page.spec.ts` (4) | i due campi, i controlli prima dell'invio, il motivo del backend, il PIN sbagliato che si cancella, la pausa con il pulsante spento, "Crea il PIN dal PC" |
-| `app.spec.ts` (+1) | senza PIN c'è solo la pagina del PIN, non la navigazione |
+| `auth-store.spec.ts` (9) | gli stati; il codice di recupero prima di entrare; "senza PIN"; il login; il recupero; senza rete, la copia solo con una conferma recente; un 401 chiude la sessione **senza arrivare alla pagina**; un 401 del PIN no; Esci |
+| `pin-page.spec.ts` (6) | la scelta, i controlli del PIN, il codice mostrato prima di entrare; "Continua senza PIN"; il PIN sbagliato; la pausa; "Ho dimenticato il PIN"; i due messaggi "da un altro dispositivo" |
+| `access-section.spec.ts` (3) | aggiungere il PIN dal PC (con il codice), toglierlo, niente da fare da un altro dispositivo |
 
-**L'orologio finto.** In `AuthControllerTest`, `TestClock` è un `Clock` che si sposta solo quando lo dice il test
-(`clock.advance(Duration.ofSeconds(61))`). È registrato come bean `@Primary`, quindi `PinService` riceve lui invece
-dell'orologio vero. Così la prova della pausa dura un istante.
+### L3. L'orologio finto
 
-**La CI** ora fa il giro completo, con `curl`:
-- controlla che senza PIN `/api/accounts` risponda 401;
-- crea il PIN dal "PC", con il gettone CSRF letto dal cookie, ed entra;
-- cambia la password del database;
-- azzera il PIN con lo script, e controlla che la vecchia sessione non valga più.
+In `AuthControllerTest`, `TestClock` è un `Clock` che si sposta solo quando lo dice il test
+(`clock.advance(Duration.ofSeconds(61))`). È un bean `@Primary`, quindi `PinService` riceve lui invece dell'orologio
+vero. Così la prova della pausa dura un istante. È il motivo per cui l'orologio è un bean (parte B4): **il codice che
+dipende dal tempo si prova bene solo se il tempo si può controllare**.
+
+### L4. La CI
+
+Il job "Installazione con Docker" fa, con `curl`, il giro completo sulla macchina di GitHub:
+1. senza PIN `/api/accounts` risponde 401;
+2. la porta 8001 dice `"local":false`, **anche** se la richiesta scrive `X-WalletTracker-Access: local`: nginx lo
+   sostituisce;
+3. crea il PIN dalla porta 8000, con il gettone CSRF letto dal cookie, e salva il codice di recupero;
+4. dalla porta 8001 ("il telefono") recupera il PIN con il codice, entra, e controlla che la sessione di prima non
+   valga più;
+5. cambia la password del database;
+6. azzera tutto con lo script, e controlla che la sessione del "telefono" non valga più.
 
 ---
 
-## Parte I: la sicurezza di questo passo
+## Parte M: verifiche fatte e difetti trovati
 
-In `docs/17` sono le righe **32-35**:
-- **32: il PIN.** Hash bcrypt, pause dopo gli errori con il conteggio nel database e la riga bloccata durante il
-  controllo, PIN creato e azzerato solo dal PC;
-- **33: la sessione.** 401 senza; cookie `HttpOnly`, `SameSite=Strict`, `Secure` con https; 12 ore; *session
+Prove con una copia nuova del progetto installata con lo script, un anno di movimenti inventati sul conto "Banca
+Alfa", e Chromium: il PC su `localhost:8000`, i "telefoni" su `localhost:8001`.
+
+| Prova | Esito |
+|---|---|
+| test del backend: 342, tutti verdi (1 saltato, come prima) | ✅ |
+| test del frontend: 211 verdi, Prettier, build | ✅ |
+| i comandi della CI, eseguiti sullo stack vero | ✅ |
+| l'ordine dei filtri chiesto a Spring (`FilterChainProxy`): `PinAccessFilter` tra `ExceptionTranslationFilter` e `AuthorizationFilter` | ✅ |
+| telefono, prima apertura: "Crea il PIN dal PC" | ✅ |
+| PC, prima apertura: "Come vuoi proteggere WalletTracker?"; "Continua senza PIN": dentro, senza "Esci" | ✅ |
+| telefono con il PC senza PIN: "Da qui serve un PIN" | ✅ |
+| PC: Impostazioni → Accesso → "Proteggi con un PIN": codice di recupero nel formato giusto; poi "protetta da un PIN" ed "Esci" | ✅ |
+| telefono: "Inserisci il PIN", dentro | ✅ |
+| secondo telefono: "Ho dimenticato il PIN", codice scritto in minuscolo con gli spazi, PIN nuovo: codice nuovo, diverso, e dentro | ✅ |
+| dopo il recupero: il primo telefono e il PC tornano a "Inserisci il PIN"; il PIN vecchio è sbagliato | ✅ |
+| PC: "Togli il PIN": "aperta senza PIN"; il secondo telefono: "Da qui serve un PIN" | ✅ |
+| le prove del passo 3 di prima (pausa, riavvio, senza rete, Esci e copia vuota, cookie): rifatte con questa versione dove cambiava qualcosa | ✅ |
+
+**Difetti trovati provando, e corretti:**
+1. **"59 secondi" invece di "1 minuto"**: l'orologio letto due volte (parte F3);
+2. **la copia dei dati non si cancellava davvero**: buttare il cassetto non bastava (parte J);
+3. **un `.env` nuovo per un database vecchio**: lo script ora se ne accorge e si ferma (`docs/45`, parte M);
+4. **errori nella console dopo una sessione scaduta**: le pagine ricevevano il 401 come errore non gestito; ora
+   l'intercettore lo consuma (parte I6);
+5. **un mio schema sbagliato**: la prima versione dell'immagine della catena metteva il nostro filtro prima di
+   `ExceptionTranslationFilter`. L'ordine vero, chiesto a Spring, è quello della parte B2.
+
+**Due cose capite provando, che non erano difetti dell'app:**
+- dopo "Esci" sembravano restare risposte in copia: contavo anche i cassetti di servizio del service worker;
+- in un test MockMvc "senza PIN" compariva una sessione: la crea il supporto ai test di Spring Security per il
+  gettone CSRF (l'app vera lo tiene nel cookie). La prova "nessun cookie di sessione" l'abbiamo fatta con il server
+  vero (`SessionCookieTest`).
+
+**Non provato:** un telefono vero (arriva con il passo 4), e l'avvio da sviluppo (`npm start` con il backend avviato
+a mano). Il proxy di `ng serve` passa i cookie così come sono e aggiunge l'header "local", quindi dovrebbe funzionare
+uguale: se vedi qualcosa di strano, dimmelo.
+
+---
+
+## Parte N: la sicurezza di questo passo, e i limiti
+
+In `docs/17` sono le righe **32-38**:
+- **32: il PIN**, facoltativo solo dal PC, hash bcrypt, pause, scelta e azzeramento solo dal PC;
+- **33: la sessione**: 401 senza; cookie `HttpOnly`, `SameSite=Strict`, `Secure` con https; 12 ore; *session
   fixation*; solo cookie;
 - **34: CSRF con gettone**, in aggiunta a `Origin` e `SameSite`;
-- **35: la copia dei dati** sul dispositivo solo a sessione aperta.
+- **35: la copia dei dati** sul dispositivo solo a sessione aperta;
+- **36: le due porte** e il confine di fiducia;
+- **37: il codice di recupero**;
+- **38: la generazione**, che chiude le sessioni vecchie.
 
-Dalla lista delle protezioni pianificate esce il **login**: fatto. Il principio "nessun accesso da fuori dal PC
-finché non c'è il login" ora permette il passo 4.
+**I limiti, detti chiaramente:**
+
+| Limite | Perché lo accettiamo |
+|---|---|
+| "senza PIN", chi usa il tuo PC entra | è la scelta; chi usa il tuo PC può comunque leggere il database. La protezione del PC è la password di Windows |
+| chi sbaglia il PIN apposta può farti aspettare | è il prezzo del conteggio unico, che ferma chi prova i PIN da tanti dispositivi |
+| telefono rubato sbloccato e subito offline: gli ultimi dati | è il prezzo di "a PC spento vedi gli ultimi dati" (parte J) |
+| il codice di recupero scritto su un foglio | chi trova il foglio **e** raggiunge l'app (il PC, o la tua rete Tailscale) può scegliere un PIN nuovo: conservalo come una chiave di casa |
+| un PIN di 6 cifre contro chi ha rubato il database | bcrypt lo rallenta a giorni; chi vuole di più sceglie 8-10 cifre (parte E4) |
 
 ---
 
-## Parte J: prova
+## Parte O: prova
 
 1. `git pull`, poi lancia lo script come sempre:
    ```powershell
    powershell -ExecutionPolicy Bypass -File installa.ps1
    ```
-   Le immagini si ricostruiscono (qualche minuto), Flyway applica la V29.
-2. Si apre `http://localhost:8000`: **"Crea il tuo PIN"**. Scegline uno di 6-10 cifre (non quello del bancomat),
-   scrivilo due volte, **Crea il PIN ed entra**. Ci sono i tuoi dati di sempre.
-3. Premi **Esci** (in fondo alla colonna). Torna "Inserisci il PIN".
-4. Sbaglia il PIN cinque volte: dopo il quinto, il pulsante dice "Aspetta 1 min". Dopo un minuto, entra con quello
-   giusto.
-5. Lascia l'app aperta e riavvia il backend (`docker compose restart backend`): al primo tocco su una pagina, l'app
-   chiede di nuovo il PIN.
-6. F12 → **Application → Cookies → http://localhost:8000**: `WALLETTRACKER_SESSION` con la spunta HttpOnly e
-   SameSite Strict; `XSRF-TOKEN` senza HttpOnly.
-7. F12 → **Application → Cache Storage**: apri `ngsw:/:1:data:dati:cache` e guarda le risposte salvate. Premi Esci
-   e riaprilo (tasto destro → Refresh): è vuoto.
-8. Per curiosità, prova l'azzeramento: `... installa.ps1 -ReimpostaPin`. L'app chiederà di creare un PIN nuovo.
-
-**Per sviluppare** (`npm start` e `./mvnw spring-boot:run`) il PIN è lo stesso dell'app nei container, perché sta
-nel database.
+   Le immagini si ricostruiscono (qualche minuto), Flyway applica V29 e V30.
+2. Si apre `http://localhost:8000`: **"Come vuoi proteggere WalletTracker?"**.
+3. **Prova prima "Continua senza PIN"**: entri subito, con i tuoi dati di sempre. In "Altro" non c'è "Esci".
+4. Apri `http://localhost:8001` (la porta "da un altro dispositivo"): "Da qui serve un PIN".
+5. Sul PC: **Impostazioni → Accesso → Proteggi con un PIN**. Compare il codice di recupero: copialo da qualche parte
+   (per la prova basta un file di testo), poi "L'ho salvato, continua".
+6. Su `localhost:8001`: ora "Inserisci il PIN". Entra.
+7. Su `localhost:8001`, in un'altra finestra in incognito: "Ho dimenticato il PIN", il codice e un PIN nuovo. Compare
+   un codice nuovo. La finestra di prima, al primo tocco, torna a "Inserisci il PIN".
+8. Sbaglia il PIN cinque volte: il pulsante dice "Aspetta 1 min".
+9. Dal PC: **Impostazioni → Accesso → Togli il PIN**, oppure tienilo: la scelta è tua.
+10. Per curiosità, F12 → **Application → Cookies**: `WALLETTRACKER_SESSION` (HttpOnly, SameSite Strict) e
+    `XSRF-TOKEN`. Con "senza PIN", dal PC, il primo non c'è.
 
 ---
 
-## Parte K: verifiche fatte e difetti trovati
-
-Prove con una copia nuova del progetto installata con lo script, un anno di movimenti inventati sul conto "Banca
-Alfa", e Chromium in formato telefono e PC.
-
-| Prova | Esito |
-|---|---|
-| test del backend: 335, tutti verdi (1 saltato, come prima) | ✅ |
-| test del frontend: 203 verdi, Prettier, build | ✅ |
-| senza PIN: `/api/accounts` 401, `/actuator/health` 200 | ✅ |
-| da un altro nome ("pc-casa.esempio.ts.net"): "Crea il PIN dal PC", nessun campo | ✅ |
-| dal PC: "Crea il tuo PIN"; due PIN diversi: "I due PIN non sono uguali" | ✅ |
-| PIN creato aprendo `/movimenti`: dopo il PIN si è su Movimenti | ✅ |
-| una modifica con il gettone CSRF 200, senza 403 | ✅ |
-| cookie: `WALLETTRACKER_SESSION` HttpOnly, SameSite Strict; `XSRF-TOKEN` leggibile | ✅ |
-| cinque errori: "Ancora 4… 1 tentativo", poi "riprova tra 1 minuto", pulsante "Aspetta 1 min" spento; dopo 61 s si entra | ✅ |
-| backend riavviato: al tocco su Analisi, pagina del PIN; dopo il PIN, su Analisi | ✅ |
-| senza rete (nginx fermo) con una sessione recente: Movimenti dalla copia, 50 movimenti | ✅ |
-| Esci: risposte in copia 0, subito e dopo 3 secondi; `/api/accounts` 401; conferma dimenticata | ✅ |
-| senza rete dopo Esci: "Il PC non risponde"; una lettura dei movimenti dal service worker: 504, niente dati | ✅ |
-| sul PC: "Esci" in fondo alla colonna | ✅ |
-| `--reimposta-pin` e `-ReimpostaPin`: PIN azzerato, vecchia sessione 401, nuovo PIN creato | ✅ |
-
-**Difetti trovati provando, e corretti:**
-1. **"59 secondi" invece di "1 minuto".** Il backend leggeva l'orologio due volte: un solo istante per tentativo
-   (parte C3);
-2. **La copia dei dati non si cancellava davvero.** Buttare il cassetto non bastava, perché il service worker lo
-   teneva aperto: ora si svuota (parte F3);
-3. **Un `.env` nuovo per un database vecchio.** Durante le prove il volume del database di una prova precedente era
-   rimasto, e lo script ha creato un `.env` con una password nuova: il backend non entrava ("password authentication
-   failed"). Lo stesso succederebbe a chi cancella il `.env` e reinstalla. Ora lo script se ne accorge e si ferma,
-   spiegando che cosa fare (`docs/45`, parte M);
-4. **Un mio contatore sbagliato.** Dopo Esci sembravano restare 8 risposte in copia: contavo anche il registro del
-   service worker (parte F3). Le risposte vere erano zero.
-
-**Non provato:** il PIN da un telefono vero (arriva con il passo 4), e l'avvio da sviluppo (`npm start` con il backend avviato a mano). Il proxy di `ng serve` passa i cookie così come sono, quindi dovrebbe funzionare uguale: se vedi qualcosa di strano, dimmelo.
-
----
-
-## Parte L: problemi comuni
+## Parte P: problemi comuni
 
 | Sintomo | Causa probabile | Che cosa fare |
 |---|---|---|
-| "Crea il PIN dal PC" anche sul PC | hai aperto l'app con un altro nome (es. l'indirizzo IP del PC) | apri `http://localhost:8000` |
+| "Crea il PIN dal PC" anche sul PC | hai aperto `localhost:8001` (la porta "remota") o un altro indirizzo | apri `http://localhost:8000` |
 | "Richiesta rifiutata: ricarica la pagina e riprova" | manca il gettone CSRF (cookie `XSRF-TOKEN` cancellato o scaduto) | ricarica la pagina: lo stato lo ridà |
-| il PIN è giusto ma "Troppi PIN sbagliati" | sei in una pausa: durante la pausa il PIN non si controlla | aspetta il tempo scritto sul pulsante |
+| il PIN è giusto ma "Troppi tentativi sbagliati" | sei in una pausa: durante la pausa il PIN non si controlla | aspetta il tempo scritto sul pulsante |
 | chiede il PIN dopo ogni aggiornamento | normale: le sessioni stanno nella memoria del backend | — |
 | "Il PC non risponde" | backend o nginx spenti, o niente rete, e nessuna sessione nelle ultime 12 ore | `docker compose ps`; poi "Riprova" |
-| PIN dimenticato | — | `installa.ps1 -ReimpostaPin` (parte G) |
-| `npm start`: 401 su tutto | normale: anche in sviluppo serve il PIN | inserisci il PIN nella pagina |
+| ho perso il codice di recupero ma ricordo il PIN | — | Impostazioni → Accesso: togli il PIN e rimettilo, ti dà un codice nuovo |
+| persi PIN e codice | — | `installa.ps1 -ReimpostaPin` (parte K3) |
+| `Bind for 127.0.0.1:8001 failed: port is already allocated` | un altro programma usa la porta 8001 | nel `.env` `REMOTE_PORT=8002` (o un'altra) |
+| `npm start`: 401 su tutto | normale: anche in sviluppo vale la scelta fatta (il PIN, o "senza PIN" dal PC) | inserisci il PIN, o scegli |
 
 ---
 
 ## Esercizi guidati
 
-1. **L'hash.** Con l'app avviata:
-   `docker compose exec db psql -U wallettracker -d wallettracker -c "select pin_hash, failed_attempts from app_pin"`.
-   Riconosci `{bcrypt}`, `$2a$` (la versione di bcrypt), `12` (il costo) e il resto (il *sale* e l'hash)? Perché due
-   installazioni con lo stesso PIN hanno hash diversi? (Suggerimento: il *sale*.)
-2. **La pausa vista dal database.** Sbaglia il PIN cinque volte e rilancia la query dell'esercizio 1 aggiungendo
-   `locked_until`. Poi entra con il PIN giusto e guarda di nuovo.
-3. **401 o 403?** In un terminale: `curl -i http://localhost:8000/api/accounts` (che cosa dice `detail`?), poi
+1. **L'hash.** Con l'app avviata e un PIN:
+   `docker compose exec db psql -U wallettracker -d wallettracker -c "select pin_hash, recovery_hash, generation, failed_attempts from app_pin"`.
+   Riconosci `{bcrypt}`, `$2a$`, `12`, il sale e l'hash (parte E2)? Perché i due hash sono così diversi, anche se
+   sono calcolati allo stesso modo?
+2. **La generazione al lavoro.** Rilancia la query dopo un recupero, e dopo "Togli il PIN". Di quanto cresce
+   `generation`? Perché il telefono di prima, alla richiesta successiva, è fuori? (Parte G6.)
+3. **Il confine di fiducia.** Da un terminale:
+   `curl -H "X-WalletTracker-Access: local" http://localhost:8001/api/auth/status`. Che cosa dice `local`? Quale riga di
+   `wallettracker.conf` lo decide? (Parte C2.) Ora pensa: che cosa succederebbe se nginx usasse `add_header` invece di
+   `proxy_set_header`, o se il backend avesse una porta pubblicata?
+4. **401 o 403?** `curl -i http://localhost:8000/api/accounts` (con il PIN: che cosa dice `detail`?), poi
    `curl -i -X POST http://localhost:8000/api/auth/login -H "Content-Type: application/json" -d "{\"pin\":\"123456\"}"`.
-   Perché il secondo è 403 e non 401? (Parte D.)
-4. **Il gettone.** Rifai il secondo comando come la CI (`.github/workflows/ci.yml`, "Controlla che l'app
-   risponda"): con un file di cookie (`-c biscotti -b biscotti`), prima lo stato, poi il login con l'header
-   `X-XSRF-TOKEN`. Quale risposta ottieni con un PIN sbagliato?
-5. **Il cookie Secure.** Leggi `SessionCookieTest`: che cosa cambia tra i due test? Perché Tomcat crede a
+   Perché il secondo è 403 e non 401? Quale filtro della parte B2 risponde?
+5. **Il gettone.** Rifai il secondo comando come la CI (`.github/workflows/ci.yml`): con un file di cookie
+   (`-c biscotti -b biscotti`), prima lo stato, poi il login con l'header `X-XSRF-TOKEN`. Che cosa ottieni con un PIN
+   sbagliato?
+6. **Il cookie Secure.** Leggi `SessionCookieTest`: che cosa cambia tra i test? Perché Tomcat crede a
    `X-Forwarded-Proto` solo dalla rete interna?
-6. **Un'idea per dopo: cambiare il PIN.** Oggi il PIN si cambia solo azzerandolo. Come aggiungeresti "Cambia il
-   PIN" in Impostazioni? Che cosa dovrebbe chiedere il backend, oltre al PIN nuovo? (Suggerimento: chi ha un
-   telefono sbloccato con la sessione aperta non deve poterlo cambiare.)
+7. **Il nostro filtro.** In `SecurityConfig`, prova a spostare `PinAccessFilter` **prima** di
+   `SecurityContextHolderFilter` (`addFilterBefore(..., SecurityContextHolderFilter.class)`) e lancia
+   `AuthControllerTest`. Quali test falliscono, e perché? (Suggerimento: che cosa non sa ancora il filtro, a quel
+   punto?) Rimetti com'era.
+8. **Un'idea per dopo: cambiare il PIN.** Oggi il PIN si cambia togliendolo e rimettendolo (dal PC), o con il codice
+   di recupero. Come aggiungeresti "Cambia il PIN" in Impostazioni, anche dal telefono? Che cosa dovrebbe chiedere il
+   backend, oltre al PIN nuovo? Dovrebbe far crescere la generazione?
