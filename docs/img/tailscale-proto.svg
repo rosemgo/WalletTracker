@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+</defs>
+<rect width="1200" height="720" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il "biglietto" X-Forwarded-Proto: oggi e al passo 4</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">$scheme dice come è arrivata la connessione A NGINX, non come è partito il browser</text>
+
+<!-- Row 1: today -->
+<rect x="30" y="95" width="1140" height="230" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="55" y="127" font-size="18" font-weight="700" fill="#334155">Oggi, dal PC: due tratti</text>
+
+<rect x="60" y="150" width="210" height="80" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="165" y="182" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">Browser del PC</text>
+<text x="165" y="206" text-anchor="middle" font-size="13" fill="#334155">http://localhost:8000</text>
+
+<line x1="270" y1="190" x2="405" y2="190" stroke="#475569" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="338" y="178" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">1 · http</text>
+
+<rect x="410" y="150" width="290" height="80" rx="12" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="555" y="180" text-anchor="middle" font-size="16" font-weight="700" fill="#15803d">nginx :8080</text>
+<text x="555" y="204" text-anchor="middle" font-size="13" fill="#334155">$scheme = http</text>
+
+<line x1="700" y1="190" x2="835" y2="190" stroke="#475569" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="768" y="178" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">2 · http</text>
+
+<rect x="840" y="150" width="300" height="80" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="990" y="180" text-anchor="middle" font-size="16" font-weight="700" fill="#c2410c">Tomcat</text>
+<text x="990" y="204" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">X-Forwarded-Proto: http</text>
+
+<rect x="410" y="250" width="730" height="55" rx="10" fill="#f0fdf4" stroke="#15803d"/>
+<text x="775" y="283" text-anchor="middle" font-size="14" fill="#14532d">✓ Biglietto giusto: il browser era in http → cookie senza Secure (e così il browser lo rimanda)</text>
+
+<!-- Row 2: step 4 -->
+<rect x="30" y="345" width="1140" height="350" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="55" y="377" font-size="18" font-weight="700" fill="#334155">Passo 4, dal telefono: tre tratti</text>
+
+<rect x="45" y="400" width="190" height="90" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="140" y="432" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">Telefono</text>
+<text x="140" y="456" text-anchor="middle" font-size="13" fill="#334155">https://pc.….ts.net</text>
+
+<line x1="235" y1="445" x2="320" y2="445" stroke="#1d4ed8" stroke-width="3" marker-end="url(#ab)"/>
+<text x="278" y="432" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">A · https</text>
+<text x="278" y="468" text-anchor="middle" font-size="11" fill="#1d4ed8">cifrato</text>
+
+<rect x="325" y="400" width="220" height="90" rx="12" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="435" y="430" text-anchor="middle" font-size="16" font-weight="700" fill="#7e22ce">Tailscale (sul PC)</text>
+<text x="435" y="454" text-anchor="middle" font-size="13" fill="#334155">decifra l'https e rifà</text>
+<text x="435" y="472" text-anchor="middle" font-size="13" fill="#334155">la richiesta in http</text>
+
+<line x1="545" y1="445" x2="620" y2="445" stroke="#475569" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="583" y="432" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">B · http</text>
+<text x="583" y="468" text-anchor="middle" font-size="11" fill="#475569">127.0.0.1:8001</text>
+
+<rect x="625" y="400" width="220" height="90" rx="12" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="735" y="430" text-anchor="middle" font-size="16" font-weight="700" fill="#15803d">nginx :8081</text>
+<text x="735" y="454" text-anchor="middle" font-size="13" fill="#334155">vede solo il tratto B:</text>
+<text x="735" y="474" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">$scheme = http</text>
+
+<line x1="845" y1="445" x2="915" y2="445" stroke="#475569" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="880" y="432" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">C · http</text>
+
+<rect x="920" y="400" width="230" height="90" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="1035" y="430" text-anchor="middle" font-size="16" font-weight="700" fill="#c2410c">Tomcat</text>
+<text x="1035" y="456" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#b91c1c">X-Forwarded-Proto:</text>
+<text x="1035" y="474" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#b91c1c">http</text>
+
+<rect x="45" y="515" width="1105" height="70" rx="10" fill="#fef2f2" stroke="#b91c1c"/>
+<text x="597" y="544" text-anchor="middle" font-size="14" font-weight="700" fill="#7f1d1d">✗ Biglietto sbagliato: il telefono era in https, ma l'https l'ha già tolto Tailscale, un tratto prima di nginx.</text>
+<text x="597" y="567" text-anchor="middle" font-size="14" fill="#7f1d1d">Tomcat gli crede e scrive il cookie senza Secure.</text>
+
+<rect x="45" y="600" width="1105" height="75" rx="10" fill="#f0fdf4" stroke="#15803d"/>
+<text x="597" y="630" text-anchor="middle" font-size="14" font-weight="700" fill="#14532d">La correzione (passo 4): sulla porta 8081 nginx scrive sempre "https"</text>
+<text x="597" y="654" text-anchor="middle" font-size="14" fill="#14532d">dal telefono a quella porta si arriva solo passando da Tailscale, quindi in https (dettagli al passo 4)</text>
+</svg>

@@ -569,13 +569,87 @@ server:
 | `http-only: true` | il JavaScript della pagina **non può leggerlo** | uno script infilato nella pagina (XSS) che ruba il cookie |
 | `same-site: strict` | il browser **non lo manda** nelle richieste partite da un altro sito | CSRF (parte H) |
 
-### G3. Il cookie `Secure`, che si accende da solo
+### G3. Il cookie `Secure`, dalle basi
 
-Un cookie `Secure` viaggia **solo su https**. Non lo scriviamo fisso, perché oggi l'app è su `http://localhost:8000`:
-con `Secure` il browser non rimanderebbe il cookie, e non si entrerebbe mai. Tomcat lo aggiunge da solo **quando la
-richiesta è https**.
+Questa parte parte da zero: ogni pezzo si appoggia su quello prima, quindi conviene leggerla in ordine.
 
-#### Chi è Tomcat
+#### G3.1 Una richiesta HTTP è un testo
+
+Quando il browser chiede qualcosa al backend, manda un **testo**, più o meno così:
+
+```
+GET /api/accounts HTTP/1.1
+Host: localhost:8000
+Accept: application/json
+Cookie: WALLETTRACKER_SESSION=8F3A91C2...
+```
+
+- La **prima riga** dice che cosa vuole: "dammi `/api/accounts`".
+- Le righe dopo sono le **intestazioni** (*headers*), nella forma `Nome: valore`: informazioni in più che
+  accompagnano la richiesta.
+
+La risposta ha la stessa forma:
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: WALLETTRACKER_SESSION=8F3A91C2...; HttpOnly; SameSite=Strict
+
+[ ...i conti... ]
+```
+
+**Il punto importante:** le intestazioni sono righe di testo e **le scrive chi manda la richiesta**. Il browser
+ne scrive alcune da solo, ma chiunque, con un programma come `curl`, può scrivere quelle che vuole, con il valore
+che vuole:
+
+```
+curl -H "X-Forwarded-Proto: https" http://localhost:8000/api/accounts
+```
+
+Quindi un server non può credere a occhi chiusi a quello che c'è scritto nelle intestazioni.
+
+#### G3.2 Il cookie
+
+HTTP non ha memoria: ogni richiesta arriva da sola. Il cookie serve a riconoscere il browser:
+
+1. inserisci il PIN giusto; il server risponde con `Set-Cookie: WALLETTRACKER_SESSION=8F3A91C2...`, cioè
+   "conserva questo numero";
+2. il browser lo salva e lo **rimanda in ogni richiesta**, nella riga `Cookie: ...`;
+3. il server vede il numero e lo riconosce: "è quello che ha già messo il PIN giusto".
+
+Quel numero **vale quanto il PIN**: chi lo possiede è "dentro". Se qualcuno lo copiasse, potrebbe usare l'app al
+posto tuo senza conoscere il PIN (*furto di sessione*).
+
+Dopo il valore, nella riga `Set-Cookie` ci sono delle **istruzioni per il browser**, gli attributi:
+
+| Attributo | Che cosa dice al browser |
+|---|---|
+| `HttpOnly` | "non far leggere questo cookie al JavaScript della pagina" |
+| `SameSite=Strict` | "non mandarlo se la richiesta parte da un altro sito" |
+| `Secure` | "**mandalo solo se la connessione è https**" |
+
+#### G3.3 http, https e che cos'è `Secure`
+
+- Con **http** il testo della richiesta viaggia **così com'è**: chi sta in mezzo (qualcuno sulla stessa Wi-Fi
+  del bar, il router) lo legge tutto, compresa la riga `Cookie: WALLETTRACKER_SESSION=...`.
+- Con **https** lo stesso testo viene **cifrato** prima di partire: chi sta in mezzo vede byte senza senso, e
+  solo il server lo decifra.
+
+**`Secure` vuol dire: "browser, manda questo cookie solo nelle connessioni https, mai in quelle http".** Così il
+numero della sessione non viaggia mai leggibile, nemmeno aprendo per sbaglio un indirizzo `http://`.
+
+Perché non lo mettiamo sempre? Perché oggi l'app si apre su `http://localhost:8000`, che è **http**. Con `Secure`
+il browser riceverebbe il cookie, lo salverebbe, ma **non lo rimanderebbe mai**. Il server vedrebbe ogni volta un
+browser senza cookie e chiederebbe di nuovo il PIN: non si entrerebbe mai. Su `localhost`, del resto, non serve:
+la richiesta non esce dal PC, non c'è nessuno "in mezzo".
+
+La regola che vogliamo:
+- richiesta arrivata in **http** → cookie **senza** `Secure`;
+- richiesta arrivata in **https** → cookie **con** `Secure`.
+
+Per seguirla, chi scrive il `Set-Cookie` deve sapere come è arrivata la richiesta. Ed è qui il problema.
+
+#### G3.4 Chi scrive il cookie: Tomcat
 
 nginx non è l'unico server web dell'app: ce ne sono **due, uno dietro l'altro**.
 
@@ -584,41 +658,122 @@ nginx non è l'unico server web dell'app: ce ne sono **due, uno dietro l'altro**
 - **nginx** (container `web`) sta davanti: riceve il browser, risponde da solo con i file di Angular e rifà le
   richieste `/api/…` al backend.
 - **Tomcat** sta **dentro** il backend. Il `.jar` di Spring Boot non contiene solo il nostro codice: contiene
-  anche un server web Java, Tomcat, "incorporato" (lo porta `spring-boot-starter-web`). È Tomcat che apre la
-  porta 8080 del container, legge l'HTTP, tiene le sessioni e scrive le intestazioni `Set-Cookie`; poi passa la
-  richiesta a Spring (la catena di filtri, i controller). Non lo vedi perché Spring Boot lo avvia da solo, dentro
-  `main`.
+  anche un server web Java, Tomcat, "incorporato" (lo porta `spring-boot-starter-web`). Spring Boot lo avvia da
+  solo dentro `main`, per questo non lo vedi. È Tomcat che apre la porta 8080 del container, legge l'HTTP, tiene
+  le sessioni e scrive i `Set-Cookie`; poi passa la richiesta a Spring (filtri, controller) e al nostro codice.
 
-Quindi il cookie `WALLETTRACKER_SESSION` non lo scrive nginx: lo scrive Tomcat. nginx lo inoltra così com'è.
+Ogni freccia è una **connessione separata**: nginx riceve la richiesta del browser (connessione 1) e ne apre
+**un'altra**, tutta sua, verso Tomcat (connessione 2), dove la ricopia.
 
-#### Come fa Tomcat a sapere se era https
+- La connessione **1** è http o https, a seconda di come è arrivato il browser.
+- La connessione **2** è **sempre http**: sta tutta dentro il PC, nella rete di Docker, cifrarla non servirebbe.
 
-Tomcat la richiesta la riceve **da nginx, sempre in http**, sulla rete di Docker. Da solo penserebbe sempre "http".
-Per questo nginx gli lascia un biglietto, l'intestazione `X-Forwarded-Proto` (`docs/44`, parte D3):
+Il cookie lo scrive Tomcat, ma Tomcat vede solo la connessione 2. Da solo penserebbe sempre "http". È come un
+impiegato in un ufficio interno: il cliente l'ha visto solo il portiere, e l'impiegato non sa se è arrivato in
+macchina o a piedi, a meno che il portiere non glielo scriva.
+
+#### G3.5 Il "biglietto": `X-Forwarded-Proto`
+
+nginx lo sa, perché la connessione 1 l'ha ricevuta lui. Quando ricopia la richiesta verso Tomcat, **aggiunge una
+riga** (`wallettracker.conf`, `docs/44` parte D3):
 
 ```nginx
-proxy_set_header X-Forwarded-Proto $scheme;   # $scheme = come è arrivato il browser A NGINX
+proxy_set_header X-Forwarded-Proto $scheme;
 ```
 
-`forward-headers-strategy: native` dice a Tomcat di leggere quel biglietto (lo fa un suo componente, il
-`RemoteIpValve`). I passi sono quelli della parte bassa dell'immagine:
+- `X-Forwarded-Proto` ("protocollo della richiesta inoltrata") è un nome che usano tutti i proxy, non l'abbiamo
+  inventato noi.
+- `$scheme` è una variabile di nginx: vale `http` o `https` **a seconda di come è arrivata la connessione a
+  nginx**.
 
-1. **Da chi arriva la richiesta?** Tomcat ci crede **solo** se arriva da un indirizzo interno (172.16-31.x come
-   la rete di Docker, 10.x, 192.168.x, 127.x). Altrimenti la ignora: un estraneo che scrivesse
-   `X-Forwarded-Proto: https` a mano non conterebbe. È ancora un confine di fiducia (parte C4).
-2. **Che cosa dice il biglietto?** Se dice `https`, per Tomcat la richiesta è https (`request.isSecure()` vale
-   `true`).
-3. In quel caso aggiunge `Secure` al cookie della sessione. Se dice `http`, no.
+A Tomcat arriva quindi:
+
+```
+GET /api/accounts HTTP/1.1
+Host: localhost:8000
+X-Forwarded-Proto: http        ← il biglietto di nginx
+Cookie: ...
+```
+
+Il "biglietto" è solo questa riga.
+
+#### G3.6 `forward-headers-strategy: native`: "leggi il biglietto"
+
+Di serie Tomcat **ignora** `X-Forwarded-Proto`: leggerlo sempre sarebbe pericoloso, perché (G3.1) chiunque può
+scrivere quella riga. `forward-headers-strategy: native` in `application.yml` dice a Spring Boot di accendere in
+Tomcat il componente che legge quei biglietti, il `RemoteIpValve` ("valve" è il nome che Tomcat dà ai pezzi che
+guardano ogni richiesta prima del resto). Ma il `RemoteIpValve` non crede a chiunque: per capire a chi crede serve
+un'ultima base.
+
+#### G3.7 "Dall'interno" o "dall'esterno": l'indirizzo di chi si collega
+
+Ogni connessione ha **due indirizzi IP**: quello di chi chiama e quello di chi risponde. E sono una cosa diversa
+dalle intestazioni:
+- le **intestazioni** sono testo **dentro** la richiesta: le scrive chi chiama, come vuole;
+- l'**indirizzo di chi chiama** non è scritto nella richiesta: Tomcat lo prende dalla **connessione** stessa,
+  perché le risposte devono tornare proprio lì. Chi se lo inventasse non riceverebbe le risposte.
+
+Sulla connessione 2 chi chiama Tomcat è **nginx**, che nella rete di Docker ha un indirizzo come `172.18.0.3`.
+
+Alcuni gruppi di indirizzi sono **privati**: su Internet non esistono, si usano solo dentro le reti di casa o di
+un'azienda. Sono `10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`, più `127.x.x.x` (il PC stesso). La rete di Docker usa
+indirizzi `172.x`. "Interno" vuol dire questo.
+
+La regola del `RemoteIpValve`:
+
+> **Credo al biglietto solo se chi si collega a me ha un indirizzo privato**: è probabilmente il mio proxy
+> (nginx), non uno sconosciuto da Internet.
+
+#### G3.8 I tre passi di Tomcat
+
+Arriva una richiesta a Tomcat (la parte bassa dell'immagine in G3.4).
+
+1. **"Chi si è collegato a me?"** Tomcat guarda l'indirizzo della connessione.
+   - `172.18.0.3`, privato: "è il mio proxy, i suoi biglietti valgono". Si va al passo 2.
+   - Un indirizzo pubblico, per esempio `93.40.12.7`: "sei uno sconosciuto, il tuo `X-Forwarded-Proto` lo
+     ignoro". La richiesta resta "http".
+2. **"Che cosa dice il biglietto?"**
+   - `https` → per tutto il resto del backend la richiesta conta come https: `request.isSecure()` vale `true`.
+   - `http` → non cambia niente: `isSecure()` è `false`.
+3. **Scrivere il cookie.** Quando apre la sessione dopo il PIN, Tomcat guarda `isSecure()`:
+   - `true` → `Set-Cookie: WALLETTRACKER_SESSION=...; HttpOnly; SameSite=Strict; Secure`
+   - `false` → la stessa riga, senza `Secure`.
+
+La protezione è **doppia**:
+- nel nostro Compose il backend **non ha porte aperte verso fuori**: l'unico che può collegarsi a Tomcat è nginx.
+  Il passo 1 è una sicurezza in più, per il giorno in cui qualcuno lo configurasse male;
+- `proxy_set_header` **sostituisce** l'intestazione: se un browser mandasse `X-Forwarded-Proto: https` a mano,
+  nginx la cancellerebbe e ci scriverebbe il valore vero.
+
+È lo stesso confine di fiducia di `local`/`remote` (parte C4): il backend crede a un'intestazione **solo perché
+sa che l'ha scritta nginx**, mai perché l'ha scritta il browser.
 
 Lo prova `SessionCookieTest`: senza l'intestazione il cookie non è `Secure`, con `X-Forwarded-Proto: https` lo è.
 
-#### Attenzione: al passo 4 serve una riga in più
+#### G3.9 Al passo 4, con Tailscale, serve una riga in più
 
-Con Tailscale, l'https lo toglie Tailscale **prima** di nginx: `tailscale serve` riceve `https://…` dal telefono e
-lo rifà in **http** verso `127.0.0.1:8001`. nginx vede http, `$scheme` vale `http`, e il cookie resterebbe senza
-`Secure`. Nella prima versione di questa guida avevo scritto che sarebbe diventato `Secure` "senza toccare
-niente": non era vero. Al passo 4 il blocco della porta 8081 (quella che usa solo Tailscale) dovrà scrivere
-`https`; lo sistemeremo lì, insieme a Tailscale, e lo proveremo con il telefono.
+![Il biglietto oggi e al passo 4](img/tailscale-proto.svg)
+
+Dal telefono il percorso avrà **tre** tratti invece di due:
+
+- **A**: il telefono si collega in **https** a Tailscale, che gira sul PC. Tailscale decifra la richiesta e la
+  rifà verso nginx, su `127.0.0.1:8001`.
+- **B**: questa connessione è **http** (sta dentro il PC, non serve cifrarla).
+- **C**: nginx la rifà a Tomcat, come sempre.
+
+`$scheme` (G3.5) è il protocollo con cui la connessione è arrivata **a nginx**: quella del tratto B, cioè http.
+Quindi nginx scrive `X-Forwarded-Proto: http`, e il biglietto è **sbagliato**: il telefono era in https, ma l'https
+l'ha già tolto Tailscale, un tratto prima. Tomcat ci crede e scrive il cookie **senza `Secure`**.
+
+Nella prima versione di questa guida c'era scritto che al passo 4 il cookie sarebbe diventato `Secure` "senza
+toccare niente": non era vero, per questo motivo. La correzione è una riga di nginx, solo per la porta 8081: lì
+il biglietto dirà sempre `https`, perché dal telefono a quella porta si arriva solo passando da Tailscale. Non la
+mettiamo adesso: oggi la porta 8001 si apre anche dal PC in http, e con un cookie `Secure` lì non si entrerebbe
+più (né nelle tue prove, né nella CI). La sistemiamo al passo 4, insieme a Tailscale, e la proviamo dal telefono.
+
+Quanto è grave intanto? Poco: il tratto A è cifrato due volte, dall'https e dalla rete di Tailscale. `Secure` è
+una protezione in più, che impedisce al browser di mandare il cookie in chiaro se un giorno si aprisse per sbaglio
+un indirizzo `http://`. Vale la pena metterla bene, ma va provata sul percorso vero.
 
 ### G4. Aprire la sessione (`AuthController.openSession`)
 
