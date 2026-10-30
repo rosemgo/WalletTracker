@@ -698,18 +698,30 @@ sullo stesso dispositivo.
 ### I3. Che cosa registrare su Enable Banking
 
 Lo script (`--tailscale`) aggiunge da solo l'indirizzo del telefono al `.env`. Su Enable Banking, invece, lo devi
-aggiungere tu:
-1. apri il pannello di controllo di Enable Banking (**Control Panel**) e la tua applicazione;
-2. tra gli indirizzi di ritorno (**Redirect URLs**) aggiungi `https://pc-casa.tail0000.ts.net/callback` (con il nome
-   vero del tuo PC), lasciando quello che c'è già;
-3. salva.
+aggiungere tu. Il pannello accetta più indirizzi per la stessa applicazione, e si possono cambiare anche dopo la
+registrazione:
+1. su **enablebanking.com/cp** apri **API applications** e la tua applicazione (il pulsante per modificarla porta
+   alla pagina **Editing application …**);
+2. nel riquadro **Allowed redirect URLs (one per line)** scrivi **un indirizzo per riga**: "one per line" vuol dire
+   proprio questo. Dopo ogni indirizzo premi **Invio**, e il successivo va sulla riga sotto. Niente virgole, niente
+   spazi prima o dopo:
 
-> **Da verificare tu.** Da qui (l'ambiente cloud) il sito di Enable Banking non è raggiungibile, quindi non ho potuto
-> controllare se il pannello accetta più indirizzi per la stessa applicazione e se si possono aggiungere dopo la
-> registrazione. Di solito questi servizi sì (si scrive un indirizzo per riga). Se il tuo pannello non lo permette,
-> hai due strade: registrare una **seconda applicazione** solo per il telefono, oppure usare **un solo indirizzo**,
-> quello Tailscale, e collegare le banche sempre da `https://pc-casa.tail0000.ts.net`, anche dal PC (che è nella
-> tailnet: funziona, ma lì l'app chiede il PIN).
+   ```
+   https://localhost:8443/callback
+   http://localhost:8000/callback
+   https://pc-casa.tail0000.ts.net/callback
+   ```
+
+   (con il nome vero del tuo PC al posto di `pc-casa.tail0000.ts.net`);
+3. premi **Save**.
+
+> **Attenzione:** il riquadro contiene **tutto** l'elenco. Se quando lo apri è vuoto (o mostra solo la scritta
+> grigia "Allowed redirect URLs…", che è un suggerimento e non un valore), scrivi **tutti** gli indirizzi che usi,
+> anche quelli che avevi già registrato: salvando un riquadro con un indirizzo solo, gli altri smetterebbero di
+> valere.
+
+Nel pannello gli indirizzi sono uno per riga, nel `.env` sono separati da virgole: sono lo stesso elenco scritto in
+due modi. Conta solo che ogni indirizzo del `.env` sia anche nel pannello, carattere per carattere.
 
 **E l'indirizzo del PC?** Il valore di serie è ancora `https://localhost:8443/callback`, quello di `ng serve` dei passi
 precedenti. Con l'app in Docker, dal PC l'indirizzo giusto è `http://localhost:8000/callback` (`docs/44`, parte H):
