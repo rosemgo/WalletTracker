@@ -34,11 +34,19 @@
         <strong>Production</strong>.
       </li>
       <li>
-        Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
-        <code>{{ status.redirectUrl }}</code>
-        <button type="button" class="link" (click)="copyRedirectUrl(status.redirectUrl)">
-          {{ copied() ? 'copiato ✓' : 'copia' }}
-        </button>
+        @if (status.redirectUrls.length > 1) {
+          Come indirizzi di ritorno (<em>Redirect URLs</em>) inseriscili tutti, esattamente così:
+        } @else {
+          Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
+        }
+        @for (url of status.redirectUrls; track url) {
+          <span class="redirect-url">
+            <code>{{ url }}</code>
+            <button type="button" class="link" (click)="copyRedirectUrl(url)">
+              {{ copied() === url ? 'copiato ✓' : 'copia' }}
+            </button>
+          </span>
+        }
       </li>
       <li>
         Alla fine il browser scarica un file <code>.pem</code>: è la tua

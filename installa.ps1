@@ -7,6 +7,7 @@
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -CambiaPasswordDb    password nuova per il database
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -SenzaBrowser        non apre il browser alla fine
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -ReimpostaPin        PIN dimenticato: lo azzera
+#   powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           l'app sui tuoi dispositivi (docs/47)
 #
 # "-ExecutionPolicy Bypass": Windows, di serie, non esegue gli script scaricati. Così il permesso vale solo per
 # questo comando, senza cambiare le impostazioni del PC.
@@ -18,6 +19,7 @@ param(
     [switch]$Ia,
     [switch]$CambiaPasswordDb,
     [switch]$ReimpostaPin,
+    [switch]$Tailscale,
     [switch]$SenzaBrowser
 )
 
@@ -175,6 +177,64 @@ if ($ReimpostaPin) {
     Write-Host 'PIN azzerato. Apri l''app da questo PC (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza.'
 }
 
+# --- 4c. Tailscale (solo con -Tailscale) -------------------------------------------------------------------
+# Le stesse tre cose di installa.sh (vedi i commenti lì): tailscale serve verso la porta "remota" di nginx, il nome
+# del PC tra i nomi consentiti, l'indirizzo di ritorno di Enable Banking per quel nome (docs/47).
+
+# Aggiunge un valore a una variabile del .env fatta di valori separati da virgole, se non c'è già. $true se l'ha aggiunto.
+function Aggiungi-A-Elenco([string]$nome, [string]$nuovo, [string]$predefinito) {
+    $attuale = Valore-Env $nome
+    if ($attuale -eq '') { $attuale = $predefinito }
+    if (($attuale -split ',') -contains $nuovo) { return $false }
+    Scrivi-Env $nome "$attuale,$nuovo"
+    return $true
+}
+
+$NomeTs = ''
+if ($Tailscale) {
+    Passo 'Tailscale'
+    # Il programma di installazione di Tailscale lo mette nel PATH; se no, lo cerchiamo dove si installa di solito.
+    $TsCmd = (Get-Command tailscale -ErrorAction SilentlyContinue).Source
+    if (-not $TsCmd) {
+        $predefinito = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
+        if (Test-Path $predefinito) { $TsCmd = $predefinito }
+        else { Errore 'Non trovo Tailscale: installalo e accedi con il tuo account (docs/47, parte C), poi rilancia.' }
+    }
+
+    # tailscale status --json: lo stato di Tailscale in JSON. ConvertFrom-Json lo trasforma in un oggetto:
+    # BackendState vale "Running" quando è collegato; Self.DNSName è il nome di questo PC, con un punto finale.
+    $testo = (& $TsCmd status --json 2>$null) -join "`n"
+    if ($LASTEXITCODE -ne 0 -or $testo -eq '') { Errore 'Tailscale non risponde: aprilo e accedi con il tuo account (docs/47, parte C).' }
+    $stato = $testo | ConvertFrom-Json
+    if ($stato.BackendState -ne 'Running') { Errore 'Tailscale è installato ma non collegato: aprilo, accedi con il tuo account e rilancia.' }
+    $NomeTs = ([string]$stato.Self.DNSName).TrimEnd('.')
+    if (-not $NomeTs.EndsWith('.ts.net')) {
+        Errore 'Non trovo il nome del PC nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia.'
+    }
+    Write-Host "Il nome di questo PC nella rete Tailscale è: $NomeTs"
+
+    # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5).
+    $serve = (& $TsCmd serve status --json 2>$null) -join "`n"
+    if ($serve -match '"AllowFunnel"\s*:\s*\{[^}]*:\s*true') {
+        Errore "Tailscale Funnel è acceso: renderebbe l'app raggiungibile da Internet. Spegnilo con:  tailscale funnel --https=443 off   e rilancia."
+    }
+
+    $portaRemota = Valore-Env 'REMOTE_PORT'
+    if ($portaRemota -eq '') { $portaRemota = '8001' }
+    Write-Host "Chiedo a Tailscale di ricevere i tuoi dispositivi su https://$NomeTs e di passarli a 127.0.0.1:$portaRemota."
+    Write-Host "(Se è la prima volta, Tailscale può chiederti di attivare HTTPS per la tua rete: apri il link che scrive,"
+    Write-Host " conferma, e lo script prosegue da solo.)"
+    & $TsCmd serve --bg --https=443 "http://127.0.0.1:$portaRemota"
+    if ($LASTEXITCODE -ne 0) { Errore 'tailscale serve non è riuscito: leggi il messaggio qui sopra (docs/47, parte P).' }
+
+    if (Aggiungi-A-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $NomeTs 'localhost,127.0.0.1') {
+        Write-Host "Aggiunto $NomeTs ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)."
+    }
+    if (Aggiungi-A-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" 'https://localhost:8443/callback') {
+        Write-Host "Aggiunto https://$NomeTs/callback agli indirizzi di ritorno di Enable Banking (nel .env)."
+    }
+}
+
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
 Passo 'Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)'
 if ($Ia) { & docker compose --profile ia up -d --build }
@@ -193,5 +253,9 @@ $porta = Valore-Env 'WEB_PORT'
 if ($porta -eq '') { $porta = '8000' }
 $indirizzo = "http://localhost:$porta"
 Passo "WalletTracker è avviato: $indirizzo"
+if ($Tailscale) {
+    Write-Host "Dai tuoi dispositivi con Tailscale:  https://$NomeTs   (lì serve il PIN: crealo prima da questo PC)"
+    Write-Host "Per collegare una banca dal telefono, registra su Enable Banking anche:  https://$NomeTs/callback"
+}
 Write-Host 'Per fermarlo:  docker compose down   (i dati restano)'
 if (-not $SenzaBrowser) { Start-Process $indirizzo }

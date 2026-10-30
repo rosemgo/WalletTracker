@@ -140,6 +140,46 @@ jobs:
           curl -fsS -b telefono http://localhost:8001/api/accounts
           test "$(curl -s -o /dev/null -w '%{http_code}' -b biscotti http://localhost:8000/api/accounts)" = 401
 
+      # Passo 4 (docs/47, parte L). Le intestazioni che Tailscale aggiunge, e quelle false che potrebbe scrivere chiunque.
+      - name: Intestazioni di Tailscale e intestazioni false
+        run: |
+          # Un nome falso (DNS rebinding) resta fuori anche con X-Forwarded-Host: nginx non la fa passare.
+          for porta in 8000 8001; do
+            test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example' -H 'X-Forwarded-Host: localhost' \
+              http://localhost:$porta/api/auth/status)" = 403
+          done
+          # Entra con il PIN e stampa il cookie della sessione. $1 = porta, il resto = intestazioni in più.
+          entra() {
+            porta=$1; shift
+            rm -f prova-cookie
+            curl -fsS -c prova-cookie -b prova-cookie "$@" http://localhost:$porta/api/auth/status > /dev/null
+            gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' prova-cookie)
+            curl -fsS -D - -o /dev/null -b prova-cookie "$@" -H "X-XSRF-TOKEN: $gettone" \
+              -H 'Content-Type: application/json' -d '{"pin":"246810"}' http://localhost:$porta/api/auth/login |
+              grep -i '^set-cookie: WALLETTRACKER_SESSION'
+          }
+          # Dalla porta di Tailscale, con l'https che dice Tailscale: cookie Secure.
+          cookie=$(entra 8001 -H 'X-Forwarded-Proto: https')
+          echo "$cookie" | grep -q 'Secure'
+          # Dalla porta del PC un "https" scritto a mano non conta; e in http, niente Secure. (Non "! grep": con
+          # "set -e" una riga che comincia con "!" non fa mai fallire il passo.)
+          cookie=$(entra 8000 -H 'X-Forwarded-Proto: https')
+          if echo "$cookie" | grep -q 'Secure'; then echo "Secure sulla porta del PC: $cookie"; exit 1; fi
+          cookie=$(entra 8001)
+          if echo "$cookie" | grep -q 'Secure'; then echo "Secure in http: $cookie"; exit 1; fi
+          # Una richiesta arrivata da Internet con Tailscale Funnel: rifiutata, pagine comprese.
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Tailscale-Funnel-Request: ?1' http://localhost:8001/)" = 403
+
+      # ./installa.sh --tailscale con un finto "tailscale" (.github/ci/tailscale): il nome del PC e l'indirizzo di
+      # ritorno finiscono nel .env, e il backend accetta il nome Tailscale.
+      - name: Installazione con --tailscale
+        run: |
+          PATH="$PWD/.github/ci:$PATH" ./installa.sh --tailscale --senza-browser
+          grep -q 'serve --bg --https=443 http://127.0.0.1:8001' .github/ci/serve-chiamato
+          grep -q '^WALLETTRACKER_ALLOWED_HOSTS=localhost,127.0.0.1,pc-casa.tail0000.ts.net$' .env
+          grep -q '^ENABLE_BANKING_REDIRECT_URL=.*,https://pc-casa.tail0000.ts.net/callback$' .env
+          curl -fsS -H 'Host: pc-casa.tail0000.ts.net' http://localhost:8001/api/auth/status | grep -q '"local":false'
+
       - name: Cambia la password del database e ricontrolla
         run: |
           ./installa.sh --cambia-password-db --senza-browser

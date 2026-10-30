@@ -34,10 +34,15 @@ public class ConnectionController {
         return bankLinkService.banks(country.toUpperCase()).stream().map(BankDto::from).toList();
     }
 
-    /** {@code POST /api/connections} con {@code {"bank": "ING", "country": "IT"}}: avvia il collegamento. */
+    /**
+     * {@code POST /api/connections} con {@code {"bank": "ING", "country": "IT"}}: avvia il collegamento. Il nome con cui
+     * è aperta l'app ({@code getServerName()}, dall'header Host) sceglie l'indirizzo di ritorno: dal telefono, la
+     * banca rimanda al telefono (docs/47, parte I).
+     */
     @PostMapping("/connections")
-    public StartedLink start(@Valid @RequestBody StartLink request) {
-        return new StartedLink(bankLinkService.start(request.bank(), request.country().toUpperCase()));
+    public StartedLink start(@Valid @RequestBody StartLink request, HttpServletRequest httpRequest) {
+        return new StartedLink(bankLinkService.start(request.bank(), request.country().toUpperCase(),
+                httpRequest.getServerName()));
     }
 
     /**

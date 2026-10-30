@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Un finto "tailscale", solo per la CI: risponde come quello vero (stessa forma del JSON), con dati inventati.
+# Serve a provare ./installa.sh --tailscale senza un account Tailscale (docs/47, parte L).
+case "$1 $2" in
+  "status --json")
+    printf '{\n\t"BackendState": "Running",\n\t"Self": {\n\t\t"HostName": "pc-casa",\n\t\t"DNSName": "pc-casa.tail0000.ts.net."\n\t},\n\t"Peer": {\n\t\t"nodekey:abc": {\n\t\t\t"DNSName": "telefono.tail0000.ts.net."\n\t\t}\n\t}\n}\n'
+    ;;
+  "serve status") echo '{}' ;;
+  "serve --bg") echo "$*" >"$(dirname "$0")/serve-chiamato" ;;
+  *)
+    echo "finto tailscale: non so fare $*" >&2
+    exit 1
+    ;;
+esac

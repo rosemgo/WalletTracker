@@ -1237,6 +1237,13 @@ code {
   font-size: 0.88em;
 }
 
+/* Impostazioni: gli indirizzi di ritorno di Enable Banking, uno per riga (sono lunghi, sul telefono vanno a capo). */
+.redirect-url {
+  display: block;
+  margin-top: 0.3rem;
+  overflow-wrap: anywhere;
+}
+
 progress {
   display: block;
   width: 100%;

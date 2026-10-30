@@ -89,11 +89,11 @@ class BankLinkServiceTest {
 
     @Test
     void startAsksForTheLongestConsentTheBankAllowsAndReturnsTheLoginPage() {
-        String url = bankLinkService.start("ING", "IT");
+        String url = bankLinkService.start("ING", "IT", "localhost");
 
         assertThat(url).isEqualTo("https://banca.example/login");
         AuthorizationRequest request = sentAuthorization();
-        assertThat(request.redirectUrl()).isEqualTo(properties.redirectUrl());
+        assertThat(request.redirectUrl()).isEqualTo("https://localhost:8443/callback");
         assertThat(request.aspsp()).isEqualTo(new AspspRef("ING", "IT"));
         // ING concede al massimo 90 giorni: chiediamo 90 giorni meno 5 minuti di margine.
         assertThat(request.access().validUntil())
@@ -112,7 +112,7 @@ class BankLinkServiceTest {
 
     @Test
     void completeSavesTheAccountsAndImportsWithTheUserPresent() {
-        bankLinkService.start("ING", "IT");
+        bankLinkService.start("ING", "IT", "localhost");
         String state = sentAuthorization().state();
         when(client.createSession("code-1")).thenReturn(new Session("session-1",
                 List.of(new Account("uid-a", new AccountId("IT60X001"), "Conto Arancio", "EUR", "hash-a")),
@@ -141,7 +141,7 @@ class BankLinkServiceTest {
 
     @Test
     void aStateCanBeUsedOnlyOnce() {
-        bankLinkService.start("ING", "IT");
+        bankLinkService.start("ING", "IT", "localhost");
         String state = sentAuthorization().state();
         when(client.createSession("code-1")).thenReturn(new Session("session-1", List.of(),
                 new AspspRef("ING", "IT"), new Access(Instant.now().plus(90, ChronoUnit.DAYS))));

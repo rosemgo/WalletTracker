@@ -31,7 +31,7 @@ export class SettingsPage {
   protected readonly pem = signal<string | null>(null); // il contenuto del file .pem scelto
   protected readonly fileName = signal<string | null>(null);
   protected readonly saving = signal(false);
-  protected readonly copied = signal(false);
+  protected readonly copied = signal<string | null>(null); // l'ultimo indirizzo copiato
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
@@ -79,7 +79,7 @@ export class SettingsPage {
 
   /** Copia l'indirizzo di ritorno negli appunti, da incollare sul sito di Enable Banking. */
   copyRedirectUrl(url: string): void {
-    navigator.clipboard?.writeText(url).then(() => this.copied.set(true));
+    navigator.clipboard?.writeText(url).then(() => this.copied.set(url));
   }
 
   save(): void {

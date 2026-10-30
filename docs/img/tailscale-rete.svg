@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7e22ce"/></marker>
+<marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+</defs>
+<rect width="1200" height="780" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Tailscale: una rete privata solo tra i tuoi dispositivi</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">ogni dispositivo ha le sue chiavi; il traffico passa cifrato da un dispositivo all'altro; il server di Tailscale presenta, ma non legge</text>
+
+<!-- coordination -->
+<rect x="400" y="95" width="400" height="140" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5"/>
+<text x="600" y="125" text-anchor="middle" font-size="17" font-weight="700" fill="#7e22ce">Server di coordinamento (Tailscale)</text>
+<text x="600" y="150" text-anchor="middle" font-size="13" fill="#334155">sa CHI c'è nella tua rete e le loro chiavi PUBBLICHE</text>
+<text x="600" y="172" text-anchor="middle" font-size="13" fill="#334155">(come un elenco del telefono); ti fa accedere con il tuo</text>
+<text x="600" y="194" text-anchor="middle" font-size="13" fill="#334155">account Google, Microsoft o Apple</text>
+<text x="600" y="220" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">non vede il contenuto: le chiavi private restano sui dispositivi</text>
+
+<!-- PC -->
+<rect x="40" y="300" width="330" height="200" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="205" y="330" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">PC di casa</text>
+<text x="205" y="356" text-anchor="middle" font-size="13" fill="#334155">Tailscale installato</text>
+<text x="205" y="380" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">100.101.102.103</text>
+<text x="205" y="402" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">pc-casa.tail0000.ts.net</text>
+<text x="205" y="430" text-anchor="middle" font-size="12" fill="#475569">dietro il router di casa,</text>
+<text x="205" y="448" text-anchor="middle" font-size="12" fill="#475569">nessuna porta aperta</text>
+<text x="205" y="478" text-anchor="middle" font-size="12" fill="#334155">🔑 chiave privata: solo qui</text>
+
+<!-- phone -->
+<rect x="830" y="300" width="330" height="200" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
+<text x="995" y="330" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Telefono</text>
+<text x="995" y="356" text-anchor="middle" font-size="13" fill="#334155">app Tailscale, collegata</text>
+<text x="995" y="380" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">100.64.0.7</text>
+<text x="995" y="402" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">telefono.tail0000.ts.net</text>
+<text x="995" y="430" text-anchor="middle" font-size="12" fill="#475569">su 4G, 5G o un Wi-Fi qualsiasi</text>
+<text x="995" y="478" text-anchor="middle" font-size="12" fill="#334155">🔑 chiave privata: solo qui</text>
+
+<!-- coordination lines -->
+<line x1="420" y1="235" x2="290" y2="295" stroke="#7e22ce" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ap)"/>
+<line x1="780" y1="235" x2="910" y2="295" stroke="#7e22ce" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ap)"/>
+<text x="300" y="262" font-size="12" fill="#7e22ce">"il telefono ha questa chiave"</text>
+<text x="770" y="262" font-size="12" fill="#7e22ce">"il PC ha questa chiave"</text>
+
+<!-- direct tunnel -->
+<line x1="372" y1="390" x2="826" y2="390" stroke="#15803d" stroke-width="5" marker-start="url(#ag)" marker-end="url(#ag)"/>
+<rect x="430" y="345" width="340" height="32" rx="8" fill="#f0fdf4" stroke="#15803d"/>
+<text x="600" y="367" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">tunnel WireGuard diretto, cifrato</text>
+<text x="600" y="420" text-anchor="middle" font-size="12" fill="#334155">i due si "bucano" il router a vicenda (NAT traversal):</text>
+<text x="600" y="438" text-anchor="middle" font-size="12" fill="#334155">tutti e due COMINCIANO verso l'altro, nello stesso momento</text>
+
+<!-- relay -->
+<rect x="450" y="520" width="300" height="80" rx="12" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+<text x="600" y="550" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">Relè DERP (Tailscale)</text>
+<text x="600" y="574" text-anchor="middle" font-size="12" fill="#475569">se la strada diretta non si trova:</text>
+<text x="600" y="590" text-anchor="middle" font-size="12" fill="#475569">passa i pacchetti, ancora cifrati</text>
+<path d="M 205 500 Q 205 560 445 560" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#as)"/>
+<path d="M 995 500 Q 995 560 755 560" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#as)"/>
+
+<!-- outsiders -->
+<rect x="40" y="630" width="1120" height="125" rx="12" fill="#fef2f2" stroke="#b91c1c"/>
+<text x="600" y="660" text-anchor="middle" font-size="15" font-weight="700" fill="#7f1d1d">Chi NON c'è nella tua rete (tailnet)</text>
+<text x="600" y="686" text-anchor="middle" font-size="13" fill="#334155">chiunque altro su Internet: non ha una chiave che il PC conosca, quindi i suoi pacchetti il PC li butta senza rispondere.</text>
+<text x="600" y="708" text-anchor="middle" font-size="13" fill="#334155">Per lui gli indirizzi 100.x e i nomi …ts.net del PC non portano da nessuna parte. Sul router non si apre niente.</text>
+<text x="600" y="734" text-anchor="middle" font-size="13" fill="#334155">Per entrare serve accedere al TUO account (proteggilo con la verifica in due passaggi).</text>
+</svg>

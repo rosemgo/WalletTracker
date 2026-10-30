@@ -21,6 +21,7 @@ describe('App', () => {
           source: configured ? 'ENV' : null,
           applicationId: null,
           redirectUrl: '',
+          redirectUrls: [],
         }),
     };
     TestBed.configureTestingModule({

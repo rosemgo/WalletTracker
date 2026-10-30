@@ -12,6 +12,7 @@ const NOT_CONFIGURED: SetupStatus = {
   source: null,
   applicationId: null,
   redirectUrl: 'https://localhost:8443/callback',
+  redirectUrls: ['https://localhost:8443/callback'],
 };
 const APP_ID = 'cf589be3-3755-465b-a8df-a90a16a31403';
 const PEM = '-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n';
@@ -76,6 +77,26 @@ describe('SettingsPage', () => {
 
     expect(text).toContain('Non ancora configurato');
     expect(text).toContain('https://localhost:8443/callback');
+  });
+
+  it('with more redirect URLs (PC and Tailscale) shows them all, each with its own copy button', async () => {
+    const two = ['http://localhost:8000/callback', 'https://pc-casa.tail0000.ts.net/callback'];
+    TestBed.inject(SetupStore).status.set({
+      ...NOT_CONFIGURED,
+      redirectUrl: two[0],
+      redirectUrls: two,
+    });
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.textContent).toContain('inseriscili tutti');
+    const rows = [...page.querySelectorAll('.redirect-url')];
+    expect(rows.map((row) => row.querySelector('code')?.textContent)).toEqual(two);
+    expect(rows.map((row) => row.querySelector('button')?.textContent?.trim())).toEqual([
+      'copia',
+      'copia',
+    ]);
   });
 
   it('fills the Application ID from the file name and saves the key', async () => {

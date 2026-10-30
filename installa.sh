@@ -6,6 +6,7 @@
 #   ./installa.sh --ia                   come sopra, con anche Ollama (l'IA locale)
 #   ./installa.sh --cambia-password-db   genera una password nuova per il database e la mette dove serve
 #   ./installa.sh --reimposta-pin        PIN e codice di recupero persi: li cancella, e dal PC si sceglie di nuovo
+#   ./installa.sh --tailscale            apre l'app ai tuoi dispositivi con Tailscale, con https (docs/47)
 #   ./installa.sh --senza-browser        non apre il browser alla fine (per la CI)
 #
 # Si può rilanciare quante volte si vuole: quello che c'è già (il .env, la chiave, i dati) non viene toccato.
@@ -14,7 +15,7 @@
 #   1. controlla che Docker sia avviato;
 #   2. se manca il .env, lo crea da .env.example con una password del database generata a caso;
 #   3. crea la cartella .data (la chiave di cifratura) come tuo utente;
-#   4. se richiesto, cambia la password del database o azzera il PIN;
+#   4. se richiesto, cambia la password del database, azzera il PIN o prepara Tailscale;
 #   5. docker compose up -d --build, e aspetta che il backend sia pronto;
 #   6. apre l'app nel browser.
 
@@ -28,15 +29,17 @@ cd "$(dirname "$0")"
 CON_IA=false
 CAMBIA_PASSWORD=false
 REIMPOSTA_PIN=false
+CON_TAILSCALE=false
 APRI_BROWSER=true
 for argomento in "$@"; do
   case "$argomento" in
     --ia) CON_IA=true ;;
     --cambia-password-db) CAMBIA_PASSWORD=true ;;
     --reimposta-pin) REIMPOSTA_PIN=true ;;
+    --tailscale) CON_TAILSCALE=true ;;
     --senza-browser) APRI_BROWSER=false ;;
     -h | --aiuto | --help)
-      sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -182,6 +185,75 @@ if [ "$REIMPOSTA_PIN" = true ]; then
   echo "PIN azzerato. Apri l'app da questo PC (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza."
 fi
 
+# --- 4c. Tailscale (solo con --tailscale) ------------------------------------------------------------------
+# Tailscale è installato e collegato a mano, sul PC e sul telefono (docs/47, parti C e D). Qui lo script fa le tre
+# cose che restano, sempre uguali:
+#   - chiede a Tailscale di ricevere i tuoi dispositivi in https e di passarli alla porta "remota" di nginx
+#     (tailscale serve, docs/47 parte E): la porta del PC (8000) a Tailscale non la diamo mai;
+#   - aggiunge il nome del PC nella rete Tailscale ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS);
+#   - aggiunge l'indirizzo di ritorno di Enable Banking per quel nome (docs/47, parte I).
+# Si può rilanciare: se è già tutto pronto, non cambia niente.
+
+# Aggiunge un valore a una variabile del .env fatta di valori separati da virgole, se non c'è già.
+aggiungi_a_elenco() {
+  local nome="$1" nuovo="$2" predefinito="$3" attuale
+  attuale=$(valore_env "$nome")
+  [ -z "$attuale" ] && attuale="$predefinito"
+  case ",$attuale," in
+    *",$nuovo,"*) return 1 ;; # c'è già
+  esac
+  scrivi_env "$nome" "$attuale,$nuovo"
+}
+
+if [ "$CON_TAILSCALE" = true ]; then
+  passo "Tailscale"
+  # Dove sta il comando tailscale: di solito è nel PATH; su macOS, con l'app dell'App Store, è dentro l'app.
+  tailscale_cmd=""
+  if command -v tailscale >/dev/null 2>&1; then
+    tailscale_cmd=tailscale
+  elif [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+    tailscale_cmd=/Applications/Tailscale.app/Contents/MacOS/Tailscale
+  else
+    errore "Non trovo Tailscale: installalo e accedi con il tuo account (docs/47, parte C), poi rilancia."
+  fi
+
+  # tailscale status --json: lo stato di Tailscale su questo PC, in JSON. "BackendState" vale "Running" quando è
+  # collegato; il nome del PC nella rete è "DNSName", dentro "Self" (questo PC), con un punto finale da togliere.
+  stato_ts=$("$tailscale_cmd" status --json 2>/dev/null) ||
+    errore "Tailscale non risponde: aprilo e accedi con il tuo account (docs/47, parte C)."
+  echo "$stato_ts" | grep -q '"BackendState": *"Running"' ||
+    errore "Tailscale è installato ma non collegato: aprilo, accedi con il tuo account e rilancia."
+  nome_ts=$(echo "$stato_ts" | awk '/"Self":/ { dentro = 1 } dentro && /"DNSName":/ { sub(/.*"DNSName": *"/, ""); sub(/\.?".*/, ""); print; exit }')
+  case "$nome_ts" in
+    *.ts.net) ;;
+    *) errore "Non trovo il nome del PC nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia." ;;
+  esac
+  echo "Il nome di questo PC nella rete Tailscale è: $nome_ts"
+
+  # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5). Se è acceso, ci fermiamo.
+  if "$tailscale_cmd" serve status --json 2>/dev/null | tr -d ' \n' | grep -q '"AllowFunnel":{[^}]*:true'; then
+    errore "Tailscale Funnel è acceso: renderebbe l'app raggiungibile da Internet. Spegnilo con:  $tailscale_cmd funnel --https=443 off   e rilancia."
+  fi
+
+  # La porta "remota" di nginx sul PC (docker-compose.yml): 8001, se non l'hai cambiata nel .env.
+  porta_remota=$(valore_env REMOTE_PORT)
+  porta_remota=${porta_remota:-8001}
+  echo "Chiedo a Tailscale di ricevere i tuoi dispositivi su https://$nome_ts e di passarli a 127.0.0.1:$porta_remota."
+  echo "(Se è la prima volta, Tailscale può chiederti di attivare HTTPS per la tua rete: apri il link che scrive,"
+  echo " conferma, e lo script prosegue da solo.)"
+  # --bg: resta acceso da solo, anche dopo un riavvio del PC. --https=443: la porta normale di https, così
+  # l'indirizzo non ha bisogno di ":numero".
+  "$tailscale_cmd" serve --bg --https=443 "http://127.0.0.1:$porta_remota" ||
+    errore "tailscale serve non è riuscito (messaggio qui sopra). Su Linux può servire il permesso:  sudo tailscale set --operator=\$USER   e poi rilancia (docs/47, parte P)."
+
+  if aggiungi_a_elenco WALLETTRACKER_ALLOWED_HOSTS "$nome_ts" "localhost,127.0.0.1"; then
+    echo "Aggiunto $nome_ts ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)."
+  fi
+  if aggiungi_a_elenco ENABLE_BANKING_REDIRECT_URL "https://$nome_ts/callback" "https://localhost:8443/callback"; then
+    echo "Aggiunto https://$nome_ts/callback agli indirizzi di ritorno di Enable Banking (nel .env)."
+  fi
+fi
+
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
 passo "Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)"
 profilo=""
@@ -204,6 +276,10 @@ echo "Il backend è pronto."
 porta=$(valore_env WEB_PORT)
 indirizzo="http://localhost:${porta:-8000}"
 passo "WalletTracker è avviato: $indirizzo"
+if [ "$CON_TAILSCALE" = true ]; then
+  echo "Dai tuoi dispositivi con Tailscale:  https://$nome_ts   (lì serve il PIN: crealo prima da questo PC)"
+  echo "Per collegare una banca dal telefono, registra su Enable Banking anche:  https://$nome_ts/callback"
+fi
 echo "Per fermarlo:  docker compose down   (i dati restano)"
 if [ "$APRI_BROWSER" = true ]; then
   # open su macOS, xdg-open sui Linux con un desktop; se non c'è nessuno dei due, basta l'indirizzo scritto sopra.

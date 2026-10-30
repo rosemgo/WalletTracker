@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="760" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">La rete di casa: perché il telefono, fuori casa, non arriva al PC</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">i dispositivi di casa hanno indirizzi privati; su Internet c'è un solo indirizzo, quello del router, che non sa a chi passare le richieste</text>
+
+<!-- home -->
+<rect x="20" y="95" width="560" height="560" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="45" y="125" font-size="18" font-weight="700" fill="#334155">Casa: la rete privata (192.168.1.x)</text>
+
+<rect x="50" y="150" width="230" height="120" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="165" y="180" text-anchor="middle" font-size="16" font-weight="700" fill="#c2410c">PC con WalletTracker</text>
+<text x="165" y="205" text-anchor="middle" font-size="13" fill="#334155">indirizzo privato 192.168.1.20</text>
+<text x="165" y="228" text-anchor="middle" font-size="13" fill="#334155">l'app ascolta su 127.0.0.1:8000</text>
+<text x="165" y="250" text-anchor="middle" font-size="12" fill="#475569">(127.0.0.1 = "solo da me stesso")</text>
+
+<rect x="50" y="295" width="230" height="80" rx="12" fill="#ffffff" stroke="#94a3b8"/>
+<text x="165" y="327" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Tablet, TV, …</text>
+<text x="165" y="350" text-anchor="middle" font-size="13" fill="#334155">192.168.1.31, .32, …</text>
+
+<rect x="50" y="400" width="230" height="90" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="165" y="430" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">Telefono, in casa (Wi-Fi)</text>
+<text x="165" y="454" text-anchor="middle" font-size="13" fill="#334155">192.168.1.40: vede il PC, ma</text>
+<text x="165" y="474" text-anchor="middle" font-size="13" fill="#334155">l'app è su 127.0.0.1: porta chiusa</text>
+
+<rect x="350" y="250" width="200" height="190" rx="14" fill="#f1f5f9" stroke="#334155" stroke-width="2.5"/>
+<text x="450" y="282" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">Router di casa</text>
+<text x="450" y="310" text-anchor="middle" font-size="13" fill="#334155">dentro: 192.168.1.1</text>
+<text x="450" y="334" text-anchor="middle" font-size="13" fill="#334155">fuori: 93.40.12.7</text>
+<text x="450" y="356" text-anchor="middle" font-size="12" fill="#475569">(l'unico indirizzo pubblico)</text>
+<text x="450" y="386" text-anchor="middle" font-size="12" fill="#334155">NAT: tutti escono con</text>
+<text x="450" y="404" text-anchor="middle" font-size="12" fill="#334155">il suo indirizzo</text>
+
+<line x1="280" y1="210" x2="350" y2="290" stroke="#64748b" stroke-width="2"/>
+<line x1="280" y1="335" x2="350" y2="340" stroke="#64748b" stroke-width="2"/>
+<line x1="280" y1="445" x2="350" y2="400" stroke="#64748b" stroke-width="2"/>
+
+<rect x="50" y="520" width="500" height="115" rx="12" fill="#f0fdf4" stroke="#15803d"/>
+<text x="300" y="548" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">Uscire funziona sempre</text>
+<text x="300" y="572" text-anchor="middle" font-size="13" fill="#334155">il PC chiede una pagina a un sito: il router se lo segna,</text>
+<text x="300" y="592" text-anchor="middle" font-size="13" fill="#334155">e la risposta la riporta al PC. È così che il backend</text>
+<text x="300" y="612" text-anchor="middle" font-size="13" fill="#334155">parla con Enable Banking: è sempre lui a cominciare.</text>
+
+<!-- internet -->
+<rect x="620" y="95" width="560" height="560" rx="16" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+<text x="645" y="125" font-size="18" font-weight="700" fill="#7f1d1d">Internet</text>
+
+<rect x="900" y="160" width="250" height="100" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="1025" y="192" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">Telefono, fuori casa</text>
+<text x="1025" y="216" text-anchor="middle" font-size="13" fill="#334155">rete 4G/5G o Wi-Fi del bar</text>
+<text x="1025" y="238" text-anchor="middle" font-size="13" fill="#334155">vuole aprire WalletTracker</text>
+
+<line x1="900" y1="225" x2="560" y2="320" stroke="#b91c1c" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ar)"/>
+<rect x="650" y="270" width="230" height="78" rx="10" fill="#ffffff" stroke="#b91c1c"/>
+<text x="765" y="296" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">✗ a 93.40.12.7: e poi?</text>
+<text x="765" y="318" text-anchor="middle" font-size="12" fill="#334155">il router non sa a quale</text>
+<text x="765" y="336" text-anchor="middle" font-size="12" fill="#334155">dispositivo passarla: la butta</text>
+
+<rect x="650" y="390" width="500" height="245" rx="12" fill="#ffffff" stroke="#b91c1c" stroke-width="2"/>
+<text x="900" y="420" text-anchor="middle" font-size="15" font-weight="700" fill="#b91c1c">La soluzione "classica", da NON fare: aprire una porta</text>
+<text x="670" y="450" font-size="13" fill="#334155">Sul router: "quello che arriva alla porta 443 passalo al PC".</text>
+<text x="670" y="474" font-size="13" fill="#334155">Funziona, ma per CHIUNQUE: su Internet ci sono programmi</text>
+<text x="670" y="494" font-size="13" fill="#334155">che provano tutti gli indirizzi, tutto il giorno.</text>
+<text x="670" y="524" font-size="13" fill="#334155">• la pagina del PIN diventa un bersaglio pubblico</text>
+<text x="670" y="548" font-size="13" fill="#334155">• un difetto di nginx, Spring o Tomcat è raggiungibile da tutti</text>
+<text x="670" y="572" font-size="13" fill="#334155">• l'indirizzo di casa cambia (93.40.12.7 non è fisso)</text>
+<text x="670" y="596" font-size="13" fill="#334155">• il certificato https vero bisogna procurarselo e rinnovarlo</text>
+<text x="900" y="622" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">→ Tailscale: nessuna porta aperta (parte B)</text>
+
+<text x="600" y="700" text-anchor="middle" font-size="14" fill="#334155">In sintesi: dall'esterno si può RISPONDERE a chi è dentro, ma non si può COMINCIARE una conversazione con chi è dentro.</text>
+<text x="600" y="724" text-anchor="middle" font-size="14" fill="#334155">Ed è proprio quello che serve al telefono: cominciare lui.</text>
+</svg>

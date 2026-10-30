@@ -80,13 +80,14 @@ services:
       # resta chiuso lo stesso: qui sotto non c'è "ports", nessuna porta del PC porta a lui.
       SERVER_ADDRESS: 0.0.0.0
       SERVER_PORT: 8080
-      # I nomi con cui si apre l'app nel browser (vedi LocalOnlyRequestFilter). Con Tailscale (passo 4) si
-      # aggiunge il nome del PC nella rete privata.
+      # I nomi con cui si apre l'app nel browser (vedi LocalOnlyRequestFilter). Con Tailscale si aggiunge il nome del
+      # PC nella rete privata: lo fa ./installa.sh --tailscale (docs/47).
       WALLETTRACKER_ALLOWED_HOSTS: ${WALLETTRACKER_ALLOWED_HOSTS:-localhost,127.0.0.1}
       # La chiave di cifratura e la chiave di Enable Banking: nelle cartelle montate qui sotto (volumes).
       WALLETTRACKER_KEY_FILE: /app/.data/encryption.key
       ENABLE_BANKING_PRIVATE_KEY_PATH: /app/secrets/enable-banking.pem
       ENABLE_BANKING_APP_ID: ${ENABLE_BANKING_APP_ID:-}
+      # Uno o più indirizzi di ritorno, separati da virgole: dal PC e dal telefono (docs/47, parte I).
       ENABLE_BANKING_REDIRECT_URL: ${ENABLE_BANKING_REDIRECT_URL:-https://localhost:8443/callback}
       SYNC_INTERVAL: ${SYNC_INTERVAL:-6h}
       # Il servizio "ollama" qui sotto. Se Ollama è installato sul PC (docs/44, parte G), nel .env:

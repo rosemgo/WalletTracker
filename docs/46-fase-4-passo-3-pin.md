@@ -906,6 +906,9 @@ Lo prova `SessionCookieTest`: senza l'intestazione il cookie non è `Secure`, co
 
 #### G3.9 Al passo 4, con Tailscale, serve una riga in più
 
+> **Fatto al passo 4** (`docs/47`, parte G): sulla porta di Tailscale nginx dice al backend il protocollo che dice
+> Tailscale, che aggiunge `X-Forwarded-Proto: https`; dal telefono il cookie è `Secure`.
+
 ![Il biglietto oggi e al passo 4](img/tailscale-proto.svg)
 
 Dal telefono il percorso avrà **tre** tratti invece di due:

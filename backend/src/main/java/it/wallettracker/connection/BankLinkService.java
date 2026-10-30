@@ -96,8 +96,13 @@ public class BankLinkService {
                 .toList();
     }
 
-    /** Avvia il collegamento: restituisce l'indirizzo della pagina di login della banca. */
-    public String start(String bankName, String country) {
+    /**
+     * Avvia il collegamento: restituisce l'indirizzo della pagina di login della banca.
+     *
+     * @param host il nome con cui è aperta l'app (header Host): alla fine la banca rimanda il browser lì, con
+     *             l'indirizzo di ritorno di quel nome ({@link EnableBankingProperties#redirectUrlFor})
+     */
+    public String start(String bankName, String country, String host) {
         Aspsp bank = banks(country).stream()
                 .filter(b -> b.name().equals(bankName))
                 .findFirst()
@@ -107,7 +112,7 @@ public class BankLinkService {
         Instant validUntil = consentValidUntil(bank, Instant.now());
         String state = UUID.randomUUID().toString();
         String url = client.startAuthorization(new AuthorizationRequest(new Access(validUntil),
-                new AspspRef(bank.name(), bank.country()), state, properties.redirectUrl(), "personal")).url();
+                new AspspRef(bank.name(), bank.country()), state, properties.redirectUrlFor(host), "personal")).url();
 
         removeExpired();
         pending.put(state, new Pending(validUntil, Instant.now()));

@@ -1,6 +1,7 @@
 package it.wallettracker.setup;
 
 import java.security.PrivateKey;
+import java.util.List;
 
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingCredentials;
@@ -37,15 +38,20 @@ public class SetupService {
      * restituiamo solo se c'è, da dove arriva e l'Application ID (che non è un segreto).
      *
      * @param source      "DASHBOARD", "ENV" oppure null se non configurato
-     * @param redirectUrl l'indirizzo di ritorno da registrare nell'applicazione Enable Banking
+     * @param redirectUrl  il primo indirizzo di ritorno (quello di prima, quando ce n'era uno solo)
+     * @param redirectUrls tutti gli indirizzi di ritorno, da registrare uguali nell'applicazione Enable Banking: uno
+     *                     per ogni nome con cui si apre l'app (docs/47, parte I)
      */
-    public record SetupStatus(boolean configured, String source, String applicationId, String redirectUrl) {
+    public record SetupStatus(boolean configured, String source, String applicationId, String redirectUrl,
+            List<String> redirectUrls) {
     }
 
     public SetupStatus status() {
         return credentials.current()
-                .map(c -> new SetupStatus(true, c.source().name(), c.applicationId(), properties.redirectUrl()))
-                .orElseGet(() -> new SetupStatus(false, null, null, properties.redirectUrl()));
+                .map(c -> new SetupStatus(true, c.source().name(), c.applicationId(),
+                        properties.redirectUrls().getFirst(), properties.redirectUrls()))
+                .orElseGet(() -> new SetupStatus(false, null, null, properties.redirectUrls().getFirst(),
+                        properties.redirectUrls()));
     }
 
     /** Verifica le credenziali con Enable Banking e, se vanno bene, le salva. */

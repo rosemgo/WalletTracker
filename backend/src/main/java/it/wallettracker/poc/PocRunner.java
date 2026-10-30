@@ -206,14 +206,14 @@ public class PocRunner implements CommandLineRunner {
                 new Access(validUntil),
                 new AspspRef(bank.name(), bank.country()),
                 state,
-                properties.redirectUrl(),
+                properties.redirectUrls().getFirst(),
                 "personal");
         AuthorizationResponse response = client.startAuthorization(request);
 
         System.out.println();
         System.out.println("1) Apri questo link nel browser e accedi alla tua banca:");
         System.out.println("   " + response.url());
-        System.out.println("2) Alla fine verrai mandato su " + properties.redirectUrl());
+        System.out.println("2) Alla fine verrai mandato su " + properties.redirectUrls().getFirst());
         System.out.println("   La pagina darà errore: è normale, per ora non c'è un server in ascolto.");
         System.out.println("3) Copia l'indirizzo completo dalla barra del browser e incollalo qui.");
         String redirectedUrl = ask("Indirizzo");
