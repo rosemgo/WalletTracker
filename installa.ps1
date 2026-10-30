@@ -174,7 +174,7 @@ if ($ReimpostaPin) {
     Aspetta-Salute 'db' 60
     & docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U $utente -d $database -c 'DELETE FROM app_pin'
     if ($LASTEXITCODE -ne 0) { Errore 'Non sono riuscito ad azzerare il PIN (l''app è già stata avviata almeno una volta?).' }
-    Write-Host 'PIN azzerato. Apri l''app da questo PC (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza.'
+    Write-Host 'PIN azzerato. Apri l''app da qui, dal server (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza.'
 }
 
 # --- 4c. Tailscale (solo con -Tailscale) -------------------------------------------------------------------
@@ -209,9 +209,9 @@ if ($Tailscale) {
     if ($stato.BackendState -ne 'Running') { Errore 'Tailscale è installato ma non collegato: aprilo, accedi con il tuo account e rilancia.' }
     $NomeTs = ([string]$stato.Self.DNSName).TrimEnd('.')
     if (-not $NomeTs.EndsWith('.ts.net')) {
-        Errore 'Non trovo il nome del PC nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia.'
+        Errore 'Non trovo il nome del server nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia.'
     }
-    Write-Host "Il nome di questo PC nella rete Tailscale è: $NomeTs"
+    Write-Host "Il nome di questo server nella rete Tailscale è: $NomeTs"
 
     # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5).
     $serve = (& $TsCmd serve status --json 2>$null) -join "`n"
@@ -254,8 +254,8 @@ if ($porta -eq '') { $porta = '8000' }
 $indirizzo = "http://localhost:$porta"
 Passo "WalletTracker è avviato: $indirizzo"
 if ($Tailscale) {
-    Write-Host "Dai tuoi dispositivi con Tailscale:  https://$NomeTs   (lì serve il PIN: crealo prima da questo PC)"
-    Write-Host "Per collegare una banca dal telefono, registra su Enable Banking anche:  https://$NomeTs/callback"
+    Write-Host "Dai dispositivi remoti, con Tailscale:  https://$NomeTs   (lì serve il PIN: crealo prima da qui, dal server)"
+    Write-Host "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$NomeTs/callback"
 }
 Write-Host 'Per fermarlo:  docker compose down   (i dati restano)'
 if (-not $SenzaBrowser) { Start-Process $indirizzo }

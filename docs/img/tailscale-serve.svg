@@ -5,12 +5,12 @@
 <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
 </defs>
 <rect width="1200" height="820" fill="#ffffff"/>
-<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Dal telefono a WalletTracker, passo per passo</text>
-<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">tailscale serve riceve in https e passa alla porta "remota" (8001): mai a quella del PC (8000)</text>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Da un dispositivo remoto a WalletTracker, passo per passo</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">tailscale serve riceve in https e passa alla porta "remota" (8001): mai a quella del server (8000)</text>
 
 <!-- phone -->
 <rect x="20" y="100" width="240" height="190" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
-<text x="140" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Telefono</text>
+<text x="140" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Dispositivo remoto</text>
 <text x="140" y="156" text-anchor="middle" font-size="12" fill="#334155">browser o app installata:</text>
 <text x="140" y="178" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#0f172a">https://pc-casa.</text>
 <text x="140" y="196" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#0f172a">tail0000.ts.net</text>
@@ -26,7 +26,7 @@
 
 <!-- PC -->
 <rect x="350" y="90" width="830" height="560" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
-<text x="375" y="120" font-size="18" font-weight="700" fill="#334155">Il PC di casa</text>
+<text x="375" y="120" font-size="18" font-weight="700" fill="#334155">Il server (per esempio il PC di casa)</text>
 
 <rect x="370" y="140" width="250" height="230" rx="12" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5"/>
 <text x="495" y="168" text-anchor="middle" font-size="16" font-weight="700" fill="#7e22ce">Tailscale: serve</text>
@@ -56,7 +56,7 @@
 <text x="765" y="304" font-size="11" font-family="Consolas, monospace" fill="#0f172a">X-WalletTracker-Access: remote</text>
 <text x="765" y="322" font-size="11" font-family="Consolas, monospace" fill="#0f172a">X-Forwarded-Proto: https  (da Tailscale)</text>
 <text x="765" y="340" font-size="11" font-family="Consolas, monospace" fill="#0f172a">X-Forwarded-Host: (cancellato)</text>
-<text x="745" y="368" font-size="12" fill="#475569">la porta 8080 (8000 sul PC) Tailscale non la vede</text>
+<text x="745" y="368" font-size="12" fill="#475569">la porta 8080 (8000 sul server) Tailscale non la vede</text>
 
 <line x1="932" y1="390" x2="932" y2="425" stroke="#475569" stroke-width="3" marker-end="url(#ag)"/>
 
@@ -69,7 +69,7 @@
 <text x="745" y="582" font-size="12" fill="#334155">⑪ collegare una banca: ritorno su https://pc-casa…/callback</text>
 
 <rect x="370" y="400" width="320" height="230" rx="12" fill="#ffffff" stroke="#94a3b8"/>
-<text x="530" y="428" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Il browser del PC</text>
+<text x="530" y="428" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Il browser del server</text>
 <text x="530" y="454" text-anchor="middle" font-size="12" fill="#334155">http://localhost:8000</text>
 <text x="530" y="474" text-anchor="middle" font-size="12" fill="#334155">→ nginx 8080, "local", come sempre</text>
 <line x1="690" y1="465" x2="720" y2="300" stroke="#475569" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ag)"/>
@@ -83,7 +83,7 @@
 <!-- bottom: internet -->
 <rect x="20" y="670" width="1160" height="130" rx="14" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
 <text x="600" y="700" text-anchor="middle" font-size="16" font-weight="700" fill="#7f1d1d">Da Internet, senza Tailscale: niente</text>
-<text x="600" y="726" text-anchor="middle" font-size="13" fill="#334155">fuori dalla tua rete Tailscale il nome pc-casa.tail0000.ts.net non porta al PC: gli indirizzi 100.x da Internet non si raggiungono.</text>
+<text x="600" y="726" text-anchor="middle" font-size="13" fill="#334155">fuori dalla tua rete Tailscale il nome pc-casa.tail0000.ts.net non porta al server: gli indirizzi 100.x da Internet non si raggiungono.</text>
 <text x="600" y="748" text-anchor="middle" font-size="13" fill="#334155">Sul router di casa non c'è nessuna porta aperta. L'unico modo di pubblicarlo su Internet è Tailscale Funnel:</text>
 <text x="600" y="770" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">non accenderlo mai. Se succedesse, lo script si ferma e nginx risponde 403 (⑤).</text>
 </svg>

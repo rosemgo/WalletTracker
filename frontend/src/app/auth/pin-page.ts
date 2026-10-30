@@ -12,10 +12,10 @@ export const VALID_PIN = /^\d{6,10}$/;
 /**
  * La pagina per entrare (docs/46, parte F): al posto dell'app finché non si entra. Un solo componente per tutti i casi
  * dell'{@link AuthStore}:
- * - la prima apertura dal PC: con un PIN, o senza;
+ * - la prima apertura dal server (il computer su cui gira l'app): con un PIN, o senza;
  * - inserisci il PIN, o "Ho dimenticato il PIN" con il codice di recupero;
  * - il codice di recupero da salvare, dopo averlo creato o usato;
- * - perché da qui non si entra (un altro dispositivo, il PC che non risponde).
+ * - perché da qui non si entra (un dispositivo remoto, il server che non risponde).
  *
  * I campi del PIN sono `type="password"` (le cifre non si vedono, e il browser non le ricorda nei suggerimenti) con
  * `inputmode="numeric"`: sul telefono si apre la tastierina dei numeri.
@@ -39,8 +39,9 @@ export const VALID_PIN = /^\d{6,10}$/;
             <form class="card" (ngSubmit)="create()">
               <h2>Con un PIN</h2>
               <p class="hint">
-                Lo chiederemo per aprire l'app, su ogni dispositivo. Serve se userai l'app dal
-                telefono. Da 6 a 10 cifre: non usare il PIN del bancomat né una data di nascita.
+                Lo chiederemo per aprire l'app, su ogni dispositivo. Serve se userai l'app da un
+                dispositivo remoto (il telefono, un portatile, un altro computer). Da 6 a 10 cifre:
+                non usare il PIN del bancomat né una data di nascita.
               </p>
               <label>
                 PIN
@@ -70,10 +71,11 @@ export const VALID_PIN = /^\d{6,10}$/;
               <button type="submit" [disabled]="busy()">Crea il PIN</button>
             </form>
             <div class="card">
-              <h2>Senza PIN, solo da questo PC</h2>
+              <h2>Senza PIN, solo dal server</h2>
               <p class="hint">
-                Chi usa questo PC entra subito. Dal telefono, invece, non si potrà entrare finché
-                non crei un PIN (lo puoi fare quando vuoi, da Impostazioni).
+                Chi usa questo computer, il server su cui è installata l'app, entra subito. Dai
+                dispositivi remoti, invece, non si potrà entrare finché non crei un PIN (lo puoi
+                fare quando vuoi, da Impostazioni).
               </p>
               <button type="button" [disabled]="busy()" (click)="withoutPin()">
                 Continua senza PIN
@@ -130,8 +132,8 @@ export const VALID_PIN = /^\d{6,10}$/;
               </form>
               <button type="button" class="link" (click)="showRecovery(false)">Torna al PIN</button>
               <p class="hint">
-                Hai perso anche il codice? Dal PC su cui è installata l'app, lo script di
-                installazione azzera il PIN (la guida dice come).
+                Hai perso anche il codice? Dal server, il computer su cui è installata l'app, lo
+                script di installazione azzera il PIN (la guida dice come).
               </p>
             } @else {
               <h1>Inserisci il PIN</h1>
@@ -163,22 +165,25 @@ export const VALID_PIN = /^\d{6,10}$/;
             @if (auth.status()?.withoutPin) {
               <h1>Da qui serve un PIN</h1>
               <p>
-                WalletTracker è aperto senza PIN, ma solo dal PC su cui è installato. Per usarlo da
-                questo dispositivo, crea un PIN dal PC: <strong>Impostazioni → Accesso</strong>.
+                WalletTracker è aperto senza PIN, ma solo dal server, il computer su cui è
+                installato. Per usarlo da questo dispositivo, crea un PIN dal server:
+                <strong>Impostazioni → Accesso</strong>.
               </p>
             } @else {
-              <h1>Crea il PIN dal PC</h1>
+              <h1>Crea il PIN dal server</h1>
               <p>
-                WalletTracker non è ancora protetto. Per sicurezza la scelta si fa solo dal PC su
-                cui è installata l'app: aprila lì, su <strong>http://localhost:8000</strong>.
+                WalletTracker non è ancora protetto. Per sicurezza la scelta si fa solo dal server,
+                il computer su cui è installata l'app: aprila lì, su
+                <strong>http://localhost:8000</strong>.
               </p>
             }
           }
           @case ('unreachable') {
-            <h1>Il PC non risponde</h1>
+            <h1>Il server non risponde</h1>
             <p>
-              Per entrare serve il collegamento con il PC su cui gira WalletTracker. Controlla che
-              sia acceso e che tu sia in rete, poi riprova.
+              Per entrare serve il collegamento con il server, il computer su cui gira
+              WalletTracker. Controlla che sia acceso e che tu sia in rete (da un dispositivo
+              remoto, con Tailscale acceso), poi riprova.
             </p>
             <button type="button" (click)="auth.refresh()">Riprova</button>
           }
@@ -273,7 +278,9 @@ export class PinPage implements OnDestroy {
         // Un PIN sbagliato non deve restare scritto: si riparte da zero.
         this.pin = '';
         this.repeat = '';
-        this.error.set(reason(error, 'Il PC non risponde: controlla che sia acceso e riprova.'));
+        this.error.set(
+          reason(error, 'Il server non risponde: controlla che sia acceso e riprova.'),
+        );
         if (error instanceof HttpErrorResponse && error.status === 429) {
           this.countDown(Number(error.error?.retryAfterSeconds) || 60);
         }

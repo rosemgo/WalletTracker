@@ -83,14 +83,14 @@ public class AuthController {
 
     @PostMapping("/no-pin")
     public ResponseEntity<Void> withoutPin(HttpServletRequest request) {
-        requireLocal(request, "La scelta si fa solo dal PC su cui è installata l'app.");
+        requireLocal(request, "La scelta si fa solo dal server, il computer su cui è installata l'app.");
         pins.chooseWithoutPin();
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/pin")
     public RecoveryCode create(@RequestBody PinRequest body, HttpServletRequest request, HttpServletResponse response) {
-        requireLocal(request, "Il PIN si crea solo dal PC su cui è installata l'app (http://localhost:8000).");
+        requireLocal(request, "Il PIN si crea solo dal server, il computer su cui è installata l'app (http://localhost:8000).");
         PinService.Created created = pins.createPin(body.pin());
         openSession(created.generation(), request, response);
         return new RecoveryCode(created.recoveryCode());
@@ -112,7 +112,7 @@ public class AuthController {
     /** Toglie il PIN. Solo dal PC: dal telefono, senza PIN, non si entrerebbe più. */
     @PostMapping("/pin/remove")
     public ResponseEntity<?> remove(@RequestBody PinRequest body, HttpServletRequest request) {
-        requireLocal(request, "Il PIN si toglie solo dal PC su cui è installata l'app.");
+        requireLocal(request, "Il PIN si toglie solo dal server, il computer su cui è installata l'app.");
         PinService.Attempt attempt = pins.removePin(body.pin());
         if (attempt instanceof PinService.Attempt.Correct) {
             closeSession(request); // dal PC si entra ora senza PIN; le altre sessioni le chiude la generazione

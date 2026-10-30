@@ -59,7 +59,7 @@ describe('PinPage', () => {
   it('the first time offers a PIN or no PIN, and checks the PIN before sending it', async () => {
     const { page, type, click, fixture, auth } = await open('choose', { local: true });
     expect(page.querySelector('h1')?.textContent).toContain('Come vuoi proteggere');
-    expect(page.textContent).toContain('Senza PIN, solo da questo PC');
+    expect(page.textContent).toContain('Senza PIN, solo dal server');
     const inputs = page.querySelectorAll('input');
     expect(inputs[0].type).toBe('password');
     expect(inputs[0].getAttribute('inputmode')).toBe('numeric');
@@ -156,7 +156,7 @@ describe('PinPage', () => {
 
   it('from another device it explains that the choice is made on the PC', async () => {
     const first = await open('elsewhere', { local: false });
-    expect(first.page.querySelector('h1')?.textContent).toBe('Crea il PIN dal PC');
+    expect(first.page.querySelector('h1')?.textContent).toBe('Crea il PIN dal server');
     expect(first.page.querySelector('input')).toBeNull();
     first.fixture.destroy();
 

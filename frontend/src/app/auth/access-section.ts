@@ -9,7 +9,7 @@ import { RecoveryCodeView } from './recovery-code';
  * "Accesso", nelle Impostazioni (docs/46, parte F): com'è protetta l'app, e come cambiarlo.
  * - senza PIN: "Proteggi con un PIN" (poi il codice di recupero, da salvare);
  * - con il PIN: "Togli il PIN" (serve il PIN di adesso).
- * Tutte e due si fanno solo dal PC: dal telefono la sezione lo spiega e basta.
+ * Tutte e due si fanno solo dal server: da un dispositivo remoto la sezione lo spiega e basta.
  */
 @Component({
   selector: 'app-access-section',
@@ -38,14 +38,16 @@ import { RecoveryCodeView } from './recovery-code';
             </div>
           </form>
           <p class="hint">
-            Senza PIN si entra solo da questo PC; dal telefono non si entrerà più, finché non ne
-            crei uno nuovo.
+            Senza PIN si entra solo dal server; dai dispositivi remoti non si entrerà più, finché
+            non ne crei uno nuovo.
           </p>
         } @else {
-          <p class="hint">Il PIN si toglie solo dal PC su cui è installata l'app.</p>
+          <p class="hint">
+            Il PIN si toglie solo dal server, il computer su cui è installata l'app.
+          </p>
         }
       } @else {
-        <p>L'app è aperta senza PIN, solo da questo PC. Dal telefono non si entra.</p>
+        <p>L'app è aperta senza PIN, solo dal server. Dai dispositivi remoti non si entra.</p>
         @if (status.local) {
           <form class="form-grid" (ngSubmit)="add()">
             <label>
@@ -75,7 +77,7 @@ import { RecoveryCodeView } from './recovery-code';
             </div>
           </form>
           <p class="hint">
-            Da 6 a 10 cifre. Da quel momento lo chiederemo su ogni dispositivo, anche su questo PC.
+            Da 6 a 10 cifre. Da quel momento lo chiederemo su ogni dispositivo, anche sul server.
           </p>
         }
       }
@@ -141,6 +143,6 @@ export class AccessSection {
     this.busy.set(false);
     this.pin = '';
     this.repeat = '';
-    this.error.set(reason(error, 'Il PC non risponde: riprova.'));
+    this.error.set(reason(error, 'Il server non risponde: riprova.'));
   }
 }

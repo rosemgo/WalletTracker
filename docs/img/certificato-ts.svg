@@ -3,12 +3,12 @@
 <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
 </defs>
 <rect width="1200" height="760" fill="#ffffff"/>
-<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il certificato https del PC: chi lo firma, e perché il telefono ci crede</text>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il certificato https del server: chi lo firma, e perché il browser ci crede</text>
 <text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">un certificato è una carta d'identità: "questa chiave pubblica appartiene a questo nome", firmata da qualcuno di cui il browser si fida</text>
 
 <!-- PC -->
 <rect x="30" y="100" width="300" height="250" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
-<text x="180" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">PC (Tailscale)</text>
+<text x="180" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">Server (Tailscale)</text>
 <text x="50" y="160" font-size="13" fill="#334155">① crea una coppia di chiavi:</text>
 <text x="70" y="182" font-size="12" fill="#334155">🔑 privata: resta qui, sempre</text>
 <text x="70" y="202" font-size="12" fill="#334155">🔓 pubblica: si può dare a tutti</text>
@@ -27,18 +27,18 @@
 <text x="490" y="224" font-size="12" fill="#334155">_acme-challenge.pc-casa.tail0000.ts.net"</text>
 <text x="470" y="258" font-size="13" fill="#334155">⑤ controlla il DNS: c'è →</text>
 <text x="490" y="278" font-size="12" fill="#334155">firma con la SUA chiave privata</text>
-<text x="490" y="306" font-size="12" fill="#b91c1c">non vede mai la chiave privata del PC</text>
+<text x="490" y="306" font-size="12" fill="#b91c1c">non vede mai la chiave privata del server</text>
 
 <!-- TS DNS -->
 <rect x="870" y="100" width="300" height="250" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5"/>
 <text x="1020" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#7e22ce">Tailscale: il DNS di ts.net</text>
 <text x="1020" y="152" text-anchor="middle" font-size="12" fill="#475569">ts.net è di Tailscale, e tail0000 è la tua rete</text>
-<text x="890" y="184" font-size="13" fill="#334155">④ il PC chiede al server di</text>
+<text x="890" y="184" font-size="13" fill="#334155">④ il server chiede al servizio di</text>
 <text x="910" y="204" font-size="12" fill="#334155">coordinamento di pubblicare il</text>
-<text x="910" y="224" font-size="12" fill="#334155">codice. Lo fa solo per un PC</text>
+<text x="910" y="224" font-size="12" fill="#334155">codice. Lo fa solo per un dispositivo</text>
 <text x="910" y="244" font-size="12" fill="#334155">della TUA rete, con quel nome:</text>
 <text x="910" y="264" font-size="12" fill="#334155">nessun altro può farsi dare un</text>
-<text x="910" y="284" font-size="12" fill="#334155">certificato per il tuo PC</text>
+<text x="910" y="284" font-size="12" fill="#334155">certificato per il tuo server</text>
 <text x="1020" y="320" text-anchor="middle" font-size="12" fill="#475569">(per questo serve "Enable HTTPS")</text>
 
 <line x1="330" y1="262" x2="445" y2="200" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
@@ -48,12 +48,12 @@
 
 <!-- browser -->
 <rect x="30" y="390" width="1140" height="200" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
-<text x="600" y="420" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Il telefono apre https://pc-casa.tail0000.ts.net</text>
-<text x="60" y="452" font-size="13" fill="#334155">⑦ il PC gli mostra il certificato. Il browser controlla tre cose:</text>
+<text x="600" y="420" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Un dispositivo remoto apre https://pc-casa.tail0000.ts.net</text>
+<text x="60" y="452" font-size="13" fill="#334155">⑦ il server gli mostra il certificato. Il browser controlla tre cose:</text>
 <text x="90" y="480" font-size="13" fill="#334155">• il nome nel certificato è proprio quello nella barra degli indirizzi?</text>
-<text x="90" y="504" font-size="13" fill="#334155">• la firma è di un'autorità che conosce? Let's Encrypt è nell'elenco già dentro il telefono (le "CA radice")</text>
+<text x="90" y="504" font-size="13" fill="#334155">• la firma è di un'autorità che conosce? Let's Encrypt è nell'elenco già dentro il dispositivo (le "CA radice")</text>
 <text x="90" y="528" font-size="13" fill="#334155">• non è scaduto?</text>
-<text x="60" y="560" font-size="13" fill="#334155">⑧ tutto bene → 🔒: il PC firma con la sua chiave privata (prova di essere lui), e i due si accordano su una chiave nuova per cifrare.</text>
+<text x="60" y="560" font-size="13" fill="#334155">⑧ tutto bene → 🔒: il server firma con la sua chiave privata (prova di essere lui), e i due si accordano su una chiave nuova per cifrare.</text>
 
 <!-- why not localhost -->
 <rect x="30" y="610" width="560" height="130" rx="12" fill="#fef2f2" stroke="#b91c1c"/>

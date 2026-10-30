@@ -77,6 +77,6 @@ describe('AccessSection', () => {
   it('from another device nothing can be changed', async () => {
     const { page } = await open({ pinSet: true, local: false });
     expect(page.querySelector('input')).toBeNull();
-    expect(page.textContent).toContain('solo dal PC');
+    expect(page.textContent).toContain('solo dal server');
   });
 });

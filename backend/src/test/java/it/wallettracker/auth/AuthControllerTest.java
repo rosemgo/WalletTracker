@@ -116,9 +116,9 @@ class AuthControllerTest {
         assertThat(mvc.get().uri("/api/auth/status").header("Host", "localhost"))
                 .bodyJson().extractingPath("$.local").isEqualTo(false);
         assertThat(mvc.post().uri("/api/auth/no-pin").header("Host", "localhost").with(csrf()))
-                .hasStatus(403).bodyJson().extractingPath("$.detail").asString().contains("solo dal PC");
+                .hasStatus(403).bodyJson().extractingPath("$.detail").asString().contains("solo dal server");
         assertThat(createPin(PIN, false)).hasStatus(403)
-                .bodyJson().extractingPath("$.detail").asString().contains("solo dal PC");
+                .bodyJson().extractingPath("$.detail").asString().contains("solo dal server");
         assertThat(repository.count()).isZero();
     }
 

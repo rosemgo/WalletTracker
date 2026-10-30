@@ -1,13 +1,26 @@
-# 47. Fase 4, passo 4: Tailscale, l'app dal telefono con https vero
+# 47. Fase 4, passo 4: Tailscale, l'app da un dispositivo remoto con https vero
 
-**Obiettivo di questo passo:** aprire WalletTracker **dal telefono**, da casa e da fuori casa, **senza aprire
-nessuna porta sul router** e con un **https vero** (il lucchetto, senza avvisi). Serve anche perché l'app si possa
-**installare** sul telefono (`docs/42`, parte F) e perché si possa **collegare una banca** dal telefono.
-- Sul PC e sul telefono si installa **Tailscale**: una rete privata, cifrata, solo tra i tuoi dispositivi.
-- Sul PC, `./installa.sh --tailscale` (o `installa.ps1 -Tailscale`) fa il resto: chiede a Tailscale di ricevere il
-  telefono in https e di passarlo alla porta "remota" dell'app (8001, dove serve sempre il PIN), e scrive nel `.env`
-  il nome del PC e l'indirizzo di ritorno di Enable Banking.
-- Dal telefono si apre `https://<nome-del-pc>.<la-tua-rete>.ts.net`, si mette il PIN e si entra.
+**Obiettivo di questo passo:** aprire WalletTracker **da un dispositivo remoto** (il telefono, un portatile, un altro
+computer), da casa e da fuori casa, **senza aprire nessuna porta sul router** e con un **https vero** (il lucchetto,
+senza avvisi). Serve anche perché l'app si possa **installare** sul telefono (`docs/42`, parte F) e perché si possa
+**collegare una banca** da un dispositivo remoto.
+- Sul server e sui dispositivi remoti si installa **Tailscale**: una rete privata, cifrata, solo tra i tuoi
+  dispositivi.
+- Sul server, `./installa.sh --tailscale` (o `installa.ps1 -Tailscale`) fa il resto: chiede a Tailscale di ricevere i
+  dispositivi remoti in https e di passarli alla porta "remota" dell'app (8001, dove serve sempre il PIN), e scrive nel
+  `.env` il nome del server e l'indirizzo di ritorno di Enable Banking.
+- Da un dispositivo remoto si apre `https://<nome-del-server>.<la-tua-rete>.ts.net`, si mette il PIN e si entra.
+
+**Le parole di questa guida:**
+
+| Parola | Che cosa vuol dire |
+|---|---|
+| **server** | la macchina su cui gira Docker con WalletTracker: il PC di casa, un mini PC, un server vero. È lì che lanci lo script |
+| **dal server** | aprire l'app con il browser del server stesso, su `http://localhost:8000` (la porta "del server", 8000) |
+| **dispositivo remoto** | qualsiasi altro dispositivo che apre l'app passando da Tailscale: il telefono, il tablet, un portatile, un altro PC. Arriva sulla porta "remota", 8001 |
+
+Nelle guide dei passi precedenti (`docs/44`-`46`) il server si chiamava "il PC" e il dispositivo remoto "il
+telefono": è la stessa cosa. Anche i testi dell'app ora dicono "server" e "dispositivi remoti".
 
 Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certificati): niente è dato per scontato.
 
@@ -16,12 +29,12 @@ Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certifi
 | 1 | tre container + Ollama facoltativo, nginx (`docs/44`) | fatto |
 | 2 | lo script di installazione, la password del database (`docs/45`) | fatto |
 | 3 | entrare nell'app: PIN facoltativo, codice di recupero (`docs/46`) | fatto |
-| **4** | **Tailscale: l'app dal telefono con https vero, redirect di Enable Banking** | **questa guida** |
+| **4** | **Tailscale: l'app da un dispositivo remoto con https vero, redirect di Enable Banking** | **questa guida** |
 | 5 | backup e ripristino, provato davvero | da fare |
 | 6 | aggiornamenti, la guida per chi non è informatico, il doppio clic | da fare |
 
 > Prerequisiti: i passi 1, 2 e 3, e `git pull`. Nessuna migrazione nuova del database. Se l'app è **senza PIN**,
-> prima di tutto crea un PIN dal PC (Impostazioni → Accesso): dal telefono senza PIN non si entra (`docs/46`, parte D).
+> prima di tutto crea un PIN dal server (Impostazioni → Accesso): da un dispositivo remoto senza PIN non si entra (`docs/46`, parte D).
 
 **Che cosa è cambiato nel codice, in breve:**
 
@@ -35,16 +48,16 @@ Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certifi
 | `.github/workflows/ci.yml`, `.github/ci/tailscale` | le prove nuove, con un finto `tailscale` (parte L) |
 
 **Indice**
-- Parte A: le basi delle reti (perché il telefono non arriva al PC)
+- Parte A: le basi delle reti (perché il dispositivo remoto non arriva al server)
 - Parte B: Tailscale dalle basi
-- Parte C: installare Tailscale sul PC
-- Parte D: installare Tailscale sul telefono
+- Parte C: installare Tailscale sul server
+- Parte D: installare Tailscale sul dispositivo remoto
 - Parte E: https vero: certificati, `tailscale serve` e lo script
 - Parte F: la sicurezza con Tailscale
 - Parte G: il cookie `Secure`, finalmente
 - Parte H: il difetto trovato: `X-Forwarded-Host`
-- Parte I: collegare una banca dal telefono (più indirizzi di ritorno)
-- Parte J: installare l'app sul telefono
+- Parte I: collegare una banca da un dispositivo remoto (più indirizzi di ritorno)
+- Parte J: installare l'app sul dispositivo remoto
 - Parte K: usare l'app da fuori casa, giorno per giorno
 - Parte L: i test e la CI
 - Parte M: verifiche fatte e difetti trovati
@@ -55,7 +68,7 @@ Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certifi
 
 ---
 
-## Parte A: le basi delle reti (perché il telefono non arriva al PC)
+## Parte A: le basi delle reti (perché il dispositivo remoto non arriva al server)
 
 ![La rete di casa](img/rete-casa.svg)
 
@@ -78,7 +91,7 @@ Su Internet ogni indirizzo deve essere unico al mondo, come un numero di telefon
 numeri sono circa 4 miliardi, meno dei dispositivi esistenti. La soluzione è questa:
 
 - **a casa** i dispositivi usano indirizzi **privati**, che non esistono su Internet e che ogni casa può riusare:
-  `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x` (gli stessi di `docs/46`, parte G3.7). Il PC è `192.168.1.20`, il
+  `192.168.x.x`, `10.x.x.x`, `172.16-31.x.x` (gli stessi di `docs/46`, parte G3.7). Il server è `192.168.1.20`, il
   telefono sul Wi-Fi `192.168.1.40`, e i tuoi vicini hanno gli stessi numeri a casa loro;
 - **il router** è il confine tra casa e Internet. Dentro ha un indirizzo privato (`192.168.1.1`), fuori ha l'**unico
   indirizzo pubblico** della casa, assegnato dal fornitore di Internet (per esempio `93.40.12.7`). Spesso cambia
@@ -86,28 +99,28 @@ numeri sono circa 4 miliardi, meno dei dispositivi esistenti. La soluzione è qu
 
 ### A3. Uscire sì, entrare no: il NAT
 
-Quando il PC chiede una pagina a un sito, il router fa un trucco che si chiama **NAT** (*Network Address
+Quando il server chiede una pagina a un sito, il router fa un trucco che si chiama **NAT** (*Network Address
 Translation*, traduzione degli indirizzi):
-1. riceve il pacchetto del PC (da `192.168.1.20`);
+1. riceve il pacchetto del server (da `192.168.1.20`);
 2. sostituisce il mittente con il **suo** indirizzo pubblico (`93.40.12.7`) e si segna: "questa conversazione è del
-   PC";
-3. quando arriva la risposta, guarda il suo appunto e la passa al PC.
+   server";
+3. quando arriva la risposta, guarda il suo appunto e la passa al server.
 
 Così **uscire** funziona sempre. È anche il modo in cui il backend parla con Enable Banking: è sempre lui a
 cominciare, e le risposte tornano indietro grazie all'appunto del router (`docs/44`, parte A).
 
-Ma se è qualcuno **da fuori** a cominciare? Il telefono, sulla rete 4G, manda un pacchetto a `93.40.12.7`. Il
+Ma se è qualcuno **da fuori** a cominciare? Il dispositivo remoto, sulla rete 4G, manda un pacchetto a `93.40.12.7`. Il
 router non ha nessun appunto per quel pacchetto: non sa a quale dei dispositivi di casa passarlo, e **lo butta**.
 
 > In una frase: dall'esterno si può **rispondere** a chi è dentro, ma non si può **cominciare** una conversazione
-> con chi è dentro. Ed è proprio quello che serve al telefono: cominciare lui.
+> con chi è dentro. Ed è proprio quello che serve al dispositivo remoto: cominciare lui.
 
-E in casa, sul Wi-Fi? Il telefono (`192.168.1.40`) vede il PC (`192.168.1.20`), ma l'app ascolta solo su
+E in casa, sul Wi-Fi? Il dispositivo remoto (`192.168.1.40`) vede il server (`192.168.1.20`), ma l'app ascolta solo su
 `127.0.0.1`: anche lì, porta chiusa. Lo abbiamo voluto noi, per sicurezza.
 
 ### A4. La soluzione "classica", da non fare: aprire una porta sul router
 
-Il router si può configurare così: "quello che arriva da Internet alla porta 443, passalo al PC". Si chiama
+Il router si può configurare così: "quello che arriva da Internet alla porta 443, passalo al server". Si chiama
 **port forwarding** (inoltro di una porta). Funziona, ma per **chiunque**:
 - su Internet ci sono programmi che provano **tutti** gli indirizzi, tutto il giorno, in cerca di porte aperte: in
   poche ore qualcuno troverebbe la pagina del PIN e comincerebbe a provare;
@@ -153,16 +166,16 @@ Sotto, Tailscale usa **WireGuard**, un protocollo VPN moderno, piccolo e molto s
 - ogni dispositivo crea una **coppia di chiavi**: una **privata**, che non lascia mai il dispositivo, e una
   **pubblica**, che si può dare a tutti;
 - quello che si cifra con la chiave pubblica di un dispositivo lo può decifrare solo lui, con la sua privata;
-- PC e telefono, conoscendo ognuno la chiave pubblica dell'altro, si costruiscono un canale cifrato che solo loro
+- server e dispositivo remoto, conoscendo ognuno la chiave pubblica dell'altro, si costruiscono un canale cifrato che solo loro
   due possono leggere.
 
-### B3. Il server di coordinamento: l'elenco del telefono
+### B3. Il server di coordinamento: l'elenco del dispositivo remoto
 
-Resta un problema: come fa il telefono a sapere la chiave pubblica del PC, e dove si trova? Qui entra il **server di
+Resta un problema: come fa il dispositivo remoto a sapere la chiave pubblica del server, e dove si trova? Qui entra il **server di
 coordinamento** di Tailscale:
 - quando accedi con il tuo account (Google, Microsoft, Apple, GitHub…), il dispositivo gli manda la sua **chiave
   pubblica**;
-- il server tiene l'elenco: "nella rete di questo account ci sono il PC, con questa chiave, e il telefono, con
+- il server tiene l'elenco: "nella rete di questo account ci sono il server, con questa chiave, e il dispositivo remoto, con
   quest'altra";
 - e lo distribuisce ai tuoi dispositivi.
 
@@ -171,8 +184,8 @@ e il traffico non passa da lui (quasi mai: vedi B4).
 
 ### B4. Come passa il traffico, anche dietro due router
 
-Il PC è dietro il router di casa, il telefono dietro la rete del suo operatore: tutti e due "possono solo uscire"
-(parte A3). Il trucco di Tailscale si chiama **NAT traversal** ("attraversare il NAT"): PC e telefono, avvisati dal
+Il server è dietro il router di casa, il dispositivo remoto dietro la rete del suo operatore: tutti e due "possono solo uscire"
+(parte A3). Il trucco di Tailscale si chiama **NAT traversal** ("attraversare il NAT"): server e dispositivo remoto, avvisati dal
 server di coordinamento, **cominciano tutti e due**, nello stesso momento, a mandarsi pacchetti. Ognuno dei due
 router vede una conversazione "cominciata da dentro", si segna l'appunto, e lascia passare le risposte. Così si apre
 una strada diretta, senza toccare la configurazione di nessun router.
@@ -193,14 +206,14 @@ Ricordare numeri è scomodo, quindi Tailscale dà anche dei **nomi**, con **Magi
 - `tail0000` è il nome della tua tailnet (Tailscale ne assegna uno a caso, del tipo `tail` più numeri e lettere);
 - `ts.net` è un dominio di Tailscale.
 
-Il telefono, collegato a Tailscale, scrive quel nome nel browser, e MagicDNS lo traduce nell'indirizzo `100.x` del PC.
+Il dispositivo remoto, collegato a Tailscale, scrive quel nome nel browser, e MagicDNS lo traduce nell'indirizzo `100.x` del server.
 
 ### B6. Che cosa vede Tailscale, e di chi ti fidi
 
 Con Tailscale ti fidi di due cose:
 1. **del tuo account** (Google, Microsoft, Apple…): chi entra nel tuo account può aggiungere un dispositivo alla tua
    tailnet. Proteggilo con la **verifica in due passaggi**;
-2. **del server di coordinamento**: è lui a dire "questa è la chiave del PC". In teoria un server di coordinamento
+2. **del server di coordinamento**: è lui a dire "questa è la chiave del server". In teoria un server di coordinamento
    malevolo potrebbe presentare una chiave falsa. Tailscale offre una difesa anche contro questo (il **Tailnet
    Lock**, parte N), ma per un uso personale di solito non serve.
 
@@ -215,7 +228,7 @@ solo il piano gratuito.
 
 ---
 
-## Parte C: installare Tailscale sul PC
+## Parte C: installare Tailscale sul server
 
 I nomi dei menu possono cambiare un po' tra una versione e l'altra: qui c'è quello che si vede oggi.
 
@@ -233,12 +246,12 @@ I nomi dei menu possono cambiare un po' tra una versione e l'altra: qui c'è que
 2. Alla fine, in basso a destra (vicino all'orologio, a volte sotto la freccina `^`), compare l'**icona di
    Tailscale**. Cliccala e scegli **Log in…**: si apre il browser, accedi con l'account del punto C1 e conferma
    **Connect**.
-3. L'icona diventa "attiva". Cliccandola vedi il nome del PC e il suo indirizzo `100.x`.
-4. **Importante, perché il PC resta acceso:** nel menu dell'icona apri **Preferences** (o **Settings**) e accendi
+3. L'icona diventa "attiva". Cliccandola vedi il nome del server e il suo indirizzo `100.x`.
+4. **Importante, perché il server resta acceso:** nel menu dell'icona apri **Preferences** (o **Settings**) e accendi
    **Run unattended**. Senza, Tailscale si scollega quando esci dal tuo utente di Windows (anche solo con "Esci"), e
-   il telefono non troverebbe più il PC.
-5. Prova il comando: apri **PowerShell** e scrivi `tailscale status`. Deve mostrare il PC (e, dopo la parte D, il
-   telefono). Se dice che il comando non esiste, chiudi e riapri PowerShell.
+   il dispositivo remoto non troverebbe più il server.
+5. Prova il comando: apri **PowerShell** e scrivi `tailscale status`. Deve mostrare il server (e, dopo la parte D, i
+   dispositivi remoti). Se dice che il comando non esiste, chiudi e riapri PowerShell.
 
 ### C3. macOS e Linux
 
@@ -249,47 +262,52 @@ I nomi dei menu possono cambiare un po' tra una versione e l'altra: qui c'è que
   indirizzo da aprire nel browser per accedere. Perché lo script possa configurare Tailscale senza `sudo`:
   `sudo tailscale set --operator=$USER` (una volta sola).
 
-### C4. Il nome del PC
+### C4. Il nome del server
 
-Il nome del PC nella tailnet è quello del computer (su Windows: Impostazioni → Sistema → Informazioni → **Nome del
+Il nome del server nella tailnet è quello del computer (su Windows: Impostazioni → Sistema → Informazioni → **Nome del
 dispositivo**). Si cambia anche dalla console di Tailscale (**login.tailscale.com/admin/machines** → i tre puntini
-accanto al PC → **Edit machine name…**).
+accanto al server → **Edit machine name…**).
 
-Scegli un nome **neutro**, senza nomi di persona: per esempio `pc-casa`. Il motivo è nella parte E1: il nome del PC
+Scegli un nome **neutro**, senza nomi di persona: per esempio `pc-casa`. Il motivo è nella parte E1: il nome del server
 finirà in un registro pubblico dei certificati.
 
 ---
 
-## Parte D: installare Tailscale sul telefono
+## Parte D: installare Tailscale sui dispositivi remoti
+
+Su ogni dispositivo da cui vuoi aprire l'app si installa Tailscale, con lo **stesso** account del server. Per un
+**portatile o un altro computer** i passi sono quelli della parte C (Windows, macOS o Linux), senza "Run unattended"
+e senza lo script: sul dispositivo remoto non si installa WalletTracker, basta Tailscale e il browser. Per il
+**telefono**:
 
 ### D1. Android
 
 1. Apri il **Play Store**, cerca **Tailscale** e installala.
-2. Aprila, premi **Get started** / **Log in** e accedi con lo **stesso** account del PC.
+2. Aprila, premi **Get started** / **Log in** e accedi con lo **stesso** account del server.
 3. Android chiede il permesso di creare una **connessione VPN**: conferma (**OK**). Tailscale è una VPN, e Android
    lo chiede per qualsiasi VPN.
-4. Nell'app vedi l'interruttore acceso e l'elenco dei tuoi dispositivi: c'è anche il PC.
+4. Nell'app vedi l'interruttore acceso e l'elenco dei tuoi dispositivi: c'è anche il server.
 
 ### D2. iPhone
 
 1. Apri l'**App Store**, cerca **Tailscale** e installala.
-2. Aprila, premi **Get started** / **Log in** e accedi con lo **stesso** account del PC.
+2. Aprila, premi **Get started** / **Log in** e accedi con lo **stesso** account del server.
 3. iOS chiede di **aggiungere una configurazione VPN**: conferma (**Consenti**) e, se lo chiede, usa il Face ID o il
    codice del telefono.
-4. Nell'app l'interruttore è acceso e vedi il PC nell'elenco.
+4. Nell'app l'interruttore è acceso e vedi il server nell'elenco.
 
 ### D3. Controllare che si vedano
 
-Dal PC, in PowerShell o nel terminale:
+Dal server, in PowerShell o nel terminale:
 
 ```
 tailscale status
 ```
 
-Deve mostrare due righe (o più): il PC e il telefono, ciascuno con il suo indirizzo `100.x`. Lo stesso elenco è
+Deve mostrare due righe (o più): il server e i dispositivi remoti, ciascuno con il suo indirizzo `100.x`. Lo stesso elenco è
 nella console, su **login.tailscale.com/admin/machines**.
 
-A questo punto il telefono "vede" il PC, ma l'app non ancora: WalletTracker ascolta solo su `127.0.0.1` (parte A3).
+A questo punto il dispositivo remoto "vede" il server, ma l'app non ancora: WalletTracker ascolta solo su `127.0.0.1` (parte A3).
 Serve l'ultimo pezzo: `tailscale serve`.
 
 ---
@@ -302,35 +320,35 @@ Quando il browser apre un indirizzo `https://`, deve essere sicuro di due cose: 
 e che dall'altra parte ci sia **davvero** il sito che ha chiesto, e non qualcuno che si spaccia per lui. Per la
 seconda serve un **certificato**.
 
-![Il certificato https del PC](img/certificato-ts.svg)
+![Il certificato https del server](img/certificato-ts.svg)
 
 Un certificato è una **carta d'identità digitale**: "questa chiave pubblica appartiene a questo nome
 (`pc-casa.tail0000.ts.net`)", **firmata** da un'**autorità di certificazione** (CA, *Certificate Authority*). Il
-browser non conosce il PC, ma conosce le autorità: nel telefono c'è già un elenco di **CA radice** di cui fidarsi.
+browser non conosce il server, ma conosce le autorità: in ogni telefono e computer c'è già un elenco di **CA radice** di cui fidarsi.
 
-Ecco come il PC ottiene il suo (i numeri sono quelli dell'immagine):
-1. Tailscale, sul PC, crea una coppia di chiavi: la **privata** resta sul PC, sempre;
+Ecco come il server ottiene il suo (i numeri sono quelli dell'immagine):
+1. Tailscale, sul server, crea una coppia di chiavi: la **privata** resta sul server, sempre;
 2. chiede a **Let's Encrypt**, un'autorità gratuita usata da gran parte di Internet: "firmami un certificato per
    `pc-casa.tail0000.ts.net`, con questa chiave pubblica";
 3. Let's Encrypt risponde: "dimostra che il nome è tuo: pubblica questo codice nel DNS, sotto
    `_acme-challenge.pc-casa.tail0000.ts.net`" (si chiama **sfida DNS-01**);
-4. il nome `ts.net` è di Tailscale: il PC chiede al server di coordinamento di pubblicare il codice. Lo fa solo per un
-   dispositivo della **tua** tailnet, con quel nome: nessun altro può farsi dare un certificato per il tuo PC;
+4. il nome `ts.net` è di Tailscale: il server chiede al server di coordinamento di pubblicare il codice. Lo fa solo per un
+   dispositivo della **tua** tailnet, con quel nome: nessun altro può farsi dare un certificato per il tuo server;
 5. Let's Encrypt controlla il DNS, trova il codice e firma;
-6. il PC riceve il certificato. Dura 90 giorni, e Tailscale lo rinnova da solo.
+6. il server riceve il certificato. Dura 90 giorni, e Tailscale lo rinnova da solo.
 
-Poi, quando il telefono apre l'indirizzo (7-8), il browser controlla che il nome sia quello della barra degli
+Poi, quando il dispositivo remoto apre l'indirizzo (7-8), il browser controlla che il nome sia quello della barra degli
 indirizzi, che la firma sia di un'autorità che conosce e che il certificato non sia scaduto. Se è tutto a posto
-mostra il **lucchetto**. Il PC dimostra di essere lui firmando con la sua chiave privata, e i due si accordano su una
+mostra il **lucchetto**. Il server dimostra di essere lui firmando con la sua chiave privata, e i due si accordano su una
 chiave nuova per cifrare la conversazione.
 
 **Perché `localhost` non può avere un certificato vero.** `localhost` non è di nessuno: ogni computer chiama così sé
 stesso. Nessuna autorità può dire "localhost è tuo". Per questo `ng serve` usava un certificato fatto in casa, con
-l'avviso del browser (`docs/42`, parte F), e per questo sul PC l'app è in `http://localhost`.
+l'avviso del browser (`docs/42`, parte F), e per questo sul server l'app è in `http://localhost`.
 
 **Perché all'app serve l'https.** Il browser accende alcune funzioni solo nei "contesti sicuri" (*secure context*):
 `https`, oppure `localhost`. Il **service worker** (la copia dei dati e l'installazione, `docs/42`) è una di queste.
-Dal telefono l'indirizzo non è `localhost`, quindi senza https l'app non si potrebbe installare, e il cookie della
+Da un dispositivo remoto l'indirizzo non è `localhost`, quindi senza https l'app non si potrebbe installare, e il cookie della
 sessione viaggerebbe senza `Secure` (parte G).
 
 **Da sapere: i certificati sono pubblici.** Ogni certificato firmato da un'autorità finisce in registri pubblici
@@ -351,9 +369,9 @@ indirizzo da aprire per attivare l'https, e aspetta che tu lo faccia.
 
 ### E3. Lo script: `--tailscale`
 
-![Dal telefono a WalletTracker](img/tailscale-serve.svg)
+![Da un dispositivo remoto a WalletTracker](img/tailscale-serve.svg)
 
-Sul PC, nella cartella del progetto:
+Sul server, nella cartella del progetto:
 
 ```
 ./installa.sh --tailscale                                         # macOS e Linux
@@ -369,7 +387,7 @@ Lo script fa tutto quello di sempre (`docs/45`) e, prima di avviare l'app, la pa
 2. **Chiede lo stato** con `tailscale status --json`, cioè in JSON, un formato fatto per i programmi. Due valori:
    - `BackendState` deve essere `"Running"`, cioè collegato. Altrimenti si ferma: "Tailscale è installato ma non
      collegato";
-   - `Self.DNSName` è il nome del PC (`Self` = "questo dispositivo"), per esempio `pc-casa.tail0000.ts.net.`, con
+   - `Self.DNSName` è il nome del server (`Self` = "questo dispositivo"), per esempio `pc-casa.tail0000.ts.net.`, con
      un punto finale che lo script toglie. In PowerShell il JSON diventa un oggetto con `ConvertFrom-Json`; in bash
      lo legge `awk`, che cerca il primo `"DNSName"` dopo `"Self"`.
 3. **Controlla che Funnel sia spento** (`tailscale serve status --json`): se no, si ferma. Il perché è nella parte F5.
@@ -379,28 +397,28 @@ Lo script fa tutto quello di sempre (`docs/45`) e, prima di avviare l'app, la pa
    tailscale serve --bg --https=443 http://127.0.0.1:8001
    ```
 
-   - `serve`: "ricevi le connessioni dei miei dispositivi e passale a un programma su questo PC";
+   - `serve`: "ricevi le connessioni dei miei dispositivi e passale a un programma su questo server";
    - `--https=443`: ricevile in **https**, sulla porta normale dell'https (443), con il certificato della parte E1:
      così l'indirizzo è `https://pc-casa.tail0000.ts.net`, senza `:numero`;
-   - `--bg` (*background*, sullo sfondo): resta acceso da solo, anche dopo un riavvio del PC; non serve una finestra
+   - `--bg` (*background*, sullo sfondo): resta acceso da solo, anche dopo un riavvio del server; non serve una finestra
      aperta;
    - `http://127.0.0.1:8001`: dove passarle. È la porta **"remota"** di nginx (`REMOTE_PORT` nel `.env`, di serie
-     8001), dove serve sempre il PIN. **Mai** la 8000, quella "del PC" (parte F1).
+     8001), dove serve sempre il PIN. **Mai** la 8000, quella "del server" (parte F1).
 
    Che cosa fa `tailscale serve` a ogni richiesta (③-④ nell'immagine): toglie l'https, la rifà in **http** verso
    `127.0.0.1:8001` e aggiunge alcune intestazioni. Lo abbiamo verificato nel codice di Tailscale
    (`ipn/ipnlocal/serve.go`): conserva l'intestazione `Host` (il nome `pc-casa.tail0000.ts.net`) e aggiunge
-   `X-Forwarded-Proto: https`, `X-Forwarded-For` (l'indirizzo `100.x` del telefono) e `Tailscale-User-Login` (il tuo
+   `X-Forwarded-Proto: https`, `X-Forwarded-For` (l'indirizzo `100.x` del dispositivo remoto) e `Tailscale-User-Login` (il tuo
    account). Quelle con lo stesso nome mandate dal browser le cancella prima.
 5. **Scrive nel `.env`**, solo se mancano:
    - `WALLETTRACKER_ALLOWED_HOSTS=localhost,127.0.0.1,pc-casa.tail0000.ts.net`: i nomi consentiti dal
-     "buttafuori" del backend (`LocalOnlyRequestFilter`, `docs/17` n. 3). Senza, ogni richiesta dal telefono
+     "buttafuori" del backend (`LocalOnlyRequestFilter`, `docs/17` n. 3). Senza, ogni richiesta da un dispositivo remoto
      riceverebbe 403 "indirizzo non consentito";
    - `ENABLE_BANKING_REDIRECT_URL=...,https://pc-casa.tail0000.ts.net/callback`: l'indirizzo di ritorno della banca
-     per il telefono (parte I).
+     per il dispositivo remoto (parte I).
 6. Poi l'avvio di sempre (`docker compose up -d --build`): il backend riparte con il `.env` nuovo.
 
-Alla fine scrive l'indirizzo da aprire sul telefono e quello da registrare su Enable Banking. Si può rilanciare
+Alla fine scrive l'indirizzo da aprire sul dispositivo remoto e quello da registrare su Enable Banking. Si può rilanciare
 quante volte si vuole: se è già tutto pronto, non cambia niente.
 
 ### E4. A mano, senza lo script
@@ -408,7 +426,7 @@ quante volte si vuole: se è già tutto pronto, non cambia niente.
 Le stesse cose, una per una:
 
 ```
-tailscale status                                         # il nome del PC è nella prima riga
+tailscale status                                         # il nome del server è nella prima riga
 tailscale serve --bg --https=443 http://127.0.0.1:8001   # l'https verso la porta "remota"
 tailscale serve status                                   # che cosa sta servendo, per controllare
 ```
@@ -416,7 +434,7 @@ tailscale serve status                                   # che cosa sta servendo
 Poi nel `.env` aggiungi il nome a `WALLETTRACKER_ALLOWED_HOSTS` e l'indirizzo di ritorno a
 `ENABLE_BANKING_REDIRECT_URL`, e rilancia lo script (o `docker compose up -d`).
 
-Per **spegnere** l'accesso dal telefono: `tailscale serve --https=443 off`. L'app sul PC continua a funzionare.
+Per **spegnere** l'accesso da un dispositivo remoto: `tailscale serve --https=443 off`. L'app sul server continua a funzionare.
 
 ---
 
@@ -424,37 +442,37 @@ Per **spegnere** l'accesso dal telefono: `tailscale serve --https=443 off`. L'ap
 
 ### F1. Solo la porta "remota": perché non la 8000
 
-Al passo 3 abbiamo diviso l'app su due porte (`docs/46`, parte C): **8000** "dal PC" (dove si può scegliere "senza
+Al passo 3 abbiamo diviso l'app su due porte (`docs/46`, parte C): **8000** "dal server" (dove si può scegliere "senza
 PIN" e creare il PIN) e **8001** "da un altro dispositivo" (dove serve sempre il PIN). La differenza la fa **da quale
 porta entra la richiesta**, e il browser non la può falsificare.
 
-`tailscale serve` deve quindi puntare **solo** alla 8001. Se puntasse alla 8000, il telefono entrerebbe "come il PC":
+`tailscale serve` deve quindi puntare **solo** alla 8001. Se puntasse alla 8000, il dispositivo remoto entrerebbe "come il server":
 con "senza PIN" entrerebbe senza niente, e potrebbe creare lui il PIN. Lo script usa sempre `REMOTE_PORT`, e la CI
 controlla che dalla porta 8001 risulti `local:false` (parte L).
 
-### F2. Il PIN dal telefono
+### F2. Il PIN da un dispositivo remoto
 
-Dalla porta 8001 l'app chiede sempre il PIN. Se sul PC hai scelto "senza PIN", dal telefono compare la pagina "Da
-qui non si entra" con le istruzioni: crea un PIN dal PC (Impostazioni → Accesso). Tutto il resto del passo 3 vale
+Dalla porta 8001 l'app chiede sempre il PIN. Se sul server hai scelto "senza PIN", da un dispositivo remoto compare la pagina "Da
+qui non si entra" con le istruzioni: crea un PIN dal server (Impostazioni → Accesso). Tutto il resto del passo 3 vale
 uguale: blocco dopo 5 errori, sessione di 12 ore, codice di recupero, "Esci" (`docs/46`).
 
 ### F3. Chi entra nella tailnet
 
 Nella tailnet entrano solo i dispositivi su cui hai fatto l'accesso con il tuo account. Tre cose da sapere:
-- **non condividere il PC** con altri account (nella console c'è **Share…**): chi lo riceve entrerebbe nella tua
+- **non condividere il server** con altri account (nella console c'è **Share…**): chi lo riceve entrerebbe nella tua
   rete, fino alla pagina del PIN;
 - un dispositivo **perso o venduto**: toglilo dalla console (**Machines** → i tre puntini → **Remove…**). Da quel
-  momento la sua chiave non vale più. Poi, per sicurezza, cambia il PIN dal PC: le sessioni aperte si chiudono
+  momento la sua chiave non vale più. Poi, per sicurezza, cambia il PIN dal server: le sessioni aperte si chiudono
   (`docs/46`, parte G6);
-- le chiavi dei dispositivi **scadono** (di serie dopo 180 giorni): Tailscale chiede di rifare l'accesso. Sul PC, che
+- le chiavi dei dispositivi **scadono** (di serie dopo 180 giorni): Tailscale chiede di rifare l'accesso. Sul server, che
   deve restare raggiungibile, puoi disattivare la scadenza (**Machines** → i tre puntini → **Disable key expiry**):
-  è comodo, ma vuol dire che quel dispositivo resta nella rete finché non lo togli tu. Sul telefono lasciala accesa.
+  è comodo, ma vuol dire che quel dispositivo resta nella rete finché non lo togli tu. Sui dispositivi remoti lasciala accesa.
 
 ### F4. Le regole d'accesso (ACL)
 
 Di serie, nella tailnet personale, ogni tuo dispositivo vede tutti gli altri. Tailscale permette di scrivere
-regole più strette (**Access controls** nella console): per esempio "il telefono può raggiungere solo la porta 443
-del PC". Per una tailnet con soli dispositivi tuoi non serve; diventa utile se un giorno aggiungi dispositivi di
+regole più strette (**Access controls** nella console): per esempio "il dispositivo remoto può raggiungere solo la porta 443
+del server". Per una tailnet con soli dispositivi tuoi non serve; diventa utile se un giorno aggiungi dispositivi di
 altre persone (esercizio 5).
 
 ### F5. Funnel: mai
@@ -484,7 +502,7 @@ chiunque, senza Tailscale. Per WalletTracker non va **mai** acceso. Le difese so
 ### F6. Che cosa resta come prima
 
 - **nessuna porta aperta sul router**: Tailscale non ne ha bisogno (parte B4);
-- **porte su `127.0.0.1`**: dalla rete di casa l'app non si raggiunge (il telefono di casa passa anche lui da
+- **porte su `127.0.0.1`**: dalla rete di casa l'app non si raggiunge (il dispositivo remoto di casa passa anche lui da
   Tailscale);
 - **il backend e il database** restano senza porte (`docs/44`).
 
@@ -492,7 +510,7 @@ chiunque, senza Tailscale. Per WalletTracker non va **mai** acceso. Le difese so
 
 ## Parte G: il cookie `Secure`, finalmente
 
-Nella `docs/46` (parte G3.9) avevamo lasciato un conto in sospeso: dal telefono il cookie della sessione doveva
+Nella `docs/46` (parte G3.9) avevamo lasciato un conto in sospeso: da un dispositivo remoto il cookie della sessione doveva
 diventare `Secure`, ma il "biglietto" di nginx avrebbe detto `http`.
 
 ![Il biglietto X-Forwarded-Proto: oggi e al passo 4](img/tailscale-proto.svg)
@@ -525,7 +543,7 @@ Poi ogni blocco `server` sceglie il suo protocollo, nella variabile `$wallettrac
 server {
     listen 8080;
     set $wallettracker_access local;
-    set $wallettracker_proto $scheme;           # porta del PC: il protocollo vero, visto da nginx
+    set $wallettracker_proto $scheme;           # porta del server: il protocollo vero, visto da nginx
     ...
 }
 
@@ -547,16 +565,16 @@ proxy_set_header X-Forwarded-Proto $wallettracker_proto;
 
 | Chi | Porta | Che cosa scrive | Che cosa arriva a Tomcat | Cookie |
 |---|---|---|---|---|
-| browser del PC | 8000 | `X-Forwarded-Proto: https` (finto) | `http` (`$scheme`: il finto non conta) | senza `Secure` |
-| `tailscale serve` (il telefono) | 8001 | `X-Forwarded-Proto: https` (vero) | `https` | **`Secure`** |
-| browser del PC su `localhost:8001` | 8001 | niente | `http` | senza `Secure` |
-| browser del PC su `localhost:8001` | 8001 | `https` scritto a mano | `https` | `Secure`, ma solo per lui |
+| browser del server | 8000 | `X-Forwarded-Proto: https` (finto) | `http` (`$scheme`: il finto non conta) | senza `Secure` |
+| `tailscale serve` (il dispositivo remoto) | 8001 | `X-Forwarded-Proto: https` (vero) | `https` | **`Secure`** |
+| browser del server su `localhost:8001` | 8001 | niente | `http` | senza `Secure` |
+| browser del server su `localhost:8001` | 8001 | `https` scritto a mano | `https` | `Secure`, ma solo per lui |
 
-L'ultima riga è il caso "peggiore", e non fa danni: alla porta 8001 arriva solo chi è già sul PC, e scrivendo
+L'ultima riga è il caso "peggiore", e non fa danni: alla porta 8001 arriva solo chi è già sul server, e scrivendo
 `https` ottiene solo un cookie `Secure` per sé stesso. Non tocca la sessione di nessun altro.
 
 Perché non abbiamo scritto semplicemente `https` fisso sulla porta 8081? Perché la 8001 la usano anche le prove dal
-PC e la CI, in http: con un cookie sempre `Secure`, lì non si entrerebbe più (`docs/46`, parte G3.3).
+server e la CI, in http: con un cookie sempre `Secure`, lì non si entrerebbe più (`docs/46`, parte G3.3).
 
 Il resto lo fa Tomcat, come spiegato nella `docs/46` (parte G3.8): crede a `X-Forwarded-Proto` perché arriva da
 nginx, un indirizzo della rete di Docker, e con `https` scrive il cookie con `Secure`. Lo abbiamo verificato con il
@@ -602,7 +620,7 @@ $ curl -H 'Host: evil.example' -H 'X-Forwarded-Host: localhost' http://127.0.0.1
 
 **Quanto era grave?** Con il PIN, poco: la pagina malevola non avrebbe avuto il cookie della sessione (il browser lo
 manda solo a `localhost`, non a `evil.example`), quindi avrebbe ricevuto 401. Ma con **"senza PIN"** si entra dalla
-porta del PC senza cookie (`docs/46`, parte G4.8, caso ⑤): una pagina così avrebbe potuto leggere i tuoi dati. Il
+porta del server senza cookie (`docs/46`, parte G4.8, caso ⑤): una pagina così avrebbe potuto leggere i tuoi dati. Il
 DNS rebinding non è un attacco facile (bisogna visitare una pagina preparata apposta, e i browser hanno qualche difesa
 in più), ma era una porta lasciata aperta.
 
@@ -635,15 +653,15 @@ che qui ce n'era una che non avevamo visto. La CI ora lo prova a ogni push (part
 
 ---
 
-## Parte I: collegare una banca dal telefono (più indirizzi di ritorno)
+## Parte I: collegare una banca da un dispositivo remoto (più indirizzi di ritorno)
 
 ### I1. Il problema
 
 Quando colleghi una banca (`docs/13`), l'app ti manda sulla pagina della banca, e alla fine la banca rimanda il
 browser all'**indirizzo di ritorno** (*redirect URL*), con un `code`. Quell'indirizzo:
 - deve essere **registrato**, uguale carattere per carattere, nella tua applicazione su Enable Banking;
-- deve portare **dove è partito il browser**. Se parti dal telefono e la banca ti rimanda a `http://localhost:8000`,
-  sul telefono `localhost` è il telefono stesso: pagina non trovata.
+- deve portare **dove è partito il browser**. Se parti da un dispositivo remoto e la banca ti rimanda a `http://localhost:8000`,
+  sul dispositivo remoto `localhost` è il dispositivo remoto stesso: pagina non trovata.
 
 Fino a oggi l'indirizzo era **uno solo** (`ENABLE_BANKING_REDIRECT_URL`).
 
@@ -656,7 +674,7 @@ ENABLE_BANKING_REDIRECT_URL=http://localhost:8000/callback,https://pc-casa.tail0
 ```
 
 Quando avvii il collegamento, il backend sceglie quello con **lo stesso nome** dell'indirizzo che hai nel browser:
-dal PC (`localhost`) il primo, dal telefono (`pc-casa.tail0000.ts.net`) il secondo. Se nessuno coincide, il primo,
+dal server (`localhost`) il primo, da un dispositivo remoto (`pc-casa.tail0000.ts.net`) il secondo. Se nessuno coincide, il primo,
 come prima.
 
 In `EnableBankingProperties`:
@@ -695,9 +713,79 @@ può far tornare la banca (con il `code`) su un sito suo.
 Il `state` (`docs/13`) resta com'è: è salvato nel backend, non nella sessione, e il collegamento comincia e finisce
 sullo stesso dispositivo.
 
+### I2b. Chi sceglie l'indirizzo: il backend, non Enable Banking
+
+![Più indirizzi di ritorno: chi sceglie, chi controlla](img/redirect-scelta.svg)
+
+È facile pensare che, con più indirizzi registrati, sia Enable Banking a scegliere quale usare. Non è così.
+
+**L'elenco nel pannello è un elenco di permessi** (una *whitelist*: "accetta solo questi"). Il nostro backend, ogni
+volta che comincia un collegamento, dice a Enable Banking **un** indirizzo, e Enable Banking fa due cose sole:
+1. **controlla** che sia nell'elenco, uguale carattere per carattere; se non c'è, rifiuta la richiesta con un
+   errore su `redirect_url`;
+2. alla fine del login, rimanda il browser **esattamente lì**.
+
+Perché esiste l'elenco? Senza, chiunque riuscisse a far partire un collegamento a nome della tua applicazione
+potrebbe scrivere `redirect_url: https://sito-cattivo.com/`, e la banca manderebbe lì il browser con il `code`.
+L'elenco garantisce che il `code` finisca solo su indirizzi tuoi.
+
+Il giro, passo per passo (i numeri sono quelli dell'immagine):
+
+**① Il browser.** Premi "Collega una banca": Angular manda `POST /api/connections`, e il browser ci mette
+l'intestazione `Host` con il nome **che hai nella barra degli indirizzi**: `localhost` dal server,
+`pc-casa.tail0000.ts.net` da un dispositivo remoto (Tailscale conserva `Host` così com'è, parte E3). Il buttafuori
+controlla che sia un nome consentito (parte H).
+
+**② Il backend sceglie.** Il controller passa il nome (`httpRequest.getServerName()`) a `BankLinkService.start`, che
+chiama `redirectUrlFor(host)` (parte I2): dall'elenco del `.env` prende il primo indirizzo con lo stesso nome; se
+nessuno coincide, il primo. Dal browser non arriva nessun indirizzo, solo il nome, e solo uno di quelli consentiti.
+
+**③ Enable Banking controlla.** Il backend manda la richiesta che avvia l'autorizzazione (`POST /auth`, record
+`AuthorizationRequest`; Jackson scrive `redirectUrl` come `redirect_url`):
+
+```json
+{ "aspsp": { "name": "Banca Alfa", "country": "IT" },
+  "state": "3f1c…",
+  "redirect_url": "https://pc-casa.tail0000.ts.net/callback" }
+```
+
+Enable Banking guarda se quell'indirizzo è nel pannello e risponde con l'indirizzo della pagina di login della banca.
+
+**④-⑤ Il login e il ritorno.** Il browser va sulla banca; alla fine la banca gli risponde con un ordine **per il
+browser**:
+
+```
+HTTP/1.1 302 Found
+Location: https://pc-casa.tail0000.ts.net/callback?code=…&state=…
+```
+
+cioè esattamente l'indirizzo scelto al punto ②. Il browser lo apre, la pagina `/callback` di Angular legge `code` e
+`state` e li manda al backend, che li scambia con Enable Banking (questa volta da server a server).
+
+| | Dal server | Da un dispositivo remoto |
+|---|---|---|
+| nella barra del browser | `http://localhost:8000` | `https://pc-casa.tail0000.ts.net` |
+| `Host` della richiesta | `localhost` | `pc-casa.tail0000.ts.net` |
+| indirizzo scelto dal backend | `http://localhost:8000/callback` | `https://pc-casa.tail0000.ts.net/callback` |
+| dove torna il browser | sul server, porta 8000 | sul server, passando da Tailscale (porta 8001) |
+
+**Perché `localhost` da solo non basta.** L'indirizzo di ritorno lo apre **il browser**, non il server. E
+`localhost` vuol dire "il dispositivo su cui gira il browser": dal server è il server stesso, e lì c'è l'app; da un
+dispositivo remoto è il dispositivo remoto, dove l'app non c'è ("pagina non trovata", e `code` e `state` vanno
+persi). Che il container sul server sia sempre acceso non cambia niente: il browser del dispositivo remoto, con
+`localhost`, il server non lo cerca nemmeno.
+
+**Ti serve davvero?** Solo se vuoi collegare (o **ricollegare**, quando il consenso scade, ogni 90-180 giorni) una
+banca **da un dispositivo remoto**. Se lo fai sempre dal server, basta l'indirizzo con `localhost`. I movimenti, ai
+dispositivi remoti, arrivano comunque: li scarica il backend da solo, da server a server.
+
+**In sintesi:** nel **pannello** registri tutti gli indirizzi possibili (i permessi); nel **`.env`** c'è lo stesso
+elenco, separato da virgole (da lì sceglie il backend); a ogni collegamento il backend ne manda **uno**, quello con il
+nome che hai nel browser, ed Enable Banking controlla e rimanda il browser lì.
+
 ### I3. Che cosa registrare su Enable Banking
 
-Lo script (`--tailscale`) aggiunge da solo l'indirizzo del telefono al `.env`. Su Enable Banking, invece, lo devi
+Lo script (`--tailscale`) aggiunge da solo l'indirizzo del dispositivo remoto al `.env`. Su Enable Banking, invece, lo devi
 aggiungere tu. Il pannello accetta più indirizzi per la stessa applicazione, e si possono cambiare anche dopo la
 registrazione:
 1. su **enablebanking.com/cp** apri **API applications** e la tua applicazione (il pulsante per modificarla porta
@@ -712,7 +800,7 @@ registrazione:
    https://pc-casa.tail0000.ts.net/callback
    ```
 
-   (con il nome vero del tuo PC al posto di `pc-casa.tail0000.ts.net`);
+   (con il nome vero del tuo server al posto di `pc-casa.tail0000.ts.net`);
 3. premi **Save**.
 
 > **Attenzione:** il riquadro contiene **tutto** l'elenco. Se quando lo apri è vuoto (o mostra solo la scritta
@@ -723,8 +811,8 @@ registrazione:
 Nel pannello gli indirizzi sono uno per riga, nel `.env` sono separati da virgole: sono lo stesso elenco scritto in
 due modi. Conta solo che ogni indirizzo del `.env` sia anche nel pannello, carattere per carattere.
 
-**E l'indirizzo del PC?** Il valore di serie è ancora `https://localhost:8443/callback`, quello di `ng serve` dei passi
-precedenti. Con l'app in Docker, dal PC l'indirizzo giusto è `http://localhost:8000/callback` (`docs/44`, parte H):
+**E l'indirizzo del server?** Il valore di serie è ancora `https://localhost:8443/callback`, quello di `ng serve` dei passi
+precedenti. Con l'app in Docker, dal server l'indirizzo giusto è `http://localhost:8000/callback` (`docs/44`, parte H):
 se Enable Banking lo accetta, registralo e mettilo al posto del primo nel `.env`. Lo script non lo cambia da solo, per
 non toccare quello che hai già registrato.
 
@@ -763,20 +851,20 @@ schermo, e mostra gli ultimi dati anche senza rete.
 1. con Tailscale acceso, apri l'indirizzo in **Safari** ed entra con il PIN;
 2. pulsante **Condividi** (il quadrato con la freccia in su) → **Aggiungi alla schermata Home** → **Aggiungi**.
 
-L'app installata usa lo stesso indirizzo: Tailscale deve essere acceso anche per lei. Senza rete, o con il PC spento,
+L'app installata usa lo stesso indirizzo: Tailscale deve essere acceso anche per lei. Senza rete, o con il server spento,
 mostra gli ultimi dati scaricati, se li hai visti nelle ultime 12 ore (`docs/46`, parte J).
 
 ---
 
 ## Parte K: usare l'app da fuori casa, giorno per giorno
 
-- **Tailscale acceso sul telefono.** Se l'app dice che il PC non risponde, guarda prima l'app Tailscale:
+- **Tailscale acceso sul dispositivo remoto.** Se l'app dice che il server non risponde, guarda prima l'app Tailscale:
   l'interruttore deve essere acceso. Su Android puoi renderlo permanente (Impostazioni di Android → Rete → VPN →
   Tailscale → **VPN sempre attiva**); su iPhone, nell'app Tailscale, c'è l'opzione **VPN On Demand**.
-- **Anche a casa passa da Tailscale.** Sul Wi-Fi di casa il telefono usa lo stesso indirizzo `…ts.net`: Tailscale
+- **Anche a casa passa da Tailscale.** Sul Wi-Fi di casa il dispositivo remoto usa lo stesso indirizzo `…ts.net`: Tailscale
   trova da solo la strada più corta (diretta, in casa).
 - **La batteria.** Tailscale consuma poco: manda pacchetti solo quando li usi.
-- **Il PC deve essere acceso, con Docker e Tailscale avviati.** Con "Run unattended" (parte C2) Tailscale riparte
+- **Il server deve essere acceso, con Docker e Tailscale avviati.** Con "Run unattended" (parte C2) Tailscale riparte
   da solo; `tailscale serve --bg` si ricorda la configurazione anche dopo un riavvio; Docker Desktop va impostato per
   partire all'avvio (Impostazioni di Docker Desktop → **General** → **Start Docker Desktop when you sign in**).
 
@@ -793,7 +881,7 @@ mostra gli ultimi dati scaricati, se li hai visti nelle ultime 12 ore (`docs/46`
 
 ### L2. Frontend
 
-- `settings-page.spec.ts`: un test nuovo, con due indirizzi (PC e Tailscale): li mostra tutti e due, ognuno con il
+- `settings-page.spec.ts`: un test nuovo, con due indirizzi (server e Tailscale): li mostra tutti e due, ognuno con il
   suo "copia", e la frase al plurale.
 
 ### L3. La CI: le intestazioni
@@ -817,11 +905,11 @@ piccolo script bash che risponde a `status --json` e a `serve status --json` con
 del JSON vero, e si segna la chiamata `serve --bg`. Il passo **Installazione con --tailscale** lo mette per primo nel
 `PATH` e lancia `./installa.sh --tailscale`, poi controlla:
 - che `tailscale serve` sia stato chiamato con `--bg --https=443 http://127.0.0.1:8001`;
-- che nel `.env` ci siano il nome del PC e l'indirizzo di ritorno;
+- che nel `.env` ci siano il nome del server e l'indirizzo di ritorno;
 - che il backend, ripartito, accetti il nome Tailscale (`local:false`, dalla 8001).
 
 Il finto `tailscale` prova **il nostro script**, non Tailscale: che Tailscale faccia davvero quello che diciamo
-l'abbiamo controllato nel suo codice (parte E3), e lo proverai tu dal telefono (parte O).
+l'abbiamo controllato nel suo codice (parte E3), e lo proverai tu da un dispositivo remoto (parte O).
 
 ---
 
@@ -867,10 +955,10 @@ pannello di Enable Banking) le ho preparate leggendo il codice di Tailscale, ma 
 | Protezione | Contro che cosa | Dove |
 |---|---|---|
 | nessuna porta sul router, solo Tailscale | chiunque su Internet | parte B |
-| `tailscale serve` solo verso la porta "remota" | il telefono che entra "come il PC" | script, parte F1 |
+| `tailscale serve` solo verso la porta "remota" | il dispositivo remoto che entra "come il server" | script, parte F1 |
 | Funnel rifiutato (script e nginx) | l'app pubblicata su Internet per sbaglio | parte F5 |
 | `X-Forwarded-Host` e `-Port` cancellati | DNS rebinding verso l'app "senza PIN" | parte H |
-| `X-Forwarded-Proto` da Tailscale solo sulla 8001, solo `https`/`http` | cookie senza `Secure` dal telefono | parte G |
+| `X-Forwarded-Proto` da Tailscale solo sulla 8001, solo `https`/`http` | cookie senza `Secure` da un dispositivo remoto | parte G |
 | indirizzo di ritorno solo dall'elenco del `.env` | la banca che rimanda il `code` a un altro sito | parte I |
 
 Sono le righe **39-43** della tabella della sicurezza (`docs/17`).
@@ -882,34 +970,34 @@ Sono le righe **39-43** della tabella della sicurezza (`docs/17`).
   Per un uso personale è facoltativo.
 - **Un dispositivo della tailnet arriva fino alla pagina del PIN.** Il PIN, il blocco dopo 5 errori e la sessione di
   12 ore restano la difesa (`docs/46`).
-- **Il nome del PC è pubblico** (Certificate Transparency, parte E1). Il nome non apre niente; scegli un nome neutro.
+- **Il nome del server è pubblico** (Certificate Transparency, parte E1). Il nome non apre niente; scegli un nome neutro.
 - **L'identità di Tailscale non la usiamo.** `tailscale serve` dice anche **chi** è (`Tailscale-User-Login`). Si
   potrebbe usare per entrare senza PIN dai tuoi dispositivi, ma vorrebbe dire fidarsi di un'intestazione che sulla
-  porta 8001 può scrivere anche chi è sul PC: abbiamo preferito il PIN (esercizio 4).
+  porta 8001 può scrivere anche chi è sul server: abbiamo preferito il PIN (esercizio 4).
 
 ---
 
 ## Parte O: prova
 
-Sul PC:
+Sul server:
 1. `git pull`, poi Tailscale installato e collegato (parte C), e MagicDNS e HTTPS attivati (parte E2).
 2. Se l'app è "senza PIN", crea un PIN: Impostazioni → Accesso → **Proteggi con un PIN**.
 3. Lancia lo script con l'opzione nuova:
    - Windows: `powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale`
    - macOS/Linux: `./installa.sh --tailscale`
 
-   Alla fine scrive: `Dai tuoi dispositivi con Tailscale:  https://<nome>.<rete>.ts.net`.
+   Alla fine scrive: `Dai dispositivi remoti, con Tailscale:  https://<nome>.<rete>.ts.net`.
 4. Controlla: `tailscale serve status` deve mostrare `https://<nome>.<rete>.ts.net` → `http://127.0.0.1:8001`.
 
-Sul telefono:
+Sul dispositivo remoto:
 5. Tailscale installato, collegato con lo stesso account (parte D).
 6. Apri `https://<nome>.<rete>.ts.net`: deve comparire il **lucchetto**, senza avvisi, e la pagina **Inserisci il
    PIN**. Metti il PIN: sei dentro.
-7. **Fuori casa**: spegni il Wi-Fi del telefono (solo rete mobile) e ricarica: deve funzionare uguale.
+7. **Fuori casa**: spegni il Wi-Fi del dispositivo remoto (solo rete mobile) e ricarica: deve funzionare uguale.
 8. **Senza Tailscale**: spegni l'interruttore di Tailscale e ricarica: l'indirizzo non deve aprirsi. Riaccendilo.
 9. Installa l'app (parte J) e aprila dall'icona.
 10. Facoltativo: aggiungi l'indirizzo di ritorno su Enable Banking (parte I3) e prova **Collega una banca** (o
-    **Ricollega**) dal telefono: alla fine devi tornare sull'app, sul telefono.
+    **Ricollega**) da un dispositivo remoto: alla fine devi tornare sull'app, sul dispositivo remoto.
 
 Se va tutto, scrivimi "Funziona, passiamo al passo 5". Se qualcosa non va, la parte P ha i casi più comuni; mandami
 il messaggio esatto (senza dati personali).
@@ -922,18 +1010,18 @@ il messaggio esatto (senza dati personali).
 |---|---|---|
 | lo script: "Non trovo Tailscale" | non installato, o non nel `PATH` | installalo (parte C); su Windows chiudi e riapri PowerShell |
 | lo script: "installato ma non collegato" | non hai fatto l'accesso, o è in pausa | apri Tailscale → **Log in** / **Connect** |
-| lo script: "Non trovo il nome del PC" | MagicDNS spento | console → **DNS** → **Enable MagicDNS** (parte E2) |
+| lo script: "Non trovo il nome del server" | MagicDNS spento | console → **DNS** → **Enable MagicDNS** (parte E2) |
 | lo script resta fermo dopo "Chiedo a Tailscale…" e mostra un indirizzo | l'https non è ancora attivo nella tailnet | apri l'indirizzo, attiva, e lo script prosegue |
 | Linux: `tailscale serve` "access denied" | serve il permesso di configurare Tailscale | `sudo tailscale set --operator=$USER` e rilancia |
 | lo script: "Funnel è acceso" | Funnel pubblicherebbe l'app su Internet | `tailscale funnel --https=443 off` e rilancia |
-| telefono: la pagina non si apre | Tailscale spento sul telefono, o il PC spento/scollegato | accendi l'interruttore; sul PC `tailscale status`; "Run unattended" (parte C2) |
-| telefono: avviso sul certificato | stai usando l'indirizzo `100.x` invece del nome | usa `https://<nome>.<rete>.ts.net`: il certificato vale per il nome |
-| telefono: 403 "indirizzo … non consentito" | il nome non è in `WALLETTRACKER_ALLOWED_HOSTS` | rilancia lo script con `--tailscale` (o aggiungilo a mano e riavvia) |
-| telefono: 403 "non si apre da Internet" | stai passando da Funnel | spegni Funnel (sopra) |
-| telefono: "Da qui non si entra" | l'app è "senza PIN" | crea un PIN dal PC (Impostazioni → Accesso) |
+| dispositivo remoto: la pagina non si apre | Tailscale spento sul dispositivo remoto, o il server spento/scollegato | accendi l'interruttore; sul server `tailscale status`; "Run unattended" (parte C2) |
+| dispositivo remoto: avviso sul certificato | stai usando l'indirizzo `100.x` invece del nome | usa `https://<nome>.<rete>.ts.net`: il certificato vale per il nome |
+| dispositivo remoto: 403 "indirizzo … non consentito" | il nome non è in `WALLETTRACKER_ALLOWED_HOSTS` | rilancia lo script con `--tailscale` (o aggiungilo a mano e riavvia) |
+| dispositivo remoto: 403 "non si apre da Internet" | stai passando da Funnel | spegni Funnel (sopra) |
+| dispositivo remoto: "Da qui non si entra" | l'app è "senza PIN" | crea un PIN dal server (Impostazioni → Accesso) |
 | 502 Bad Gateway sull'indirizzo `…ts.net` | `tailscale serve` punta a una porta dove non c'è nessuno | `docker compose ps`: l'app è avviata? `REMOTE_PORT` è quella giusta? |
 | dopo la banca: errore sul `redirect_url` | l'indirizzo non è registrato su Enable Banking | aggiungilo nel pannello, uguale (parte I3) |
-| dopo la banca, sul telefono: "pagina non trovata" su `localhost` | è stato scelto l'indirizzo del PC | nel `.env` manca quello Tailscale: rilancia lo script con `--tailscale` |
+| dopo la banca, sul dispositivo remoto: "pagina non trovata" su `localhost` | è stato scelto l'indirizzo del server | nel `.env` manca quello Tailscale: rilancia lo script con `--tailscale` |
 
 ---
 
@@ -942,7 +1030,7 @@ il messaggio esatto (senza dati personali).
 1. **Leggere lo stato di Tailscale.** Lancia `tailscale status --json` e trova `BackendState`, `Self.DNSName`,
    `Self.TailscaleIPs` e l'elenco `Peer`. Poi apri `installa.sh` (parte `4c.`) e segui come `awk` arriva al nome.
    Che cosa succederebbe se cercasse il **primo** `"DNSName"` senza guardare `"Self"`?
-2. **Il `map` di nginx.** Dal PC, con l'app avviata, prova:
+2. **Il `map` di nginx.** Dal server, con l'app avviata, prova:
    `curl -s -D - -o /dev/null -H 'X-Forwarded-Proto: HTTPS' http://localhost:8001/api/auth/status`. Il cookie
    `XSRF-TOKEN` è `Secure`? (Sì: nel `map` nginx confronta i testi senza badare a maiuscole e minuscole, lo dice la
    sua documentazione, e anche Tomcat accetta `HTTPS`.) Prova poi `-H 'X-Forwarded-Proto: ftp'`: che cosa arriva al
@@ -954,9 +1042,9 @@ il messaggio esatto (senza dati personali).
    entrare senza PIN dai tuoi dispositivi? (Suggerimento: chi può scrivere quell'intestazione sulla porta 8001, oltre
    a Tailscale? E se un giorno qualcuno mettesse un altro proxy davanti alla 8001?)
 5. **Le ACL.** Nella console di Tailscale apri **Access controls** e leggi la regola di serie. Scrivi (senza salvarla,
-   se non sei sicuro) una regola che permetta al telefono di raggiungere **solo** la porta 443 del PC.
-6. **Un dispositivo perso.** Simula: dal PC togli il telefono dalla console (**Remove…**). Che cosa vede il telefono
-   aprendo l'indirizzo? Poi ricollegalo con l'app Tailscale. Che cosa dovresti fare, in più, se il telefono fosse
+   se non sei sicuro) una regola che permetta al dispositivo remoto di raggiungere **solo** la porta 443 del server.
+6. **Un dispositivo perso.** Simula: dal server togli il dispositivo remoto dalla console (**Remove…**). Che cosa vede il dispositivo remoto
+   aprendo l'indirizzo? Poi ricollegalo con l'app Tailscale. Che cosa dovresti fare, in più, se il dispositivo remoto fosse
    davvero perso? (Suggerimento: `docs/46`, parte G6.)
 7. **Più indirizzi di ritorno.** Leggi `EnableBankingPropertiesTest` e aggiungi un test: con
    `ENABLE_BANKING_REDIRECT_URL` vuoto dopo una virgola (`"https://a.example/callback,"`) l'elenco ha un solo

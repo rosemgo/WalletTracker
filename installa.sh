@@ -182,7 +182,7 @@ if [ "$REIMPOSTA_PIN" = true ]; then
   aspetta_salute db 60
   docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U "$utente" -d "$database" -c "DELETE FROM app_pin" ||
     errore "Non sono riuscito ad azzerare il PIN (l'app è già stata avviata almeno una volta?)."
-  echo "PIN azzerato. Apri l'app da questo PC (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza."
+  echo "PIN azzerato. Apri l'app da qui, dal server (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza."
 fi
 
 # --- 4c. Tailscale (solo con --tailscale) ------------------------------------------------------------------
@@ -226,9 +226,9 @@ if [ "$CON_TAILSCALE" = true ]; then
   nome_ts=$(echo "$stato_ts" | awk '/"Self":/ { dentro = 1 } dentro && /"DNSName":/ { sub(/.*"DNSName": *"/, ""); sub(/\.?".*/, ""); print; exit }')
   case "$nome_ts" in
     *.ts.net) ;;
-    *) errore "Non trovo il nome del PC nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia." ;;
+    *) errore "Non trovo il nome del server nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia." ;;
   esac
-  echo "Il nome di questo PC nella rete Tailscale è: $nome_ts"
+  echo "Il nome di questo server nella rete Tailscale è: $nome_ts"
 
   # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5). Se è acceso, ci fermiamo.
   if "$tailscale_cmd" serve status --json 2>/dev/null | tr -d ' \n' | grep -q '"AllowFunnel":{[^}]*:true'; then
@@ -277,8 +277,8 @@ porta=$(valore_env WEB_PORT)
 indirizzo="http://localhost:${porta:-8000}"
 passo "WalletTracker è avviato: $indirizzo"
 if [ "$CON_TAILSCALE" = true ]; then
-  echo "Dai tuoi dispositivi con Tailscale:  https://$nome_ts   (lì serve il PIN: crealo prima da questo PC)"
-  echo "Per collegare una banca dal telefono, registra su Enable Banking anche:  https://$nome_ts/callback"
+  echo "Dai dispositivi remoti, con Tailscale:  https://$nome_ts   (lì serve il PIN: crealo prima da qui, dal server)"
+  echo "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$nome_ts/callback"
 fi
 echo "Per fermarlo:  docker compose down   (i dati restano)"
 if [ "$APRI_BROWSER" = true ]; then

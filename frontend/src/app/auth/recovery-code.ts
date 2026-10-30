@@ -15,8 +15,9 @@ import { Component, input, output, signal } from '@angular/core';
         {{ copied() ? 'Copiato ✓' : 'Copia il codice' }}
       </button>
       <p class="hint">
-        Se dimentichi il PIN, con questo codice ne scegli uno nuovo, anche dal telefono. Salvalo
-        adesso dove salvi le cose importanti (un gestore di password, un foglio in un cassetto):
+        Se dimentichi il PIN, con questo codice ne scegli uno nuovo, anche da un dispositivo remoto.
+        Salvalo adesso dove salvi le cose importanti (un gestore di password, un foglio in un
+        cassetto):
         <strong>non lo vedrai più</strong>. Vale una volta sola: dopo l'uso, l'app te ne dà uno
         nuovo.
       </p>

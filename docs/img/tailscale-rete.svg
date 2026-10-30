@@ -18,7 +18,7 @@
 
 <!-- PC -->
 <rect x="40" y="300" width="330" height="200" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
-<text x="205" y="330" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">PC di casa</text>
+<text x="205" y="330" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">Server (PC di casa)</text>
 <text x="205" y="356" text-anchor="middle" font-size="13" fill="#334155">Tailscale installato</text>
 <text x="205" y="380" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">100.101.102.103</text>
 <text x="205" y="402" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">pc-casa.tail0000.ts.net</text>
@@ -28,8 +28,8 @@
 
 <!-- phone -->
 <rect x="830" y="300" width="330" height="200" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
-<text x="995" y="330" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Telefono</text>
-<text x="995" y="356" text-anchor="middle" font-size="13" fill="#334155">app Tailscale, collegata</text>
+<text x="995" y="330" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Dispositivo remoto</text>
+<text x="995" y="356" text-anchor="middle" font-size="13" fill="#334155">telefono o portatile, Tailscale collegato</text>
 <text x="995" y="380" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">100.64.0.7</text>
 <text x="995" y="402" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">telefono.tail0000.ts.net</text>
 <text x="995" y="430" text-anchor="middle" font-size="12" fill="#475569">su 4G, 5G o un Wi-Fi qualsiasi</text>
@@ -38,8 +38,8 @@
 <!-- coordination lines -->
 <line x1="420" y1="235" x2="290" y2="295" stroke="#7e22ce" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ap)"/>
 <line x1="780" y1="235" x2="910" y2="295" stroke="#7e22ce" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ap)"/>
-<text x="300" y="262" font-size="12" fill="#7e22ce">"il telefono ha questa chiave"</text>
-<text x="770" y="262" font-size="12" fill="#7e22ce">"il PC ha questa chiave"</text>
+<text x="300" y="262" font-size="12" fill="#7e22ce">"il dispositivo remoto ha questa chiave"</text>
+<text x="770" y="262" font-size="12" fill="#7e22ce">"il server ha questa chiave"</text>
 
 <!-- direct tunnel -->
 <line x1="372" y1="390" x2="826" y2="390" stroke="#15803d" stroke-width="5" marker-start="url(#ag)" marker-end="url(#ag)"/>
@@ -59,7 +59,7 @@
 <!-- outsiders -->
 <rect x="40" y="630" width="1120" height="125" rx="12" fill="#fef2f2" stroke="#b91c1c"/>
 <text x="600" y="660" text-anchor="middle" font-size="15" font-weight="700" fill="#7f1d1d">Chi NON c'è nella tua rete (tailnet)</text>
-<text x="600" y="686" text-anchor="middle" font-size="13" fill="#334155">chiunque altro su Internet: non ha una chiave che il PC conosca, quindi i suoi pacchetti il PC li butta senza rispondere.</text>
-<text x="600" y="708" text-anchor="middle" font-size="13" fill="#334155">Per lui gli indirizzi 100.x e i nomi …ts.net del PC non portano da nessuna parte. Sul router non si apre niente.</text>
+<text x="600" y="686" text-anchor="middle" font-size="13" fill="#334155">chiunque altro su Internet: non ha una chiave che il server conosca, quindi i suoi pacchetti il server li butta senza rispondere.</text>
+<text x="600" y="708" text-anchor="middle" font-size="13" fill="#334155">Per lui gli indirizzi 100.x e i nomi …ts.net del server non portano da nessuna parte. Sul router non si apre niente.</text>
 <text x="600" y="734" text-anchor="middle" font-size="13" fill="#334155">Per entrare serve accedere al TUO account (proteggilo con la verifica in due passaggi).</text>
 </svg>
