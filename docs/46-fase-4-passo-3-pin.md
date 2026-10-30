@@ -931,25 +931,147 @@ un indirizzo `http://`. Vale la pena metterla bene, ma va provata sul percorso v
 
 ### G4. Aprire la sessione (`AuthController.openSession`)
 
+Prima di leggere il codice servono due idee distinte, la **sessione** e il **contesto**, e il modo in cui si
+collegano.
+
+![Sessione e contesto: il cassetto e il cartellino](img/sessione-contesto.svg)
+
+#### G4.1 La sessione: il cassetto
+
+La **sessione** (`HttpSession`) la gestisce **Tomcat**. È un **cassetto** nella memoria del backend:
+- ha un **numero** (l'id della sessione, per esempio `8F3A91C2...`), che è proprio il valore del cookie
+  `WALLETTRACKER_SESSION`;
+- dentro ci sono degli **attributi**: coppie `nome → valore`, come in una `Map` di Java;
+- **dura tra una richiesta e l'altra**: fino a 12 ore senza richieste, a "Esci" o al riavvio del backend.
+
+È il guardaroba di un teatro: lasci il cappotto, ricevi un biglietto con un numero (il cookie), e il cappotto resta
+lì (la sessione) finché non torni con quel biglietto.
+
+La sessione **non sa niente di sicurezza**: è un posto dove tenere cose, qualunque cosa.
+
+**Dove sta, fisicamente.** Nella memoria (RAM) del processo Java del backend. Tomcat tiene un elenco di tutte le
+sessioni aperte, una mappa `numero → sessione` (ogni browser ha la sua, con il suo numero); ogni sessione ha a sua
+volta la sua mappa di attributi. Non c'è niente nel database né su disco: per questo un riavvio del backend chiude
+tutte le sessioni (parte K3).
+
+#### G4.2 Il contesto: il cartellino
+
+Il **contesto di sicurezza** (`SecurityContext`) è di **Spring Security**. È un oggetto piccolo che contiene una
+cosa sola: l'`Authentication`, cioè **chi sta facendo questa richiesta** (o niente, se non si sa).
+
+Durante una richiesta il contesto si trova nel `SecurityContextHolder`. Tomcat serve ogni richiesta con un *thread*
+(una linea di lavoro), e il `SecurityContextHolder` tiene un contesto **per ogni thread** (un `ThreadLocal`): è un
+**cartellino appeso al collo** di quella richiesta. Chiunque nel backend lo può leggere
+(`SecurityContextHolder.getContext().getAuthentication()`): i filtri, l'`AuthorizationFilter`, i controller. A fine
+richiesta il cartellino si stacca, e il thread passa pulito a un'altra richiesta.
+
+#### G4.3 Il collegamento: il cartellino sta DENTRO il cassetto
+
+Qui è facile confondersi, quindi lo diciamo chiaro: **il cassetto è sempre la sessione. Il contesto è una delle
+cose che stanno dentro il cassetto.** Nel cassetto del telefono, dopo il PIN, ci sono due attributi:
+
+| Nome dell'attributo (l'etichetta) | Valore | Chi lo mette | Chi lo legge |
+|---|---|---|---|
+| `SPRING_SECURITY_CONTEXT` | il `SecurityContext`, con dentro "proprietario, autenticato" | `saveContext` (riga 7) | `SecurityContextHolderFilter`, a ogni richiesta |
+| `wallettracker.pin-generation` | il numero di generazione, per esempio `3` | noi (riga 8) | `PinAccessFilter` (G6) |
+
+`SPRING_SECURITY_CONTEXT` quindi non è un posto: è il **nome dell'etichetta** con cui Spring mette il contesto nel
+cassetto, così lo ritrova. È un nome fisso, scelto da Spring
+(`HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY`).
+
+Perché serve metterlo nel cassetto? Il cartellino da solo **sparirebbe a fine richiesta**: il PIN varrebbe per una
+richiesta sola. Il ciclo è:
+- **al login**: il contesto si mette nel cassetto, sotto `SPRING_SECURITY_CONTEXT`;
+- **all'inizio di ogni richiesta dopo**: `SecurityContextHolderFilter` (il terzo filtro della catena, parte B)
+  prende il cookie, trova il cassetto, ne tira fuori `SPRING_SECURITY_CONTEXT` e lo appende al thread;
+- **a fine richiesta**: il thread si svuota, il cassetto resta.
+
+| | Sessione (il cassetto) | Contesto (il cartellino) |
+|---|---|---|
+| Di chi è | Tomcat | Spring Security |
+| Che cosa contiene | attributi qualsiasi, fra cui il contesto | solo "chi è" (l'`Authentication`) |
+| Quanto dura | fino a 12 ore | una richiesta (sul thread); nel cassetto, quanto il cassetto |
+| Dove sta | memoria di Tomcat, ritrovata dal cookie | `SecurityContextHolder`, legato al thread |
+| A che cosa serve | ricordare tra una richiesta e l'altra | dire, adesso, a tutto il codice chi è |
+
+#### G4.4 Il codice, riga per riga
+
+Siamo in `AuthController`, dopo che `PinService` ha risposto "PIN giusto":
+
 ```java
-if (request.getSession(false) != null) {
-    request.changeSessionId();
-}
-SecurityContext context = SecurityContextHolder.createEmptyContext();
-context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of()));
-SecurityContextHolder.setContext(context);
-contextRepository.saveContext(context, request, response);
-request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);
+if (request.getSession(false) != null) {                                                    // 1
+    request.changeSessionId();                                                              // 2
+}                                                                                           // 3
+SecurityContext context = SecurityContextHolder.createEmptyContext();                        // 4
+context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of())); // 5
+SecurityContextHolder.setContext(context);                                                   // 6
+contextRepository.saveContext(context, request, response);                                   // 7
+request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);                  // 8
 ```
 
-- **`changeSessionId()`**: la difesa dalla *session fixation*. Un attaccante che fosse riuscito a far usare al tuo
-  browser un numero di sessione scelto da lui aspetterebbe che tu inserisca il PIN, per usare poi lo stesso numero.
-  Cambiando il numero al momento del PIN, il suo resta "fuori";
-- **`UsernamePasswordAuthenticationToken.authenticated(...)`**: un `Authentication` "già controllato" (il PIN
-  l'abbiamo controllato noi, in `PinService`). Di solito Spring lo crea dentro un suo `AuthenticationManager`; qui,
-  con un PIN solo e senza nomi utente, lo creiamo noi: più semplice da leggere;
-- **`saveContext`**: lo salva nella sessione (parte B3);
-- **la generazione** (G6) si scrive nella sessione.
+**Righe 1-3: un numero nuovo per il cassetto.** `getSession(false)` vuol dire "dammi il cassetto di questo
+browser **se c'è già**; se non c'è, **non crearlo**" (restituisce `null`). Se c'era, `changeSessionId()` gli dà un
+**numero nuovo**: il contenuto resta, cambia il biglietto, e il numero vecchio non vale più.
+
+È la difesa dalla *session fixation* ("sessione fissata"): un malintenzionato si procura un numero di sessione
+valido, ancora senza PIN, e riesce a farlo usare al tuo browser; tu inserisci il PIN, e se il numero restasse lo
+stesso lui, che lo conosce, sarebbe dentro con te. Cambiandolo proprio al momento del PIN, il suo resta fuori. Se
+il cassetto non c'era, non c'è niente da cambiare: lo crea la riga 7, con un numero nuovo.
+
+**Riga 4: un cartellino nuovo e vuoto.** Se ne crea uno nuovo invece di modificare quello che c'è: un oggetto
+condiviso modificato a metà può fare pasticci tra richieste diverse (lo consiglia la documentazione di Spring).
+
+**Riga 5: ci si scrive "chi è".** L'`Authentication` ha tre parti:
+- **`OWNER`** (`"proprietario"`): il *principal*, chi è. C'è un solo utente, basta un nome fisso;
+- **`null`**: le *credentials*, la prova (il PIN). `null` apposta: il PIN è già controllato, tenerlo in memoria
+  per 12 ore sarebbe solo un rischio;
+- **`List.of()`**: le *authorities* (ruoli, permessi, come `ROLE_ADMIN`). Vuote: un solo utente, che può tutto.
+
+`authenticated(...)` crea un token già marcato come autenticato (`isAuthenticated()` è `true`).
+`unauthenticated(...)` servirebbe per "uno che **chiede** di entrare, da controllare": noi abbiamo già controllato,
+in `PinService`. Di solito Spring crea questo oggetto dentro un suo `AuthenticationManager`; con un PIN solo e
+senza nomi utente lo creiamo noi, ed è più semplice da leggere.
+
+**Riga 6: il cartellino al collo, per questa richiesta.** Da qui alla fine di **questa** richiesta, chi chiede
+"chi è?" ha la risposta. Ma a fine richiesta si stacca: da solo non basterebbe.
+
+**Riga 7: il cartellino nel cassetto.** È la riga che fa **durare** il login. `saveContext` di
+`HttpSessionSecurityContextRepository` fa due cose:
+1. **prende il cassetto** di questo browser con `request.getSession()`, e se non c'è ancora **lo crea**: Tomcat
+   sceglie un numero nuovo e casuale e aggiunge il cassetto, vuoto, al suo elenco. È qui che, al primo login,
+   nasce la sessione. Il cassetto è la sessione: `saveContext` non crea un "cassetto del contesto", crea (se serve)
+   la sessione;
+2. **ci mette dentro il contesto**, con l'etichetta `SPRING_SECURITY_CONTEXT`.
+
+Siccome la sessione è nuova (o ha un numero nuovo), nella risposta Tomcat aggiunge
+`Set-Cookie: WALLETTRACKER_SESSION=<numero>; HttpOnly; SameSite=Strict`, e il browser lo conserva.
+
+Perché a mano? Da Spring Security 6 il contesto **non si salva più da solo** a fine richiesta: si salva solo
+quando qualcuno lo chiede, perché i salvataggi automatici creavano sessioni anche quando nessuno le voleva. Il login
+di Spring (`formLogin`) lo fa da sé; noi l'abbiamo spento e il login lo fa un nostro controller, quindi il
+salvataggio tocca a noi. Senza questa riga il PIN varrebbe solo per la risposta al login: alla richiesta dopo, 401.
+
+**Riga 8: una seconda cosa nel cassetto.** Nello **stesso** cassetto mettiamo il numero di generazione del PIN di
+adesso, con l'etichetta `wallettracker.pin-generation`. Qui `getSession()` senza argomenti va bene: il cassetto c'è
+di sicuro, l'ha appena preso o creato la riga 7. Spring Security non sa niente di questo attributo: è nostro, e lo
+legge `PinAccessFilter` (G6).
+
+#### G4.5 La richiesta dopo
+
+Il telefono chiede `GET /api/accounts` con `Cookie: WALLETTRACKER_SESSION=<numero>` (la parte destra
+dell'immagine):
+
+1. **Tomcat** usa il numero e trova il cassetto;
+2. **`SecurityContextHolderFilter`** ne tira fuori `SPRING_SECURITY_CONTEXT` e lo appende al thread: "proprietario,
+   autenticato";
+3. **`PinAccessFilter`** confronta la generazione nel cassetto con quella nel database: se nel frattempo il PIN è
+   cambiato, butta il cassetto e svuota il cartellino;
+4. **`AuthorizationFilter`** vede un contesto autenticato e fa passare (`anyRequest().authenticated()`);
+5. il **controller** risponde con i conti;
+6. fine: il cartellino si stacca dal thread, il cassetto resta per la prossima.
+
+Se il cookie manca, o il cassetto non c'è più (scaduto, "Esci", riavvio), al passo 2 non si trova niente: il
+cartellino resta vuoto, il passo 4 risponde **401** e il frontend mostra la pagina del PIN (parte I).
 
 ### G5. Uscire
 
