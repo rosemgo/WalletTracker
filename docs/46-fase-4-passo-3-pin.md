@@ -1313,25 +1313,148 @@ la richiesta sembrerebbe tua.
 
 Con "senza PIN" dal PC non c'è nemmeno un cookie di sessione: lì le difese sono l'`Origin` e il gettone.
 
-### H3. Come funziona il gettone
+### H3. Il gettone, dalle basi
+
+![Il gettone CSRF: due cookie e un'intestazione](img/csrf-gettone.svg)
+
+#### H3.1 Che cos'è un cookie
+
+Un cookie è **una coppia `nome=valore` che il server chiede al browser di conservare**, e che il browser poi
+**rimanda da solo** a ogni richiesta verso lo stesso sito. Il server lo chiede nella **risposta**, con
+`Set-Cookie`:
 
 ```
- 1. il backend manda il cookie   XSRF-TOKEN=8c1d...        (leggibile dal JavaScript: niente HttpOnly)
- 2. Angular lo legge e lo rimanda come header, nelle richieste che modificano (POST, PUT, DELETE):
-                                 X-XSRF-TOKEN: 8c1d...
- 3. Spring Security (CsrfFilter) confronta header e cookie: diversi o mancanti → 403
+HTTP/1.1 200 OK
+Set-Cookie: WALLETTRACKER_SESSION=8F3A91C2...; HttpOnly; SameSite=Strict
 ```
 
-Il trucco: un altro sito può far partire una richiesta verso di noi, ma **non può leggere i nostri cookie** (la regola
-della stessa origine, `docs/44` parte D3b). Quindi non può scrivere l'header giusto.
+Il browser lo salva nel suo "barattolo dei cookie" (uno per ogni sito) e da quel momento lo aggiunge a ogni
+**richiesta** verso quel sito, con `Cookie`:
 
-- **`csrf().spa()`** è la configurazione di Spring Security per le *Single-Page Application*: il gettone in un cookie
-  leggibile, da rimandare in un header;
-- **lo stato prepara il gettone**: `GET /api/auth/status` riceve un parametro `CsrfToken csrfToken` e chiama
-  `csrfToken.getToken()`, anche se non lo usa. È il modo per chiedere a Spring di preparare il gettone e mandarlo nel
-  cookie: è la prima richiesta della dashboard, quindi da lì in poi Angular ce l'ha;
-- **Angular lo fa da solo**: `HttpClient` ha la protezione XSRF accesa di serie, con proprio i nomi che usa Spring
-  (`XSRF-TOKEN` e `X-XSRF-TOKEN`).
+```
+GET /api/accounts HTTP/1.1
+Cookie: WALLETTRACKER_SESSION=8F3A91C2...
+```
+
+Tre cose da tenere a mente:
+1. **lo decide il server** (`Set-Cookie`), ma **lo conserva il browser**;
+2. **il browser lo rimanda in automatico**, senza che il codice della pagina faccia niente: è la sua comodità, ed
+   è anche il suo punto debole (H3.4);
+3. gli **attributi** (`HttpOnly`, `SameSite`, `Secure`) sono istruzioni per il browser: al server non tornano,
+   nella riga `Cookie:` c'è solo `nome=valore`.
+
+Per vederli: apri l'app, F12 → **Application** (in Firefox **Archiviazione**) → **Cookies** →
+`http://localhost:8000`.
+
+#### H3.2 Due cookie e un'intestazione
+
+| Nome | Che cos'è | Chi lo scrive | Dove viaggia |
+|---|---|---|---|
+| `WALLETTRACKER_SESSION` | **cookie** | il server (`Set-Cookie`), al PIN | il browser lo rimanda da solo, nella riga `Cookie:` |
+| `XSRF-TOKEN` | **cookie** | il server (`Set-Cookie`), alla prima richiesta | il browser lo rimanda da solo, nella riga `Cookie:` |
+| `X-XSRF-TOKEN` | **intestazione** della richiesta, **non un cookie** | il **JavaScript della pagina** (Angular), a mano | una riga a sé: `X-XSRF-TOKEN: 8c1d...` |
+
+`XSRF-TOKEN` e `X-XSRF-TOKEN` contengono **lo stesso valore** (il "gettone"), per due strade diverse:
+
+```
+POST /api/categories HTTP/1.1
+Cookie: WALLETTRACKER_SESSION=8F3A91C2...; XSRF-TOKEN=8c1d...    ← due cookie, aggiunti dal browser
+X-XSRF-TOKEN: 8c1d...                                            ← un'intestazione, scritta da Angular
+```
+
+#### H3.3 I due cookie sono molto diversi
+
+| | `WALLETTRACKER_SESSION` | `XSRF-TOKEN` |
+|---|---|---|
+| A che cosa serve | dire **chi sei** (il numero del cassetto, parte G4) | dimostrare che la richiesta parte **dalle nostre pagine** |
+| Da solo, fa entrare? | **sì**: vale quanto il PIN | **no**: da solo non serve a niente |
+| Il server se lo ricorda? | sì, il cassetto in memoria | **no**, non lo salva da nessuna parte (H3.5) |
+| `HttpOnly` | **sì**: il JavaScript non lo può leggere | **no**: il JavaScript **deve** poterlo leggere |
+| Quando nasce | al PIN giusto (`saveContext`) | alla prima richiesta, `GET /api/auth/status` |
+| Con "senza PIN" dal PC | non c'è | c'è |
+
+Uno protetto dal JavaScript e l'altro no: il cookie della sessione è una **chiave**, e uno script infilato nella
+pagina che lo leggesse potrebbe mandarlo altrove ed entrare al posto tuo, quindi `HttpOnly`. Il gettone invece
+**deve** essere letto, perché Angular lo copia nell'intestazione; ed è innocuo, perché da solo non apre niente.
+
+#### H3.4 Il problema: il browser manda i cookie da solo
+
+Sei dentro WalletTracker e in un'altra scheda apri `sito-cattivo.com`, che contiene:
+
+```html
+<form method="POST" action="http://localhost:8000/api/categories/12/delete">
+<script>document.forms[0].submit()</script>
+```
+
+È il **tuo** browser a mandare quella richiesta al tuo backend; e se i cookie partissero in automatico (H3.1), ci
+aggiungerebbe anche `WALLETTRACKER_SESSION`. Il backend vedrebbe la tua sessione ed eseguirebbe. Il sito cattivo
+non ha mai visto il tuo cookie: gli basta che lo usi il **tuo** browser. Contro questo ci sono tre difese (H2); il
+gettone è quella che funziona anche dove il cookie della sessione non c'è ("senza PIN" dal PC) o se un giorno
+`SameSite` non bastasse.
+
+#### H3.5 Il trucco: una cosa che il browser **non** fa da solo
+
+Il punto debole è che i cookie partono in automatico. Allora il backend chiede, per ogni modifica, **anche una
+cosa che non parte in automatico**: un'intestazione con lo stesso valore del cookie, scritta a mano dal JavaScript
+della pagina. Il sito cattivo non ci riesce:
+- **non sa il valore**: dovrebbe leggere il cookie `XSRF-TOKEN`, ma il JavaScript di `sito-cattivo.com` legge solo
+  i cookie **della sua origine**, mai quelli di `localhost:8000` (la regola della stessa origine, `docs/44` parte
+  D3b);
+- **non può nemmeno aggiungere intestazioni sue** a una richiesta verso un altro sito, senza il permesso di quel
+  sito (CORS), che noi non diamo.
+
+Quindi la sua richiesta, anche se avesse i cookie, arriverebbe **senza** l'intestazione giusta, e il backend la
+rifiuta. Per questo il server non deve ricordarsi il gettone: gli basta confrontare "il cookie è uguale
+all'intestazione?". Solo chi sa **leggere** il cookie può farli uguali, e lo sanno solo le nostre pagine. La
+tecnica si chiama *double-submit cookie* ("il cookie mandato due volte").
+
+#### H3.6 Passo per passo, nel nostro codice
+
+**a) Il backend prepara il gettone** (`AuthController`):
+
+```java
+@GetMapping("/status")
+public AuthStatus status(HttpServletRequest request, CsrfToken csrfToken) {
+    csrfToken.getToken();
+```
+
+`GET /api/auth/status` è la prima richiesta che l'app fa all'apertura. `getToken()` obbliga Spring a generare il
+gettone (un valore casuale) e a mandarlo: `Set-Cookie: XSRF-TOKEN=8c1d...; Path=/`, senza `HttpOnly`. Il valore
+restituito non lo usiamo: serve solo a far partire il cookie, così da lì in poi Angular ce l'ha.
+
+**b) La configurazione** (`SecurityConfig`):
+
+```java
+.csrf(csrf -> csrf.spa())
+```
+
+`spa()` (*Single-Page Application*) dice a Spring: "il gettone mettilo in un cookie leggibile, `XSRF-TOKEN`, e
+aspettalo indietro nell'intestazione `X-XSRF-TOKEN`".
+
+**c) Angular lo rimanda, da solo.** In `app.config.ts` non c'è niente da scrivere: `provideHttpClient(...)` ha la
+protezione XSRF accesa di serie, con proprio questi due nomi. Per ogni richiesta che **modifica** (`POST`, `PUT`,
+`PATCH`, `DELETE`) verso il **nostro** sito, Angular legge il cookie `XSRF-TOKEN` (da `document.cookie`) e aggiunge
+`X-XSRF-TOKEN: <quel valore>`. Verso un altro sito non lo manderebbe mai: il gettone non esce dalla nostra app.
+
+**d) Spring controlla.** Il `CsrfFilter`, il quinto della catena (parte B), per ogni richiesta che modifica
+confronta cookie e intestazione: uguali → passa; mancanti o diversi → **403**, con il nostro messaggio
+(`SecurityConfig`, `accessDeniedHandler`): "Richiesta rifiutata: ricarica la pagina e riprova.".
+
+#### H3.7 Perché le `GET` non lo chiedono
+
+Le `GET` **leggono e basta**. Se il sito cattivo ne facesse partire una, la risposta (i tuoi dati) arriverebbe al
+tuo browser, ma lui **non potrebbe leggerla**: di nuovo la regola della stessa origine. Il pericolo del CSRF è
+**far fare** qualcosa a nome tuo, non far leggere: per questo il gettone serve solo per `POST`, `PUT`, `PATCH` e
+`DELETE`, e per questo nel nostro backend nessuna `GET` modifica dati.
+
+#### H3.8 Riassunto
+
+- Un **cookie** è un `nome=valore` che il server chiede (`Set-Cookie`) e il browser conserva e **rimanda da solo**.
+- I cookie sono **due**: `WALLETTRACKER_SESSION` (**chi sei**, `HttpOnly`, vale quanto il PIN) e `XSRF-TOKEN` (**il
+  gettone**, leggibile dal JavaScript, da solo inutile).
+- **`X-XSRF-TOKEN` è un'intestazione**, non un cookie: Angular la scrive copiando il valore del cookie.
+- Una modifica passa solo se cookie e intestazione **coincidono**: l'intestazione giusta la può scrivere solo chi sa
+  leggere il cookie, cioè solo le nostre pagine.
 
 ---
 
