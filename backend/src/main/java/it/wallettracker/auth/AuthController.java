@@ -75,7 +75,7 @@ public class AuthController {
      */
     @GetMapping("/status")
     public AuthStatus status(HttpServletRequest request, CsrfToken csrfToken) {
-        csrfToken.getToken();
+        csrfToken.getToken(); //Chiedere getToken() obbliga Spring a generare il gettone, un valore casuale, e a mandarlo nella risposta: "Set-Cookie: XSRF-TOKEN=8c1d...; Path=/" Senza HttpOnly, quindi leggibile dal JavaScript. Il valore restituito non lo usiamo: serve solo a far partire il cookie.
         PinService.Mode mode = pins.state().mode();
         return new AuthStatus(mode == PinService.Mode.WITH_PIN, mode == PinService.Mode.WITHOUT_PIN,
                 PinAccessFilter.isAuthenticated(), RequestOrigin.isLocal(request));
@@ -173,7 +173,7 @@ public class AuthController {
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of()));
         SecurityContextHolder.setContext(context);
-        contextRepository.saveContext(context, request, response);
+        contextRepository.saveContext(context, request, response); //CREA LA SESSIONE E SETTA IL CONTESTO (SPRING_SECURITY_CONTEXT) NELLA SESSIONE
         request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);
     }
 
