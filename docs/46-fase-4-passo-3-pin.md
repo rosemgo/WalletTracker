@@ -1073,6 +1073,203 @@ dell'immagine):
 Se il cookie manca, o il cassetto non c'è più (scaduto, "Esci", riavvio), al passo 2 non si trova niente: il
 cartellino resta vuoto, il passo 4 risponde **401** e il frontend mostra la pagina del PIN (parte I).
 
+#### G4.6 Dentro Spring: dove nasce la sessione
+
+Nella riga 7 la sessione non si vede: succede **dentro** `saveContext`, nel codice di Spring. Il collegamento è
+l'argomento `request`: la sessione si chiede proprio alla richiesta, con `request.getSession(...)`, un metodo che
+implementa Tomcat. Ecco il codice vero di `HttpSessionSecurityContextRepository` (Spring Security 7.1.1, senza i
+log):
+
+```java
+public void saveContext(SecurityContext context, HttpServletRequest request, HttpServletResponse response) {
+    ...
+    saveContextInHttpSession(context, request);                     // (a)
+}
+
+private void saveContextInHttpSession(SecurityContext context, HttpServletRequest request) {
+    ...
+    SecurityContext emptyContext = generateNewContext();
+    if (emptyContext.equals(context)) {                             // (b) contesto vuoto?
+        HttpSession session = request.getSession(false);
+        removeContextFromSession(context, session);                 //     lo toglie, non crea niente
+    }
+    else {
+        boolean createSession = this.allowSessionCreation;          // (c) di serie: true
+        HttpSession session = request.getSession(createSession);    // (d) ← qui: getSession(true)
+        setContextInSession(context, session);                      // (e)
+    }
+}
+
+private void setContextInSession(SecurityContext context, HttpSession session) {
+    if (session != null) {
+        session.setAttribute(this.springSecurityContextKey, context);   // (f) "SPRING_SECURITY_CONTEXT" → context
+    }
+}
+```
+
+- **(b)** Un contesto vuoto non ha niente da ricordare: Spring non crea nessuna sessione (anzi, toglie un contesto
+  vecchio). Il nostro contiene "proprietario", quindi si va nell'`else`.
+- **(c)** `allowSessionCreation` vale `true` di serie: "se serve, puoi creare la sessione".
+- **(d)** La riga chiave: **`request.getSession(true)`**. Il `true` dice a Tomcat "dammi il cassetto di questo
+  browser e, **se non c'è, crealo**": il contrario del `getSession(false)` delle righe 1-3.
+- **(e)-(f)** `session.setAttribute("SPRING_SECURITY_CONTEXT", context)`: il contesto entra nel cassetto.
+
+Quando riceve `getSession(true)` e il cassetto non c'è, Tomcat: sceglie un **numero nuovo e casuale**; aggiunge il
+cassetto, vuoto, al suo elenco; si segna di mandare nella risposta `Set-Cookie: WALLETTRACKER_SESSION=<numero>`.
+Quindi la sessione **la crea Tomcat**, su richiesta di `saveContext`, attraverso il `request` che le passiamo.
+
+Per leggere questi file nell'editor: Ctrl+clic sul nome di una classe di Spring (per esempio
+`SecurityContextHolder` in `AuthController`). IntelliJ propone "Download Sources"; VS Code con l'estensione Java li
+apre da solo.
+
+#### G4.7 Dentro Spring: il ciclo di ogni richiesta
+
+Dopo il login, il contesto si riprende dal cassetto a ogni richiesta. Il codice è in tre classi.
+
+**`SecurityContextHolderFilter.doFilter`** (righe 72-88): il ciclo, uguale per **ogni** richiesta.
+
+```java
+Supplier<SecurityContext> deferredContext = this.securityContextRepository.loadDeferredContext(request); // 79
+try {
+    this.securityContextHolderStrategy.setDeferredContext(deferredContext);                            // 81
+    chain.doFilter(request, response);                                                                  // 82
+}
+finally {
+    this.securityContextHolderStrategy.clearContext();                                                  // 85
+}
+```
+
+- **79**: prepara **il modo** di prendere il contesto dal cassetto, ma non lo prende ancora (vedi sotto);
+- **81**: lo affida al thread (il cartellino al collo);
+- **82**: la richiesta prosegue lungo la catena, fino al controller;
+- **85**: nel `finally`, eseguito **sempre** (anche dopo un errore), il thread lascia la presa.
+
+**`ThreadLocalSecurityContextHolderStrategy`**: che cosa vuol dire "lasciare la presa".
+
+```java
+private static final ThreadLocal<Supplier<SecurityContext>> contextHolder = new ThreadLocal<>();
+
+public void clearContext() {
+    contextHolder.remove();                 // vuota la casella del thread, e basta
+}
+
+public SecurityContext createEmptyContext() {
+    return new SecurityContextImpl();       // l'unico posto dove nasce un contesto nuovo
+}
+```
+
+Il `ThreadLocal` è una casella che ogni thread ha per conto suo. `clearContext()` la **vuota**, ma **non distrugge**
+il contesto: se è anche nel cassetto, lì resta intatto. Perché vuotarla? Tomcat **riusa** i thread: quello che ora
+serve il tuo telefono tra un attimo servirà un'altra richiesta. Se la casella restasse piena, quella richiesta
+erediterebbe "proprietario, autenticato" senza aver mostrato nessun cookie: un buco grave. Per questo la riga 85 sta
+in un `finally`.
+
+**`HttpSessionSecurityContextRepository` e `SupplierDeferredSecurityContext`**: da dove viene il contesto.
+
+```java
+// HttpSessionSecurityContextRepository, riga 145: chiamato dalla riga 79 del filtro
+public DeferredSecurityContext loadDeferredContext(HttpServletRequest request) {
+    Supplier<SecurityContext> supplier = () -> readSecurityContextFromSession(request.getSession(false));
+    return new SupplierDeferredSecurityContext(supplier, this.securityContextHolderStrategy);
+}
+
+// riga 207
+private SecurityContext readSecurityContextFromSession(HttpSession httpSession) {
+    if (httpSession == null) {
+        return null;                                                          // nessun cassetto
+    }
+    Object contextFromSession = httpSession.getAttribute(this.springSecurityContextKey); // "SPRING_SECURITY_CONTEXT"
+    if (contextFromSession == null) {
+        return null;                                                          // cassetto senza cartellino
+    }
+    ...
+    return (SecurityContext) contextFromSession;                              // quello salvato al login
+}
+
+// SupplierDeferredSecurityContext, righe 63-76
+private void init() {
+    if (this.securityContext != null) {
+        return;                                                    // già preso: non rifà il lavoro
+    }
+    this.securityContext = this.supplier.get();                    // legge dal cassetto
+    this.missingContext = (this.securityContext == null);
+    if (this.missingContext) {
+        this.securityContext = this.strategy.createEmptyContext(); // niente nel cassetto: uno nuovo, vuoto
+    }
+}
+```
+
+- `readSecurityContextFromSession` è un `getAttribute("SPRING_SECURITY_CONTEXT")`: **non crea niente**, restituisce
+  **lo stesso oggetto** messo nel cassetto al login. Nota il `getSession(false)`: leggere non crea mai una sessione.
+- **"Deferred", cioè rimandato**: il `Supplier` (`() -> ...`, una *lambda*) è codice pronto ma non ancora
+  eseguito. La sessione si legge solo **quando qualcuno chiede** il contesto: per i file statici o per
+  `/actuator/health` nessuno lo chiede, e il lavoro si risparmia.
+- `init()` è l'**unico** punto in cui, per una richiesta qualsiasi, nasce un contesto nuovo: solo se nel cassetto
+  non c'è niente.
+
+Chi lo chiede per primo? Il nostro `PinAccessFilter` (riga 69,
+`SecurityContextHolder.getContext().getAuthentication()`); poi l'`AuthorizationFilter`, che lo trova già preso.
+
+#### G4.8 Cinque casi: che fine fanno cassetto e cartellino
+
+![Cinque casi: il cassetto e il cartellino](img/sessione-casi.svg)
+
+**① Entri con il PIN.** `openSession`: la riga 4 crea il contesto, la riga 7 lo mette nel cassetto e, se serve,
+crea il cassetto (G4.6).
+
+**② Le richieste dopo.** Il contesto è **lo stesso oggetto Java** per tutta la sessione: a ogni richiesta
+`getAttribute` lo riprende, a fine richiesta il thread lascia la presa, e l'oggetto resta nel cassetto. Un contesto
+nuovo nasce solo se rimetti il PIN: la riga 7 **sostituisce** quello nel cassetto. `changeSessionId()` non lo
+tocca: cambia il numero del cassetto, non il contenuto. (Vale perché da noi le sessioni stanno nella memoria del
+backend; con sessioni salvate in un database, come nelle app su più server, a ogni richiesta se ne leggerebbe una
+**copia**.)
+
+**③ La sessione finisce.** Il contesto vive quanto il cassetto, e muore con lui:
+
+| Come | Chi la chiude |
+|---|---|
+| "Esci" | `AuthController.closeSession` (G5): `session.invalidate()` e `SecurityContextHolder.clearContext()` |
+| 12 ore senza richieste | Tomcat, da solo (`timeout: 12h`) |
+| riavvio del backend | nessuno: la memoria si azzera, e i cassetti spariscono tutti |
+| PIN cambiato, tolto o recuperato | `PinAccessFilter`, alla prima richiesta dopo: generazione diversa, `invalidate()` (G6) |
+
+`invalidate()` toglie il cassetto dall'elenco di Tomcat con tutto il contenuto. Il browser **ha ancora il
+cookie**, ma quel numero non apre più niente: è il biglietto di un cappotto già ritirato.
+
+**④ Nessun cassetto valido** (con il PIN impostato). Due situazioni diverse:
+- **a) nessun cookie**: la prima volta su quel dispositivo, un altro browser, una finestra anonima, i cookie
+  cancellati, qualcuno che chiama le API con `curl`;
+- **b) cookie sì, cassetto no**: dopo uno dei casi ③.
+
+In tutte e due `readSecurityContextFromSession` restituisce `null` (in (a) perché `getSession(false)` non trova
+niente, in (b) perché il numero non corrisponde più a niente). `init()` crea un contesto **vuoto**, solo per quella
+richiesta; l'`AuthorizationFilter` risponde **401** e il frontend mostra la pagina del PIN. Nessuno chiama
+`getSession(true)`, quindi nessuna sessione nuova.
+
+**⑤ "Senza PIN", dal PC.** `PinAccessFilter`, righe 60-62:
+
+```java
+SecurityContext context = SecurityContextHolder.createEmptyContext();
+context.setAuthentication(...);               // "proprietario-dal-pc"
+SecurityContextHolder.setContext(context);    // solo sul thread
+```
+
+È la riga 6 del login (il cartellino al collo) **senza la riga 7**: nessun `saveContext`. Quindi un contesto nuovo
+**a ogni richiesta**, che la riga 85 di `SecurityContextHolderFilter` toglie alla fine; e, siccome nessuno chiama
+`getSession(true)`, **nessuna sessione e nessun cookie**: niente da rubare. Lo prova
+`SessionCookieTest.withoutPinThePcGetsNoSessionCookie`. Non serve ricordarsi di niente: ogni richiesta dal PC si
+riconosce da sola, con l'header `local` (parte C).
+
+| Situazione | Cassetto (sessione) | Cartellino (contesto) |
+|---|---|---|
+| ① entri con il PIN | creato da `saveContext` → `getSession(true)` | creato una volta, messo nel cassetto |
+| ② richieste dopo | lo stesso, ritrovato dal cookie | **lo stesso oggetto**, ripreso dal cassetto |
+| ③ "Esci", 12 ore, riavvio, PIN cambiato | buttato (`invalidate()`) o sparito | sparisce con il cassetto |
+| ④ nessun cookie, o cassetto sparito | nessuno | uno vuoto a ogni richiesta → 401 |
+| ⑤ "senza PIN", dal PC | **nessuno**, mai | uno nuovo a ogni richiesta, mai salvato |
+
+In ogni caso, a fine richiesta il thread lascia la presa (`clearContext()`); il cassetto, se c'è, resta com'era.
+
 ### G5. Uscire
 
 `POST /api/auth/logout` chiude la sessione (`session.invalidate()`) e svuota il `SecurityContext`. Il cookie che il
