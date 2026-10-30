@@ -270,6 +270,121 @@ Security, che sta a -100. Una richiesta con un nome falso (DNS rebinding) viene 
 
 ## Parte C: "dal PC" o "da un altro dispositivo": le due porte
 
+### C0. Prima le basi: porte, container e blocchi `server`
+
+Guardando `default.conf` viene spontaneo pensare che `listen 8080` sia il backend, perché anche Tomcat ascolta
+sulla 8080. **Non è così**: è la porta di nginx. Le due 8080 non si disturbano perché stanno in due container
+diversi. Vediamo perché, dall'inizio.
+
+![Le porte: del PC, di nginx, di Tomcat](img/porte-container.svg)
+
+#### C0.1 Che cos'è una porta
+
+Un computer ha un indirizzo (l'IP) e ci possono girare molti programmi che ricevono connessioni. Per sapere a quale
+programma è destinata una connessione si usa un numero, la **porta** (da 1 a 65535). È come un condominio:
+l'**indirizzo** è la via e il civico (il computer), la **porta** è il numero dell'interno (il programma).
+
+- Un programma che **ascolta su una porta** (*listen*) dice: "le connessioni che arrivano a questo numero le
+  prendo io".
+- Nello stesso computer, su una porta può ascoltare **un solo programma** alla volta.
+- Per collegarsi servono indirizzo **e** porta: `localhost:8000` vuol dire "questo PC, interno 8000".
+
+#### C0.2 Ogni container è come un computer a sé
+
+Per la rete, un container Docker è un **piccolo computer separato**: ha il suo indirizzo nella rete di Docker
+(`172.18.0.x`) e le sue porte, tutte sue.
+
+| Container | Programma | Porta su cui ascolta, **dentro il suo container** |
+|---|---|---|
+| `db` | PostgreSQL | 5432 |
+| `backend` | Tomcat (Spring Boot) | **8080** (`SERVER_PORT: 8080` nel Compose) |
+| `web` | nginx | **8080** e **8081** (`listen` in `default.conf`) |
+
+Tomcat e nginx usano tutti e due la 8080, ma **in due computer diversi**: due condomini diversi possono avere
+entrambi un "interno 8".
+
+Perché proprio 8080 anche per nginx? L'immagine è `nginx-unprivileged`, che gira senza root, e le porte sotto la
+1024 le può aprire solo root: niente 80, la porta "classica" del web. 8080 è la scelta abituale in questi casi; con
+9000 non cambierebbe niente.
+
+#### C0.3 Il PC vede solo quello che il Compose "pubblica"
+
+Di serie le porte dei container si raggiungono **solo dalla rete di Docker**, non dal browser. Per aprirne una
+verso il PC serve la sezione `ports:` di `docker-compose.yml`, e ce l'ha solo `web`:
+
+```yaml
+ports:
+  - "127.0.0.1:${WEB_PORT:-8000}:8080"
+  - "127.0.0.1:${REMOTE_PORT:-8001}:8081"
+```
+
+Ogni riga si legge **`indirizzo del PC : porta del PC : porta del container`**:
+- `127.0.0.1:8000:8080`: quello che arriva al **PC** sulla **8000** va al container `web`, sulla sua **8080**;
+- `127.0.0.1:8001:8081`: quello che arriva al PC sulla **8001** va a `web`, sulla **8081**;
+- `127.0.0.1`: lo accetta **solo dal PC stesso**, non dalla rete di casa.
+
+È come un centralino: da fuori si chiama il numero 8000, dentro squilla l'interno 8080 di nginx.
+
+Il `backend` e il `db` **non hanno `ports:`**: dal PC non si raggiungono, solo dalla rete di Docker. Per questo nel
+browser si scrive `localhost:8000` e mai `localhost:8080`.
+
+#### C0.4 Il percorso di una richiesta
+
+`http://localhost:8000/api/accounts`, dal browser del PC:
+
+1. il browser si collega al **PC, porta 8000**;
+2. Docker la passa al container `web`, **porta 8080**;
+3. nginx ascolta lì (`listen 8080`): la richiesta entra nel **primo** blocco `server`;
+4. è un `/api/...`, quindi nginx la rifà al backend, verso `http://backend:8080` (la riga
+   `set $backend http://backend:8080;` in `wallettracker.conf`). `backend` è il **nome del container**, che Docker
+   traduce nel suo indirizzo; `8080` è la porta di **Tomcat**;
+5. Tomcat risponde, e nginx passa la risposta al browser.
+
+Le due 8080 compaiono in due file diversi, con due significati diversi:
+- `listen 8080` in `default.conf` → "**nginx** ascolta qui";
+- `http://backend:8080` in `wallettracker.conf` → "**nginx chiama Tomcat** qui".
+
+#### C0.5 Che cos'è un blocco `server`
+
+Per nginx un blocco `server { ... }` è **un sito**: "per le connessioni che arrivano su questa porta, comportati
+così". Due blocchi vogliono dire due porte, ciascuna con le sue regole:
+
+```nginx
+server {
+    listen 8080;                                     # la porta
+    set $wallettracker_access local;                 # per questa porta, la variabile vale "local"
+    include /etc/nginx/snippets/wallettracker.conf;  # e poi tutte le regole del sito
+}
+```
+
+- **`listen 8080;`**: il blocco riguarda la porta 8080 del container (la 8000 del PC).
+- **`set $wallettracker_access local;`**: crea una **variabile** di nginx (una scatolina con un nome) e ci mette
+  `local`. Il nome l'abbiamo scelto noi; il `$` iniziale è il modo in cui nginx riconosce le variabili.
+- **`include ...;`**: "incolla qui il contenuto di quel file". Le regole del sito (file di Angular, cache, `/api/`,
+  intestazioni di sicurezza) sono lunghe: così si scrivono **una volta sola**. Il file è
+  `frontend/nginx/wallettracker.conf`; il Dockerfile lo copia in `/etc/nginx/snippets/`.
+
+Il secondo blocco è **identico**, tranne due cose: `listen 8081` e la variabile che vale `remote`. Dentro
+`wallettracker.conf`, nella parte `/api/`, la variabile si usa così:
+
+```nginx
+proxy_set_header X-WalletTracker-Access $wallettracker_access;
+```
+
+"Quando rifai la richiesta a Tomcat, aggiungi l'intestazione `X-WalletTracker-Access` con il valore della
+variabile". Tomcat riceve quindi `local` se la richiesta era entrata dalla 8080, `remote` se dalla 8081.
+
+#### C0.6 Perché due porte, in una frase
+
+È lo **stesso sito**, ma il backend deve sapere **da quale ingresso** è arrivata la richiesta, e questo, a
+differenza di un'intestazione, il browser non lo può falsificare. È come un condominio con due ingressi, uno che si
+raggiunge solo dal tuo appartamento e il portone sulla strada: il portiere non chiede "chi sei?" (chiunque può
+mentire), guarda **da dove sei entrato** e lo scrive sul biglietto per l'ufficio. I dettagli sono nelle parti
+qui sotto.
+
+Sul PC si possono aprire tutte e due le porte (sono entrambe su `127.0.0.1`): da `localhost:8001` l'app ti tratta
+"come un telefono" e chiede il PIN. Serve a provare come si comporterà il telefono, prima di avere Tailscale.
+
 ### C1. Il problema
 
 "Senza PIN, solo dal PC" e "il PIN si crea solo dal PC" hanno bisogno di una cosa: **sapere da dove arriva una
