@@ -270,6 +270,160 @@ Security, che sta a -100. Una richiesta con un nome falso (DNS rebinding) viene 
 
 ## Parte C: "dal PC" o "da un altro dispositivo": le due porte
 
+### C0. Prima le basi: porte, container e blocchi `server`
+
+Guardando `default.conf` viene spontaneo pensare che `listen 8080` sia il backend, perché anche Tomcat ascolta
+sulla 8080. **Non è così**: è la porta di nginx. Le due 8080 non si disturbano perché stanno in due container
+diversi. Vediamo perché, dall'inizio.
+
+![Le porte: del PC, di nginx, di Tomcat](img/porte-container.svg)
+
+#### C0.1 Che cos'è una porta
+
+Un computer ha un indirizzo (l'IP) e ci possono girare molti programmi che ricevono connessioni. Per sapere a quale
+programma è destinata una connessione si usa un numero, la **porta** (da 1 a 65535). È come un condominio:
+l'**indirizzo** è la via e il civico (il computer), la **porta** è il numero dell'interno (il programma).
+
+- Un programma che **ascolta su una porta** (*listen*) dice: "le connessioni che arrivano a questo numero le
+  prendo io".
+- Nello stesso computer, su una porta può ascoltare **un solo programma** alla volta.
+- Per collegarsi servono indirizzo **e** porta: `localhost:8000` vuol dire "questo PC, interno 8000".
+
+#### C0.2 Ogni container è come un computer a sé
+
+Per la rete, un container Docker è un **piccolo computer separato**: ha il suo indirizzo nella rete di Docker
+(`172.18.0.x`) e le sue porte, tutte sue.
+
+| Container | Programma | Porta su cui ascolta, **dentro il suo container** |
+|---|---|---|
+| `db` | PostgreSQL | 5432 |
+| `backend` | Tomcat (Spring Boot) | **8080** (`SERVER_PORT: 8080` nel Compose) |
+| `web` | nginx | **8080** e **8081** (`listen` in `default.conf`) |
+
+Tomcat e nginx usano tutti e due la 8080, ma **in due computer diversi**: due condomini diversi possono avere
+entrambi un "interno 8".
+
+Perché proprio 8080 anche per nginx? L'immagine è `nginx-unprivileged`, che gira senza root, e le porte sotto la
+1024 le può aprire solo root: niente 80, la porta "classica" del web. 8080 è la scelta abituale in questi casi; con
+9000 non cambierebbe niente.
+
+#### C0.3 Il PC vede solo quello che il Compose "pubblica"
+
+Di serie le porte dei container si raggiungono **solo dalla rete di Docker**, non dal browser. Per aprirne una
+verso il PC serve la sezione `ports:` di `docker-compose.yml`, e ce l'ha solo `web`:
+
+```yaml
+ports:
+  - "127.0.0.1:${WEB_PORT:-8000}:8080"
+  - "127.0.0.1:${REMOTE_PORT:-8001}:8081"
+```
+
+Ogni riga si legge **`indirizzo del PC : porta del PC : porta del container`**:
+- `127.0.0.1:8000:8080`: quello che arriva al **PC** sulla **8000** va al container `web`, sulla sua **8080**;
+- `127.0.0.1:8001:8081`: quello che arriva al PC sulla **8001** va a `web`, sulla **8081**;
+- `127.0.0.1`: lo accetta **solo dal PC stesso**, non dalla rete di casa.
+
+È come un centralino: da fuori si chiama il numero 8000, dentro squilla l'interno 8080 di nginx.
+
+Il `backend` e il `db` **non hanno `ports:`**: dal PC non si raggiungono, solo dalla rete di Docker. Per questo nel
+browser si scrive `localhost:8000` e mai `localhost:8080`.
+
+#### C0.4 Il percorso di una richiesta
+
+`http://localhost:8000/api/accounts`, dal browser del PC:
+
+1. il browser si collega al **PC, porta 8000**;
+2. Docker la passa al container `web`, **porta 8080**;
+3. nginx ascolta lì (`listen 8080`): la richiesta entra nel **primo** blocco `server`;
+4. è un `/api/...`, quindi nginx la rifà al backend, verso `http://backend:8080` (la riga
+   `set $backend http://backend:8080;` in `wallettracker.conf`). `backend` è il **nome del container**, che Docker
+   traduce nel suo indirizzo; `8080` è la porta di **Tomcat**;
+5. Tomcat risponde, e nginx passa la risposta al browser.
+
+Le due 8080 compaiono in due file diversi, con due significati diversi:
+- `listen 8080` in `default.conf` → "**nginx** ascolta qui";
+- `http://backend:8080` in `wallettracker.conf` → "**nginx chiama Tomcat** qui".
+
+#### C0.5 Che cos'è un blocco `server`
+
+Per nginx un blocco `server { ... }` è **un sito**: "per le connessioni che arrivano su questa porta, comportati
+così". Due blocchi vogliono dire due porte, ciascuna con le sue regole:
+
+```nginx
+server {
+    listen 8080;                                     # la porta
+    set $wallettracker_access local;                 # per questa porta, la variabile vale "local"
+    include /etc/nginx/snippets/wallettracker.conf;  # e poi tutte le regole del sito
+}
+```
+
+- **`listen 8080;`**: il blocco riguarda la porta 8080 del container (la 8000 del PC).
+- **`set $wallettracker_access local;`**: crea una **variabile** di nginx (una scatolina con un nome) e ci mette
+  `local`. Il nome l'abbiamo scelto noi; il `$` iniziale è il modo in cui nginx riconosce le variabili.
+- **`include ...;`**: "incolla qui il contenuto di quel file". Le regole del sito (file di Angular, cache, `/api/`,
+  intestazioni di sicurezza) sono lunghe: così si scrivono **una volta sola**. Il file è
+  `frontend/nginx/wallettracker.conf`; il Dockerfile lo copia in `/etc/nginx/snippets/`.
+
+Il secondo blocco è **identico**, tranne due cose: `listen 8081` e la variabile che vale `remote`. Dentro
+`wallettracker.conf`, nella parte `/api/`, la variabile si usa così:
+
+```nginx
+proxy_set_header X-WalletTracker-Access $wallettracker_access;
+```
+
+"Quando rifai la richiesta a Tomcat, aggiungi l'intestazione `X-WalletTracker-Access` con il valore della
+variabile". Tomcat riceve quindi `local` se la richiesta era entrata dalla 8080, `remote` se dalla 8081.
+
+#### C0.6 Perché due porte, in una frase
+
+È lo **stesso sito**, ma il backend deve sapere **da quale ingresso** è arrivata la richiesta, e questo, a
+differenza di un'intestazione, il browser non lo può falsificare. È come un condominio con due ingressi, uno che si
+raggiunge solo dal tuo appartamento e il portone sulla strada: il portiere non chiede "chi sei?" (chiunque può
+mentire), guarda **da dove sei entrato** e lo scrive sul biglietto per l'ufficio. I dettagli sono nelle parti
+qui sotto.
+
+Sul PC si possono aprire tutte e due le porte (sono entrambe su `127.0.0.1`): da `localhost:8001` l'app ti tratta
+"come un telefono" e chiede il PIN. Serve a provare come si comporterà il telefono, prima di avere Tailscale.
+
+#### C0.7 Le porte devono coincidere (e non vanno scambiate)
+
+Nella riga `ports:` il numero **a destra** (porta del container) deve essere proprio quello su cui nginx fa
+`listen`; il numero **a sinistra** (porta del PC) invece è libero:
+
+```
+"127.0.0.1:${WEB_PORT:-8000}:8080"
+            └── a sinistra ──┘ └ a destra ┘
+            porta del PC:       porta del container:
+            libera (.env)       deve coincidere con "listen 8080"
+```
+
+**Se non coincidono.** Docker non sa che cosa c'è dentro il container: inoltra e basta. Con
+`127.0.0.1:8000:9000` porterebbe le connessioni alla porta 9000 di `web`, dove non ascolta nessuno: nel browser
+"connessione interrotta" o "risposta vuota". Nessuno avvisa prima, né Docker né nginx.
+
+**Se le scambi: il caso più pericoloso**, perché l'app sembra funzionare:
+
+```yaml
+- "127.0.0.1:8000:8081"   # sbagliato
+- "127.0.0.1:8001:8080"   # sbagliato
+```
+
+Il browser del PC entrerebbe dal blocco `remote`, e Tailscale (cioè il telefono) dal blocco `local`: il telefono
+potrebbe entrare senza PIN (se si è scelto "senza PIN") o creare il PIN al posto tuo. Il backend non se ne
+accorgerebbe, perché si fida di ciò che scrive nginx (C4). Per questo la CI prova a ogni push che dalla porta 8001
+risulti `local:false` (parte L4): chi scambiasse le righe lo scoprirebbe subito.
+
+**Gli altri posti con la stessa porta.** La porta di nginx dentro il container compare anche qui:
+
+| Dove | Che cosa | Conta? |
+|---|---|---|
+| `docker-compose.yml`, `healthcheck` | `wget http://127.0.0.1:8080/`: il controllo di salute chiede a nginx **dall'interno** del container | sì: con una porta sbagliata il container sarebbe sempre "unhealthy" |
+| `frontend/Dockerfile`, `EXPOSE 8080 8081` | dichiara quali porte usa l'immagine | no: è documentazione, Docker non apre né chiude niente per questo |
+
+Per cambiare la 8080 di nginx bisognerebbe cambiarla in tutti e quattro i posti (`listen`, `ports:`, `healthcheck`,
+`EXPOSE`), ma non c'è motivo di farlo. Se sul PC la 8000 è già occupata, si cambia **quella a sinistra**:
+`WEB_PORT=9000` nel `.env`, senza toccare nginx.
+
 ### C1. Il problema
 
 "Senza PIN, solo dal PC" e "il PIN si crea solo dal PC" hanno bisogno di una cosa: **sapere da dove arriva una
@@ -569,39 +723,552 @@ server:
 | `http-only: true` | il JavaScript della pagina **non può leggerlo** | uno script infilato nella pagina (XSS) che ruba il cookie |
 | `same-site: strict` | il browser **non lo manda** nelle richieste partite da un altro sito | CSRF (parte H) |
 
-### G3. Il cookie `Secure`, che si accende da solo
+### G3. Il cookie `Secure`, dalle basi
 
-Un cookie `Secure` viaggia **solo su https**. Non lo scriviamo fisso, perché oggi l'app è su `http://localhost:8000`:
-con `Secure` il browser non rimanderebbe il cookie, e non si entrerebbe mai. Tomcat lo aggiunge da solo **quando la
-richiesta è https**.
+Questa parte parte da zero: ogni pezzo si appoggia su quello prima, quindi conviene leggerla in ordine.
 
-Ma la richiesta al backend arriva da nginx, sempre in http: come fa Tomcat a saperlo? Gliel'ha detto nginx, con
-l'intestazione `X-Forwarded-Proto` (`docs/44`, parte D3). `forward-headers-strategy: native` dice a Tomcat di crederci,
-**ma solo** se la richiesta arriva da un indirizzo interno (la rete di Docker, 127.0.0.1): è ancora un confine di
-fiducia (parte C4). Un estraneo che scrivesse `X-Forwarded-Proto` a mano non conterebbe. Al passo 4, con Tailscale e
-https, il cookie diventerà `Secure` senza toccare niente. Lo prova `SessionCookieTest`.
+#### G3.1 Una richiesta HTTP è un testo
+
+Quando il browser chiede qualcosa al backend, manda un **testo**, più o meno così:
+
+```
+GET /api/accounts HTTP/1.1
+Host: localhost:8000
+Accept: application/json
+Cookie: WALLETTRACKER_SESSION=8F3A91C2...
+```
+
+- La **prima riga** dice che cosa vuole: "dammi `/api/accounts`".
+- Le righe dopo sono le **intestazioni** (*headers*), nella forma `Nome: valore`: informazioni in più che
+  accompagnano la richiesta.
+
+La risposta ha la stessa forma:
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Set-Cookie: WALLETTRACKER_SESSION=8F3A91C2...; HttpOnly; SameSite=Strict
+
+[ ...i conti... ]
+```
+
+**Il punto importante:** le intestazioni sono righe di testo e **le scrive chi manda la richiesta**. Il browser
+ne scrive alcune da solo, ma chiunque, con un programma come `curl`, può scrivere quelle che vuole, con il valore
+che vuole:
+
+```
+curl -H "X-Forwarded-Proto: https" http://localhost:8000/api/accounts
+```
+
+Quindi un server non può credere a occhi chiusi a quello che c'è scritto nelle intestazioni.
+
+#### G3.2 Il cookie
+
+HTTP non ha memoria: ogni richiesta arriva da sola. Il cookie serve a riconoscere il browser:
+
+1. inserisci il PIN giusto; il server risponde con `Set-Cookie: WALLETTRACKER_SESSION=8F3A91C2...`, cioè
+   "conserva questo numero";
+2. il browser lo salva e lo **rimanda in ogni richiesta**, nella riga `Cookie: ...`;
+3. il server vede il numero e lo riconosce: "è quello che ha già messo il PIN giusto".
+
+Quel numero **vale quanto il PIN**: chi lo possiede è "dentro". Se qualcuno lo copiasse, potrebbe usare l'app al
+posto tuo senza conoscere il PIN (*furto di sessione*).
+
+Dopo il valore, nella riga `Set-Cookie` ci sono delle **istruzioni per il browser**, gli attributi:
+
+| Attributo | Che cosa dice al browser |
+|---|---|
+| `HttpOnly` | "non far leggere questo cookie al JavaScript della pagina" |
+| `SameSite=Strict` | "non mandarlo se la richiesta parte da un altro sito" |
+| `Secure` | "**mandalo solo se la connessione è https**" |
+
+#### G3.3 http, https e che cos'è `Secure`
+
+- Con **http** il testo della richiesta viaggia **così com'è**: chi sta in mezzo (qualcuno sulla stessa Wi-Fi
+  del bar, il router) lo legge tutto, compresa la riga `Cookie: WALLETTRACKER_SESSION=...`.
+- Con **https** lo stesso testo viene **cifrato** prima di partire: chi sta in mezzo vede byte senza senso, e
+  solo il server lo decifra.
+
+**`Secure` vuol dire: "browser, manda questo cookie solo nelle connessioni https, mai in quelle http".** Così il
+numero della sessione non viaggia mai leggibile, nemmeno aprendo per sbaglio un indirizzo `http://`.
+
+Perché non lo mettiamo sempre? Perché oggi l'app si apre su `http://localhost:8000`, che è **http**. Con `Secure`
+il browser riceverebbe il cookie, lo salverebbe, ma **non lo rimanderebbe mai**. Il server vedrebbe ogni volta un
+browser senza cookie e chiederebbe di nuovo il PIN: non si entrerebbe mai. Su `localhost`, del resto, non serve:
+la richiesta non esce dal PC, non c'è nessuno "in mezzo".
+
+La regola che vogliamo:
+- richiesta arrivata in **http** → cookie **senza** `Secure`;
+- richiesta arrivata in **https** → cookie **con** `Secure`.
+
+Per seguirla, chi scrive il `Set-Cookie` deve sapere come è arrivata la richiesta. Ed è qui il problema.
+
+#### G3.4 Chi scrive il cookie: Tomcat
+
+nginx non è l'unico server web dell'app: ce ne sono **due, uno dietro l'altro**.
+
+![nginx e Tomcat](img/nginx-tomcat.svg)
+
+- **nginx** (container `web`) sta davanti: riceve il browser, risponde da solo con i file di Angular e rifà le
+  richieste `/api/…` al backend.
+- **Tomcat** sta **dentro** il backend. Il `.jar` di Spring Boot non contiene solo il nostro codice: contiene
+  anche un server web Java, Tomcat, "incorporato" (lo porta `spring-boot-starter-web`). Spring Boot lo avvia da
+  solo dentro `main`, per questo non lo vedi. È Tomcat che apre la porta 8080 del container, legge l'HTTP, tiene
+  le sessioni e scrive i `Set-Cookie`; poi passa la richiesta a Spring (filtri, controller) e al nostro codice.
+
+Ogni freccia è una **connessione separata**: nginx riceve la richiesta del browser (connessione 1) e ne apre
+**un'altra**, tutta sua, verso Tomcat (connessione 2), dove la ricopia.
+
+- La connessione **1** è http o https, a seconda di come è arrivato il browser.
+- La connessione **2** è **sempre http**: sta tutta dentro il PC, nella rete di Docker, cifrarla non servirebbe.
+
+Il cookie lo scrive Tomcat, ma Tomcat vede solo la connessione 2. Da solo penserebbe sempre "http". È come un
+impiegato in un ufficio interno: il cliente l'ha visto solo il portiere, e l'impiegato non sa se è arrivato in
+macchina o a piedi, a meno che il portiere non glielo scriva.
+
+#### G3.5 Il "biglietto": `X-Forwarded-Proto`
+
+nginx lo sa, perché la connessione 1 l'ha ricevuta lui. Quando ricopia la richiesta verso Tomcat, **aggiunge una
+riga** (`wallettracker.conf`, `docs/44` parte D3):
+
+```nginx
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+
+- `X-Forwarded-Proto` ("protocollo della richiesta inoltrata") è un nome che usano tutti i proxy, non l'abbiamo
+  inventato noi.
+- `$scheme` è una variabile di nginx: vale `http` o `https` **a seconda di come è arrivata la connessione a
+  nginx**.
+
+A Tomcat arriva quindi:
+
+```
+GET /api/accounts HTTP/1.1
+Host: localhost:8000
+X-Forwarded-Proto: http        ← il biglietto di nginx
+Cookie: ...
+```
+
+Il "biglietto" è solo questa riga.
+
+#### G3.6 `forward-headers-strategy: native`: "leggi il biglietto"
+
+Di serie Tomcat **ignora** `X-Forwarded-Proto`: leggerlo sempre sarebbe pericoloso, perché (G3.1) chiunque può
+scrivere quella riga. `forward-headers-strategy: native` in `application.yml` dice a Spring Boot di accendere in
+Tomcat il componente che legge quei biglietti, il `RemoteIpValve` ("valve" è il nome che Tomcat dà ai pezzi che
+guardano ogni richiesta prima del resto). Ma il `RemoteIpValve` non crede a chiunque: per capire a chi crede serve
+un'ultima base.
+
+#### G3.7 "Dall'interno" o "dall'esterno": l'indirizzo di chi si collega
+
+Ogni connessione ha **due indirizzi IP**: quello di chi chiama e quello di chi risponde. E sono una cosa diversa
+dalle intestazioni:
+- le **intestazioni** sono testo **dentro** la richiesta: le scrive chi chiama, come vuole;
+- l'**indirizzo di chi chiama** non è scritto nella richiesta: Tomcat lo prende dalla **connessione** stessa,
+  perché le risposte devono tornare proprio lì. Chi se lo inventasse non riceverebbe le risposte.
+
+Sulla connessione 2 chi chiama Tomcat è **nginx**, che nella rete di Docker ha un indirizzo come `172.18.0.3`.
+
+Alcuni gruppi di indirizzi sono **privati**: su Internet non esistono, si usano solo dentro le reti di casa o di
+un'azienda. Sono `10.x.x.x`, `172.16-31.x.x`, `192.168.x.x`, più `127.x.x.x` (il PC stesso). La rete di Docker usa
+indirizzi `172.x`. "Interno" vuol dire questo.
+
+La regola del `RemoteIpValve`:
+
+> **Credo al biglietto solo se chi si collega a me ha un indirizzo privato**: è probabilmente il mio proxy
+> (nginx), non uno sconosciuto da Internet.
+
+#### G3.8 I tre passi di Tomcat
+
+Arriva una richiesta a Tomcat (la parte bassa dell'immagine in G3.4).
+
+1. **"Chi si è collegato a me?"** Tomcat guarda l'indirizzo della connessione.
+   - `172.18.0.3`, privato: "è il mio proxy, i suoi biglietti valgono". Si va al passo 2.
+   - Un indirizzo pubblico, per esempio `93.40.12.7`: "sei uno sconosciuto, il tuo `X-Forwarded-Proto` lo
+     ignoro". La richiesta resta "http".
+2. **"Che cosa dice il biglietto?"**
+   - `https` → per tutto il resto del backend la richiesta conta come https: `request.isSecure()` vale `true`.
+   - `http` → non cambia niente: `isSecure()` è `false`.
+3. **Scrivere il cookie.** Quando apre la sessione dopo il PIN, Tomcat guarda `isSecure()`:
+   - `true` → `Set-Cookie: WALLETTRACKER_SESSION=...; HttpOnly; SameSite=Strict; Secure`
+   - `false` → la stessa riga, senza `Secure`.
+
+La protezione è **doppia**:
+- nel nostro Compose il backend **non ha porte aperte verso fuori**: l'unico che può collegarsi a Tomcat è nginx.
+  Il passo 1 è una sicurezza in più, per il giorno in cui qualcuno lo configurasse male;
+- `proxy_set_header` **sostituisce** l'intestazione: se un browser mandasse `X-Forwarded-Proto: https` a mano,
+  nginx la cancellerebbe e ci scriverebbe il valore vero.
+
+È lo stesso confine di fiducia di `local`/`remote` (parte C4): il backend crede a un'intestazione **solo perché
+sa che l'ha scritta nginx**, mai perché l'ha scritta il browser.
+
+Lo prova `SessionCookieTest`: senza l'intestazione il cookie non è `Secure`, con `X-Forwarded-Proto: https` lo è.
+
+#### G3.9 Al passo 4, con Tailscale, serve una riga in più
+
+![Il biglietto oggi e al passo 4](img/tailscale-proto.svg)
+
+Dal telefono il percorso avrà **tre** tratti invece di due:
+
+- **A**: il telefono si collega in **https** a Tailscale, che gira sul PC. Tailscale decifra la richiesta e la
+  rifà verso nginx, su `127.0.0.1:8001`.
+- **B**: questa connessione è **http** (sta dentro il PC, non serve cifrarla).
+- **C**: nginx la rifà a Tomcat, come sempre.
+
+`$scheme` (G3.5) è il protocollo con cui la connessione è arrivata **a nginx**: quella del tratto B, cioè http.
+Quindi nginx scrive `X-Forwarded-Proto: http`, e il biglietto è **sbagliato**: il telefono era in https, ma l'https
+l'ha già tolto Tailscale, un tratto prima. Tomcat ci crede e scrive il cookie **senza `Secure`**.
+
+Nella prima versione di questa guida c'era scritto che al passo 4 il cookie sarebbe diventato `Secure` "senza
+toccare niente": non era vero, per questo motivo. La correzione è una riga di nginx, solo per la porta 8081: lì
+il biglietto dirà sempre `https`, perché dal telefono a quella porta si arriva solo passando da Tailscale. Non la
+mettiamo adesso: oggi la porta 8001 si apre anche dal PC in http, e con un cookie `Secure` lì non si entrerebbe
+più (né nelle tue prove, né nella CI). La sistemiamo al passo 4, insieme a Tailscale, e la proviamo dal telefono.
+
+Quanto è grave intanto? Poco: il tratto A è cifrato due volte, dall'https e dalla rete di Tailscale. `Secure` è
+una protezione in più, che impedisce al browser di mandare il cookie in chiaro se un giorno si aprisse per sbaglio
+un indirizzo `http://`. Vale la pena metterla bene, ma va provata sul percorso vero.
 
 ### G4. Aprire la sessione (`AuthController.openSession`)
 
+Prima di leggere il codice servono due idee distinte, la **sessione** e il **contesto**, e il modo in cui si
+collegano.
+
+![Sessione e contesto: il cassetto e il cartellino](img/sessione-contesto.svg)
+
+#### G4.1 La sessione: il cassetto
+
+La **sessione** (`HttpSession`) la gestisce **Tomcat**. È un **cassetto** nella memoria del backend:
+- ha un **numero** (l'id della sessione, per esempio `8F3A91C2...`), che è proprio il valore del cookie
+  `WALLETTRACKER_SESSION`;
+- dentro ci sono degli **attributi**: coppie `nome → valore`, come in una `Map` di Java;
+- **dura tra una richiesta e l'altra**: fino a 12 ore senza richieste, a "Esci" o al riavvio del backend.
+
+È il guardaroba di un teatro: lasci il cappotto, ricevi un biglietto con un numero (il cookie), e il cappotto resta
+lì (la sessione) finché non torni con quel biglietto.
+
+La sessione **non sa niente di sicurezza**: è un posto dove tenere cose, qualunque cosa.
+
+**Dove sta, fisicamente.** Nella memoria (RAM) del processo Java del backend. Tomcat tiene un elenco di tutte le
+sessioni aperte, una mappa `numero → sessione` (ogni browser ha la sua, con il suo numero); ogni sessione ha a sua
+volta la sua mappa di attributi. Non c'è niente nel database né su disco: per questo un riavvio del backend chiude
+tutte le sessioni (parte K3).
+
+#### G4.2 Il contesto: il cartellino
+
+Il **contesto di sicurezza** (`SecurityContext`) è di **Spring Security**. È un oggetto piccolo che contiene una
+cosa sola: l'`Authentication`, cioè **chi sta facendo questa richiesta** (o niente, se non si sa).
+
+Durante una richiesta il contesto si trova nel `SecurityContextHolder`. Tomcat serve ogni richiesta con un *thread*
+(una linea di lavoro), e il `SecurityContextHolder` tiene un contesto **per ogni thread** (un `ThreadLocal`): è un
+**cartellino appeso al collo** di quella richiesta. Chiunque nel backend lo può leggere
+(`SecurityContextHolder.getContext().getAuthentication()`): i filtri, l'`AuthorizationFilter`, i controller. A fine
+richiesta il cartellino si stacca, e il thread passa pulito a un'altra richiesta.
+
+#### G4.3 Il collegamento: il cartellino sta DENTRO il cassetto
+
+Qui è facile confondersi, quindi lo diciamo chiaro: **il cassetto è sempre la sessione. Il contesto è una delle
+cose che stanno dentro il cassetto.** Nel cassetto del telefono, dopo il PIN, ci sono due attributi:
+
+| Nome dell'attributo (l'etichetta) | Valore | Chi lo mette | Chi lo legge |
+|---|---|---|---|
+| `SPRING_SECURITY_CONTEXT` | il `SecurityContext`, con dentro "proprietario, autenticato" | `saveContext` (riga 7) | `SecurityContextHolderFilter`, a ogni richiesta |
+| `wallettracker.pin-generation` | il numero di generazione, per esempio `3` | noi (riga 8) | `PinAccessFilter` (G6) |
+
+`SPRING_SECURITY_CONTEXT` quindi non è un posto: è il **nome dell'etichetta** con cui Spring mette il contesto nel
+cassetto, così lo ritrova. È un nome fisso, scelto da Spring
+(`HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY`).
+
+Perché serve metterlo nel cassetto? Il cartellino da solo **sparirebbe a fine richiesta**: il PIN varrebbe per una
+richiesta sola. Il ciclo è:
+- **al login**: il contesto si mette nel cassetto, sotto `SPRING_SECURITY_CONTEXT`;
+- **all'inizio di ogni richiesta dopo**: `SecurityContextHolderFilter` (il terzo filtro della catena, parte B)
+  prende il cookie, trova il cassetto, ne tira fuori `SPRING_SECURITY_CONTEXT` e lo appende al thread;
+- **a fine richiesta**: il thread si svuota, il cassetto resta.
+
+| | Sessione (il cassetto) | Contesto (il cartellino) |
+|---|---|---|
+| Di chi è | Tomcat | Spring Security |
+| Che cosa contiene | attributi qualsiasi, fra cui il contesto | solo "chi è" (l'`Authentication`) |
+| Quanto dura | fino a 12 ore | una richiesta (sul thread); nel cassetto, quanto il cassetto |
+| Dove sta | memoria di Tomcat, ritrovata dal cookie | `SecurityContextHolder`, legato al thread |
+| A che cosa serve | ricordare tra una richiesta e l'altra | dire, adesso, a tutto il codice chi è |
+
+#### G4.4 Il codice, riga per riga
+
+Siamo in `AuthController`, dopo che `PinService` ha risposto "PIN giusto":
+
 ```java
-if (request.getSession(false) != null) {
-    request.changeSessionId();
-}
-SecurityContext context = SecurityContextHolder.createEmptyContext();
-context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of()));
-SecurityContextHolder.setContext(context);
-contextRepository.saveContext(context, request, response);
-request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);
+if (request.getSession(false) != null) {                                                    // 1
+    request.changeSessionId();                                                              // 2
+}                                                                                           // 3
+SecurityContext context = SecurityContextHolder.createEmptyContext();                        // 4
+context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(OWNER, null, List.of())); // 5
+SecurityContextHolder.setContext(context);                                                   // 6
+contextRepository.saveContext(context, request, response);                                   // 7
+request.getSession().setAttribute(PinAccessFilter.GENERATION, generation);                  // 8
 ```
 
-- **`changeSessionId()`**: la difesa dalla *session fixation*. Un attaccante che fosse riuscito a far usare al tuo
-  browser un numero di sessione scelto da lui aspetterebbe che tu inserisca il PIN, per usare poi lo stesso numero.
-  Cambiando il numero al momento del PIN, il suo resta "fuori";
-- **`UsernamePasswordAuthenticationToken.authenticated(...)`**: un `Authentication` "già controllato" (il PIN
-  l'abbiamo controllato noi, in `PinService`). Di solito Spring lo crea dentro un suo `AuthenticationManager`; qui,
-  con un PIN solo e senza nomi utente, lo creiamo noi: più semplice da leggere;
-- **`saveContext`**: lo salva nella sessione (parte B3);
-- **la generazione** (G6) si scrive nella sessione.
+**Righe 1-3: un numero nuovo per il cassetto.** `getSession(false)` vuol dire "dammi il cassetto di questo
+browser **se c'è già**; se non c'è, **non crearlo**" (restituisce `null`). Se c'era, `changeSessionId()` gli dà un
+**numero nuovo**: il contenuto resta, cambia il biglietto, e il numero vecchio non vale più.
+
+È la difesa dalla *session fixation* ("sessione fissata"): un malintenzionato si procura un numero di sessione
+valido, ancora senza PIN, e riesce a farlo usare al tuo browser; tu inserisci il PIN, e se il numero restasse lo
+stesso lui, che lo conosce, sarebbe dentro con te. Cambiandolo proprio al momento del PIN, il suo resta fuori. Se
+il cassetto non c'era, non c'è niente da cambiare: lo crea la riga 7, con un numero nuovo.
+
+**Riga 4: un cartellino nuovo e vuoto.** Se ne crea uno nuovo invece di modificare quello che c'è: un oggetto
+condiviso modificato a metà può fare pasticci tra richieste diverse (lo consiglia la documentazione di Spring).
+
+**Riga 5: ci si scrive "chi è".** L'`Authentication` ha tre parti:
+- **`OWNER`** (`"proprietario"`): il *principal*, chi è. C'è un solo utente, basta un nome fisso;
+- **`null`**: le *credentials*, la prova (il PIN). `null` apposta: il PIN è già controllato, tenerlo in memoria
+  per 12 ore sarebbe solo un rischio;
+- **`List.of()`**: le *authorities* (ruoli, permessi, come `ROLE_ADMIN`). Vuote: un solo utente, che può tutto.
+
+`authenticated(...)` crea un token già marcato come autenticato (`isAuthenticated()` è `true`).
+`unauthenticated(...)` servirebbe per "uno che **chiede** di entrare, da controllare": noi abbiamo già controllato,
+in `PinService`. Di solito Spring crea questo oggetto dentro un suo `AuthenticationManager`; con un PIN solo e
+senza nomi utente lo creiamo noi, ed è più semplice da leggere.
+
+**Riga 6: il cartellino al collo, per questa richiesta.** Da qui alla fine di **questa** richiesta, chi chiede
+"chi è?" ha la risposta. Ma a fine richiesta si stacca: da solo non basterebbe.
+
+**Riga 7: il cartellino nel cassetto.** È la riga che fa **durare** il login. `saveContext` di
+`HttpSessionSecurityContextRepository` fa due cose:
+1. **prende il cassetto** di questo browser con `request.getSession()`, e se non c'è ancora **lo crea**: Tomcat
+   sceglie un numero nuovo e casuale e aggiunge il cassetto, vuoto, al suo elenco. È qui che, al primo login,
+   nasce la sessione. Il cassetto è la sessione: `saveContext` non crea un "cassetto del contesto", crea (se serve)
+   la sessione;
+2. **ci mette dentro il contesto**, con l'etichetta `SPRING_SECURITY_CONTEXT`.
+
+Siccome la sessione è nuova (o ha un numero nuovo), nella risposta Tomcat aggiunge
+`Set-Cookie: WALLETTRACKER_SESSION=<numero>; HttpOnly; SameSite=Strict`, e il browser lo conserva.
+
+Perché a mano? Da Spring Security 6 il contesto **non si salva più da solo** a fine richiesta: si salva solo
+quando qualcuno lo chiede, perché i salvataggi automatici creavano sessioni anche quando nessuno le voleva. Il login
+di Spring (`formLogin`) lo fa da sé; noi l'abbiamo spento e il login lo fa un nostro controller, quindi il
+salvataggio tocca a noi. Senza questa riga il PIN varrebbe solo per la risposta al login: alla richiesta dopo, 401.
+
+**Riga 8: una seconda cosa nel cassetto.** Nello **stesso** cassetto mettiamo il numero di generazione del PIN di
+adesso, con l'etichetta `wallettracker.pin-generation`. Qui `getSession()` senza argomenti va bene: il cassetto c'è
+di sicuro, l'ha appena preso o creato la riga 7. Spring Security non sa niente di questo attributo: è nostro, e lo
+legge `PinAccessFilter` (G6).
+
+#### G4.5 La richiesta dopo
+
+Il telefono chiede `GET /api/accounts` con `Cookie: WALLETTRACKER_SESSION=<numero>` (la parte destra
+dell'immagine):
+
+1. **Tomcat** usa il numero e trova il cassetto;
+2. **`SecurityContextHolderFilter`** ne tira fuori `SPRING_SECURITY_CONTEXT` e lo appende al thread: "proprietario,
+   autenticato";
+3. **`PinAccessFilter`** confronta la generazione nel cassetto con quella nel database: se nel frattempo il PIN è
+   cambiato, butta il cassetto e svuota il cartellino;
+4. **`AuthorizationFilter`** vede un contesto autenticato e fa passare (`anyRequest().authenticated()`);
+5. il **controller** risponde con i conti;
+6. fine: il cartellino si stacca dal thread, il cassetto resta per la prossima.
+
+Se il cookie manca, o il cassetto non c'è più (scaduto, "Esci", riavvio), al passo 2 non si trova niente: il
+cartellino resta vuoto, il passo 4 risponde **401** e il frontend mostra la pagina del PIN (parte I).
+
+#### G4.6 Dentro Spring: dove nasce la sessione
+
+Nella riga 7 la sessione non si vede: succede **dentro** `saveContext`, nel codice di Spring. Il collegamento è
+l'argomento `request`: la sessione si chiede proprio alla richiesta, con `request.getSession(...)`, un metodo che
+implementa Tomcat. Ecco il codice vero di `HttpSessionSecurityContextRepository` (Spring Security 7.1.1, senza i
+log):
+
+```java
+public void saveContext(SecurityContext context, HttpServletRequest request, HttpServletResponse response) {
+    ...
+    saveContextInHttpSession(context, request);                     // (a)
+}
+
+private void saveContextInHttpSession(SecurityContext context, HttpServletRequest request) {
+    ...
+    SecurityContext emptyContext = generateNewContext();
+    if (emptyContext.equals(context)) {                             // (b) contesto vuoto?
+        HttpSession session = request.getSession(false);
+        removeContextFromSession(context, session);                 //     lo toglie, non crea niente
+    }
+    else {
+        boolean createSession = this.allowSessionCreation;          // (c) di serie: true
+        HttpSession session = request.getSession(createSession);    // (d) ← qui: getSession(true)
+        setContextInSession(context, session);                      // (e)
+    }
+}
+
+private void setContextInSession(SecurityContext context, HttpSession session) {
+    if (session != null) {
+        session.setAttribute(this.springSecurityContextKey, context);   // (f) "SPRING_SECURITY_CONTEXT" → context
+    }
+}
+```
+
+- **(b)** Un contesto vuoto non ha niente da ricordare: Spring non crea nessuna sessione (anzi, toglie un contesto
+  vecchio). Il nostro contiene "proprietario", quindi si va nell'`else`.
+- **(c)** `allowSessionCreation` vale `true` di serie: "se serve, puoi creare la sessione".
+- **(d)** La riga chiave: **`request.getSession(true)`**. Il `true` dice a Tomcat "dammi il cassetto di questo
+  browser e, **se non c'è, crealo**": il contrario del `getSession(false)` delle righe 1-3.
+- **(e)-(f)** `session.setAttribute("SPRING_SECURITY_CONTEXT", context)`: il contesto entra nel cassetto.
+
+Quando riceve `getSession(true)` e il cassetto non c'è, Tomcat: sceglie un **numero nuovo e casuale**; aggiunge il
+cassetto, vuoto, al suo elenco; si segna di mandare nella risposta `Set-Cookie: WALLETTRACKER_SESSION=<numero>`.
+Quindi la sessione **la crea Tomcat**, su richiesta di `saveContext`, attraverso il `request` che le passiamo.
+
+Per leggere questi file nell'editor: Ctrl+clic sul nome di una classe di Spring (per esempio
+`SecurityContextHolder` in `AuthController`). IntelliJ propone "Download Sources"; VS Code con l'estensione Java li
+apre da solo.
+
+#### G4.7 Dentro Spring: il ciclo di ogni richiesta
+
+Dopo il login, il contesto si riprende dal cassetto a ogni richiesta. Il codice è in tre classi.
+
+**`SecurityContextHolderFilter.doFilter`** (righe 72-88): il ciclo, uguale per **ogni** richiesta.
+
+```java
+Supplier<SecurityContext> deferredContext = this.securityContextRepository.loadDeferredContext(request); // 79
+try {
+    this.securityContextHolderStrategy.setDeferredContext(deferredContext);                            // 81
+    chain.doFilter(request, response);                                                                  // 82
+}
+finally {
+    this.securityContextHolderStrategy.clearContext();                                                  // 85
+}
+```
+
+- **79**: prepara **il modo** di prendere il contesto dal cassetto, ma non lo prende ancora (vedi sotto);
+- **81**: lo affida al thread (il cartellino al collo);
+- **82**: la richiesta prosegue lungo la catena, fino al controller;
+- **85**: nel `finally`, eseguito **sempre** (anche dopo un errore), il thread lascia la presa.
+
+**`ThreadLocalSecurityContextHolderStrategy`**: che cosa vuol dire "lasciare la presa".
+
+```java
+private static final ThreadLocal<Supplier<SecurityContext>> contextHolder = new ThreadLocal<>();
+
+public void clearContext() {
+    contextHolder.remove();                 // vuota la casella del thread, e basta
+}
+
+public SecurityContext createEmptyContext() {
+    return new SecurityContextImpl();       // l'unico posto dove nasce un contesto nuovo
+}
+```
+
+Il `ThreadLocal` è una casella che ogni thread ha per conto suo. `clearContext()` la **vuota**, ma **non distrugge**
+il contesto: se è anche nel cassetto, lì resta intatto. Perché vuotarla? Tomcat **riusa** i thread: quello che ora
+serve il tuo telefono tra un attimo servirà un'altra richiesta. Se la casella restasse piena, quella richiesta
+erediterebbe "proprietario, autenticato" senza aver mostrato nessun cookie: un buco grave. Per questo la riga 85 sta
+in un `finally`.
+
+**`HttpSessionSecurityContextRepository` e `SupplierDeferredSecurityContext`**: da dove viene il contesto.
+
+```java
+// HttpSessionSecurityContextRepository, riga 145: chiamato dalla riga 79 del filtro
+public DeferredSecurityContext loadDeferredContext(HttpServletRequest request) {
+    Supplier<SecurityContext> supplier = () -> readSecurityContextFromSession(request.getSession(false));
+    return new SupplierDeferredSecurityContext(supplier, this.securityContextHolderStrategy);
+}
+
+// riga 207
+private SecurityContext readSecurityContextFromSession(HttpSession httpSession) {
+    if (httpSession == null) {
+        return null;                                                          // nessun cassetto
+    }
+    Object contextFromSession = httpSession.getAttribute(this.springSecurityContextKey); // "SPRING_SECURITY_CONTEXT"
+    if (contextFromSession == null) {
+        return null;                                                          // cassetto senza cartellino
+    }
+    ...
+    return (SecurityContext) contextFromSession;                              // quello salvato al login
+}
+
+// SupplierDeferredSecurityContext, righe 63-76
+private void init() {
+    if (this.securityContext != null) {
+        return;                                                    // già preso: non rifà il lavoro
+    }
+    this.securityContext = this.supplier.get();                    // legge dal cassetto
+    this.missingContext = (this.securityContext == null);
+    if (this.missingContext) {
+        this.securityContext = this.strategy.createEmptyContext(); // niente nel cassetto: uno nuovo, vuoto
+    }
+}
+```
+
+- `readSecurityContextFromSession` è un `getAttribute("SPRING_SECURITY_CONTEXT")`: **non crea niente**, restituisce
+  **lo stesso oggetto** messo nel cassetto al login. Nota il `getSession(false)`: leggere non crea mai una sessione.
+- **"Deferred", cioè rimandato**: il `Supplier` (`() -> ...`, una *lambda*) è codice pronto ma non ancora
+  eseguito. La sessione si legge solo **quando qualcuno chiede** il contesto: per i file statici o per
+  `/actuator/health` nessuno lo chiede, e il lavoro si risparmia.
+- `init()` è l'**unico** punto in cui, per una richiesta qualsiasi, nasce un contesto nuovo: solo se nel cassetto
+  non c'è niente.
+
+Chi lo chiede per primo? Il nostro `PinAccessFilter` (riga 69,
+`SecurityContextHolder.getContext().getAuthentication()`); poi l'`AuthorizationFilter`, che lo trova già preso.
+
+#### G4.8 Cinque casi: che fine fanno cassetto e cartellino
+
+![Cinque casi: il cassetto e il cartellino](img/sessione-casi.svg)
+
+**① Entri con il PIN.** `openSession`: la riga 4 crea il contesto, la riga 7 lo mette nel cassetto e, se serve,
+crea il cassetto (G4.6).
+
+**② Le richieste dopo.** Il contesto è **lo stesso oggetto Java** per tutta la sessione: a ogni richiesta
+`getAttribute` lo riprende, a fine richiesta il thread lascia la presa, e l'oggetto resta nel cassetto. Un contesto
+nuovo nasce solo se rimetti il PIN: la riga 7 **sostituisce** quello nel cassetto. `changeSessionId()` non lo
+tocca: cambia il numero del cassetto, non il contenuto. (Vale perché da noi le sessioni stanno nella memoria del
+backend; con sessioni salvate in un database, come nelle app su più server, a ogni richiesta se ne leggerebbe una
+**copia**.)
+
+**③ La sessione finisce.** Il contesto vive quanto il cassetto, e muore con lui:
+
+| Come | Chi la chiude |
+|---|---|
+| "Esci" | `AuthController.closeSession` (G5): `session.invalidate()` e `SecurityContextHolder.clearContext()` |
+| 12 ore senza richieste | Tomcat, da solo (`timeout: 12h`) |
+| riavvio del backend | nessuno: la memoria si azzera, e i cassetti spariscono tutti |
+| PIN cambiato, tolto o recuperato | `PinAccessFilter`, alla prima richiesta dopo: generazione diversa, `invalidate()` (G6) |
+
+`invalidate()` toglie il cassetto dall'elenco di Tomcat con tutto il contenuto. Il browser **ha ancora il
+cookie**, ma quel numero non apre più niente: è il biglietto di un cappotto già ritirato.
+
+**④ Nessun cassetto valido** (con il PIN impostato). Due situazioni diverse:
+- **a) nessun cookie**: la prima volta su quel dispositivo, un altro browser, una finestra anonima, i cookie
+  cancellati, qualcuno che chiama le API con `curl`;
+- **b) cookie sì, cassetto no**: dopo uno dei casi ③.
+
+In tutte e due `readSecurityContextFromSession` restituisce `null` (in (a) perché `getSession(false)` non trova
+niente, in (b) perché il numero non corrisponde più a niente). `init()` crea un contesto **vuoto**, solo per quella
+richiesta; l'`AuthorizationFilter` risponde **401** e il frontend mostra la pagina del PIN. Nessuno chiama
+`getSession(true)`, quindi nessuna sessione nuova.
+
+**⑤ "Senza PIN", dal PC.** `PinAccessFilter`, righe 60-62:
+
+```java
+SecurityContext context = SecurityContextHolder.createEmptyContext();
+context.setAuthentication(...);               // "proprietario-dal-pc"
+SecurityContextHolder.setContext(context);    // solo sul thread
+```
+
+È la riga 6 del login (il cartellino al collo) **senza la riga 7**: nessun `saveContext`. Quindi un contesto nuovo
+**a ogni richiesta**, che la riga 85 di `SecurityContextHolderFilter` toglie alla fine; e, siccome nessuno chiama
+`getSession(true)`, **nessuna sessione e nessun cookie**: niente da rubare. Lo prova
+`SessionCookieTest.withoutPinThePcGetsNoSessionCookie`. Non serve ricordarsi di niente: ogni richiesta dal PC si
+riconosce da sola, con l'header `local` (parte C).
+
+| Situazione | Cassetto (sessione) | Cartellino (contesto) |
+|---|---|---|
+| ① entri con il PIN | creato da `saveContext` → `getSession(true)` | creato una volta, messo nel cassetto |
+| ② richieste dopo | lo stesso, ritrovato dal cookie | **lo stesso oggetto**, ripreso dal cassetto |
+| ③ "Esci", 12 ore, riavvio, PIN cambiato | buttato (`invalidate()`) o sparito | sparisce con il cassetto |
+| ④ nessun cookie, o cassetto sparito | nessuno | uno vuoto a ogni richiesta → 401 |
+| ⑤ "senza PIN", dal PC | **nessuno**, mai | uno nuovo a ogni richiesta, mai salvato |
+
+In ogni caso, a fine richiesta il thread lascia la presa (`clearContext()`); il cassetto, se c'è, resta com'era.
 
 ### G5. Uscire
 
@@ -646,25 +1313,148 @@ la richiesta sembrerebbe tua.
 
 Con "senza PIN" dal PC non c'è nemmeno un cookie di sessione: lì le difese sono l'`Origin` e il gettone.
 
-### H3. Come funziona il gettone
+### H3. Il gettone, dalle basi
+
+![Il gettone CSRF: due cookie e un'intestazione](img/csrf-gettone.svg)
+
+#### H3.1 Che cos'è un cookie
+
+Un cookie è **una coppia `nome=valore` che il server chiede al browser di conservare**, e che il browser poi
+**rimanda da solo** a ogni richiesta verso lo stesso sito. Il server lo chiede nella **risposta**, con
+`Set-Cookie`:
 
 ```
- 1. il backend manda il cookie   XSRF-TOKEN=8c1d...        (leggibile dal JavaScript: niente HttpOnly)
- 2. Angular lo legge e lo rimanda come header, nelle richieste che modificano (POST, PUT, DELETE):
-                                 X-XSRF-TOKEN: 8c1d...
- 3. Spring Security (CsrfFilter) confronta header e cookie: diversi o mancanti → 403
+HTTP/1.1 200 OK
+Set-Cookie: WALLETTRACKER_SESSION=8F3A91C2...; HttpOnly; SameSite=Strict
 ```
 
-Il trucco: un altro sito può far partire una richiesta verso di noi, ma **non può leggere i nostri cookie** (la regola
-della stessa origine, `docs/44` parte D3b). Quindi non può scrivere l'header giusto.
+Il browser lo salva nel suo "barattolo dei cookie" (uno per ogni sito) e da quel momento lo aggiunge a ogni
+**richiesta** verso quel sito, con `Cookie`:
 
-- **`csrf().spa()`** è la configurazione di Spring Security per le *Single-Page Application*: il gettone in un cookie
-  leggibile, da rimandare in un header;
-- **lo stato prepara il gettone**: `GET /api/auth/status` riceve un parametro `CsrfToken csrfToken` e chiama
-  `csrfToken.getToken()`, anche se non lo usa. È il modo per chiedere a Spring di preparare il gettone e mandarlo nel
-  cookie: è la prima richiesta della dashboard, quindi da lì in poi Angular ce l'ha;
-- **Angular lo fa da solo**: `HttpClient` ha la protezione XSRF accesa di serie, con proprio i nomi che usa Spring
-  (`XSRF-TOKEN` e `X-XSRF-TOKEN`).
+```
+GET /api/accounts HTTP/1.1
+Cookie: WALLETTRACKER_SESSION=8F3A91C2...
+```
+
+Tre cose da tenere a mente:
+1. **lo decide il server** (`Set-Cookie`), ma **lo conserva il browser**;
+2. **il browser lo rimanda in automatico**, senza che il codice della pagina faccia niente: è la sua comodità, ed
+   è anche il suo punto debole (H3.4);
+3. gli **attributi** (`HttpOnly`, `SameSite`, `Secure`) sono istruzioni per il browser: al server non tornano,
+   nella riga `Cookie:` c'è solo `nome=valore`.
+
+Per vederli: apri l'app, F12 → **Application** (in Firefox **Archiviazione**) → **Cookies** →
+`http://localhost:8000`.
+
+#### H3.2 Due cookie e un'intestazione
+
+| Nome | Che cos'è | Chi lo scrive | Dove viaggia |
+|---|---|---|---|
+| `WALLETTRACKER_SESSION` | **cookie** | il server (`Set-Cookie`), al PIN | il browser lo rimanda da solo, nella riga `Cookie:` |
+| `XSRF-TOKEN` | **cookie** | il server (`Set-Cookie`), alla prima richiesta | il browser lo rimanda da solo, nella riga `Cookie:` |
+| `X-XSRF-TOKEN` | **intestazione** della richiesta, **non un cookie** | il **JavaScript della pagina** (Angular), a mano | una riga a sé: `X-XSRF-TOKEN: 8c1d...` |
+
+`XSRF-TOKEN` e `X-XSRF-TOKEN` contengono **lo stesso valore** (il "gettone"), per due strade diverse:
+
+```
+POST /api/categories HTTP/1.1
+Cookie: WALLETTRACKER_SESSION=8F3A91C2...; XSRF-TOKEN=8c1d...    ← due cookie, aggiunti dal browser
+X-XSRF-TOKEN: 8c1d...                                            ← un'intestazione, scritta da Angular
+```
+
+#### H3.3 I due cookie sono molto diversi
+
+| | `WALLETTRACKER_SESSION` | `XSRF-TOKEN` |
+|---|---|---|
+| A che cosa serve | dire **chi sei** (il numero del cassetto, parte G4) | dimostrare che la richiesta parte **dalle nostre pagine** |
+| Da solo, fa entrare? | **sì**: vale quanto il PIN | **no**: da solo non serve a niente |
+| Il server se lo ricorda? | sì, il cassetto in memoria | **no**, non lo salva da nessuna parte (H3.5) |
+| `HttpOnly` | **sì**: il JavaScript non lo può leggere | **no**: il JavaScript **deve** poterlo leggere |
+| Quando nasce | al PIN giusto (`saveContext`) | alla prima richiesta, `GET /api/auth/status` |
+| Con "senza PIN" dal PC | non c'è | c'è |
+
+Uno protetto dal JavaScript e l'altro no: il cookie della sessione è una **chiave**, e uno script infilato nella
+pagina che lo leggesse potrebbe mandarlo altrove ed entrare al posto tuo, quindi `HttpOnly`. Il gettone invece
+**deve** essere letto, perché Angular lo copia nell'intestazione; ed è innocuo, perché da solo non apre niente.
+
+#### H3.4 Il problema: il browser manda i cookie da solo
+
+Sei dentro WalletTracker e in un'altra scheda apri `sito-cattivo.com`, che contiene:
+
+```html
+<form method="POST" action="http://localhost:8000/api/categories/12/delete">
+<script>document.forms[0].submit()</script>
+```
+
+È il **tuo** browser a mandare quella richiesta al tuo backend; e se i cookie partissero in automatico (H3.1), ci
+aggiungerebbe anche `WALLETTRACKER_SESSION`. Il backend vedrebbe la tua sessione ed eseguirebbe. Il sito cattivo
+non ha mai visto il tuo cookie: gli basta che lo usi il **tuo** browser. Contro questo ci sono tre difese (H2); il
+gettone è quella che funziona anche dove il cookie della sessione non c'è ("senza PIN" dal PC) o se un giorno
+`SameSite` non bastasse.
+
+#### H3.5 Il trucco: una cosa che il browser **non** fa da solo
+
+Il punto debole è che i cookie partono in automatico. Allora il backend chiede, per ogni modifica, **anche una
+cosa che non parte in automatico**: un'intestazione con lo stesso valore del cookie, scritta a mano dal JavaScript
+della pagina. Il sito cattivo non ci riesce:
+- **non sa il valore**: dovrebbe leggere il cookie `XSRF-TOKEN`, ma il JavaScript di `sito-cattivo.com` legge solo
+  i cookie **della sua origine**, mai quelli di `localhost:8000` (la regola della stessa origine, `docs/44` parte
+  D3b);
+- **non può nemmeno aggiungere intestazioni sue** a una richiesta verso un altro sito, senza il permesso di quel
+  sito (CORS), che noi non diamo.
+
+Quindi la sua richiesta, anche se avesse i cookie, arriverebbe **senza** l'intestazione giusta, e il backend la
+rifiuta. Per questo il server non deve ricordarsi il gettone: gli basta confrontare "il cookie è uguale
+all'intestazione?". Solo chi sa **leggere** il cookie può farli uguali, e lo sanno solo le nostre pagine. La
+tecnica si chiama *double-submit cookie* ("il cookie mandato due volte").
+
+#### H3.6 Passo per passo, nel nostro codice
+
+**a) Il backend prepara il gettone** (`AuthController`):
+
+```java
+@GetMapping("/status")
+public AuthStatus status(HttpServletRequest request, CsrfToken csrfToken) {
+    csrfToken.getToken();
+```
+
+`GET /api/auth/status` è la prima richiesta che l'app fa all'apertura. `getToken()` obbliga Spring a generare il
+gettone (un valore casuale) e a mandarlo: `Set-Cookie: XSRF-TOKEN=8c1d...; Path=/`, senza `HttpOnly`. Il valore
+restituito non lo usiamo: serve solo a far partire il cookie, così da lì in poi Angular ce l'ha.
+
+**b) La configurazione** (`SecurityConfig`):
+
+```java
+.csrf(csrf -> csrf.spa())
+```
+
+`spa()` (*Single-Page Application*) dice a Spring: "il gettone mettilo in un cookie leggibile, `XSRF-TOKEN`, e
+aspettalo indietro nell'intestazione `X-XSRF-TOKEN`".
+
+**c) Angular lo rimanda, da solo.** In `app.config.ts` non c'è niente da scrivere: `provideHttpClient(...)` ha la
+protezione XSRF accesa di serie, con proprio questi due nomi. Per ogni richiesta che **modifica** (`POST`, `PUT`,
+`PATCH`, `DELETE`) verso il **nostro** sito, Angular legge il cookie `XSRF-TOKEN` (da `document.cookie`) e aggiunge
+`X-XSRF-TOKEN: <quel valore>`. Verso un altro sito non lo manderebbe mai: il gettone non esce dalla nostra app.
+
+**d) Spring controlla.** Il `CsrfFilter`, il quinto della catena (parte B), per ogni richiesta che modifica
+confronta cookie e intestazione: uguali → passa; mancanti o diversi → **403**, con il nostro messaggio
+(`SecurityConfig`, `accessDeniedHandler`): "Richiesta rifiutata: ricarica la pagina e riprova.".
+
+#### H3.7 Perché le `GET` non lo chiedono
+
+Le `GET` **leggono e basta**. Se il sito cattivo ne facesse partire una, la risposta (i tuoi dati) arriverebbe al
+tuo browser, ma lui **non potrebbe leggerla**: di nuovo la regola della stessa origine. Il pericolo del CSRF è
+**far fare** qualcosa a nome tuo, non far leggere: per questo il gettone serve solo per `POST`, `PUT`, `PATCH` e
+`DELETE`, e per questo nel nostro backend nessuna `GET` modifica dati.
+
+#### H3.8 Riassunto
+
+- Un **cookie** è un `nome=valore` che il server chiede (`Set-Cookie`) e il browser conserva e **rimanda da solo**.
+- I cookie sono **due**: `WALLETTRACKER_SESSION` (**chi sei**, `HttpOnly`, vale quanto il PIN) e `XSRF-TOKEN` (**il
+  gettone**, leggibile dal JavaScript, da solo inutile).
+- **`X-XSRF-TOKEN` è un'intestazione**, non un cookie: Angular la scrive copiando il valore del cookie.
+- Una modifica passa solo se cookie e intestazione **coincidono**: l'intestazione giusta la può scrivere solo chi sa
+  leggere il cookie, cioè solo le nostre pagine.
 
 ---
 
