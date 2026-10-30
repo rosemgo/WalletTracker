@@ -575,11 +575,50 @@ Un cookie `Secure` viaggia **solo su https**. Non lo scriviamo fisso, perché og
 con `Secure` il browser non rimanderebbe il cookie, e non si entrerebbe mai. Tomcat lo aggiunge da solo **quando la
 richiesta è https**.
 
-Ma la richiesta al backend arriva da nginx, sempre in http: come fa Tomcat a saperlo? Gliel'ha detto nginx, con
-l'intestazione `X-Forwarded-Proto` (`docs/44`, parte D3). `forward-headers-strategy: native` dice a Tomcat di crederci,
-**ma solo** se la richiesta arriva da un indirizzo interno (la rete di Docker, 127.0.0.1): è ancora un confine di
-fiducia (parte C4). Un estraneo che scrivesse `X-Forwarded-Proto` a mano non conterebbe. Al passo 4, con Tailscale e
-https, il cookie diventerà `Secure` senza toccare niente. Lo prova `SessionCookieTest`.
+#### Chi è Tomcat
+
+nginx non è l'unico server web dell'app: ce ne sono **due, uno dietro l'altro**.
+
+![nginx e Tomcat](img/nginx-tomcat.svg)
+
+- **nginx** (container `web`) sta davanti: riceve il browser, risponde da solo con i file di Angular e rifà le
+  richieste `/api/…` al backend.
+- **Tomcat** sta **dentro** il backend. Il `.jar` di Spring Boot non contiene solo il nostro codice: contiene
+  anche un server web Java, Tomcat, "incorporato" (lo porta `spring-boot-starter-web`). È Tomcat che apre la
+  porta 8080 del container, legge l'HTTP, tiene le sessioni e scrive le intestazioni `Set-Cookie`; poi passa la
+  richiesta a Spring (la catena di filtri, i controller). Non lo vedi perché Spring Boot lo avvia da solo, dentro
+  `main`.
+
+Quindi il cookie `WALLETTRACKER_SESSION` non lo scrive nginx: lo scrive Tomcat. nginx lo inoltra così com'è.
+
+#### Come fa Tomcat a sapere se era https
+
+Tomcat la richiesta la riceve **da nginx, sempre in http**, sulla rete di Docker. Da solo penserebbe sempre "http".
+Per questo nginx gli lascia un biglietto, l'intestazione `X-Forwarded-Proto` (`docs/44`, parte D3):
+
+```nginx
+proxy_set_header X-Forwarded-Proto $scheme;   # $scheme = come è arrivato il browser A NGINX
+```
+
+`forward-headers-strategy: native` dice a Tomcat di leggere quel biglietto (lo fa un suo componente, il
+`RemoteIpValve`). I passi sono quelli della parte bassa dell'immagine:
+
+1. **Da chi arriva la richiesta?** Tomcat ci crede **solo** se arriva da un indirizzo interno (172.16-31.x come
+   la rete di Docker, 10.x, 192.168.x, 127.x). Altrimenti la ignora: un estraneo che scrivesse
+   `X-Forwarded-Proto: https` a mano non conterebbe. È ancora un confine di fiducia (parte C4).
+2. **Che cosa dice il biglietto?** Se dice `https`, per Tomcat la richiesta è https (`request.isSecure()` vale
+   `true`).
+3. In quel caso aggiunge `Secure` al cookie della sessione. Se dice `http`, no.
+
+Lo prova `SessionCookieTest`: senza l'intestazione il cookie non è `Secure`, con `X-Forwarded-Proto: https` lo è.
+
+#### Attenzione: al passo 4 serve una riga in più
+
+Con Tailscale, l'https lo toglie Tailscale **prima** di nginx: `tailscale serve` riceve `https://…` dal telefono e
+lo rifà in **http** verso `127.0.0.1:8001`. nginx vede http, `$scheme` vale `http`, e il cookie resterebbe senza
+`Secure`. Nella prima versione di questa guida avevo scritto che sarebbe diventato `Secure` "senza toccare
+niente": non era vero. Al passo 4 il blocco della porta 8081 (quella che usa solo Tailscale) dovrà scrivere
+`https`; lo sistemeremo lì, insieme a Tailscale, e lo proveremo con il telefono.
 
 ### G4. Aprire la sessione (`AuthController.openSession`)
 
