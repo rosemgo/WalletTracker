@@ -53,7 +53,7 @@ public class SecurityConfig {
                 // CSRF pensato per le app come la nostra, con il frontend separato (Single-Page Application): il
                 // gettone arriva in un cookie (XSRF-TOKEN) che il JavaScript della pagina legge e rimanda in un
                 // header (X-XSRF-TOKEN). Angular lo fa da solo.
-                .csrf(csrf -> csrf.spa())
+                .csrf(csrf -> csrf.spa()) //spa() sta per Single-Page Application. Dice a Spring: “il gettone mettilo in un cookie leggibile, XSRF-TOKEN, e aspettalo indietro nell’intestazione X-XSRF-TOKEN”.
                 .securityContext(context -> context.securityContextRepository(contextRepository))
                 // Il nostro filtro (le sessioni di un PIN vecchio non valgono; "senza PIN" dal PC si entra), subito
                 // prima di AuthorizationFilter, l'ultimo della catena, quello che decide "dentro o 401".
