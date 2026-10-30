@@ -22,6 +22,57 @@ senza avvisi). Serve anche perché l'app si possa **installare** sul telefono (`
 Nelle guide dei passi precedenti (`docs/44`-`46`) il server si chiamava "il PC" e il dispositivo remoto "il
 telefono": è la stessa cosa. Anche i testi dell'app ora dicono "server" e "dispositivi remoti".
 
+### Prima di cominciare: due modi di avviare l'app, e le loro porte
+
+L'app si avvia in **due modi diversi**, e ognuno ha le sue porte. Confonderli è il dubbio più comune.
+
+**Modo 1: l'app completa, in Docker.** È quello di questo passo e di tutta la Fase 4: lo avvia lo script
+`installa` (o `docker compose up -d`). Dal browser del server si apre **solo**:
+
+```
+http://localhost:8000
+```
+
+| Porta sul server | Che cosa c'è | Si apre dal browser? |
+|---|---|---|
+| **8000** | nginx, porta "del server" (`local`) | **sì: è l'indirizzo dell'app** |
+| **8001** | nginx, porta "remota" (`remote`): la usa Tailscale | sì, ma l'app la tratta come un dispositivo remoto e chiede il PIN; serve per provare |
+| 8443 | niente | no: era `ng serve`, che in questo modo non gira |
+| 8080 | niente | no: Tomcat sta **dentro** il suo container, senza `ports:` (`docs/46`, parte C0.3) |
+
+La 8000 **non** è una porta "interna di Angular": è la porta d'ingresso che usa il browser, per tutto.
+1. Il browser apre `http://localhost:8000` e arriva a nginx, che gli manda i file di Angular (`index.html`, `.js`,
+   `.css`).
+2. Angular, cioè quel codice JavaScript, **gira nel browser**.
+3. Quando gli servono i dati, chiede `/api/accounts` **allo stesso indirizzo**, quindi di nuovo `localhost:8000`.
+4. nginx gira le richieste `/api/...` a Tomcat (`http://backend:8080`), dentro la rete di Docker.
+
+Il browser parla sempre e solo con la 8000 (`docs/44`, parte D).
+
+**Modo 2: lo sviluppo.** Quando modifichi il codice e vuoi vedere subito il risultato, ricompilando in un attimo,
+si usa il modo dei passi prima della Fase 4, senza nginx:
+
+| Che cosa | Comando | Porta sul server |
+|---|---|---|
+| il database | `docker compose -f docker-compose.dev.yml up -d` | 5432 (o `POSTGRES_PORT`) |
+| il backend | `./mvnw spring-boot:run`, nella cartella `backend` | **8080** |
+| il frontend | `npm start` (cioè `ng serve`), nella cartella `frontend` | **8443** |
+
+E si apre **`https://localhost:8443`**. Qui la 8443 c'è: è il server di sviluppo di Angular, che gira le `/api/...`
+alla 8080 (`proxy.conf.json`). E la 8080 è aperta davvero sul server, perché il backend non è in un container.
+
+**Non usarli insieme.** I due modi hanno **database diversi**: quello che vedi su `localhost:8000` non è quello che
+vedi su `localhost:8443`. In più usano lo stesso nome di container per il database (`wallettracker-db`). Prima di
+passare dall'uno all'altro, ferma quello acceso:
+- per fermare il modo 1: `docker compose down`;
+- per fermare il modo 2: chiudi `ng serve` e il backend (Ctrl+C), poi `docker compose -f docker-compose.dev.yml down`.
+
+| Vuoi… | Modo | Apri |
+|---|---|---|
+| usare l'app, provare Tailscale e il telefono (questo passo) | 1 | `http://localhost:8000` (dal server), `https://<nome>.ts.net` (da remoto) |
+| scrivere codice e vederlo subito | 2 | `https://localhost:8443` |
+| provare il codice nuovo "come sarà davvero" | 1, dopo aver rilanciato `installa` (ricostruisce le immagini) | `http://localhost:8000` |
+
 Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certificati): niente è dato per scontato.
 
 | Passo | Che cosa | Stato |
@@ -48,6 +99,7 @@ Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certifi
 | `.github/workflows/ci.yml`, `.github/ci/tailscale` | le prove nuove, con un finto `tailscale` (parte L) |
 
 **Indice**
+- Prima di cominciare: due modi di avviare l'app, e le loro porte
 - Parte A: le basi delle reti (perché il dispositivo remoto non arriva al server)
 - Parte B: Tailscale dalle basi
 - Parte C: installare Tailscale sul server
