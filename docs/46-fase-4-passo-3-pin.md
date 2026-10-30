@@ -385,6 +385,45 @@ qui sotto.
 Sul PC si possono aprire tutte e due le porte (sono entrambe su `127.0.0.1`): da `localhost:8001` l'app ti tratta
 "come un telefono" e chiede il PIN. Serve a provare come si comporterà il telefono, prima di avere Tailscale.
 
+#### C0.7 Le porte devono coincidere (e non vanno scambiate)
+
+Nella riga `ports:` il numero **a destra** (porta del container) deve essere proprio quello su cui nginx fa
+`listen`; il numero **a sinistra** (porta del PC) invece è libero:
+
+```
+"127.0.0.1:${WEB_PORT:-8000}:8080"
+            └── a sinistra ──┘ └ a destra ┘
+            porta del PC:       porta del container:
+            libera (.env)       deve coincidere con "listen 8080"
+```
+
+**Se non coincidono.** Docker non sa che cosa c'è dentro il container: inoltra e basta. Con
+`127.0.0.1:8000:9000` porterebbe le connessioni alla porta 9000 di `web`, dove non ascolta nessuno: nel browser
+"connessione interrotta" o "risposta vuota". Nessuno avvisa prima, né Docker né nginx.
+
+**Se le scambi: il caso più pericoloso**, perché l'app sembra funzionare:
+
+```yaml
+- "127.0.0.1:8000:8081"   # sbagliato
+- "127.0.0.1:8001:8080"   # sbagliato
+```
+
+Il browser del PC entrerebbe dal blocco `remote`, e Tailscale (cioè il telefono) dal blocco `local`: il telefono
+potrebbe entrare senza PIN (se si è scelto "senza PIN") o creare il PIN al posto tuo. Il backend non se ne
+accorgerebbe, perché si fida di ciò che scrive nginx (C4). Per questo la CI prova a ogni push che dalla porta 8001
+risulti `local:false` (parte L4): chi scambiasse le righe lo scoprirebbe subito.
+
+**Gli altri posti con la stessa porta.** La porta di nginx dentro il container compare anche qui:
+
+| Dove | Che cosa | Conta? |
+|---|---|---|
+| `docker-compose.yml`, `healthcheck` | `wget http://127.0.0.1:8080/`: il controllo di salute chiede a nginx **dall'interno** del container | sì: con una porta sbagliata il container sarebbe sempre "unhealthy" |
+| `frontend/Dockerfile`, `EXPOSE 8080 8081` | dichiara quali porte usa l'immagine | no: è documentazione, Docker non apre né chiude niente per questo |
+
+Per cambiare la 8080 di nginx bisognerebbe cambiarla in tutti e quattro i posti (`listen`, `ports:`, `healthcheck`,
+`EXPOSE`), ma non c'è motivo di farlo. Se sul PC la 8000 è già occupata, si cambia **quella a sinistra**:
+`WEB_PORT=9000` nel `.env`, senza toccare nginx.
+
 ### C1. Il problema
 
 "Senza PIN, solo dal PC" e "il PIN si crea solo dal PC" hanno bisogno di una cosa: **sapere da dove arriva una
