@@ -11,6 +11,7 @@ Fuori dalla numerazione, come `docs/investimenti.md`: scritta in parallelo alla 
 | E | perché il CSV e non i PDF mensili |
 | F | i test, e la prova nel browser |
 | G | come usarlo |
+| H | due correzioni: la causale intera, e i giroconti scelti a mano |
 
 ---
 
@@ -206,3 +207,76 @@ Nel browser, con un file inventato: la pagina Importa ha scelto da sola "una col
    reimportarlo non li corregge: l'importo fa parte dell'impronta della riga (`docs/25`, "niente doppioni"), quindi
    le uscite arriverebbero una seconda volta, accanto alle vecchie col segno sbagliato.
    Cancella il conto Tinaba in **Conti**, ricrealo e importa di nuovo.
+
+---
+
+## Parte H: due correzioni, trovate usando l'app
+
+### La causale intera: una seconda colonna di testo
+
+**Il problema.** Il file di Tinaba ha due colonne di testo: `Descrizione` ("Ricevuto da Mario Rossi") e
+`Causale/Messaggio` ("Trasferimento a mio conto"). L'importazione ne leggeva **una sola**, e la seconda finiva solo
+nei "dati originali" del movimento.
+
+**La soluzione.** Nella mappatura c'è un campo in più, `detailColumn`: nella pagina Importa,
+"Altro testo da aggiungere alla descrizione (facoltativo)". Il suo testo si aggiunge alla causale dopo " · ":
+
+```
+Ricevuto da Mario Rossi · Trasferimento a mio conto
+```
+
+Se una delle due è vuota resta l'altra, senza separatore. Per il file di Tinaba la proposta automatica sceglie già
+`Causale/Messaggio`.
+
+Nel codice: `RowReader.ParsedRow` tiene separate le due parti (`description` e `detail`) e le unisce in
+`fullDescription()`, che è quella che si salva e che si vede nell'anteprima.
+
+**L'impronta non cambia, e i movimenti già importati si completano.** L'impronta di una riga (`docs/25`, "niente
+doppioni") si calcola con la sola `description`, **senza** la seconda colonna. Per questo:
+
+- reimportando un file già importato prima di questa modifica, le righe sono riconosciute come già presenti e
+  **non raddoppiano**;
+- per quelle righe, se la causale salvata è ancora quella di allora, si aggiunge il testo della seconda colonna
+  (`BankTransaction.extendDescription`). Una causale diversa, cambiata nel frattempo, non si tocca mai.
+
+Il risultato dell'importazione dice quante ne ha completate (`completed`): "0 movimenti importati (4 righe erano già
+presenti e sono state saltate); a 2 movimenti già presenti è stata completata la descrizione."
+
+Quindi, per chi aveva già importato il file di Tinaba: basta **reimportarlo**, con la proposta automatica.
+
+### I giroconti scelti a mano si abbinano lo stesso
+
+**Il problema.** Un bonifico da ING a Tinaba, corretto a mano con "Conta come: Versamento investimenti". La sua altra
+metà, l'entrata su Tinaba, restava un'**Entrata** "senza categoria". Il motivo: i movimenti corretti a mano erano
+esclusi dall'abbinamento (`ClassificationService.canBePaired`). L'idea era "l'utente ha deciso, non tocco niente",
+ma così l'altra metà non trovava più con chi abbinarsi.
+
+**La soluzione.** Un tipo scelto a mano che è già un giroconto (`TRANSFER_TYPES`: trasferimento interno,
+versamento e prelievo investimenti, saldo della carta) **si abbina lo stesso**. Il movimento corretto tiene il suo
+tipo; l'altra metà prende il tipo del giroconto. Per il movimento scelto a mano non serve nemmeno che "abbia
+l'aspetto" di un giroconto (`looksLikeOwnTransfer`): lo ha già detto l'utente.
+
+Un tipo scelto a mano che **non** è un giroconto ("Spesa", "Entrata"…) vuol dire il contrario, "questo non è un
+giroconto", e resta escluso come prima.
+
+### Test
+
+- `RowReaderTest.aSecondTextColumnIsAddedToTheDescription`;
+- `ColumnGuesserTest`: per Tinaba la seconda colonna è `Causale/Messaggio`;
+- `CsvImportControllerTest.reimportingWithTheSecondTextColumnCompletesTheDescriptionsWithoutDuplicates`: importato
+  senza la seconda colonna, reimportato con: nessun doppione, una causale completata, e una terza volta niente;
+- `CsvImportControllerTest.theTinabaFileGetsTheSignsAndTheTypesRight`, aggiornato con la causale intera;
+- `ClassificationServiceTest.aTransferChosenByHandIsStillPairedWithItsOtherHalf` e
+  `aMovementChosenByHandAsAnExpenseIsNeverPaired`;
+- frontend: il nuovo campo nella pagina Importa e il messaggio delle descrizioni completate.
+
+Backend 379 test, frontend 227. Nel browser, con il file inventato: la proposta sceglie "Causale/Messaggio",
+l'anteprima mostra "Ricevuto da Mario Rossi · Trasferimento a mio conto", e reimportando un file importato "alla
+vecchia maniera" 2 movimenti vengono completati, senza doppioni.
+
+**Da sapere.** Le regole guardano la causale intera, seguita dalla controparte. Il testo aggiunto va in fondo alla
+causale, quindi "inizia con" non cambia. Cambia invece un "contiene" che scavalca il punto in cui causale e
+controparte si toccano: la regola `V31` della ricarica Power cerca "Ricarica effettuata Tinaba Power", cioè la fine
+della causale più la controparte. Oggi funziona perché in quelle righe la seconda colonna è vuota; se un giorno non lo
+fosse, la regola andrebbe cambiata (per esempio con "tutte le parole"). Per le tue regole, "Prova" dice subito se
+trovano ancora i loro movimenti.

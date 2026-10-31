@@ -28,18 +28,7 @@
   <!-- Fatto: il riepilogo e i passi successivi. -->
   <div class="card">
     <h2>Importazione completata</h2>
-    <p class="message">
-      {{ accountName() }}:
-      {{ done.imported === 1 ? '1 movimento importato' : done.imported + ' movimenti importati' }}
-      @if (done.duplicates > 0) {
-        ({{
-          done.duplicates === 1
-            ? '1 riga era già presente ed è stata saltata'
-            : done.duplicates + ' righe erano già presenti e sono state saltate'
-        }})
-      }
-      .
-    </p>
+    <p class="message">{{ accountName() }}: {{ doneMessage(done) }}</p>
     <p>
       I movimenti sono stati classificati come quelli delle banche collegate.
       <a routerLink="/movimenti">Vai ai movimenti</a>, filtra per questo conto e controlla quelli
@@ -176,6 +165,15 @@
           Descrizione (facoltativa)
           <select formControlName="descriptionColumn">
             <option [ngValue]="null">— nessuna —</option>
+            @for (c of columns(); track c.index) {
+              <option [ngValue]="c.index">{{ c.label }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Altro testo da aggiungere alla descrizione (facoltativo)
+          <select formControlName="detailColumn">
+            <option [ngValue]="null">— nessuno —</option>
             @for (c of columns(); track c.index) {
               <option [ngValue]="c.index">{{ c.label }}</option>
             }

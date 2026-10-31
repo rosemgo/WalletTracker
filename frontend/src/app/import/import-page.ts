@@ -110,6 +110,7 @@ export class ImportPage implements OnInit {
     currencyColumn: this.fb.control<number | null>(null),
     signColumn: this.fb.control<number | null>(null),
     incomeWords: this.fb.control<string | null>(null),
+    detailColumn: this.fb.control<number | null>(null),
   });
 
   /**
@@ -219,6 +220,26 @@ export class ImportPage implements OnInit {
   }
 
   /** Il nome del conto, nel messaggio finale. */
+  /** "4 movimenti importati (2 righe erano già presenti…); a 1 movimento … la descrizione." */
+  protected doneMessage(done: ImportResult): string {
+    let text =
+      done.imported === 1 ? '1 movimento importato' : `${done.imported} movimenti importati`;
+    if (done.duplicates > 0) {
+      text +=
+        done.duplicates === 1
+          ? ' (1 riga era già presente ed è stata saltata)'
+          : ` (${done.duplicates} righe erano già presenti e sono state saltate)`;
+    }
+    if (done.completed > 0) {
+      // Righe importate prima che si leggesse la seconda colonna della descrizione (docs/tinaba.md, parte H).
+      text +=
+        done.completed === 1
+          ? '; a 1 movimento già presente è stata completata la descrizione'
+          : `; a ${done.completed} movimenti già presenti è stata completata la descrizione`;
+    }
+    return `${text}.`;
+  }
+
   protected accountName(): string {
     const account = this.accounts().find((a) => a.id === this.account.value);
     return account?.label ?? '';

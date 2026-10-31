@@ -62,7 +62,7 @@ public final class ColumnGuesser {
                 mode == AmountMode.SPLIT ? expense : null,
                 guessDecimalSeparator(values(samples, amountForSamples)), description,
                 counterparty != null && counterparty.equals(description) ? null : counterparty, currency, null,
-                null);
+                null, null);
     }
 
     /** La mappatura del file di Tinaba: le colonne note, gli importi senza segno, le parole delle entrate. */
@@ -72,7 +72,8 @@ public final class ColumnGuesser {
         int description = TINABA_HEADERS.indexOf("descrizione");
         return new ImportMapping(delimiter, date, guessDateFormat(values(samples, date)), AmountMode.UNSIGNED, amount,
                 null, null, guessDecimalSeparator(values(samples, amount)), description,
-                TINABA_HEADERS.indexOf("controparte"), null, description, TINABA_INCOME_WORDS);
+                TINABA_HEADERS.indexOf("controparte"), null, description, TINABA_INCOME_WORDS,
+                TINABA_HEADERS.indexOf("causale/messaggio"));
     }
 
     /**

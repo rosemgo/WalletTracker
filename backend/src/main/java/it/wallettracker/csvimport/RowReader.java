@@ -31,9 +31,23 @@ public final class RowReader {
     private RowReader() {
     }
 
-    /** Un movimento letto da una riga. */
+    /**
+     * Un movimento letto da una riga.
+     *
+     * @param description la causale, dalla sua colonna
+     * @param detail      il testo della seconda colonna, se c'è (docs/tinaba.md, parte H)
+     */
     public record ParsedRow(LocalDate date, BigDecimal amount, String currency, String description,
-            String counterparty) {
+            String counterparty, String detail) {
+
+        /** La causale da salvare: la causale e il testo della seconda colonna, separati da " · ". */
+        public String fullDescription() {
+            if (detail == null) {
+                return description;
+            }
+            String joined = description == null ? detail : description + " · " + detail;
+            return joined.length() > MAX_TEXT ? joined.substring(0, MAX_TEXT) : joined;
+        }
     }
 
     /** Una riga che non si può leggere: il messaggio dice perché. */
@@ -52,8 +66,12 @@ public final class RowReader {
             case UNSIGNED -> unsignedAmount(row, mapping);
         };
         String currency = currency(cell(row, mapping.currencyColumn()), defaultCurrency);
-        return new ParsedRow(date, amount, currency, text(cell(row, mapping.descriptionColumn())),
-                text(cell(row, mapping.counterpartyColumn())));
+        String description = text(cell(row, mapping.descriptionColumn()));
+        String detail = mapping.detailColumn() == null || mapping.detailColumn().equals(mapping.descriptionColumn())
+                ? null
+                : text(cell(row, mapping.detailColumn()));
+        return new ParsedRow(date, amount, currency, description, text(cell(row, mapping.counterpartyColumn())),
+                detail);
     }
 
     /**

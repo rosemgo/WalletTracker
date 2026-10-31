@@ -87,7 +87,7 @@ public class CsvImportService {
         }
         List<PreviewRow> parsedRows = reading.parsed().stream()
                 .limit(PREVIEW_ROWS)
-                .map(r -> new PreviewRow(r.date(), r.amount(), r.currency(), r.description(), r.counterparty()))
+                .map(r -> new PreviewRow(r.date(), r.amount(), r.currency(), r.fullDescription(), r.counterparty()))
                 .toList();
         return new Preview(file.headers(), samples, file.rows().size(), used, parsedRows, reading.errorCount(),
                 reading.errors());
@@ -116,21 +116,36 @@ public class CsvImportService {
         Set<String> existing = transactionRepository.findDedupKeysByAccount(account);
         Map<String, Integer> occurrences = new HashMap<>();
         List<BankTransaction> toSave = new ArrayList<>();
+        Map<String, ParsedRow> toComplete = new HashMap<>();
         int duplicates = 0;
         for (int i = 0; i < reading.parsed().size(); i++) {
             ParsedRow row = reading.parsed().get(i);
             String key = dedupKey(row, occurrences);
             if (existing.contains(key)) {
                 duplicates++;
+                if (row.detail() != null) {
+                    toComplete.put(key, row);
+                }
                 continue;
             }
             toSave.add(new BankTransaction(account, key, TransactionStatus.BOOKED, row.date(), null, row.amount(),
-                    row.currency(), row.counterparty(), row.description(), rawJson(file.headers(), reading.rawRows().get(i))));
+                    row.currency(), row.counterparty(), row.fullDescription(),
+                    rawJson(file.headers(), reading.rawRows().get(i))));
+        }
+        // Le righe già presenti, importate quando la seconda colonna non si leggeva: la causale si completa.
+        int completed = 0;
+        if (!toComplete.isEmpty()) {
+            for (BankTransaction t : transactionRepository.findByAccountAndDedupKeyIn(account, toComplete.keySet())) {
+                ParsedRow row = toComplete.get(t.getDedupKey());
+                if (t.extendDescription(row.description(), row.fullDescription())) {
+                    completed++;
+                }
+            }
         }
         transactionRepository.saveAll(toSave);
         transactionRepository.flush();
         classificationService.classifyAll();
-        return new ImportResult(toSave.size(), duplicates);
+        return new ImportResult(toSave.size(), duplicates, completed);
     }
 
     /**
@@ -226,6 +241,9 @@ public class CsvImportService {
      * e "occorrenza": se nello stesso file ci sono due righe identiche (due caffè uguali nello stesso
      * giorno), la seconda ha occorrenza 2, così restano due movimenti distinti. Reimportando lo stesso file,
      * o un file che si sovrappone, le impronte coincidono e le righe vengono saltate.
+     *
+     * <p>La seconda colonna della causale ({@code detail}) non entra: così le righe importate prima che si leggesse
+     * hanno la stessa impronta, e reimportando il file si completano invece di raddoppiare.
      */
     static String dedupKey(ParsedRow row, Map<String, Integer> occurrences) {
         String base = row.date() + "|" + row.amount().toPlainString() + "|" + row.currency() + "|"

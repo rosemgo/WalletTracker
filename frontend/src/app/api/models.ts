@@ -75,6 +75,7 @@ export interface ImportMapping {
   currencyColumn: number | null;
   signColumn: number | null; // con UNSIGNED: dove cercare le parole delle entrate
   incomeWords: string | null; // con UNSIGNED: "ricevuto, ricevuta": quelle righe sono entrate, le altre uscite
+  detailColumn: number | null; // una seconda colonna di testo, aggiunta alla descrizione (docs/tinaba.md, parte H)
 }
 
 /** Una riga letta con la mappatura, nell'anteprima. */
@@ -101,6 +102,7 @@ export interface ImportPreview {
 export interface ImportResult {
   imported: number;
   duplicates: number; // righe già importate in passato, saltate
+  completed: number; // tra quelle, quante hanno avuto la descrizione completata con la seconda colonna
 }
 
 /**

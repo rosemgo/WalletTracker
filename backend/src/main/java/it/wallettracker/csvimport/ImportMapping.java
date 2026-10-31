@@ -32,6 +32,8 @@ import jakarta.validation.constraints.Size;
  * @param signColumn         con UNSIGNED: la colonna in cui cercare le parole delle entrate (di solito la descrizione)
  * @param incomeWords        con UNSIGNED: le parole delle entrate, separate da virgole ("ricevuto, ricevuta"): una
  *                           riga che ne contiene una è un'entrata, tutte le altre sono uscite
+ * @param detailColumn       una seconda colonna di testo, facoltativa, aggiunta alla causale dopo " · " (Tinaba:
+ *                           "Causale/Messaggio"). Non entra nell'impronta della riga (docs/tinaba.md, parte H)
  */
 public record ImportMapping(
         @NotNull @Pattern(regexp = "[;,|\\t]") String delimiter,
@@ -46,7 +48,8 @@ public record ImportMapping(
         @Min(0) Integer counterpartyColumn,
         @Min(0) Integer currencyColumn,
         @Min(0) Integer signColumn,
-        @Size(max = 300) String incomeWords) {
+        @Size(max = 300) String incomeWords,
+        @Min(0) Integer detailColumn) {
 
     /**
      * Una colonna con l'importo, oppure due colonne (entrate e uscite, come negli estratti conto), oppure una colonna

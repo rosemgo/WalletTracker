@@ -36,7 +36,7 @@ public final class ImportDtos {
      * @param imported   i movimenti nuovi salvati
      * @param duplicates le righe già importate in passato (stesso file o file che si sovrappongono), saltate
      */
-    public record ImportResult(int imported, int duplicates) {
+    public record ImportResult(int imported, int duplicates, int completed) {
     }
 
     /**

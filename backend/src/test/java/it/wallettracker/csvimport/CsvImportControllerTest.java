@@ -193,7 +193,7 @@ class CsvImportControllerTest {
         assertThat(importCsv(tinaba, csv, """
                 {"delimiter": ",", "dateColumn": 0, "dateFormat": "dd/MM/yyyy", "amountMode": "UNSIGNED",
                  "amountColumn": 6, "decimalSeparator": "COMMA", "descriptionColumn": 3, "counterpartyColumn": 2,
-                 "signColumn": 3, "incomeWords": "ricevuto, ricevuta"}
+                 "signColumn": 3, "incomeWords": "ricevuto, ricevuta", "detailColumn": 4}
                 """)).hasStatusOk();
 
         Map<String, BankTransaction> byText = transactionRepository.findAll().stream()
@@ -201,12 +201,12 @@ class CsvImportControllerTest {
                         : t.getDescription(), t -> t));
         // Il bonifico: le due metà si abbinano, ed è un versamento negli investimenti da tutte e due le parti.
         assertThat(byText.get("ING").getType()).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
-        assertThat(byText.get("Ricevuto da Mario Rossi").getType()).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        assertThat(byText.get("Ricevuto da Mario Rossi · Trasferimento a mio conto").getType()).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
         // Il versamento nel Robo advisor: acquisto titoli, non una spesa (regola di partenza V31).
         assertThat(byText.get("Nuovo versamento Robo advisor").getType()).isEqualTo(TransactionType.SECURITIES_BUY);
         // Il credito Power: una spesa; il cashback: il suo rimborso (spesa con il più), nella stessa categoria.
         BankTransaction power = byText.get("Ricarica effettuata");
-        BankTransaction cashback = byText.get("Trasferimento ricevuto per campagna cashback");
+        BankTransaction cashback = byText.get("Trasferimento ricevuto per campagna cashback · Cashback Power");
         assertThat(power.getType()).isEqualTo(TransactionType.EXPENSE);
         assertThat(cashback.getType()).isEqualTo(TransactionType.EXPENSE);
         assertThat(cashback.getAmount()).isPositive();
@@ -214,6 +214,38 @@ class CsvImportControllerTest {
         Long bankCosts = categoryRepository.findByNameIgnoreCase("Costi bancari").orElseThrow().getId();
         assertThat(power.getCategory().getId()).isEqualTo(bankCosts);
         assertThat(cashback.getCategory().getId()).isEqualTo(bankCosts);
+    }
+
+    @Test
+    void reimportingWithTheSecondTextColumnCompletesTheDescriptionsWithoutDuplicates() {
+        // Un file importato quando la seconda colonna non si leggeva (docs/tinaba.md, parte H). Dati inventati.
+        Account account = manualAccount();
+        String csv = """
+                Data;Descrizione;Messaggio;Importo
+                28/10/2026;Ricevuto da Mario Rossi;Trasferimento a mio conto;200,00
+                02/10/2026;Nuovo versamento;;-200,00
+                """;
+        String before = """
+                {"delimiter": ";", "dateColumn": 0, "dateFormat": "dd/MM/yyyy", "amountMode": "SINGLE",
+                 "amountColumn": 3, "decimalSeparator": "COMMA", "descriptionColumn": 1}
+                """;
+        String after = before.replace("\"descriptionColumn\": 1", "\"descriptionColumn\": 1, \"detailColumn\": 2");
+        assertThat(importCsv(account, csv, before)).hasStatusOk().bodyJson().extractingPath("$.imported").isEqualTo(2);
+
+        // Reimportandolo con la seconda colonna: niente doppioni, e la causale del bonifico si completa.
+        assertThat(importCsv(account, csv, after))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.imported").isEqualTo(0);
+                    json.assertThat().extractingPath("$.duplicates").isEqualTo(2);
+                    json.assertThat().extractingPath("$.completed").isEqualTo(1);
+                });
+        assertThat(transactionRepository.findAll()).extracting(BankTransaction::getDescription)
+                .containsExactlyInAnyOrder("Ricevuto da Mario Rossi · Trasferimento a mio conto", "Nuovo versamento");
+
+        // Una terza volta non cambia più niente.
+        assertThat(importCsv(account, csv, after)).hasStatusOk().bodyJson().extractingPath("$.completed").isEqualTo(0);
     }
 
     @Test

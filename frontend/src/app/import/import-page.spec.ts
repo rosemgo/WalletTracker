@@ -43,6 +43,7 @@ const GUESSED: ImportMapping = {
   currencyColumn: null,
   signColumn: null,
   incomeWords: null,
+  detailColumn: null,
 };
 
 function previewOf(mapping: ImportMapping, errors: string[] = []): ImportPreview {
@@ -87,7 +88,7 @@ describe('ImportPage', () => {
     imports = [];
     // Come il backend: senza mappatura propone GUESSED, con una mappatura la usa.
     nextPreview = (mapping) => of(previewOf(mapping ?? GUESSED));
-    importResponse = of({ imported: 1, duplicates: 0 });
+    importResponse = of({ imported: 1, duplicates: 0, completed: 0 });
     queryConto = null;
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of(accounts),
@@ -225,6 +226,27 @@ describe('ImportPage', () => {
     words.dispatchEvent(new Event('input'));
     await fixture.whenStable();
     expect(previews.at(-1)?.mapping).toEqual({ ...unsigned, incomeWords: 'ricevuto, accredito' });
+  });
+
+  it('a second text column is proposed, sent, and the completed descriptions are told', async () => {
+    // Tinaba (docs/tinaba.md, parte H): "Causale/Messaggio" si aggiunge alla descrizione.
+    const withDetail: ImportMapping = { ...GUESSED, detailColumn: 1 };
+    nextPreview = (mapping) => of(previewOf(mapping ?? withDetail));
+    importResponse = of({ imported: 0, duplicates: 2, completed: 1 });
+    const { fixture, page } = await open();
+    await chooseFile(fixture, page);
+
+    expect(selectByLabel(page, 'Altro testo').selectedOptions[0].textContent?.trim()).toBe(
+      '2 · Descrizione',
+    );
+    importButton(page).click();
+    await fixture.whenStable();
+
+    expect(imports.at(-1)?.mapping).toEqual(withDetail);
+    expect(page.textContent).toContain('2 righe erano già presenti e sono state saltate');
+    expect(page.textContent).toContain(
+      'a 1 movimento già presente è stata completata la descrizione',
+    );
   });
 
   it('with unreadable rows the errors are shown and the import is disabled', async () => {

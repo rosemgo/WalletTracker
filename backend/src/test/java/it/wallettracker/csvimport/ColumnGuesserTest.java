@@ -42,6 +42,7 @@ class ColumnGuesserTest {
         assertThat(mapping.amountMode()).isEqualTo(AmountMode.UNSIGNED);
         assertThat(mapping.amountColumn()).isEqualTo(6);
         assertThat(mapping.signColumn()).isEqualTo(3); // la descrizione
+        assertThat(mapping.detailColumn()).isEqualTo(4); // "Causale/Messaggio", aggiunta alla causale
         assertThat(mapping.incomeWordList()).containsExactly("ricevuto", "ricevuta");
         assertThat(mapping.dateFormat()).isEqualTo("dd/MM/yyyy");
         assertThat(mapping.decimalSeparator()).isEqualTo(DecimalSeparator.COMMA);

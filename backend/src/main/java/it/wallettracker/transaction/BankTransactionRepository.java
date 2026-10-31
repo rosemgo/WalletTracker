@@ -27,6 +27,9 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     boolean existsByAccountAndDedupKey(Account account, String dedupKey);
 
+    /** I movimenti di un conto con queste impronte (CsvImportService: le righe già importate da completare). */
+    List<BankTransaction> findByAccountAndDedupKeyIn(Account account, Collection<String> dedupKeys);
+
     /** Le impronte di tutti i movimenti di un conto, in una query (per l'importazione CSV). */
     @Query("SELECT t.dedupKey FROM BankTransaction t WHERE t.account = :account")
     Set<String> findDedupKeysByAccount(@Param("account") Account account);

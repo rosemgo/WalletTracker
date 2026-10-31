@@ -312,6 +312,43 @@ class ClassificationServiceTest {
         assertThat(typeOf(unknown)).isEqualTo(TransactionType.SECURITIES_BUY);
     }
 
+    @Test
+    void aTransferChosenByHandIsStillPairedWithItsOtherHalf() {
+        // Il bonifico in uscita corretto a mano come versamento: l'entrata sul conto di investimento deve trovare
+        // lo stesso la sua metà, invece di restare un'entrata (docs/tinaba.md, parte H). Conto manuale, come Tinaba.
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "Mario Rossi");
+        Account broker = accountRepository.save(Account.manual("Banca Beta", "Investimenti", "IT00BETA", "EUR",
+                AccountRole.INVESTMENT));
+        BankTransaction out = transaction(main, DAY, "-200.00", null, "Bonifico istantaneo A favore di Mario Rossi");
+        out.setManualType(TransactionType.INVESTMENT_DEPOSIT);
+        transactionRepository.save(out);
+        BankTransaction in = transaction(broker, DAY, "200.00", "Mario Rossi", "Ricevuto da Mario Rossi");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(out)).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        assertThat(reload(in).getTransferPeerId()).isEqualTo(out.getId());
+        assertThat(reload(out).getTransferPeerId()).isEqualTo(in.getId());
+    }
+
+    @Test
+    void aMovementChosenByHandAsAnExpenseIsNeverPaired() {
+        // "Spesa" scelto a mano vuol dire: non è un giroconto. L'altra metà resta da sola.
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "Mario Rossi");
+        Account spending = owned("IT00SPEND", AccountRole.SPENDING, "Mario Rossi");
+        BankTransaction out = transaction(main, DAY, "-80.00", null, "Bonifico a favore di Mario Rossi");
+        out.setManualType(TransactionType.EXPENSE);
+        transactionRepository.save(out);
+        BankTransaction in = transaction(spending, DAY, "80.00", null, "Payment from Mario Rossi");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(out)).isEqualTo(TransactionType.EXPENSE);
+        assertThat(reload(out).getTransferPeerId()).isNull();
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INCOME);
+    }
+
     // --- Strumenti per costruire gli scenari ---
 
     private Account account(String iban, AccountRole role) {
