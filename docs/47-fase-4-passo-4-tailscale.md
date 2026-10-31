@@ -473,6 +473,140 @@ Lo script fa tutto quello di sempre (`docs/45`) e, prima di avviare l'app, la pa
 Alla fine scrive l'indirizzo da aprire sul dispositivo remoto e quello da registrare su Enable Banking. Si può rilanciare
 quante volte si vuole: se è già tutto pronto, non cambia niente.
 
+### E3b. `-Tailscale` nel dettaglio: che cosa aggiunge, istruzione per istruzione
+
+Lo script è **uno solo**. Le opzioni (`-Tailscale`, `-CambiaPasswordDb`, `-ReimpostaPin`, `-Ia`…) accendono
+**parti in più**; senza, quelle parti vengono saltate e il resto si esegue uguale.
+
+**Come funziona un'opzione.** All'inizio di `installa.ps1`:
+
+```powershell
+param(
+    [switch]$Ia,
+    [switch]$CambiaPasswordDb,
+    [switch]$ReimpostaPin,
+    [switch]$Tailscale,
+    [switch]$SenzaBrowser
+)
+```
+
+Un `[switch]` è un interruttore: vale **vero** se scrivi l'opzione nel comando, **falso** se non la scrivi. La parte
+di Tailscale è chiusa dentro `if ($Tailscale) { ... }`: con l'interruttore spento, PowerShell salta tutto il blocco.
+(In `installa.sh` è lo stesso, con `CON_TAILSCALE=true` quando c'è `--tailscale`.)
+
+| Parte dello script | Senza `-Tailscale` | Con `-Tailscale` |
+|---|---|---|
+| 1. controllo di Docker | sì | sì |
+| 2. il `.env` (lo crea se manca, lo lascia com'è se c'è) | sì | sì |
+| 3. le cartelle `.data` e `secrets` | sì | sì |
+| 4c. **Tailscale** | **saltata** | **eseguita** |
+| 5. avvio (`docker compose up -d --build`) e attesa del backend | sì | sì |
+| 6. indirizzi finali | solo `http://localhost:8000` | anche `https://…ts.net` e l'indirizzo di ritorno |
+
+**Il blocco 4c, un pezzo alla volta** (in `installa.ps1`; `installa.sh` fa le stesse cose).
+
+*1. Trovare il programma `tailscale`.*
+
+```powershell
+$TsCmd = (Get-Command tailscale -ErrorAction SilentlyContinue).Source
+if (-not $TsCmd) {
+    $predefinito = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
+    if (Test-Path $predefinito) { $TsCmd = $predefinito }
+    else { Errore 'Non trovo Tailscale: ...' }
+}
+```
+
+`Get-Command` cerca il comando nel `PATH` (le cartelle dove Windows cerca i programmi che si lanciano scrivendo solo
+il nome); `.Source` è il suo percorso completo. Se non c'è, prova dove lo mette l'installazione
+(`C:\Program Files\Tailscale\tailscale.exe`); se non c'è nemmeno lì, si ferma. Da qui in poi `& $TsCmd ...` vuol
+dire "esegui tailscale con questi argomenti".
+
+*2. Chiedere a Tailscale il suo stato.*
+
+```powershell
+$testo = (& $TsCmd status --json 2>$null) -join "`n"
+if ($LASTEXITCODE -ne 0 -or $testo -eq '') { Errore 'Tailscale non risponde ...' }
+$stato = $testo | ConvertFrom-Json
+if ($stato.BackendState -ne 'Running') { Errore 'Tailscale è installato ma non collegato ...' }
+```
+
+- `tailscale status --json` restituisce lo stato in **JSON**, un formato fatto per i programmi; `2>$null` butta i
+  messaggi d'errore, `-join` riunisce le righe in un testo solo;
+- `$LASTEXITCODE` è il codice d'uscita dell'ultimo programma (0 = tutto bene);
+- `ConvertFrom-Json` trasforma il testo in un oggetto, i cui campi si leggono con il punto;
+- `BackendState` deve essere `"Running"`, cioè collegato alla tua rete; altrimenti lo script si ferma.
+
+*3. Leggere il nome del server nella rete Tailscale.*
+
+```powershell
+$NomeTs = ([string]$stato.Self.DNSName).TrimEnd('.')
+if (-not $NomeTs.EndsWith('.ts.net')) { Errore 'Non trovo il nome ... accendi MagicDNS ...' }
+```
+
+`Self` è "questo dispositivo", `DNSName` il suo nome (per esempio `pc-sviluppo.tailXXXX.ts.net.`). `TrimEnd('.')`
+toglie il punto finale: nei nomi DNS vuol dire "nome completo", ma nel browser non si scrive. Un nome che non finisce
+in `.ts.net` vuol dire MagicDNS spento.
+
+*4. Controllare che Funnel sia spento.*
+
+```powershell
+$serve = (& $TsCmd serve status --json 2>$null) -join "`n"
+if ($serve -match '"AllowFunnel"\s*:\s*\{[^}]*:\s*true') { Errore "Tailscale Funnel è acceso ..." }
+```
+
+`-match` cerca un'espressione regolare: un `"AllowFunnel"` con dentro un `true` vuol dire che Funnel pubblica
+qualcosa su Internet (parte F5).
+
+*5. Accendere `tailscale serve`.*
+
+```powershell
+$portaRemota = Valore-Env 'REMOTE_PORT'
+if ($portaRemota -eq '') { $portaRemota = '8001' }
+& $TsCmd serve --bg --https=443 "http://127.0.0.1:$portaRemota"
+```
+
+La porta remota arriva dal `.env` (8001 se non c'è): la stessa che usa `docker-compose.yml`, quindi Tailscale e
+Compose puntano sempre alla stessa porta.
+
+*6. Scrivere nel `.env` il nome del server e l'indirizzo di ritorno.*
+
+```powershell
+if (Aggiungi-A-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $NomeTs 'localhost,127.0.0.1') { ... }
+if (Aggiungi-A-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" 'https://localhost:8443/callback') { ... }
+```
+
+`Aggiungi-A-Elenco` (definita poco sopra nello script) legge la variabile dal `.env` (o il valore di serie), la divide
+alle virgole e aggiunge il valore nuovo **solo se manca**: rilanciando non si fanno doppioni.
+
+Poi l'avvio di sempre fa ripartire il backend con il `.env` aggiornato.
+
+**Che cosa fa `tailscale serve`, e perché basta lanciarlo una volta.** `tailscale serve` è un **reverse proxy**, come
+nginx, ma dentro Tailscale. Da quando lo accendi:
+1. **ascolta** sulla porta **443** dell'indirizzo Tailscale del server (`100.x`), raggiungibile solo dai tuoi
+   dispositivi;
+2. **usa un certificato vero** per il nome del server: lo chiede a Let's Encrypt la prima volta e lo rinnova da solo
+   (dura 90 giorni);
+3. per ogni richiesta **toglie l'https** e la **rifà in http** verso `127.0.0.1:8001` (nginx), conservando `Host` e
+   aggiungendo `X-Forwarded-Proto: https`.
+
+Tailscale, sul server, è fatto di due pezzi:
+- il **servizio** (`tailscaled`): un programma che parte da solo all'avvio del computer e resta acceso sullo sfondo,
+  anche senza finestre. È lui che tiene il tunnel, ascolta sulla 443 e fa il proxy;
+- il **comando** `tailscale`: dà solo ordini al servizio.
+
+`tailscale serve ...` consegna la configurazione al servizio e finisce. Con **`--bg`** (*background*) il servizio la
+**salva nel suo stato permanente**, sul disco, e a ogni avvio del computer la rilegge: per questo `serve` torna attivo
+da solo. Senza `--bg`, resterebbe attivo solo finché la finestra di PowerShell è aperta (Ctrl+C lo spegnerebbe).
+
+Quindi `-Tailscale` serve **una volta per server**. Dopo, per aggiornare o riavviare l'app, lo script senza opzioni:
+non disfa niente, perché `serve` se lo ricorda Tailscale e il nome resta scritto nel `.env`. Per vedere la
+configurazione: `tailscale serve status`; per spegnerla: `tailscale serve --https=443 off`.
+
+**Quale indirizzo registrare su Enable Banking.** Solo quello **del server**, cioè la macchina dove hai lanciato lo
+script, con `/callback` in fondo: `https://<nome-del-server>.<rete>.ts.net/callback`. Mai quello dei dispositivi
+remoti: il telefono ha anche lui un nome nella rete Tailscale, ma su di lui WalletTracker non gira. Il browser del
+telefono deve tornare **al server**.
+
 ### E4. A mano, senza lo script
 
 Le stesse cose, una per una:
