@@ -8,6 +8,8 @@
   adesso, e solo dopo sostituisce.
 - Ogni backup è **un file cifrato** con la tua password: chi lo trova senza la password non legge niente.
 - Il ripristino è **provato davvero**, a ogni push, nella CI: si cancella tutto e si ripristina.
+- Nella **dashboard**, Impostazioni → Backup: lo stato dei backup, "Fai un backup adesso", e "Scarica" (solo dal
+  server); un avviso in cima all'app se c'è qualcosa da sistemare (parte Q).
 
 Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira Docker con WalletTracker.
 
@@ -41,7 +43,10 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 | `installa.sh`, `installa.ps1` | `--backup` / `-Backup`, `--ripristina` / `-Ripristina`, la password dei backup |
 | `.env.example` | `WALLETTRACKER_BACKUP_PASSWORD`, `BACKUP_DIR`, `BACKUP_TIME`, `BACKUP_KEEP` |
 | `.gitignore` | `/backup/` e `*.backup`: i backup non vanno mai su Git |
-| `.github/workflows/ci.yml` | tre prove nuove: backup, ripristino dopo aver cancellato tutto, backup automatico |
+| `.github/workflows/ci.yml` | quattro prove nuove: backup, ripristino dopo aver cancellato tutto, backup automatico, backup dalla dashboard |
+| backend: `backup/BackupService`, `BackupController`, `BackupProperties` | le API dei backup per la dashboard (parte Q) |
+| frontend: `settings/backup-section.ts`, `api/backup-store.ts`, `app.html` | la sezione Backup delle Impostazioni, e l'avviso in cima all'app |
+| `frontend/nginx/wallettracker.conf` | `location ^~ /api/`: un difetto trovato provando lo scaricamento (parte Q6) |
 
 **Indice**
 - Parte A: i backup, dalle basi
@@ -60,6 +65,7 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte N: la sicurezza di questo passo, e i limiti
 - Parte O: prova
 - Parte P: problemi comuni
+- Parte Q: i backup nella dashboard
 - Esercizi guidati
 
 ---
@@ -572,7 +578,11 @@ mandami il messaggio.
    nginx rispondeva 502. Ora aspetta che il backend sia pronto (`riparti`).
 3. **Il primo backup automatico** parte subito, appena si imposta la password (è passata l'ora, e oggi non ce n'è uno):
    non è un difetto, è la regola della parte G1, ma sorprende. Ora la guida lo dice.
-4. Nelle mie prove: questo ambiente cloud non raggiunge il repository dei pacchetti di Alpine, quindi per costruire
+4. **Alla prima installazione** il primo backup automatico falliva: il container dei backup parte insieme al backend,
+   che crea la chiave di cifratura solo quando è avviato; il backup non trovava la chiave, e riprovava dopo mezz'ora.
+   Ora il ciclo aspetta la chiave (trovato provando la parte Q).
+5. **nginx e le API con un punto nel nome**: vedi la parte Q6.
+6. Nelle mie prove: questo ambiente cloud non raggiunge il repository dei pacchetti di Alpine, quindi per costruire
    l'immagine qui ho preso OpenSSL da un'altra immagine. Il `Dockerfile` vero usa `apk add`, che sul tuo PC e nella CI
    di GitHub funziona.
 
@@ -588,7 +598,7 @@ mandami il messaggio.
 | container senza privilegi, sola lettura, nessuna porta | un difetto nel container del backup | parte E2 |
 | backup automatico che recupera il giorno perso | dimenticarsi i backup | parte G |
 
-Sono le righe **44-46** della tabella della sicurezza (`docs/17`).
+Sono le righe **44-47** della tabella della sicurezza (`docs/17`).
 
 **I limiti, detti chiari:**
 - **La password sta anche nel `.env`** (per il backup di notte): chi ruba il server intero ha anche quella. La cifratura
@@ -596,8 +606,9 @@ Sono le righe **44-46** della tabella della sicurezza (`docs/17`).
 - **Password persa = backup persi.** Nessuna porta sul retro: tienila in un posto sicuro fuori dal server.
 - **I backup nella cartella di serie stanno sullo stesso disco del server.** Finché non li copi fuori (o non cambi
   `BACKUP_DIR`), un disco rotto si porta via dati e backup insieme.
-- **Nessun avviso se il backup notturno fallisce**, a parte i log del container (`docker compose logs backup`). Un'idea
-  per dopo: mostrare la data dell'ultimo backup nella pagina Impostazioni (esercizio 6).
+- **L'avviso lo vedi solo aprendo l'app** (parte Q): se il backup notturno fallisce e non apri WalletTracker per
+  giorni, nessuno te lo dice. Un'email o una notifica sul telefono sarebbero un'altra storia (servirebbe un servizio
+  esterno).
 - **CBC senza autenticazione** (parte D4): le impronte dentro la parte cifrata bastano per un uso personale, ma non sono
   la GCM.
 
@@ -653,6 +664,155 @@ ho potuto eseguire), mandami il messaggio esatto.
 
 ---
 
+## Parte Q: i backup nella dashboard
+
+![I backup nella dashboard](img/backup-dashboard.svg)
+
+### Q1. Che cosa c'è, e che cosa resta allo script
+
+In **Impostazioni → Backup**:
+- lo **stato**: backup automatico acceso o spento (e a che ora), quando è stato fatto l'ultimo backup, l'ultimo errore;
+- **"Fai un backup adesso"**: il pulsante è disattivato mentre un backup è in corso, se manca la password o se il
+  servizio dei backup non risponde;
+- l'**elenco** dei backup, dal più nuovo (tipo, data, dimensione), con **"Scarica"** solo dal server.
+
+In cima all'app, un **avviso** quando c'è qualcosa da sistemare, con il motivo: il servizio dei backup non risponde, il
+backup automatico è spento, l'ultimo backup non è riuscito, o nessun backup negli ultimi due giorni. Il link porta
+alla sezione Backup (`/impostazioni#backup`).
+
+Restano allo **script**, sul server:
+- il **ripristino**: sostituisce tutto, e il backend deve essere **fermo** mentre lo si fa. Il backend non può
+  ripristinare il database mentre lo sta usando;
+- la **password dei backup**: sta nel `.env`, e il backend (per sicurezza) non può scrivere i file del progetto.
+
+### Q2. Il vincolo: il backend non comanda Docker
+
+I backup li fa il container `backup`. Il modo "facile" per farli partire dalla dashboard sarebbe dare al backend il
+**socket di Docker** (il "telecomando" di Docker, `/var/run/docker.sock`). Ma chi comanda Docker può avviare un
+container con dentro tutto il disco del server: in pratica è **amministratore del server**. Un difetto nel backend
+diventerebbe il controllo di tutto il computer. Escluso.
+
+I due container si parlano invece con **due file**, in `.data/backup-stato` (la cartella `.data` la vedono già tutti e
+due: nel backend è `/app/.data`, nel container dei backup `/data`):
+
+| File | Chi lo scrive | Che cosa dice |
+|---|---|---|
+| `richiesta` | il backend | "fai un backup adesso" (il file è vuoto: conta che ci sia) |
+| `stato.txt` | il container | righe `nome=valore`: `aggiornato`, `automatico`, `ora`, `tieni`, `in-corso`, `errore-quando`, `errore` |
+
+### Q3. Il container: richieste e stato
+
+Il ciclo `automatico` (parte G1) ora gira ogni **5 secondi** invece che ogni minuto, e a ogni giro:
+1. se c'è il file `richiesta`, lo cancella e fa un backup **manuale**;
+2. controlla il backup automatico, come prima (e, se manca ancora la chiave di cifratura, aspetta);
+3. almeno **ogni minuto** riscrive `stato.txt`.
+
+```bash
+scrivi_stato() {
+  ...
+  {
+    echo "aggiornato=$(date +%s)"
+    echo "automatico=$automatico"
+    ...
+  } >"$STATO/.stato.provvisorio"
+  mv "$STATO/.stato.provvisorio" "$STATO/stato.txt"
+}
+```
+
+- `date +%s`: i **secondi dal 1° gennaio 1970** (il "tempo Unix"). Un numero solo, facile da confrontare: il backend
+  lo trasforma con `Instant.ofEpochSecond`;
+- prima un file provvisorio, poi `mv`: rinominare un file è un'operazione **atomica** (succede tutta o niente), quindi
+  il backend non legge mai uno stato scritto a metà;
+- `aggiornato` è il **battito del cuore** del container. Se è più vecchio di tre minuti (`BackupService.ALIVE`), il
+  container è spento o bloccato: "il servizio dei backup non risponde";
+- gli errori per la dashboard li scrive `esegui()`, e sono **frasi scelte da noi** ("Backup non riuscito: dal server,
+  guarda i log…"), mai il testo di un programma, che potrebbe contenere dettagli interni.
+
+### Q4. Il backend: `BackupService` e `BackupController`
+
+Le cartelle arrivano da `application.yml` (`wallettracker.backup.directory` e `state-directory`). In
+`docker-compose.yml` sono `/app/backups`, montata in **sola lettura** (`:ro`), e `/app/.data/backup-stato`. In sviluppo
+(`./mvnw`) la cartella dello stato di solito non c'è, e la dashboard dice soltanto che i backup li fa l'app installata
+con Docker (`available: false`, e nessun avviso).
+
+| API | Che cosa fa |
+|---|---|
+| `GET /api/backups` | lo stato (`BackupService.Status`) e gli ultimi 30 backup; `canDownload` dice se la richiesta arriva dal server |
+| `POST /api/backups` | scrive `richiesta` e risponde **202 Accepted** ("ricevuto, lo faccio": il backup non è ancora finito). 503 se il servizio non risponde, 409 se manca la password o se un backup è già in corso |
+| `GET /api/backups/{nome}` | scarica un backup: **solo dal server** (403 da un dispositivo remoto), e solo un nome di backup valido (404 per tutto il resto) |
+
+Tre dettagli:
+- **`Files.createFile`** per la richiesta: fallisce se il file c'è già. Due clic nello stesso istante scrivono **una**
+  richiesta sola;
+- **il nome da scaricare** deve corrispondere all'espressione regolare `BackupService.NAME`
+  (`wallettracker-(manuale|automatico|prima-del-ripristino)-\d{8}-\d{6}\.backup`), e il file deve stare **dentro** la
+  cartella dei backup. Un nome come `../.env` non apre niente: è la difesa dal *path traversal* ("attraversare i
+  percorsi"), cioè uscire dalla cartella con `../`;
+- **`Content-Disposition: attachment`**: il browser salva il file con quel nome invece di provare ad aprirlo.
+
+**Solo dal server** si decide con lo stesso header di sempre, `X-WalletTracker-Access` (`docs/46`, parte C): per questo
+`RequestOrigin` ora è pubblica, e la usano sia il PIN sia i backup.
+
+### Q5. Il frontend: `BackupStore` e `BackupSection`
+
+`BackupStore` è condiviso come `SetupStore`: lo leggono l'avviso in cima all'app e la sezione delle Impostazioni.
+"Fai un backup adesso" non aspetta il backup: il backend risponde subito (202), e lo store **richiede lo stato ogni 3
+secondi** finché `inProgress` non torna `false` (al massimo 60 volte, cioè 3 minuti). Di solito bastano 4-5 secondi.
+
+Lo scaricamento è un normale link (`<a [href]="..." download>`), non una chiamata di `HttpClient`: così è il browser a
+salvare il file. Il **service worker** non lo tiene in memoria: `/api/backups` non è tra le risposte che conserva
+(`ngsw-config.json`), e le navigazioni verso `/api/` sono escluse.
+
+L'avviso in cima all'app è un `computed`: legge lo stato e sceglie la frase giusta. Il link porta a
+`/impostazioni#backup`; perché il router scorra fino al titolo con `id="backup"`, in `app.config.ts` c'è
+`withInMemoryScrolling({ anchorScrolling: 'enabled' })`.
+
+### Q6. Il difetto trovato: nginx e le API con un punto nel nome
+
+Provando lo scaricamento dall'app vera, la risposta era un **404 di nginx**, non del backend. Il motivo è l'ordine in
+cui nginx sceglie il blocco `location`:
+1. un blocco `location =` (indirizzo esatto) vince su tutto;
+2. poi nginx cerca il blocco per **prefisso** più lungo (`location /api/`), e **se lo trova se lo ricorda soltanto**;
+3. poi prova i blocchi con le **espressioni regolari** (`location ~`), nell'ordine in cui sono scritti: se uno
+   corrisponde, **vince lui**;
+4. solo se nessuna espressione regolare corrisponde, usa il prefisso del punto 2.
+
+`/api/backups/wallettracker-manuale-20261031-101500.backup` finisce con `.backup`: corrisponde all'espressione regolare
+dei file della build (`location ~ "\.[A-Za-z0-9]+$"`, "ha un'estensione"), che cerca il file nella build, non lo trova,
+e risponde 404. Finora nessuna API aveva un punto nel nome, per questo non era mai successo.
+
+La correzione è un modificatore:
+
+```nginx
+location ^~ /api/ {
+```
+
+**`^~`** vuol dire: "se questo prefisso è il più lungo che corrisponde, usa me, e **non provare** le espressioni
+regolari". Così tutto quello che comincia con `/api/` va al backend, con o senza punti nel nome. I file della build
+(`manifest.webmanifest`, `ngsw.json`, un `.js` che non c'è → 404) funzionano come prima: l'abbiamo ricontrollato.
+
+### Q7. I test
+
+- `BackupServiceTest` (5 test, senza Spring, con cartelle temporanee e un orologio fermo): senza container niente
+  avvisi; un backup recente con il servizio acceso va bene; l'avviso nei quattro casi; una richiesta sola, e solo se il
+  servizio può farla; scaricabile solo un backup vero dentro la cartella (rifiutati `../segreto.txt`, nomi quasi giusti,
+  il file provvisorio).
+- `BackupControllerTest` (3 test, con l'app vera): lo stato con `canDownload` dal server e da remoto; lo scaricamento
+  (200 con il nome del file dal server, 403 da remoto o senza l'header, 404 con un nome sbagliato); la richiesta (202,
+  il file `richiesta` scritto, poi 409).
+- frontend: `backup-section.spec.ts` (5 test: lo stato e l'elenco con "Scarica"; da remoto niente link e la spiegazione;
+  senza password il pulsante disattivato; il pulsante, "Backup in corso…" e il controllo ogni 3 secondi con un orologio
+  finto; senza Docker) e `app.spec.ts` (l'avviso solo quando serve, con il motivo giusto).
+- CI, **"Backup dalla dashboard"**: entra dal server e da remoto, chiede un backup e aspetta che compaia, lo scarica dal
+  server e lo confronta con il file vero (`cmp`), e da remoto riceve 403.
+
+Prove fatte qui, sull'app vera in Docker e con il browser: il pulsante ("Backup in corso…", poi il backup nuovo in
+cima all'elenco in 4 secondi); lo scaricamento dal server (il file comincia con `Salted__` ed è identico a quello sul
+server); da remoto nessun link "Scarica" e 403 sull'API; l'avviso "il servizio dei backup non risponde" con il container
+spento, e il link che porta alla sezione; nessun errore nella console.
+
+---
+
 ## Esercizi guidati
 
 1. **Il ripristino, da te.** Fai la parte O. Poi ripristina anche il backup "prima-del-ripristino": torna la
@@ -666,7 +826,9 @@ ho potuto eseguire), mandami il messaggio esatto.
 4. **Il ciclo del backup automatico.** Leggi la funzione `automatico` dello script. Che cosa succede se il computer
    resta spento due giorni? E se lo accendi alle 02:00?
 5. **Il 10#.** In bash, prova `echo $((0815))` e poi `echo $((10#0815))`. Perché il primo dà errore?
-6. **L'ultimo backup nell'app.** Pensa a come mostrare in Impostazioni "Ultimo backup: ieri alle 03:15". Che cosa
-   dovrebbe leggere il backend, e da dove? Che cosa ti preoccupa, per la sicurezza, nel dargli accesso alla cartella dei
-   backup? (Suggerimento: basterebbe un file di stato scritto dal container `backup`.)
+6. **Il file di stato.** Con l'app avviata, guarda `.data/backup-stato/stato.txt` sul server. Poi ferma il container
+   (`docker compose stop backup`), aspetta tre minuti e ricarica l'app: che avviso compare, e perché proprio dopo tre
+   minuti (`BackupService.ALIVE`)? Riaccendilo con `docker compose start backup`.
 7. **La regola 3-2-1.** Scrivi dove terrai le tre copie dei tuoi dati, e quale delle tre sta fuori casa.
+8. **Il `^~` di nginx.** Togli `^~` da `location ^~ /api/` in una copia del progetto, ricostruisci `web` e prova a
+   scaricare un backup: che cosa risponde, e chi (nginx o il backend)? Rimetti `^~`.

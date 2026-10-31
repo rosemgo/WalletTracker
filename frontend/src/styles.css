@@ -1237,6 +1237,25 @@ code {
   font-size: 0.88em;
 }
 
+/* Impostazioni → Backup: un backup per riga (tipo, data, dimensione, "Scarica"); sul telefono vanno a capo. */
+.backup-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0.5rem;
+}
+.backup-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--track);
+}
+.backup-list .backup-type {
+  font-weight: 600;
+  min-width: 11rem;
+}
+
 /* Impostazioni: gli indirizzi di ritorno di Enable Banking, uno per riga (sono lunghi, sul telefono vanno a capo). */
 .redirect-url {
   display: block;

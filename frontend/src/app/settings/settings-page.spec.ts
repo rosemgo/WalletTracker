@@ -37,6 +37,22 @@ describe('SettingsPage', () => {
           evaluation: null,
           gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
         }),
+      // La sezione Backup (backup-section.spec.ts): qui come in sviluppo, senza Docker.
+      backupStatus: () =>
+        of({
+          available: false,
+          serviceRunning: false,
+          automaticEnabled: false,
+          backupTime: null,
+          keep: 0,
+          inProgress: false,
+          lastErrorAt: null,
+          lastError: null,
+          lastSuccessAt: null,
+          attention: false,
+          backups: [],
+          canDownload: false,
+        }),
       saveEnableBanking: (applicationId: string, pem: string) => {
         saved.push([applicationId, pem]);
         return rejected

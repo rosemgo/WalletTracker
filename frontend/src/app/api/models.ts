@@ -284,6 +284,30 @@ export interface SetupStatus {
   redirectUrls: string[];
 }
 
+/** Un file di backup (Fase 4, passo 5: docs/48 parte Q). */
+export interface BackupFile {
+  name: string;
+  type: 'manuale' | 'automatico' | 'prima-del-ripristino';
+  createdAt: string; // ISO, quando è stato scritto
+  sizeBytes: number;
+}
+
+/** GET /api/backups: lo stato dei backup, che fa il container "backup" (docs/48, parte Q). */
+export interface BackupStatus {
+  available: boolean; // l'app è installata con Docker: c'è il container dei backup
+  serviceRunning: boolean; // il container ha dato segni di vita da poco
+  automaticEnabled: boolean; // c'è la password: il backup di ogni notte è acceso
+  backupTime: string | null; // es. "03:15"
+  keep: number; // quanti backup automatici si tengono
+  inProgress: boolean; // un backup chiesto o in corso
+  lastErrorAt: string | null;
+  lastError: string | null; // l'ultimo errore, se è più recente dell'ultimo backup riuscito
+  lastSuccessAt: string | null;
+  attention: boolean; // qualcosa da sistemare: l'app mostra un avviso
+  backups: BackupFile[]; // dal più nuovo
+  canDownload: boolean; // la richiesta arriva dal server: i backup si possono scaricare
+}
+
 /** Come sta andando un budget (enum BudgetStatus nel backend). */
 export type BudgetStatus = 'OK' | 'WARNING' | 'OVER';
 

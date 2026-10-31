@@ -2,13 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { AuthStatus, SetupStatus } from './api/models';
+import { AuthStatus, BackupStatus, SetupStatus } from './api/models';
 import { WalletApi } from './api/wallet-api';
 import { App } from './app';
 
 describe('App', () => {
   let configured = true;
   let authenticated = true;
+  let backup: Partial<BackupStatus> = {};
 
   beforeEach(() => {
     const fakeApi: Partial<WalletApi> = {
@@ -22,6 +23,23 @@ describe('App', () => {
           applicationId: null,
           redirectUrl: '',
           redirectUrls: [],
+        }),
+      // I backup (docs/48, parte Q): di serie va tutto bene, niente avviso.
+      backupStatus: () =>
+        of<BackupStatus>({
+          available: true,
+          serviceRunning: true,
+          automaticEnabled: true,
+          backupTime: '03:15',
+          keep: 14,
+          inProgress: false,
+          lastErrorAt: null,
+          lastError: null,
+          lastSuccessAt: '2026-10-31T02:15:00Z',
+          attention: false,
+          backups: [],
+          canDownload: true,
+          ...backup,
         }),
     };
     TestBed.configureTestingModule({
@@ -97,6 +115,31 @@ describe('App', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.banner')?.textContent).toContain(
       'Impostazioni',
     );
+  });
+
+  it('warns about the backups only when something needs fixing, and says what', async () => {
+    configured = true;
+    const banners = async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.banner')).map(
+        (banner) => banner.textContent ?? '',
+      );
+    };
+
+    backup = {};
+    expect(await banners()).toEqual([]);
+
+    backup = { attention: true, automaticEnabled: false };
+    expect((await banners())[0]).toContain('il backup automatico è spento');
+
+    backup = { attention: true, serviceRunning: false };
+    expect((await banners())[0]).toContain('non risponde');
+
+    // In sviluppo, senza Docker, niente avvisi sui backup.
+    backup = { available: false, attention: true };
+    expect(await banners()).toEqual([]);
+    backup = {};
   });
 
   it('the eye switches the discreet mode, and says whether it is on', async () => {

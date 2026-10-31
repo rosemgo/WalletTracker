@@ -7,7 +7,7 @@ import {
   isDevMode,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
@@ -23,7 +23,8 @@ registerLocaleData(localeIt);
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    // anchorScrolling: un link con un'ancora (es. /impostazioni#backup, dall'avviso sui backup) scorre fino a lei.
+    provideRouter(routes, withInMemoryScrolling({ anchorScrolling: 'enabled' })),
     // HttpClient, usato da WalletApi. L'intercettore si accorge delle sessioni scadute (docs/46). La protezione CSRF
     // di Angular è accesa di serie: legge il cookie XSRF-TOKEN e lo rimanda nell'header X-XSRF-TOKEN delle richieste
     // che modificano qualcosa, proprio come vuole Spring Security.

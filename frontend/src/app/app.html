@@ -95,6 +95,12 @@
           <button type="button" class="link" (click)="status.reload()">Aggiorna</button>
         </div>
       }
+      <!-- I backup (docs/48, parte Q): un avviso se c'è qualcosa da sistemare. Il testo dice che cosa. -->
+      @if (backupWarning(); as warning) {
+        <div class="banner" role="status">
+          {{ warning }} <a routerLink="/impostazioni" fragment="backup">Apri le Impostazioni</a>.
+        </div>
+      }
       @if (setup.status()?.configured === false) {
         <div class="banner">
           Per iniziare, configura il collegamento con Enable Banking:

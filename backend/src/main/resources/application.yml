@@ -108,6 +108,12 @@ wallettracker:
     # creato al primo avvio. Sta FUORI dal database, nella cartella .data/ (esclusa da Git): includilo nei
     # backup, ma separato dal backup del database.
     key-file: ${WALLETTRACKER_KEY_FILE:../.data/encryption.key}
+  backup:
+    # I backup nella dashboard (Fase 4, passo 5: docs/48 parte Q). La cartella dei backup (il backend la legge e
+    # basta) e quella dove il container "backup" scrive il suo stato e legge le richieste. In sviluppo (./mvnw) sono
+    # quelle del progetto; se la seconda non c'è, la dashboard dice che i backup si fanno con l'app in Docker.
+    directory: ${WALLETTRACKER_BACKUP_DIR:../backup}
+    state-directory: ${WALLETTRACKER_BACKUP_STATE_DIR:../.data/backup-stato}
   sync:
     enabled: true
     # Ogni conto viene aggiornato al massimo ogni 6 ore: 4 letture al giorno, il limite PSD2 in background.

@@ -250,6 +250,34 @@ jobs:
           docker compose logs backup
           exit 1
 
+      # I backup dalla dashboard (docs/48, parte Q): lo stato, "fai un backup adesso", e lo scaricamento solo dal
+      # server (porta 8000); da un dispositivo remoto (porta 8001) 403.
+      - name: Backup dalla dashboard
+        run: |
+          entra() {
+            rm -f "$2"
+            curl -fsS -c "$2" -b "$2" http://localhost:$1/api/auth/status > /dev/null
+            gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' "$2")
+            curl -fsS -c "$2" -b "$2" -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+              -d '{"pin":"135792"}' http://localhost:$1/api/auth/login
+          }
+          entra 8000 server
+          entra 8001 remoto
+          curl -fsS -b server http://localhost:8000/api/backups | grep -q '"serviceRunning":true'
+          prima=$(ls backup/wallettracker-manuale-*.backup | wc -l)
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' server)
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b server -X POST -H "X-XSRF-TOKEN: $gettone" \
+            http://localhost:8000/api/backups)" = 202
+          for i in $(seq 1 20); do
+            if [ "$(ls backup/wallettracker-manuale-*.backup | wc -l)" -gt "$prima" ]; then break; fi
+            sleep 2
+          done
+          test "$(ls backup/wallettracker-manuale-*.backup | wc -l)" -gt "$prima"
+          nome=$(curl -fsS -b server http://localhost:8000/api/backups | grep -o 'wallettracker-manuale-[0-9-]*\.backup' | head -1)
+          curl -fsS -b server -o scaricato.backup "http://localhost:8000/api/backups/$nome"
+          sudo cmp scaricato.backup "backup/$nome"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b remoto "http://localhost:8001/api/backups/$nome")" = 403
+
       # nginx -t controlla la configurazione senza riavviare il server.
       - name: Controlla la configurazione di nginx
         run: docker compose exec -T web nginx -t

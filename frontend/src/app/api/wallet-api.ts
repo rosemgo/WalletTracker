@@ -14,6 +14,7 @@ import {
   AiSuggestionsStatus,
   AccountRole,
   Alert,
+  BackupStatus,
   Bank,
   Budget,
   BudgetRequest,
@@ -291,6 +292,24 @@ export class WalletApi {
   /** POST /api/auth/logout: chiude la sessione. */
   logout(): Observable<void> {
     return this.http.post<void>('/api/auth/logout', {});
+  }
+
+  /** GET /api/backups: lo stato dei backup e l'elenco (docs/48, parte Q). */
+  backupStatus(): Observable<BackupStatus> {
+    return this.http.get<BackupStatus>('/api/backups');
+  }
+
+  /** POST /api/backups: "fai un backup adesso" (lo fa il container dei backup, entro qualche secondo). */
+  requestBackup(): Observable<BackupStatus> {
+    return this.http.post<BackupStatus>('/api/backups', {});
+  }
+
+  /**
+   * L'indirizzo per scaricare un backup: si usa in un link, non con HttpClient (il browser lo salva come file). Il
+   * backend lo dà solo dal server.
+   */
+  backupDownloadUrl(name: string): string {
+    return `/api/backups/${encodeURIComponent(name)}`;
   }
 
   setupStatus(): Observable<SetupStatus> {

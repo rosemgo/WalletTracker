@@ -5,6 +5,7 @@ import { AiSettingsPanel } from '../ai/ai-settings-panel';
 import { AccessSection } from '../auth/access-section';
 import { SetupStore } from '../api/setup-store';
 import { WalletApi } from '../api/wallet-api';
+import { BackupSection } from './backup-section';
 import { ThemeSection } from '../theme/theme-section';
 import { FileDrop } from '../ui/file-drop';
 
@@ -20,7 +21,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [AccessSection, AiSettingsPanel, FileDrop, RouterLink, ThemeSection],
+  imports: [AccessSection, AiSettingsPanel, BackupSection, FileDrop, RouterLink, ThemeSection],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {

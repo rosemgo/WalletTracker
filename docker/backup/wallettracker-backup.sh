@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Backup e ripristino di WalletTracker (Fase 4, passo 5: docs/48). Gira nel container "backup".
 #
-#   wallettracker-backup automatico          resta acceso: un backup al giorno, dall'ora BACKUP_TIME (di serie 03:15)
+#   wallettracker-backup automatico          resta acceso: un backup al giorno, dall'ora BACKUP_TIME (di serie 03:15),
+#                                            e i backup chiesti dalla dashboard (Impostazioni → Backup)
 #   wallettracker-backup crea [tipo]         un backup adesso; tipo: manuale (di serie), automatico, prima-del-ripristino
 #   wallettracker-backup verifica <file>     apre il backup e controlla che sia integro, senza toccare niente
 #   wallettracker-backup ripristina <file>   SOSTITUISCE il database e la chiave di cifratura con quelli del backup
@@ -11,6 +12,12 @@
 #   encryption.key   la chiave di cifratura: senza, i segreti salvati nel database non si leggono (docs/17)
 #   manifest.txt     quando, che tipo, che versione di PostgreSQL, l'ultima migrazione di Flyway
 #   SHA256SUMS       l'impronta di ogni file: al ripristino si controlla che nessun byte sia cambiato
+#
+# Come parla con la dashboard (docs/48, parte Q): con due file nella cartella /data/backup-stato (cioè
+# .data/backup-stato, che il backend vede già). Il backend non comanda Docker e non tocca i backup:
+#   richiesta   lo scrive il backend ("fai un backup adesso"); questo script lo vede entro 5 secondi e lo cancella;
+#   stato.txt   lo scrive questo script: backup automatico acceso o spento, un backup in corso, l'ultimo errore, e
+#               "aggiornato" (almeno ogni minuto: se è vecchio, il servizio dei backup non è acceso).
 #
 # Come parla con il database: pg_dump, pg_restore e psql leggono PGHOST, PGDATABASE, PGUSER e PGPASSWORD
 # (docker-compose.yml). I file: la cartella dei backup è montata su /backup, quella della chiave (.data) su /data.
@@ -27,6 +34,7 @@ umask 077
 
 CARTELLA=/backup
 CHIAVE=/data/encryption.key
+STATO=/data/backup-stato
 # PBKDF2 con 600 000 giri (docs/48, parte D3): trasforma la password in una chiave AES. Cambiarlo renderebbe
 # illeggibili i backup già fatti.
 ITERAZIONI=600000
@@ -175,38 +183,103 @@ ripristina() {
 }
 
 # --- automatico ------------------------------------------------------------------------------------------------
-# Resta acceso. Ogni minuto controlla: è passata l'ora del backup, e oggi non ce n'è ancora uno automatico? Allora
-# lo fa. Così, se alle 03:15 il computer era spento, il backup del giorno si fa appena si riaccende.
+# Resta acceso. Ogni 5 secondi controlla due cose:
+#   - la dashboard ha chiesto un backup (il file "richiesta")? Allora lo fa;
+#   - è passata l'ora del backup, e oggi non ce n'è ancora uno automatico? Allora lo fa. Così, se alle 03:15 il
+#     computer era spento, il backup del giorno si fa appena si riaccende.
+# E scrive lo stato per la dashboard (scrivi_stato).
+
+IN_CORSO=""
+ERRORE=""
+ERRORE_QUANDO=""
+
+# Lo stato, in un file di righe "nome=valore" (come il manifesto). Prima un file provvisorio, poi rinominato: il
+# backend non legge mai un file scritto a metà. I tempi sono in secondi dal 1970 (date +%s): facili da confrontare.
+scrivi_stato() {
+  local automatico=spento
+  [ ${#WALLETTRACKER_BACKUP_PASSWORD} -ge 12 ] && automatico=acceso
+  {
+    echo "aggiornato=$(date +%s)"
+    echo "automatico=$automatico"
+    echo "ora=$ORA"
+    echo "tieni=${BACKUP_KEEP:-14}"
+    echo "in-corso=$IN_CORSO"
+    echo "errore-quando=$ERRORE_QUANDO"
+    echo "errore=$ERRORE"
+  } >"$STATO/.stato.provvisorio"
+  mv "$STATO/.stato.provvisorio" "$STATO/stato.txt"
+  ULTIMO_STATO=$(date +%s)
+}
+
+# Un backup del tipo $1, con lo stato aggiornato prima e dopo. Tra parentesi: in un sotto-processo, così un errore
+# (che fa "exit") non spegne il ciclo. I messaggi d'errore per la dashboard li scegliamo noi: mai il testo di un
+# programma, che potrebbe contenere dettagli interni.
+esegui() {
+  local codice=0
+  IN_CORSO=$(date +%s)
+  scrivi_stato
+  (crea "$1") || codice=$?
+  IN_CORSO=""
+  if [ "$codice" = 0 ]; then
+    ERRORE=""
+    ERRORE_QUANDO=""
+  else
+    ERRORE_QUANDO=$(date +%s)
+    if [ "$codice" = 4 ]; then
+      ERRORE="Manca la password dei backup: dal server, lancia lo script di installazione con -Backup (docs/48)."
+    else
+      ERRORE="Backup non riuscito: dal server, guarda i log con  docker compose logs backup"
+    fi
+  fi
+  scrivi_stato
+  return "$codice"
+}
+
 automatico() {
-  local ora=${BACKUP_TIME:-03:15} avvisato=false soglia adesso oggi
-  [[ "$ora" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || errore 2 "BACKUP_TIME deve essere un'ora come 03:15 (è \"$ora\")."
+  ORA=${BACKUP_TIME:-03:15}
+  local avvisato=false soglia adesso oggi riprova_dopo=0
+  [[ "$ORA" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || errore 2 "BACKUP_TIME deve essere un'ora come 03:15 (è \"$ORA\")."
   # "03:15" diventa il numero 315 (10# vuol dire "in base 10": senza, "0315" sarebbe letto come un numero ottale).
-  soglia=$((10#${ora/:/}))
+  soglia=$((10#${ORA/:/}))
   # docker stop manda il segnale TERM: usciamo subito, invece di farci aspettare 10 secondi e poi chiudere a forza.
   trap 'exit 0' TERM INT
-  log "Backup automatico: uno al giorno, dalle $ora; tengo gli ultimi ${BACKUP_KEEP:-14} (cartella del .env: BACKUP_DIR)."
+  mkdir -p "$STATO"
+  # Una richiesta rimasta da prima (il container era spento) non vale più: chi l'ha fatta non sta più aspettando.
+  rm -f "$STATO/richiesta"
+  scrivi_stato
+  log "Backup automatico: uno al giorno, dalle $ORA; tengo gli ultimi ${BACKUP_KEEP:-14} (cartella del .env: BACKUP_DIR)."
   while true; do
+    if [ -f "$STATO/richiesta" ]; then
+      rm -f "$STATO/richiesta"
+      log "Backup chiesto dalla dashboard."
+      esegui manuale || true
+    fi
     if [ ${#WALLETTRACKER_BACKUP_PASSWORD} -lt 12 ]; then
       if [ "$avvisato" = false ]; then
         log "Backup automatico SPENTO: manca la password. Per accenderlo: ./installa.sh --backup (docs/48)."
         avvisato=true
       fi
+    elif [ ! -r "$CHIAVE" ]; then
+      # Alla prima installazione questo container parte insieme al backend, che crea la chiave di cifratura solo
+      # quando è avviato: si aspetta lei, invece di fallire (e riprovare dopo mezz'ora).
+      :
     else
       adesso=$((10#$(date +%H%M)))
       oggi=$(date +%Y%m%d)
-      if [ "$adesso" -ge "$soglia" ] &&
+      if [ "$adesso" -ge "$soglia" ] && [ "$(date +%s)" -ge "$riprova_dopo" ] &&
         [ -z "$(find "$CARTELLA" -maxdepth 1 -name "wallettracker-automatico-$oggi-*.backup" | head -n 1)" ]; then
-        # Tra parentesi: in un sotto-processo, così un errore (che fa "exit") non spegne il ciclo.
-        if ! (crea automatico); then
+        if ! esegui automatico; then
           log "Backup automatico non riuscito: riprovo tra mezz'ora."
-          sleep 1800 &
-          wait $!
-          continue
+          riprova_dopo=$(($(date +%s) + 1800))
         fi
       fi
     fi
+    # Lo stato almeno ogni minuto: "aggiornato" dice alla dashboard che il servizio è acceso.
+    if [ $(($(date +%s) - ULTIMO_STATO)) -ge 60 ]; then
+      scrivi_stato
+    fi
     # "sleep &" e "wait": durante l'attesa il segnale TERM arriva subito (con un sleep normale aspetterebbe la fine).
-    sleep 60 &
+    sleep 5 &
     wait $!
   done
 }

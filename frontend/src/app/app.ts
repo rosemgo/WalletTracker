@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
+import { BackupStore } from './api/backup-store';
 import { SetupStore } from './api/setup-store';
 import { AuthStore } from './auth/auth-store';
 import { PinPage } from './auth/pin-page';
@@ -57,6 +58,25 @@ export class App implements OnInit {
   /** Il PIN: si è dentro? (docs/46) */
   protected readonly auth = inject(AuthStore);
   protected readonly setup = inject(SetupStore);
+  private readonly backups = inject(BackupStore);
+
+  /** Il testo dell'avviso sui backup, o null se va tutto bene (o se l'app non è in Docker: docs/48, parte Q). */
+  protected readonly backupWarning = computed(() => {
+    const status = this.backups.status();
+    if (!status?.available || !status.attention) {
+      return null;
+    }
+    if (!status.serviceRunning) {
+      return 'Backup: il servizio dei backup non risponde.';
+    }
+    if (!status.automaticEnabled) {
+      return 'Backup: il backup automatico è spento (manca la password dei backup).';
+    }
+    if (status.lastError) {
+      return "Backup: l'ultimo backup non è riuscito.";
+    }
+    return 'Backup: nessun backup negli ultimi due giorni.';
+  });
   /** La modalità discreta: l'occhio in alto (docs/42, parte B). */
   protected readonly privacy = inject(PrivacyStore);
   /** La rete e le versioni nuove dell'app installabile (docs/42, parte E). */
@@ -95,7 +115,10 @@ export class App implements OnInit {
     // risponderebbe 401.
     effect(() => {
       if (this.auth.state() === 'inside') {
-        untracked(() => this.setup.refresh());
+        untracked(() => {
+          this.setup.refresh();
+          this.backups.refresh();
+        });
       }
     });
     // Quando la rete torna, si richiede lo stato del PIN: senza rete l'app poteva essere aperta sulla copia dei dati,

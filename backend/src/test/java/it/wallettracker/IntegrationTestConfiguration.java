@@ -48,6 +48,11 @@ public class IntegrationTestConfiguration {
                 // Una chiave di cifratura usa e getta, creata al primo avvio nella cartella temporanea.
                 Path keyFile = privateKey.getParent().resolve("encryption.key");
                 registry.add("wallettracker.encryption.key-file", keyFile::toString);
+                // Le cartelle dei backup (docs/48, parte Q): temporanee, mai quelle vere del progetto. Non esistono
+                // finché un test non le crea (BackupControllerTest).
+                Path backups = privateKey.getParent().resolve("backup");
+                registry.add("wallettracker.backup.directory", backups::toString);
+                registry.add("wallettracker.backup.state-directory", () -> backups.resolveSibling("backup-stato").toString());
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

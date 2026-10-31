@@ -19,14 +19,14 @@ import jakarta.servlet.http.HttpServletRequest;
  *
  * <p>Senza header la richiesta conta come "da un altro dispositivo": nel dubbio, la scelta più prudente.
  */
-final class RequestOrigin {
+public final class RequestOrigin {
 
-    static final String HEADER = "X-WalletTracker-Access";
+    public static final String HEADER = "X-WalletTracker-Access";
 
     private RequestOrigin() {
     }
 
-    static boolean isLocal(HttpServletRequest request) {
+    public static boolean isLocal(HttpServletRequest request) {
         return "local".equals(request.getHeader(HEADER));
     }
 }
