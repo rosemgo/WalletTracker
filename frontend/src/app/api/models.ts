@@ -256,8 +256,18 @@ export interface Rule extends RuleRequest {
 
 /** Il risultato della prova di una regola. */
 export interface RulePreview {
-  matches: number;
+  matches: number; // a quanti movimenti corrisponde il testo
+  applies: number; // quanti ne classificherebbe davvero
+  blockers: RuleBlocker[]; // per gli altri, chi vince al suo posto
   examples: Transaction[];
+}
+
+/** Chi vince al posto della regola provata, e su quanti movimenti. */
+export interface RuleBlocker {
+  reason: 'RULE' | 'MANUAL' | 'TRANSFER'; // una regola che viene prima, una scelta a mano, un trasferimento
+  rule: string | null; // il nome della regola (solo RULE)
+  priority: number | null; // la sua priorità (solo RULE)
+  movements: number;
 }
 
 /** Lo stato della configurazione di Enable Banking (GET /api/setup). */
@@ -681,4 +691,45 @@ export interface CategoryOverview {
   months: { month: string; value: number }[];
   merchants: ExploreGroup[];
   budget: Budget | null;
+}
+
+// ---- Investimenti (docs/investimenti.md) ----
+
+/** Quanto indietro guardare: 12 mesi, 24 mesi, tutta la storia. */
+export type InvestmentPeriod = 'YEAR' | 'TWO_YEARS' | 'ALL';
+
+/** Un mese degli investimenti. */
+export interface InvestmentMonth {
+  month: string; // "2026-10"
+  contributed: number; // versato netto nel mese (verso gli investimenti, meno quello che è tornato)
+  cumulative: number; // versato netto dall'inizio della storia fino a questo mese: la linea del grafico
+  income: number; // cedole, dividendi e interessi
+  taxes: number; // tasse sugli investimenti (di solito negativo)
+}
+
+/** Una voce di un elenco delle rendite: "Cedole", o un titolo. */
+export interface InvestmentGroup {
+  name: string;
+  amount: number;
+  movements: number;
+}
+
+/** GET /api/investments: quanto hai versato e quanto ti hanno reso gli investimenti (non quanto valgono oggi). */
+export interface Investments {
+  currency: string;
+  currencies: string[];
+  period: InvestmentPeriod;
+  from: string; // "2025-11"
+  to: string;
+  contributedTotal: number;
+  contributedThisYear: number;
+  contributedThisMonth: number;
+  incomeThisYear: number;
+  contributedInPeriod: number;
+  incomeInPeriod: number;
+  taxesInPeriod: number;
+  months: InvestmentMonth[];
+  incomeByType: InvestmentGroup[];
+  incomeBySource: InvestmentGroup[];
+  recentContributions: Transaction[];
 }

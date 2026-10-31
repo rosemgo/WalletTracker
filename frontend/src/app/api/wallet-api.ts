@@ -36,6 +36,8 @@ import {
   ExplorePeriod,
   ExploreSeries,
   GroupBy,
+  InvestmentPeriod,
+  Investments,
   Metric,
   Rule,
   RulePreview,
@@ -254,8 +256,11 @@ export class WalletApi {
   }
 
   /** POST /api/rules/preview: a quali movimenti si applicherebbe la regola, senza salvarla. */
-  previewRule(rule: RuleRequest): Observable<RulePreview> {
-    return this.http.post<RulePreview>('/api/rules/preview', rule);
+  /** POST /api/rules/preview (?id=7 mentre si modifica la regola 7: non blocca sé stessa) */
+  previewRule(rule: RuleRequest, id: number | null = null): Observable<RulePreview> {
+    return this.http.post<RulePreview>('/api/rules/preview', rule, {
+      params: id === null ? {} : { id },
+    });
   }
 
   /** GET /api/setup */
@@ -365,6 +370,13 @@ export class WalletApi {
   categoryOverview(id: number, month: string | null): Observable<CategoryOverview> {
     return this.http.get<CategoryOverview>(`/api/categories/${id}/overview`, {
       params: month ? { month } : {},
+    });
+  }
+
+  /** GET /api/investments?period=YEAR&currency=EUR (docs/investimenti.md) */
+  investments(period: InvestmentPeriod, currency: string | null = null): Observable<Investments> {
+    return this.http.get<Investments>('/api/investments', {
+      params: currency ? { period, currency } : { period },
     });
   }
 

@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
-import { Overview, OverviewCategory } from '../api/models';
+import { Investments, Overview, OverviewCategory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import {
   OverviewPage,
@@ -60,6 +60,26 @@ function category(name: string | null, amount: number, usual: number | null): Ov
 
 const euros = (v: number) => `${Math.round(v)} €`;
 
+/** Nessun investimento: la scheda "Investito" non compare (la provano i test degli investimenti). */
+const NO_INVESTMENTS = {
+  currency: 'EUR',
+  currencies: [],
+  period: 'YEAR',
+  from: '2025-11',
+  to: '2026-10',
+  contributedTotal: 0,
+  contributedThisYear: 0,
+  contributedThisMonth: 0,
+  incomeThisYear: 0,
+  contributedInPeriod: 0,
+  incomeInPeriod: 0,
+  taxesInPeriod: 0,
+  months: [],
+  incomeByType: [],
+  incomeBySource: [],
+  recentContributions: [],
+} as Investments;
+
 describe('OverviewPage', () => {
   const requests: [string | null, string | null][] = [];
   let respond: (month: string | null) => Observable<Overview>;
@@ -69,6 +89,7 @@ describe('OverviewPage', () => {
     requests.length = 0;
     respond = () => of(overview());
     const fakeApi: Partial<WalletApi> = {
+      investments: () => of(NO_INVESTMENTS), // la scheda degli investimenti: qui non c'è niente
       alerts: () => of([]),
       overview: (month: string | null, currency: string | null) => {
         requests.push([month, currency]);

@@ -14,7 +14,7 @@ import {
   TransactionType,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { TransactionDetail } from './transaction-detail';
+import { TransactionDetail, merchantSearch } from './transaction-detail';
 import { TransactionsChanged } from './transactions-changed';
 
 const CATEGORIES: Category[] = [
@@ -316,6 +316,13 @@ describe('TransactionDetail', () => {
     button('Tutti i movimenti di questo esercente').click();
     expect(changed.search()).toEqual({ text: 'pagamento pos amazon it' });
     expect(navigate).toHaveBeenCalledWith(['/movimenti']);
+  });
+
+  it('the search for the merchant keeps at most 10 whole words, the limit of the search', () => {
+    // Una chiave lunga (inventata), tagliata a 60 caratteri dentro una parola: 12 parole.
+    const key = 'BONIFICO ISTANTANEO DA VOI DISPOSTO N A FAVORE DI MARIO ROSSI IB';
+    expect(merchantSearch(key)).toBe('bonifico istantaneo da voi disposto n a favore di mario');
+    expect(merchantSearch('PAGAMENTO POS AMAZON IT')).toBe('pagamento pos amazon it');
   });
 
   it('says when the movement does not exist', async () => {

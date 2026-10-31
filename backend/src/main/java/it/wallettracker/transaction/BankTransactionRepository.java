@@ -247,4 +247,19 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
                              it.wallettracker.transaction.TransactionType.INCOME)
             """)
     List<BankTransaction> findMovementsBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * I movimenti degli investimenti, di tutta la storia (sono pochi: uno o due al mese), con conto e categoria già
+     * caricati: versamenti e prelievi, acquisti e vendite di titoli, rendite e tasse (docs/investimenti.md).
+     */
+    @Query("""
+            SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category JOIN FETCH t.account
+            WHERE t.type IN (it.wallettracker.transaction.TransactionType.INVESTMENT_DEPOSIT,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_WITHDRAWAL,
+                             it.wallettracker.transaction.TransactionType.SECURITIES_BUY,
+                             it.wallettracker.transaction.TransactionType.SECURITIES_SELL,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_INCOME,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_TAX)
+            """)
+    List<BankTransaction> findInvestmentMovements();
 }

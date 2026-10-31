@@ -365,11 +365,11 @@ export class TransactionDetail implements OnInit {
     });
   }
 
-  /** "Tutti i movimenti di …": l'elenco cerca le parole dell'esercente. */
+  /** "Tutti i movimenti di …": l'elenco cerca le parole dell'esercente (al massimo 10: merchantSearch). */
   searchMerchant(): void {
     const key = this.detail()?.merchant?.key;
     if (key) {
-      this.changed.searchFor(key.toLowerCase());
+      this.changed.searchFor(merchantSearch(key));
       this.router.navigate(['/movimenti']);
     }
   }
@@ -403,4 +403,17 @@ export class TransactionDetail implements OnInit {
   protected typeLabel(t: Transaction, type: TransactionType): string {
     return type === 'EXPENSE' && t.amount > 0 ? 'Rimborso di una spesa' : this.typeLabels[type];
   }
+}
+
+/** Quante parole accetta la ricerca dei movimenti: lo stesso limite del backend (TransactionSearch.MAX_WORDS). */
+export const MAX_SEARCH_WORDS = 10;
+
+/**
+ * Le parole da cercare per "Tutti i movimenti di questo esercente": quelle della sua chiave, in minuscolo, al massimo
+ * le prime 10 intere. Una chiave lunga ("bonifico istantaneo da voi disposto n a favore di …") ne ha di più, e la
+ * ricerca rispondeva "Troppe parole da cercare" senza mostrare niente. Le prime 10 bastano: ogni parola deve esserci,
+ * quindi più parole restringono soltanto.
+ */
+export function merchantSearch(key: string): string {
+  return key.toLowerCase().split(/\s+/).filter(Boolean).slice(0, MAX_SEARCH_WORDS).join(' ');
 }

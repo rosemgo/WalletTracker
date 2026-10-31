@@ -24,6 +24,11 @@ export const routes: Routes = [
     title: 'Categoria · WalletTracker',
   },
   {
+    path: 'investimenti',
+    loadComponent: () => import('./investments/investments-page').then((m) => m.InvestmentsPage),
+    title: 'Investimenti · WalletTracker',
+  },
+  {
     path: 'budget',
     loadComponent: () => import('./budget/budget-page').then((m) => m.BudgetPage),
     title: 'Budget · WalletTracker',
