@@ -256,8 +256,18 @@ export interface Rule extends RuleRequest {
 
 /** Il risultato della prova di una regola. */
 export interface RulePreview {
-  matches: number;
+  matches: number; // a quanti movimenti corrisponde il testo
+  applies: number; // quanti ne classificherebbe davvero
+  blockers: RuleBlocker[]; // per gli altri, chi vince al suo posto
   examples: Transaction[];
+}
+
+/** Chi vince al posto della regola provata, e su quanti movimenti. */
+export interface RuleBlocker {
+  reason: 'RULE' | 'MANUAL' | 'TRANSFER'; // una regola che viene prima, una scelta a mano, un trasferimento
+  rule: string | null; // il nome della regola (solo RULE)
+  priority: number | null; // la sua priorità (solo RULE)
+  movements: number;
 }
 
 /** Lo stato della configurazione di Enable Banking (GET /api/setup). */

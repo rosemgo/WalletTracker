@@ -1226,6 +1226,18 @@ input.ng-invalid.ng-touched {
   margin-top: 1rem;
 }
 
+/* Nella prova di una regola: chi vince sui movimenti a cui la regola non si applicherebbe. */
+ul.blockers {
+  margin: 0 0 12px;
+  padding: 10px 14px 10px 30px;
+  border-radius: 12px;
+  background: var(--soft);
+}
+
+ul.blockers li + li {
+  margin-top: 6px;
+}
+
 tr.disabled {
   color: var(--sec);
 }

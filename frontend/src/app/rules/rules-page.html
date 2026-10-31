@@ -15,9 +15,20 @@
 @if (error()) {
   <p class="error">{{ error() }}</p>
 }
+@if (savedBlockers(); as w) {
+  <!-- Dopo "Salva": la regola è salvata, ma su alcuni movimenti vince qualcun altro (docs/investimenti.md, parte H). -->
+  <div class="card warning" role="status">
+    <p>
+      Attenzione: la regola «{{ w.rule }}» è salvata, ma per alcuni movimenti che corrispondono al
+      suo testo non vince lei.
+    </p>
+    <ng-container *ngTemplateOutlet="blockersList; context: { $implicit: w.blockers }" />
+  </div>
+}
 
-<!-- Il modulo. [formGroup] lo collega a "form" nella classe; (ngSubmit) scatta premendo "Salva" o Invio. -->
-<form class="card" [formGroup]="form" (ngSubmit)="save()">
+<!-- Il modulo. [formGroup] lo collega a "form" nella classe; (ngSubmit) scatta premendo "Salva" o Invio.
+     id: "Modifica" lo porta in vista (scrollIntoView), anche con un elenco lungo di regole. -->
+<form id="rule-form" class="card" [formGroup]="form" (ngSubmit)="save()">
   <h2>{{ editing() ? 'Modifica la regola' : 'Nuova regola' }}</h2>
 
   <div class="form-grid">
@@ -122,9 +133,15 @@
         Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong>
         {{ p.matches === 1 ? 'movimento' : 'movimenti' }}.
         @if (p.matches > 0) {
-          Ecco i più recenti:
+          La regola ne classificherebbe <strong>{{ p.applies }}</strong
+          >.
         }
       </p>
+      <!-- Chi vince sugli altri (docs/investimenti.md, parte H): senza, "corrisponde a 4" sembrava "vale per 4". -->
+      <ng-container *ngTemplateOutlet="blockersList; context: { $implicit: p.blockers }" />
+      @if (p.matches > 0) {
+        <p class="secondary">I più recenti:</p>
+      }
       <ul>
         @for (t of p.examples; track t.id) {
           <li>
@@ -215,3 +232,30 @@
   </p>
   <ng-container *ngTemplateOutlet="rulesTable; context: { $implicit: builtinRules() }" />
 </details>
+
+<!-- Chi vince al posto della regola, e su quanti movimenti: nella prova e dopo il salvataggio. -->
+<ng-template #blockersList let-list>
+  @if (asBlockers(list).length > 0) {
+    <ul class="blockers">
+      @for (b of asBlockers(list); track b.reason + (b.rule ?? '')) {
+        <li>
+          <strong>{{ b.movements === 1 ? '1 movimento' : b.movements + ' movimenti' }}:</strong>
+          @switch (b.reason) {
+            @case ('RULE') {
+              vince la regola «{{ b.rule }}», che ha priorità {{ b.priority }}. Per far valere
+              questa, dalle una priorità più bassa di {{ b.priority }}.
+            }
+            @case ('MANUAL') {
+              il tipo è stato scelto a mano, e una scelta a mano vince sempre sulle regole.
+            }
+            @default {
+              sono trasferimenti tra i tuoi conti (abbinati, o con l'IBAN di un tuo conto): vengono
+              prima delle regole. Per un conto di investimento, dagli il ruolo Investimenti in
+              Conti.
+            }
+          }
+        </li>
+      }
+    </ul>
+  }
+</ng-template>

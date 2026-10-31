@@ -255,8 +255,11 @@ export class WalletApi {
   }
 
   /** POST /api/rules/preview: a quali movimenti si applicherebbe la regola, senza salvarla. */
-  previewRule(rule: RuleRequest): Observable<RulePreview> {
-    return this.http.post<RulePreview>('/api/rules/preview', rule);
+  /** POST /api/rules/preview (?id=7 mentre si modifica la regola 7: non blocca sé stessa) */
+  previewRule(rule: RuleRequest, id: number | null = null): Observable<RulePreview> {
+    return this.http.post<RulePreview>('/api/rules/preview', rule, {
+      params: id === null ? {} : { id },
+    });
   }
 
   /** GET /api/setup */

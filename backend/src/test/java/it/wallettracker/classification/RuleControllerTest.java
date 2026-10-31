@@ -154,6 +154,50 @@ class RuleControllerTest {
     }
 
     @Test
+    void thePreviewSaysWhoWinsWhenTheRuleWouldNotApply() throws Exception {
+        // Bonifici verso il conto di un PAC (inventati): il testo finisce con "Note: Trasferimento a mio conto", e la
+        // regola di partenza "Trasferimento a un proprio conto" (priorità 40) li prende prima di una regola a 100.
+        Account account = accountRepository.findAll().getFirst();
+        String text = "Bonifico istantaneo da voi disposto N. ABC A favore di MARIO ROSSI IBAN beneficiario "
+                + "IT00X0000000000000000000009 Note: Trasferimento a mio conto";
+        transaction(account, "t-4", "-200.00", text);
+        transaction(account, "t-5", "-200.00", text.replace("ABC", "DEF"));
+        BankTransaction chosenByHand = transaction(account, "t-6", "-200.00", text.replace("ABC", "GHI"));
+        chosenByHand.setManualType(TransactionType.EXPENSE);
+        transactionRepository.save(chosenByHand);
+        classificationService.classifyAll();
+        String pac = """
+                {"name": "PAC", "priority": %d, "enabled": true, "matchMode": "CONTAINS",
+                 "pattern": "IT00X0000000000000000000009", "amountSign": "NEGATIVE",
+                 "resultType": "INVESTMENT_DEPOSIT"}
+                """;
+
+        assertThat(post("/api/rules/preview", pac.formatted(100)))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.matches").isEqualTo(3);
+                    json.assertThat().extractingPath("$.applies").isEqualTo(0);
+                    json.assertThat().extractingPath("$.blockers[0].reason").isEqualTo("RULE");
+                    json.assertThat().extractingPath("$.blockers[0].rule").isEqualTo("Trasferimento a un proprio conto");
+                    json.assertThat().extractingPath("$.blockers[0].priority").isEqualTo(40);
+                    json.assertThat().extractingPath("$.blockers[0].movements").isEqualTo(2);
+                    json.assertThat().extractingPath("$.blockers[1].reason").isEqualTo("MANUAL");
+                });
+        // Con una priorità più bassa di 40 vince lei (tranne sul movimento scelto a mano).
+        assertThat(post("/api/rules/preview", pac.formatted(10)))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.applies").isEqualTo(2);
+
+        // Salvata con priorità 10, e riprovata mentre la si modifica: non blocca sé stessa.
+        Long id = Long.valueOf(post("/api/rules", pac.formatted(10)).getResponse().getContentAsString()
+                .replaceAll(".*\"id\":(\\d+).*", "$1"));
+        assertThat(post("/api/rules/preview?id=" + id, pac.formatted(10)))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.applies").isEqualTo(2);
+    }
+
+    @Test
     void thePreviewFindsAMovementWhateverTheNumberOfSpaces() {
         // Un pagamento con carta in campi a larghezza fissa, come lo mandano molte banche. In pagina si vede
         // "MAR GROUP SPA FOGLIANISE ITA": la regola scritta così deve trovarlo.

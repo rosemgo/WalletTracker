@@ -17,6 +17,7 @@
 | E | che cosa **non** è: il valore di oggi |
 | F | i test, e la prova nel browser |
 | G | esercizi guidati |
+| H | aggiunta: la prova delle regole dice chi vince, e altri due ritocchi |
 
 ---
 
@@ -39,7 +40,8 @@ Perché un bonifico verso il conto del PAC conti, deve avere il tipo **Versament
    suo IBAN se la banca non si può collegare, come Tinaba. Il bonifico che cita quell'IBAN diventa da solo un
    versamento (`ClassificationService`, passo 5: "il movimento cita l'IBAN di un altro tuo conto").
 2. **Una regola**: "se il testo contiene TINABA, allora il tipo è Versamento investimenti". Vale per tutti i
-   bonifici, passati e futuri, qualunque sia l'importo.
+   bonifici, passati e futuri, qualunque sia l'importo. **Attenzione alla priorità** (Parte H): se la causale finisce
+   con "Note: Trasferimento a mio conto", la regola di partenza a priorità 40 viene prima.
 3. **Per un movimento solo**: nella sua scheda, "Conta come".
 
 Se non c'è ancora niente, la pagina Investimenti mostra proprio questi tre modi.
@@ -217,3 +219,82 @@ Tre ritocchi trovati così:
    Quale test fallisce, e con quale numero? Perché?
 3. **Il rendimento delle cedole.** Aggiungi alla pagina "rendite / versato" in percentuale, per l'anno. Perché non è
    il rendimento vero del portafoglio (pensa ai soldi versati a dicembre)?
+
+---
+
+## Parte H: la prova delle regole dice chi vince, e altri due ritocchi
+
+### Il problema, trovato usando l'app
+
+Una regola per i bonifici verso il PAC ("contiene" l'IBAN del conto, "allora il tipo è Versamento investimenti",
+priorità 100). "Prova" diceva: "corrisponde a 4 movimenti". Salvata, i 4 bonifici restavano "Trasferimento interno".
+
+Il motivo: le causali finivano con "Note: Trasferimento a mio conto", e c'è una **regola di partenza**,
+"Trasferimento a un proprio conto", con **priorità 40**, che scatta su quelle parole. Le regole si provano dalla
+priorità più bassa (`docs/07`): vinceva lei, sempre. La soluzione per l'utente era semplice (priorità 10), ma la
+pagina non lo diceva: "corrisponde a 4" sembrava "vale per 4".
+
+### La prova ora dice quanti ne classificherebbe davvero, e chi vince sugli altri
+
+```
+Il testo di questa regola corrisponde a 4 movimenti. La regola ne classificherebbe 0.
+• 4 movimenti: vince la regola «Trasferimento a un proprio conto», che ha priorità 40.
+  Per far valere questa, dalle una priorità più bassa di 40.
+```
+
+Nel backend (`RuleService.preview`) ogni movimento che corrisponde passa da `blockerOf`, che legge la **classificazione
+attuale** del movimento. Quella è il risultato dell'ordine della classificazione, quindi dice chi vince oggi:
+
+| Il movimento ha… | Chi vince | Il messaggio |
+|---|---|---|
+| un tipo scelto a mano | la scelta a mano (passo 2) | "una scelta a mano vince sempre sulle regole" |
+| nessuna regola, e un tipo da trasferimento | un trasferimento tra i tuoi conti (passi 4 e 5) | "dagli il ruolo Investimenti in Conti" |
+| una regola che viene prima | quella regola | il nome, la priorità, "dalle una priorità più bassa" |
+| una regola che viene dopo, o nessuna | la regola provata | (conta in "ne classificherebbe") |
+
+"Viene prima" vuol dire priorità più bassa; a parità di priorità, la regola creata prima (id più piccolo). Una regola
+**in modifica** non deve bloccare sé stessa: la pagina manda il suo id (`POST /api/rules/preview?id=7`). Una regola
+nuova non ha ancora un id, e a parità di priorità arriva dopo tutte.
+
+La risposta ha due campi in più, `applies` e `blockers`: chi usava solo `matches` e `examples` continua a funzionare.
+
+### Anche dopo "Salva"
+
+Non tutti premono "Prova". Dopo il salvataggio la pagina rifà la prova da sola, per la regola appena salvata. Se su
+qualche movimento vince qualcun altro, compare un avviso sopra il modulo: "la regola «PAC» è salvata, ma per alcuni
+movimenti che corrispondono al suo testo non vince lei", con lo stesso elenco. L'elenco è scritto una volta sola, in
+un `ng-template` usato in tutti e due i posti, come la tabella delle regole (`docs/39`, parte F).
+
+### "Modifica" porta il modulo in vista
+
+Con molte regole il pulsante "Modifica" è in fondo alla pagina e il modulo in cima: il modulo si riempiva senza che
+si vedesse. Ora la pagina sale al modulo (`scrollIntoView`), come nel Budget (`docs/39`, parte B).
+
+### "Tutti i movimenti di questo esercente": al massimo 10 parole
+
+La ricerca accetta al massimo 10 parole (`docs/32`, `TransactionSearch.MAX_WORDS`). La chiave di un bonifico
+istantaneo ne ha di più ("bonifico istantaneo da voi disposto n a favore di …"), e il link apriva Movimenti con
+"Troppe parole da cercare" e nessun risultato. Ora cerca le **prime 10 parole intere** (`merchantSearch`). Ogni parola
+deve esserci, quindi togliere le ultime allarga soltanto un poco la ricerca, e i movimenti dell'esercente ci sono
+tutti.
+
+### I test, e la prova nel browser
+
+- `RuleControllerTest`: tre bonifici inventati con "Note: Trasferimento a mio conto", uno scelto a mano. A priorità 100
+  la regola ne classificherebbe 0: 2 li prende la regola di partenza (priorità 40), 1 la scelta a mano. A priorità
+  10, 2. Salvata e riprovata come regola in modifica, non blocca sé stessa.
+- `rules-page.spec.ts`: il messaggio della prova; l'avviso dopo il salvataggio; "Modifica" porta in vista il modulo.
+- `transaction-detail.spec.ts`: le 10 parole intere.
+- Nel browser, con quattro bonifici inventati:
+  - la prova e l'avviso dicono che vince la regola a 40;
+  - "Modifica" riporta in cima; con priorità 10 la regola classifica i 4 bonifici e l'avviso sparisce;
+  - "Tutti i movimenti di questo esercente" trova i 4 movimenti, senza errore.
+
+### Un limite che resta
+
+I bonifici istantanei di ING verso **te stesso** ("A favore di NOME COGNOME IBAN beneficiario …") hanno tutti la stessa
+chiave dell'esercente, qualunque sia il conto di arrivo: il PAC, il broker, un altro tuo conto. "Lo stesso esercente"
+li mette insieme. Per separarli servirebbe una regola nuova in `MerchantKey`: il nome dopo "A favore di", e l'IBAN
+quando il nome è il tuo. Cambiando la chiave serve anche una migrazione che ricalcoli le chiavi salvate (`docs/40`).
+È da fare quando la Fase 4 sarà finita, per non scontrarsi con le sue migrazioni.
+

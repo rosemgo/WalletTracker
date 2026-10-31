@@ -1,5 +1,5 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DOCUMENT, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -20,6 +20,7 @@ import {
   RulePreview,
   RuleRequest,
   TransactionType,
+  RuleBlocker,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
@@ -51,6 +52,7 @@ const NEW_RULE: RuleRequest = {
 export class RulesPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly document = inject(DOCUMENT);
 
   /**
    * Il "costruttore di moduli". NonNullable: con reset() i campi tornano al valore iniziale, non a null,
@@ -79,6 +81,8 @@ export class RulesPage implements OnInit {
   }
   protected readonly editing = signal<Rule | null>(null); // la regola in modifica; null = regola nuova
   protected readonly preview = signal<RulePreview | null>(null);
+  /** Dopo "Salva": chi vince al posto della regola appena salvata, su alcuni movimenti (null = nessuno). */
+  protected readonly savedBlockers = signal<{ rule: string; blockers: RuleBlocker[] } | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
   /** L'elenco delle categorie, per il menu "Categoria". */
@@ -152,11 +156,12 @@ export class RulesPage implements OnInit {
     this.tryRule();
   }
 
-  /** "Modifica": carica la regola nel modulo. */
+  /** "Modifica": carica la regola nel modulo, e porta il modulo in vista (è in cima alla pagina). */
   edit(rule: Rule): void {
     this.editing.set(rule);
     this.preview.set(null);
     this.message.set(null);
+    this.savedBlockers.set(null);
     // setValue vuole TUTTI i campi del modulo.
     this.form.setValue({
       name: rule.name,
@@ -168,6 +173,10 @@ export class RulesPage implements OnInit {
       priority: rule.priority,
       enabled: rule.enabled,
     });
+    // Con molte regole il pulsante è in fondo e il modulo in cima: senza, la modifica non si vedrebbe.
+    this.document
+      .getElementById('rule-form')
+      ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
 
   /** Torna al modulo vuoto, per una regola nuova. */
@@ -183,7 +192,7 @@ export class RulesPage implements OnInit {
       this.form.markAllAsTouched(); // mostra gli errori di tutti i campi
       return;
     }
-    this.api.previewRule(this.form.getRawValue()).subscribe({
+    this.api.previewRule(this.form.getRawValue(), this.editing()?.id ?? null).subscribe({
       next: (preview) => this.preview.set(preview),
       error: (response) => this.error.set(response.error?.detail ?? 'Prova non riuscita.'),
     });
@@ -202,11 +211,19 @@ export class RulesPage implements OnInit {
       : this.api.createRule(request);
 
     this.error.set(null);
+    this.savedBlockers.set(null);
     saved$.subscribe({
       next: (rule) => {
         this.message.set(`Regola "${rule.name}" salvata: ora classifica ${rule.uses} movimenti.`);
         this.cancel();
         this.loadRules();
+        // La prova, rifatta da sola: se su qualche movimento vince un'altra regola, lo diciamo subito.
+        this.api.previewRule(request, rule.id).subscribe({
+          next: (preview) =>
+            this.savedBlockers.set(
+              preview.blockers.length > 0 ? { rule: rule.name, blockers: preview.blockers } : null,
+            ),
+        });
       },
       error: (response) =>
         this.error.set(response.error?.detail ?? 'La regola non è stata salvata.'),
@@ -232,6 +249,11 @@ export class RulesPage implements OnInit {
       error: (response) =>
         this.error.set(response.error?.detail ?? 'La regola non è stata cancellata.'),
     });
+  }
+
+  /** Il tipo dell'elenco passato al template "blockersList" (let-list è senza tipo: vedi asRules). */
+  protected asBlockers(list: RuleBlocker[]): RuleBlocker[] {
+    return list;
   }
 
   /** Il campo ha un errore da mostrare? Solo dopo che l'utente ci è passato (touched). */
