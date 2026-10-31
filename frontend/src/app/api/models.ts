@@ -658,3 +658,44 @@ export interface CategoryOverview {
   merchants: ExploreGroup[];
   budget: Budget | null;
 }
+
+// ---- Investimenti (docs/investimenti.md) ----
+
+/** Quanto indietro guardare: 12 mesi, 24 mesi, tutta la storia. */
+export type InvestmentPeriod = 'YEAR' | 'TWO_YEARS' | 'ALL';
+
+/** Un mese degli investimenti. */
+export interface InvestmentMonth {
+  month: string; // "2026-10"
+  contributed: number; // versato netto nel mese (verso gli investimenti, meno quello che è tornato)
+  cumulative: number; // versato netto dall'inizio della storia fino a questo mese: la linea del grafico
+  income: number; // cedole, dividendi e interessi
+  taxes: number; // tasse sugli investimenti (di solito negativo)
+}
+
+/** Una voce di un elenco delle rendite: "Cedole", o un titolo. */
+export interface InvestmentGroup {
+  name: string;
+  amount: number;
+  movements: number;
+}
+
+/** GET /api/investments: quanto hai versato e quanto ti hanno reso gli investimenti (non quanto valgono oggi). */
+export interface Investments {
+  currency: string;
+  currencies: string[];
+  period: InvestmentPeriod;
+  from: string; // "2025-11"
+  to: string;
+  contributedTotal: number;
+  contributedThisYear: number;
+  contributedThisMonth: number;
+  incomeThisYear: number;
+  contributedInPeriod: number;
+  incomeInPeriod: number;
+  taxesInPeriod: number;
+  months: InvestmentMonth[];
+  incomeByType: InvestmentGroup[];
+  incomeBySource: InvestmentGroup[];
+  recentContributions: Transaction[];
+}

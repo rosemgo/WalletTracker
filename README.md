@@ -65,6 +65,8 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 ## Guide
 
+> Fuori dalla numerazione (scritta in parallelo alla Fase 4): [Investimenti: quanto hai versato, cedole, dividendi e interessi](docs/investimenti.md).
+
 1. [Installazione e setup dell'ambiente](docs/01-installazione-e-setup.md)
 2. [Fase 0: collegamento alla banca](docs/02-fase-0-collegamento-banca.md)
 3. [Modello e regole: le decisioni prese](docs/03-modello-e-regole.md)

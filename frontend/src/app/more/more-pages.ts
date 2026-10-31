@@ -18,6 +18,11 @@ export const MORE_PAGES: NavItem[] = [
     label: 'Abbonamenti',
     hint: 'le spese che tornano ogni mese o ogni anno',
   },
+  {
+    path: '/investimenti',
+    label: 'Investimenti',
+    hint: 'quanto hai versato, cedole, dividendi e interessi',
+  },
   { path: '/conti', label: 'Conti', hint: 'i conti collegati e quelli aggiunti a mano' },
   {
     path: '/collega',

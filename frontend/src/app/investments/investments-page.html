@@ -1,0 +1,157 @@
+<h1>Investimenti</h1>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (data(); as d) {
+  <div class="investments" [class.loading]="loading()">
+    @if (d.currencies.length > 1) {
+      <label class="currency-choice">
+        Valuta
+        <select (change)="onCurrency($event)">
+          @for (c of d.currencies; track c) {
+            <option [value]="c" [selected]="c === d.currency">{{ c }}</option>
+          }
+        </select>
+      </label>
+    }
+
+    @if (empty()) {
+      <!-- Niente da mostrare: come farli riconoscere (docs/investimenti.md, parte A). -->
+      <section class="card soft">
+        <h2>Ancora nessun investimento</h2>
+        <p>
+          Qui compaiono i soldi che metti negli investimenti e le cedole, i dividendi e gli
+          interessi che incassi. Perché un bonifico verso il conto del tuo PAC o del tuo broker
+          conti come investimento, deve avere il tipo
+          <strong>Versamento investimenti</strong>. Tre modi:
+        </p>
+        <ul class="steps">
+          <li>
+            in <a routerLink="/conti">Conti</a>, il conto di investimento con il ruolo
+            <strong>Investimenti</strong>
+            (anche un conto manuale, con il suo IBAN, se la banca non si può collegare);
+          </li>
+          <li>
+            una <a routerLink="/regole">regola</a>: "se il testo contiene" il nome del broker,
+            "allora il tipo è" Versamento investimenti;
+          </li>
+          <li>per un movimento solo: nella sua scheda, <strong>Conta come</strong>.</li>
+        </ul>
+      </section>
+    } @else {
+      <div class="segmented" role="group" aria-label="Periodo">
+        @for (p of periods; track p.value) {
+          <button
+            type="button"
+            [attr.aria-pressed]="period() === p.value"
+            (click)="choosePeriod(p.value)"
+          >
+            {{ p.label }}
+          </button>
+        }
+      </div>
+
+      <div class="investments-grid">
+        <section class="card hero">
+          <span class="secondary">{{ figure()?.label }}</span>
+          <span class="big-figure">{{
+            figure()?.value ?? d.contributedTotal | money: d.currency : 'symbol' : '1.0-0'
+          }}</span>
+          <p class="comparison">{{ comparison() }}</p>
+          <app-trend-chart
+            [values]="cumulative()"
+            [labels]="monthLabels()"
+            [names]="monthNames()"
+            [description]="lineDescription()"
+            [currency]="d.currency"
+            (scrubbed)="scrubIndex.set($event)"
+          />
+          <p class="secondary note-value">
+            Sono i soldi che hai messo negli investimenti, meno quelli che hai ripreso: non quanto
+            valgono oggi.
+          </p>
+        </section>
+
+        <section class="card">
+          <span class="secondary">Cedole, dividendi e interessi · {{ periodLabel(d.period) }}</span>
+          <span class="mid-figure">{{
+            d.incomeInPeriod | money: d.currency : 'symbol' : '1.0-0'
+          }}</span>
+          @if (d.taxesInPeriod !== 0) {
+            <p class="secondary">
+              Tasse sugli investimenti nello stesso periodo:
+              {{ d.taxesInPeriod | money: d.currency : 'symbol' : '1.0-0' }}
+            </p>
+          }
+          <app-bar-chart
+            [values]="income()"
+            [labels]="barLabels()"
+            [names]="barNames()"
+            [selected]="lastIncome()"
+            [description]="barDescription()"
+          />
+          @if (d.incomeByType.length > 0) {
+            <h3>Per tipo</h3>
+            <ul class="rows">
+              @for (g of d.incomeByType; track g.name) {
+                <li>
+                  <span>
+                    {{ g.name }}
+                    <span class="secondary">{{
+                      g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                    }}</span>
+                  </span>
+                  <strong>{{ g.amount | money: d.currency }}</strong>
+                </li>
+              }
+            </ul>
+            <h3>Da dove</h3>
+            <ul class="rows">
+              @for (g of d.incomeBySource; track g.name) {
+                <li>
+                  <span>
+                    {{ g.name | readable }}
+                    <span class="secondary">{{
+                      g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                    }}</span>
+                  </span>
+                  <strong>{{ g.amount | money: d.currency }}</strong>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="secondary">Nessuna rendita in questo periodo.</p>
+          }
+        </section>
+      </div>
+
+      @if (d.recentContributions.length > 0) {
+        <h2 class="days-title">Gli ultimi versamenti</h2>
+        <section class="day">
+          <ul>
+            @for (t of d.recentContributions; track t.id) {
+              <li>
+                <a class="movement" [routerLink]="['/movimenti', t.id]">
+                  <span class="avatar" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
+                    initialOf(t)
+                  }}</span>
+                  <span class="movement-text">
+                    <span class="name">{{ nameOf(t) }}</span>
+                    <span class="secondary">{{ t.bookingDate | date: 'd MMMM y' }}</span>
+                  </span>
+                  <span class="amount" [class.positive]="t.amount > 0">{{
+                    t.amount | money: t.currency
+                  }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  </div>
+} @else if (loading()) {
+  <p>Caricamento...</p>
+}

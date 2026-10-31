@@ -29,7 +29,8 @@
         "/api/categories**",
         "/api/accounts**",
         "/api/budgets**",
-        "/api/subscriptions**"
+        "/api/subscriptions**",
+        "/api/investments**"
       ],
       "cacheConfig": {
         "strategy": "freshness",

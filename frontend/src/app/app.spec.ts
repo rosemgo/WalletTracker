@@ -56,6 +56,7 @@ describe('App', () => {
     expect(texts('a.section')).toEqual(['Riepilogo', 'Movimenti', 'Analisi', 'Budget', 'Altro']);
     expect(texts('.more-pages a')).toEqual([
       'Abbonamenti',
+      'Investimenti',
       'Conti',
       'Collega una banca',
       'Importa',

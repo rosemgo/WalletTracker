@@ -2999,6 +2999,108 @@ a.button.primary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* ---- Investimenti (docs/investimenti.md) ---- */
+.investments.loading {
+  opacity: 0.6;
+}
+
+/* Una cifra media: più piccola della cifra grande (una sola per schermata), più grande del testo. */
+.mid-figure {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-value {
+  margin: 8px 0 0;
+}
+
+.investments h3 {
+  margin: 18px 0 4px;
+  color: var(--sec);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+ul.steps {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+ul.steps li + li {
+  margin-top: 6px;
+}
+
+/* La scheda del Riepilogo: tutta toccabile, porta alla pagina. */
+a.card.investments-card {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s var(--ease);
+}
+
+@media (hover: hover) {
+  a.card.investments-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.investments-card .card-head span {
+  color: var(--acc);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.investments-card .figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 6px 0 10px;
+}
+
+.investments-card .figures strong {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Il piccolo grafico della scheda: la stessa linea, senza assi. */
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 48px;
+  overflow: visible;
+}
+
+.sparkline .spark-area {
+  fill: var(--acc);
+  fill-opacity: 0.12;
+}
+
+.sparkline .spark-line {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; /* lo spessore resta quello, anche se il disegno si allarga */
+}
+
+@media (min-width: 1100px) {
+  .investments-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0 16px;
+    align-items: start;
+  }
+}
+
 /* ---- Le tabelle sul telefono: una scheda per riga (docs/39, parte C) ----
    Sotto i 700 pixel una tabella con la classe "cards" smette di essere una griglia: ogni riga diventa una scheda, la
    cella "card-title" va in cima come titolo, e ogni altra cella scrive davanti il nome della sua colonna (preso

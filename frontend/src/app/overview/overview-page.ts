@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AlertsPanel } from '../alerts/alerts-panel';
 import { Overview, OverviewCategory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { InvestmentsCard } from '../investments/investments-card';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { MonthChart } from './month-chart';
@@ -41,7 +42,15 @@ function capitalized(text: string): string {
  */
 @Component({
   selector: 'app-overview-page',
-  imports: [AlertsPanel, DatePipe, MoneyPipe, MonthChart, NgTemplateOutlet, RouterLink],
+  imports: [
+    AlertsPanel,
+    DatePipe,
+    InvestmentsCard,
+    MoneyPipe,
+    MonthChart,
+    NgTemplateOutlet,
+    RouterLink,
+  ],
   templateUrl: './overview-page.html',
 })
 export class OverviewPage implements OnInit {

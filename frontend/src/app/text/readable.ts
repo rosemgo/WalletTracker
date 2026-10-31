@@ -17,6 +17,12 @@ const ACRONYMS = new Set([
   'ING',
   'BNL',
   'BPER',
+  'BTP', // le sigle dei titoli di Stato e dei fondi (docs/investimenti.md)
+  'BOT',
+  'CCT',
+  'CTZ',
+  'ETF',
+  'ETC',
   'UK',
   'USA',
   'EU',

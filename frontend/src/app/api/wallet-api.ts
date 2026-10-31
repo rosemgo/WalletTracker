@@ -35,6 +35,8 @@ import {
   ExplorePeriod,
   ExploreSeries,
   GroupBy,
+  InvestmentPeriod,
+  Investments,
   Metric,
   Rule,
   RulePreview,
@@ -346,6 +348,13 @@ export class WalletApi {
   categoryOverview(id: number, month: string | null): Observable<CategoryOverview> {
     return this.http.get<CategoryOverview>(`/api/categories/${id}/overview`, {
       params: month ? { month } : {},
+    });
+  }
+
+  /** GET /api/investments?period=YEAR&currency=EUR (docs/investimenti.md) */
+  investments(period: InvestmentPeriod, currency: string | null = null): Observable<Investments> {
+    return this.http.get<Investments>('/api/investments', {
+      params: currency ? { period, currency } : { period },
     });
   }
 
