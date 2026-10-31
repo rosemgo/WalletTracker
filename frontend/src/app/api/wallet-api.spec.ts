@@ -83,6 +83,8 @@ describe('WalletApi', () => {
       descriptionColumn: null,
       counterpartyColumn: null,
       currencyColumn: null,
+      signColumn: null,
+      incomeWords: null,
     };
     api.importCsv(file, 7, mapping).subscribe();
 

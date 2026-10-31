@@ -190,6 +190,18 @@ public class CsvImportService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica la colonna dell'importo.");
             }
             used.add(mapping.amountColumn());
+        } else if (mapping.amountMode() == ImportMapping.AmountMode.UNSIGNED) {
+            // Senza segno: l'importo, la colonna in cui cercare le parole e almeno una parola (docs/tinaba.md).
+            if (mapping.amountColumn() == null || mapping.signColumn() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Indica la colonna dell'importo e quella in cui cercare le parole delle entrate.");
+            }
+            if (mapping.incomeWordList().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Scrivi almeno una parola delle entrate (per esempio \"ricevuto\").");
+            }
+            used.add(mapping.amountColumn());
+            used.add(mapping.signColumn());
         } else {
             if (mapping.incomeColumn() == null || mapping.expenseColumn() == null) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,

@@ -52,7 +52,7 @@ export interface ManualAccountRequest {
 }
 
 /** Una colonna con l'importo con il segno, oppure due colonne (entrate e uscite). */
-export type AmountMode = 'SINGLE' | 'SPLIT';
+export type AmountMode = 'SINGLE' | 'SPLIT' | 'UNSIGNED'; // UNSIGNED: senza segno, dal testo (docs/tinaba.md)
 
 /** Il separatore dei decimali: virgola (12,50) o punto (12.50). */
 export type DecimalSeparator = 'COMMA' | 'DOT';
@@ -73,6 +73,8 @@ export interface ImportMapping {
   descriptionColumn: number | null;
   counterpartyColumn: number | null;
   currencyColumn: number | null;
+  signColumn: number | null; // con UNSIGNED: dove cercare le parole delle entrate
+  incomeWords: string | null; // con UNSIGNED: "ricevuto, ricevuta": quelle righe sono entrate, le altre uscite
 }
 
 /** Una riga letta con la mappatura, nell'anteprima. */

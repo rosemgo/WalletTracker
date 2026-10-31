@@ -108,6 +108,8 @@ export class ImportPage implements OnInit {
     descriptionColumn: this.fb.control<number | null>(null),
     counterpartyColumn: this.fb.control<number | null>(null),
     currencyColumn: this.fb.control<number | null>(null),
+    signColumn: this.fb.control<number | null>(null),
+    incomeWords: this.fb.control<string | null>(null),
   });
 
   /**

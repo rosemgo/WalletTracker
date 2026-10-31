@@ -64,7 +64,7 @@ class RowReaderTest {
     @Test
     void aWholeRowWithOneSignedAmountColumn() {
         ImportMapping mapping = new ImportMapping(";", 0, "dd/MM/yyyy", AmountMode.SINGLE, 3, null, null,
-                DecimalSeparator.COMMA, 1, 2, null);
+                DecimalSeparator.COMMA, 1, 2, null, null, null);
 
         ParsedRow row = RowReader.read(List.of("03/10/2026", "  Pagamento   carta ", "NETFLIX.COM", "-12,99"),
                 mapping, "EUR");
@@ -76,7 +76,7 @@ class RowReaderTest {
     @Test
     void incomeAndExpenseInTwoColumnsBecomeOneSignedAmount() {
         ImportMapping mapping = new ImportMapping(";", 0, "dd/MM/yyyy", AmountMode.SPLIT, null, 1, 2,
-                DecimalSeparator.COMMA, 3, null, null);
+                DecimalSeparator.COMMA, 3, null, null, null, null);
 
         assertThat(RowReader.read(List.of("01/10/2026", "2.100,00", "", "Stipendio"), mapping, "EUR").amount())
                 .isEqualByComparingTo("2100.00");
@@ -90,9 +90,29 @@ class RowReaderTest {
     }
 
     @Test
+    void amountsWithoutSignTakeTheSignFromTheWordsOfTheIncome() {
+        // Come il file di Tinaba (docs/tinaba.md), con dati inventati: data, descrizione, importo sempre positivo.
+        ImportMapping mapping = new ImportMapping(",", 0, "dd/MM/yyyy", AmountMode.UNSIGNED, 2, null, null,
+                DecimalSeparator.COMMA, 1, null, null, 1, " Ricevuto , ricevuta,, ");
+
+        assertThat(mapping.incomeWordList()).containsExactly("ricevuto", "ricevuta");
+        assertThat(RowReader.read(List.of("28/10/2026 01:32:31", "Ricevuto da Mario Rossi", "200"), mapping, "EUR")
+                .amount()).isEqualByComparingTo("200.00");
+        assertThat(RowReader.read(List.of("13/10/2026", "Trasferimento RICEVUTO per campagna cashback", "46,74"),
+                mapping, "EUR").amount()).isEqualByComparingTo("46.74");
+        assertThat(RowReader.read(List.of("02/10/2026", "Nuovo versamento Robo advisor", "200"), mapping, "EUR")
+                .amount()).isEqualByComparingTo("-200.00");
+        // Un segno nel file non conta: decide il testo.
+        assertThat(RowReader.read(List.of("07/04/2026", "Ricarica effettuata", "-50"), mapping, "EUR").amount())
+                .isEqualByComparingTo("-50.00");
+        assertThat(RowReader.read(List.of("07/04/2026", "Ricevuto da Mario Rossi", "-50"), mapping, "EUR")
+                .amount()).isEqualByComparingTo("50.00");
+    }
+
+    @Test
     void theCurrencyComesFromItsColumnOrFromTheAccount() {
         ImportMapping mapping = new ImportMapping(",", 0, "yyyy-MM-dd", AmountMode.SINGLE, 1, null, null,
-                DecimalSeparator.DOT, null, null, 2);
+                DecimalSeparator.DOT, null, null, 2, null, null);
 
         assertThat(RowReader.read(List.of("2026-10-03", "-40.00", "usd"), mapping, "EUR").currency()).isEqualTo("USD");
         assertThat(RowReader.read(List.of("2026-10-03", "-40.00", ""), mapping, "EUR").currency()).isEqualTo("EUR");

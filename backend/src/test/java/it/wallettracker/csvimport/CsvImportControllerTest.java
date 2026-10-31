@@ -2,19 +2,25 @@ package it.wallettracker.csvimport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
+import it.wallettracker.transaction.TransactionStatus;
 import it.wallettracker.transaction.TransactionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +69,9 @@ class CsvImportControllerTest {
 
     @Autowired
     BankConnectionRepository connectionRepository;
+
+    @Autowired
+    CategoryRepository categoryRepository;
 
     @AfterEach
     void cleanDatabase() {
@@ -151,6 +160,60 @@ class CsvImportControllerTest {
                     json.assertThat().extractingPath("$.duplicates").isEqualTo(3);
                 });
         assertThat(transactionRepository.count()).isEqualTo(4);
+    }
+
+    @Test
+    void theTinabaFileGetsTheSignsAndTheTypesRight() {
+        // Il conto corrente (collegato) e il wallet Tinaba (manuale, ruolo Investimenti). Tutto inventato.
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-1",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account bank = accountRepository.save(new Account(connection, "k-1", "uid-1", null, "MARIO ROSSI", "EUR"));
+        transactionRepository.save(new BankTransaction(bank, "b-1", TransactionStatus.BOOKED, LocalDate.of(2026, 10, 28),
+                null, new BigDecimal("-200.00"), "EUR", null, "Bonifico istantaneo da voi disposto N. ABC A favore di "
+                + "MARIO ROSSI IBAN beneficiario IT00X0000000000000000000009 Note: Trasferimento a mio conto", "{}"));
+        Account tinaba = accountRepository.save(Account.manual("Tinaba", "Wallet", null, "EUR",
+                AccountRole.INVESTMENT));
+        String csv = """
+                Data,Categoria,Controparte,Descrizione,Causale/Messaggio,CRO/NOP,Importo,Community
+                28/10/2026 01:32:31,Bonifici,Mario Rossi,Ricevuto da Mario Rossi,Trasferimento a mio conto,ABC,200,no
+                13/10/2026 15:52:28,PAYMENT_TRANSFER,Tinaba Cashback,Trasferimento ricevuto per campagna cashback,Cashback Power,,"46,74",no
+                02/10/2026 17:04:33,Robo advisor,,Nuovo versamento Robo advisor,,,200,no
+                07/04/2026 14:21:03,PAYMENT_TRANSFER,Tinaba Power,Ricarica effettuata,,,50,no
+                """;
+
+        // La proposta riconosce il file: importi senza segno, entrate le righe "ricevuto".
+        assertThat(preview(tinaba, csv, null))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.mapping.amountMode").isEqualTo("UNSIGNED");
+                    json.assertThat().extractingPath("$.parsedRows[*].amount").asArray()
+                            .containsExactly(200.0, 46.74, -200.0, -50.0);
+                });
+        assertThat(importCsv(tinaba, csv, """
+                {"delimiter": ",", "dateColumn": 0, "dateFormat": "dd/MM/yyyy", "amountMode": "UNSIGNED",
+                 "amountColumn": 6, "decimalSeparator": "COMMA", "descriptionColumn": 3, "counterpartyColumn": 2,
+                 "signColumn": 3, "incomeWords": "ricevuto, ricevuta"}
+                """)).hasStatusOk();
+
+        Map<String, BankTransaction> byText = transactionRepository.findAll().stream()
+                .collect(Collectors.toMap(t -> t.getAccount().getId().equals(bank.getId()) ? "ING"
+                        : t.getDescription(), t -> t));
+        // Il bonifico: le due metà si abbinano, ed è un versamento negli investimenti da tutte e due le parti.
+        assertThat(byText.get("ING").getType()).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        assertThat(byText.get("Ricevuto da Mario Rossi").getType()).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        // Il versamento nel Robo advisor: acquisto titoli, non una spesa (regola di partenza V31).
+        assertThat(byText.get("Nuovo versamento Robo advisor").getType()).isEqualTo(TransactionType.SECURITIES_BUY);
+        // Il credito Power: una spesa; il cashback: il suo rimborso (spesa con il più), nella stessa categoria.
+        BankTransaction power = byText.get("Ricarica effettuata");
+        BankTransaction cashback = byText.get("Trasferimento ricevuto per campagna cashback");
+        assertThat(power.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(cashback.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(cashback.getAmount()).isPositive();
+        // L'id della categoria si legge senza database (il nome no: qui siamo fuori da una transazione).
+        Long bankCosts = categoryRepository.findByNameIgnoreCase("Costi bancari").orElseThrow().getId();
+        assertThat(power.getCategory().getId()).isEqualTo(bankCosts);
+        assertThat(cashback.getCategory().getId()).isEqualTo(bankCosts);
     }
 
     @Test

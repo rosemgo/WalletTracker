@@ -107,9 +107,12 @@
           <select formControlName="amountMode">
             <option [ngValue]="'SINGLE'">una colonna, con il segno (-12,50)</option>
             <option [ngValue]="'SPLIT'">due colonne: entrate e uscite</option>
+            <option [ngValue]="'UNSIGNED'">
+              una colonna senza segno: il verso si capisce dal testo
+            </option>
           </select>
         </label>
-        @if (mapping.controls.amountMode.value === 'SINGLE') {
+        @if (mapping.controls.amountMode.value !== 'SPLIT') {
           <label>
             Colonna dell'importo
             <select formControlName="amountColumn">
@@ -119,7 +122,30 @@
               }
             </select>
           </label>
-        } @else {
+        }
+        @if (mapping.controls.amountMode.value === 'UNSIGNED') {
+          <!-- Senza segno (Tinaba, docs/tinaba.md): sono entrate le righe con una di queste parole, le altre uscite. -->
+          <label>
+            Cerca le parole delle entrate nella colonna
+            <select formControlName="signColumn">
+              <option [ngValue]="null">— scegli —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Parole delle entrate, separate da virgole
+            <input
+              type="text"
+              formControlName="incomeWords"
+              placeholder="es. ricevuto, accredito"
+            />
+            <span class="hint"
+              >Le righe che ne contengono una sono entrate; tutte le altre, uscite.</span
+            >
+          </label>
+        } @else if (mapping.controls.amountMode.value === 'SPLIT') {
           <label>
             Colonna delle entrate
             <select formControlName="incomeColumn">

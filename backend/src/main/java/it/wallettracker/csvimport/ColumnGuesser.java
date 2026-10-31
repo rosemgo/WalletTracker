@@ -31,8 +31,23 @@ public final class ColumnGuesser {
     private ColumnGuesser() {
     }
 
+    /**
+     * Il file dei movimenti di Tinaba si riconosce dalle sue colonne, tutte insieme: nessun'altra banca ha "CRO/NOP" e
+     * "Community". I suoi importi non hanno il segno (docs/tinaba.md): sono entrate solo le righe "ricevuto"
+     * ("Ricevuto da …", "Trasferimento ricevuto per campagna cashback"), tutte le altre sono uscite (versamenti nel Robo
+     * advisor, acquisti del credito Power).
+     */
+    static final List<String> TINABA_HEADERS = List.of("data", "categoria", "controparte", "descrizione",
+            "causale/messaggio", "cro/nop", "importo", "community");
+
+    /** Le parole delle entrate di Tinaba: nella descrizione, "Ricevuto da …" e "Trasferimento ricevuto …". */
+    static final String TINABA_INCOME_WORDS = "ricevuto, ricevuta";
+
     public static ImportMapping guess(String delimiter, List<String> headers, List<List<String>> samples) {
         List<String> names = headers.stream().map(h -> h.trim().toLowerCase(Locale.ROOT)).toList();
+        if (names.equals(TINABA_HEADERS)) {
+            return tinaba(delimiter, samples);
+        }
         Integer date = find(names, DATE, null);
         Integer amount = find(names, AMOUNT, date);
         Integer income = find(names, INCOME, date);
@@ -46,7 +61,18 @@ public final class ColumnGuesser {
                 mode == AmountMode.SINGLE ? amount : null, mode == AmountMode.SPLIT ? income : null,
                 mode == AmountMode.SPLIT ? expense : null,
                 guessDecimalSeparator(values(samples, amountForSamples)), description,
-                counterparty != null && counterparty.equals(description) ? null : counterparty, currency);
+                counterparty != null && counterparty.equals(description) ? null : counterparty, currency, null,
+                null);
+    }
+
+    /** La mappatura del file di Tinaba: le colonne note, gli importi senza segno, le parole delle entrate. */
+    private static ImportMapping tinaba(String delimiter, List<List<String>> samples) {
+        int date = TINABA_HEADERS.indexOf("data");
+        int amount = TINABA_HEADERS.indexOf("importo");
+        int description = TINABA_HEADERS.indexOf("descrizione");
+        return new ImportMapping(delimiter, date, guessDateFormat(values(samples, date)), AmountMode.UNSIGNED, amount,
+                null, null, guessDecimalSeparator(values(samples, amount)), description,
+                TINABA_HEADERS.indexOf("controparte"), null, description, TINABA_INCOME_WORDS);
     }
 
     /**

@@ -28,6 +28,31 @@ class ColumnGuesserTest {
     }
 
     @Test
+    void theTinabaFileIsRecognizedAndItsAmountsAreReadWithoutSign() {
+        // Le colonne del file di Tinaba, con valori inventati (docs/tinaba.md).
+        List<String> headers = List.of("Data", "Categoria", "Controparte", "Descrizione", "Causale/Messaggio",
+                "CRO/NOP", "Importo", "Community");
+        List<List<String>> samples = List.of(
+                List.of("28/10/2026 01:32:31", "Bonifici", "Mario Rossi", "Ricevuto da Mario Rossi", "", "ABC", "200", "no"),
+                List.of("13/10/2026 15:52:28", "PAYMENT_TRANSFER", "Tinaba Cashback", "Trasferimento ricevuto",
+                        "", "", "46,74", "no"));
+
+        ImportMapping mapping = ColumnGuesser.guess(",", headers, samples);
+
+        assertThat(mapping.amountMode()).isEqualTo(AmountMode.UNSIGNED);
+        assertThat(mapping.amountColumn()).isEqualTo(6);
+        assertThat(mapping.signColumn()).isEqualTo(3); // la descrizione
+        assertThat(mapping.incomeWordList()).containsExactly("ricevuto", "ricevuta");
+        assertThat(mapping.dateFormat()).isEqualTo("dd/MM/yyyy");
+        assertThat(mapping.decimalSeparator()).isEqualTo(DecimalSeparator.COMMA);
+        assertThat(mapping.descriptionColumn()).isEqualTo(3);
+        assertThat(mapping.counterpartyColumn()).isEqualTo(2);
+        // Un file con le stesse parole ma colonne diverse non è di Tinaba: resta la proposta normale.
+        assertThat(ColumnGuesser.guess(",", List.of("Data", "Descrizione", "Importo"), List.of()).amountMode())
+                .isEqualTo(AmountMode.SINGLE);
+    }
+
+    @Test
     void anExportWithIncomeAndExpenseColumns() {
         List<String> headers = List.of("Data", "Entrate", "Uscite", "Descrizione");
         List<List<String>> samples = List.of(List.of("01/10/2026", "2.100,00", "", "Stipendio"));

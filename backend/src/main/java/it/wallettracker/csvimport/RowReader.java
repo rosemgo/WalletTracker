@@ -45,9 +45,12 @@ public final class RowReader {
 
     public static ParsedRow read(List<String> row, ImportMapping mapping, String defaultCurrency) {
         LocalDate date = parseDate(cell(row, mapping.dateColumn()), mapping.dateFormat());
-        BigDecimal amount = mapping.amountMode() == AmountMode.SINGLE
-                ? required(parseAmount(cell(row, mapping.amountColumn()), mapping.decimalSeparator()), "l'importo")
-                : splitAmount(row, mapping);
+        BigDecimal amount = switch (mapping.amountMode()) {
+            case SINGLE -> required(parseAmount(cell(row, mapping.amountColumn()), mapping.decimalSeparator()),
+                    "l'importo");
+            case SPLIT -> splitAmount(row, mapping);
+            case UNSIGNED -> unsignedAmount(row, mapping);
+        };
         String currency = currency(cell(row, mapping.currencyColumn()), defaultCurrency);
         return new ParsedRow(date, amount, currency, text(cell(row, mapping.descriptionColumn())),
                 text(cell(row, mapping.counterpartyColumn())));
@@ -124,6 +127,20 @@ public final class RowReader {
         BigDecimal in = income == null ? BigDecimal.ZERO : income.abs();
         BigDecimal out = expense == null ? BigDecimal.ZERO : expense.abs();
         return in.subtract(out).setScale(2);
+    }
+
+    /**
+     * Un importo senza segno (docs/tinaba.md): è un'entrata se il testo della colonna indicata contiene una delle
+     * parole delle entrate, altrimenti un'uscita. Le maiuscole non contano. Un eventuale segno nel file si ignora:
+     * conta solo il testo, così una riga non può essere letta in due modi diversi.
+     */
+    private static BigDecimal unsignedAmount(List<String> row, ImportMapping mapping) {
+        BigDecimal amount = required(parseAmount(cell(row, mapping.amountColumn()), mapping.decimalSeparator()),
+                "l'importo").abs();
+        String text = cell(row, mapping.signColumn());
+        String lower = text == null ? "" : text.toLowerCase(Locale.ROOT);
+        boolean income = mapping.incomeWordList().stream().anyMatch(lower::contains);
+        return income ? amount : amount.negate();
     }
 
     private static String currency(String value, String defaultCurrency) {

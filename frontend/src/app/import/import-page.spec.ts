@@ -41,6 +41,8 @@ const GUESSED: ImportMapping = {
   descriptionColumn: 1,
   counterpartyColumn: null,
   currencyColumn: null,
+  signColumn: null,
+  incomeWords: null,
 };
 
 function previewOf(mapping: ImportMapping, errors: string[] = []): ImportPreview {
@@ -198,6 +200,31 @@ describe('ImportPage', () => {
 
     expect(previews).toHaveLength(2);
     expect(previews[1].mapping).toEqual({ ...GUESSED, descriptionColumn: null });
+  });
+
+  it('amounts without a sign: the column and the words of the income are shown and sent', async () => {
+    // Come il file di Tinaba (docs/tinaba.md): il backend propone "senza segno" e le parole delle entrate.
+    const unsigned: ImportMapping = {
+      ...GUESSED,
+      amountMode: 'UNSIGNED',
+      signColumn: 1,
+      incomeWords: 'ricevuto, ricevuta',
+    };
+    nextPreview = (mapping) => of(previewOf(mapping ?? unsigned));
+    const { fixture, page } = await open();
+    await chooseFile(fixture, page);
+
+    expect(selectByLabel(page, 'Importo').selectedOptions[0].textContent).toContain('senza segno');
+    expect(selectByLabel(page, 'Cerca le parole').selectedOptions[0].textContent?.trim()).toBe(
+      '2 · Descrizione',
+    );
+    const words = page.querySelector('[formControlName="incomeWords"]') as HTMLInputElement;
+    expect(words.value).toBe('ricevuto, ricevuta');
+
+    words.value = 'ricevuto, accredito';
+    words.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(previews.at(-1)?.mapping).toEqual({ ...unsigned, incomeWords: 'ricevuto, accredito' });
   });
 
   it('with unreadable rows the errors are shown and the import is disabled', async () => {
