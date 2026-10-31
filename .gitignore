@@ -7,6 +7,10 @@ secrets/*
 # I backup (docs/48): tutti i dati e la chiave di cifratura, anche se cifrati.
 /backup/
 *.backup
+*.dump
+# Il codice di recupero del PIN (docs/46): va conservato fuori dal progetto, mai su Git.
+*[Cc]odice*[Rr]ecupero*
+*CODICE*RECUPERO*
 
 # --- Build ---
 target/
