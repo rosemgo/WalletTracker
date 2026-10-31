@@ -7,6 +7,8 @@
 #   ./installa.sh --cambia-password-db   genera una password nuova per il database e la mette dove serve
 #   ./installa.sh --reimposta-pin        PIN e codice di recupero persi: li cancella, e dal PC si sceglie di nuovo
 #   ./installa.sh --tailscale            apre l'app ai tuoi dispositivi con Tailscale, con https (docs/47)
+#   ./installa.sh --backup               un backup adesso (la prima volta chiede la password dei backup: docs/48)
+#   ./installa.sh --ripristina FILE      SOSTITUISCE i dati di adesso con quelli del backup FILE (chiede conferma)
 #   ./installa.sh --senza-browser        non apre il browser alla fine (per la CI)
 #
 # Si può rilanciare quante volte si vuole: quello che c'è già (il .env, la chiave, i dati) non viene toccato.
@@ -15,9 +17,10 @@
 #   1. controlla che Docker sia avviato;
 #   2. se manca il .env, lo crea da .env.example con una password del database generata a caso;
 #   3. crea la cartella .data (la chiave di cifratura) come tuo utente;
-#   4. se richiesto, cambia la password del database, azzera il PIN o prepara Tailscale;
+#   4. se richiesto, cambia la password del database, azzera il PIN, prepara Tailscale o la password dei backup;
 #   5. docker compose up -d --build, e aspetta che il backend sia pronto;
-#   6. apre l'app nel browser.
+#   6. se richiesto, fa un backup o un ripristino;
+#   7. apre l'app nel browser.
 
 # -e: se un comando fallisce, lo script si ferma (invece di andare avanti facendo danni).
 # -u: usare una variabile mai assegnata è un errore (di solito è un nome scritto male).
@@ -30,23 +33,37 @@ CON_IA=false
 CAMBIA_PASSWORD=false
 REIMPOSTA_PIN=false
 CON_TAILSCALE=false
+FARE_BACKUP=false
+FILE_RIPRISTINO=""
 APRI_BROWSER=true
-for argomento in "$@"; do
-  case "$argomento" in
+# Un'opzione alla volta: "shift" toglie quella appena letta. --ripristina è l'unica con un valore (il file), che
+# si prende con un "shift" in più.
+while [ $# -gt 0 ]; do
+  case "$1" in
     --ia) CON_IA=true ;;
     --cambia-password-db) CAMBIA_PASSWORD=true ;;
     --reimposta-pin) REIMPOSTA_PIN=true ;;
     --tailscale) CON_TAILSCALE=true ;;
+    --backup) FARE_BACKUP=true ;;
+    --ripristina)
+      [ $# -ge 2 ] || {
+        echo "--ripristina vuole il file del backup, per esempio:  ./installa.sh --ripristina backup/wallettracker-manuale-20261031-101500.backup" >&2
+        exit 1
+      }
+      FILE_RIPRISTINO=$2
+      shift
+      ;;
     --senza-browser) APRI_BROWSER=false ;;
     -h | --aiuto | --help)
-      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
-      echo "Opzione sconosciuta: $argomento (le opzioni sono in ./installa.sh --aiuto)" >&2
+      echo "Opzione sconosciuta: $1 (le opzioni sono in ./installa.sh --aiuto)" >&2
       exit 1
       ;;
   esac
+  shift
 done
 
 passo() { printf '\n==> %s\n' "$1"; }
@@ -132,21 +149,29 @@ else
 fi
 
 # --- 3. Le cartelle ----------------------------------------------------------------------------------------
-# Il backend, nel container, è l'utente con id 1000 (backend/Dockerfile) e in .data deve scrivere la chiave di
-# cifratura. Su macOS Docker Desktop traduce i permessi da solo; su Linux conta il numero del proprietario.
-mkdir -p .data secrets
-if [ "$(uname -s)" = "Linux" ]; then
-  proprietario=$(stat -c '%u' .data)
-  if [ "$proprietario" != "1000" ]; then
-    if [ "$(id -u)" = "0" ]; then
-      # Lanciato come root (o con sudo): la cartella è di root, e l'utente 1000 non potrebbe scriverci.
-      chown 1000:1000 .data
-      echo "La cartella .data ora appartiene all'utente 1000, quello del backend nel container."
-    else
-      errore "La cartella .data è dell'utente $proprietario, ma il backend nel container è l'utente 1000 e non potrebbe scriverci. Sistemala con:  sudo chown 1000:1000 .data   e rilancia lo script (docs/45, parte F)."
-    fi
+# Il backend e il backup, nei container, sono l'utente con id 1000 (backend/Dockerfile, docker/backup/Dockerfile):
+# in .data c'è la chiave di cifratura, nella cartella dei backup vanno i backup. Su macOS Docker Desktop traduce i
+# permessi da solo; su Linux conta il numero del proprietario.
+cartella_backup=$(valore_env BACKUP_DIR)
+cartella_backup=${cartella_backup:-./backup}
+mkdir -p .data secrets "$cartella_backup"
+
+# La cartella $1 deve appartenere all'utente 1000 (solo su Linux).
+cartella_per_i_container() {
+  [ "$(uname -s)" = "Linux" ] || return 0
+  local proprietario
+  proprietario=$(stat -c '%u' "$1")
+  [ "$proprietario" = "1000" ] && return 0
+  if [ "$(id -u)" = "0" ]; then
+    # Lanciato come root (o con sudo): la cartella è di root, e l'utente 1000 non potrebbe scriverci.
+    chown 1000:1000 "$1"
+    echo "La cartella $1 ora appartiene all'utente 1000, quello dei container."
+  else
+    errore "La cartella $1 è dell'utente $proprietario, ma nei container il programma è l'utente 1000 e non potrebbe scriverci. Sistemala con:  sudo chown 1000:1000 $1   e rilancia lo script (docs/45, parte F)."
   fi
-fi
+}
+cartella_per_i_container .data
+cartella_per_i_container "$cartella_backup"
 
 # --- 4. Cambiare la password del database (solo con --cambia-password-db) --------------------------------
 if [ "$CAMBIA_PASSWORD" = true ]; then
@@ -254,6 +279,50 @@ if [ "$CON_TAILSCALE" = true ]; then
   fi
 fi
 
+# --- 4d. La password dei backup (con --backup, se manca) --------------------------------------------------
+# I backup sono cifrati con una password scelta da te (docs/48, parte D). Sta nel .env, perché il backup automatico
+# di ogni notte la deve usare; ma va anche scritta in un posto sicuro FUORI da questo computer: senza, un backup
+# portato altrove (o il computer rotto) non si apre più.
+
+# Una password va bene se è lunga almeno 12 caratteri e non ha i caratteri che nel .env darebbero problemi.
+password_backup_valida() {
+  [ ${#1} -ge 12 ] || return 1
+  case "$1" in
+    *[\'\"\$\\\`\#]* | " "* | *" ") return 1 ;;
+  esac
+}
+
+chiedi_password_backup() {
+  local prima seconda
+  [ -t 0 ] || errore "Manca la password dei backup: lancia ./installa.sh --backup da un terminale (la chiede), o scrivila nel .env come WALLETTRACKER_BACKUP_PASSWORD (docs/48)."
+  echo "Scegli la password dei backup. Ogni backup sarà cifrato con lei: chi trova il file senza la password non"
+  echo "legge niente. Almeno 12 caratteri; niente virgolette, apostrofi, \$, \\, \` e #, né spazi all'inizio o alla fine."
+  echo "SCRIVILA ANCHE IN UN POSTO SICURO, FUORI DA QUESTO COMPUTER (un gestore di password): senza, i backup non si aprono."
+  while true; do
+    # -s: quello che scrivi non si vede.
+    read -rs -p "Password dei backup: " prima
+    echo
+    read -rs -p "Ripetila: " seconda
+    echo
+    if ! password_backup_valida "$prima"; then
+      echo "Non va bene: almeno 12 caratteri, e senza i caratteri qui sopra. Riprova."
+    elif [ "$prima" != "$seconda" ]; then
+      echo "Le due password non sono uguali. Riprova."
+    else
+      break
+    fi
+  done
+  scrivi_env WALLETTRACKER_BACKUP_PASSWORD "$prima"
+  echo "Password salvata nel .env: da stanotte parte anche il backup automatico (alle ${BACKUP_TIME:-03:15})."
+}
+
+password_backup=$(valore_env WALLETTRACKER_BACKUP_PASSWORD)
+if [ "$FARE_BACKUP" = true ] && [ -z "$password_backup" ]; then
+  passo "La password dei backup"
+  chiedi_password_backup
+  password_backup=$(valore_env WALLETTRACKER_BACKUP_PASSWORD)
+fi
+
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
 passo "Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)"
 profilo=""
@@ -272,13 +341,98 @@ passo "Aspetto che il backend sia pronto"
 aspetta_salute backend 240
 echo "Il backend è pronto."
 
-# --- 6. Fatto ----------------------------------------------------------------------------------------------
+# --- 6. Backup e ripristino (solo con --backup o --ripristina) ---------------------------------------------
+# Il lavoro vero lo fa il container "backup" (docker/backup/wallettracker-backup.sh), uguale su Windows, macOS e
+# Linux. "docker compose run --rm" crea un container usa-e-getta dal servizio backup, con il comando scritto dopo.
+# -T e </dev/null: il container non deve leggere niente dalla tastiera (e non deve "mangiarsi" quello che arriva
+# allo script, per esempio la conferma del ripristino).
+if [ "$FARE_BACKUP" = true ]; then
+  passo "Backup"
+  docker compose run --rm -T backup crea manuale </dev/null ||
+    errore "Il backup non è riuscito: leggi il messaggio qui sopra."
+  echo "Il backup è nella cartella $cartella_backup. Copialo anche FUORI da questo computer (docs/48, parte F)."
+fi
+
+if [ -n "$FILE_RIPRISTINO" ]; then
+  passo "Ripristino da $FILE_RIPRISTINO"
+  [ -f "$FILE_RIPRISTINO" ] || errore "Non trovo il file $FILE_RIPRISTINO."
+  # Il container vede solo la cartella dei backup: se il file è altrove, lo copio lì (con lo stesso nome).
+  nome_backup=$(basename "$FILE_RIPRISTINO")
+  if [ ! "$FILE_RIPRISTINO" -ef "$cartella_backup/$nome_backup" ]; then
+    if [ -e "$cartella_backup/$nome_backup" ] && ! cmp -s "$FILE_RIPRISTINO" "$cartella_backup/$nome_backup"; then
+      errore "Nella cartella dei backup c'è già un file diverso di nome $nome_backup: rinomina quello da ripristinare."
+    fi
+    cp "$FILE_RIPRISTINO" "$cartella_backup/$nome_backup"
+    echo "Copiato $nome_backup nella cartella dei backup ($cartella_backup)."
+  fi
+
+  echo
+  echo "ATTENZIONE: il ripristino SOSTITUISCE tutti i dati di adesso (conti, movimenti, regole, impostazioni, PIN)"
+  echo "con quelli del backup. Prima ne faccio una copia di sicurezza, se nel .env c'è la password dei backup."
+  read -r -p "Per continuare scrivi RIPRISTINA: " risposta || risposta=""
+  [ "$risposta" = "RIPRISTINA" ] || errore "Ripristino annullato: non è cambiato niente."
+
+  # 1. La copia di sicurezza di adesso, con la password del .env (non con un'altra che arrivasse da fuori).
+  if password_backup_valida "$password_backup"; then
+    WALLETTRACKER_BACKUP_PASSWORD="$password_backup" docker compose run --rm -T backup crea prima-del-ripristino </dev/null ||
+      errore "Non riesco a fare la copia di sicurezza dei dati di adesso: ripristino annullato, non è cambiato niente."
+  else
+    echo "Nel .env non c'è la password dei backup: niente copia di sicurezza dei dati di adesso."
+  fi
+
+  # 2. Fermi il backend (nessuno deve scrivere nel database mentre lo si sostituisce) e il backup automatico.
+  docker compose stop backend backup >/dev/null
+  # Se ci si ferma prima della fine, si riparte com'era, aspettando il backend (prima, nginx risponderebbe 502).
+  riparti() {
+    docker compose start backend backup >/dev/null
+    aspetta_salute backend 240
+  }
+
+  # 3. Il ripristino. Con la password del .env, se c'è; se il container risponde "password sbagliata o mancante"
+  #    (codici 3 e 4: per esempio un backup fatto su un altro computer), la chiedo, fino a tre volte.
+  tentativi=0
+  while true; do
+    codice=0
+    docker compose run --rm -T backup ripristina "$nome_backup" </dev/null || codice=$?
+    [ "$codice" = 0 ] && break
+    if [ "$codice" != 3 ] && [ "$codice" != 4 ] || [ "$tentativi" -ge 3 ]; then
+      riparti
+      errore "Il ripristino non è riuscito (leggi il messaggio qui sopra). Se si è fermato prima di \"Svuoto il database\", non è cambiato niente."
+    fi
+    tentativi=$((tentativi + 1))
+    password_inserita=""
+    read -rs -p "Password di QUESTO backup (Invio vuoto per annullare): " password_inserita || password_inserita=""
+    echo
+    if [ -z "$password_inserita" ]; then
+      riparti
+      errore "Ripristino annullato: non è cambiato niente."
+    fi
+    # Docker Compose preferisce le variabili dell'ambiente a quelle del .env: così il container riceve questa.
+    export WALLETTRACKER_BACKUP_PASSWORD="$password_inserita"
+  done
+
+  # Un computer nuovo, senza password dei backup nel .env: tengo quella appena usata, così da stanotte parte il
+  # backup automatico (con la stessa password dei backup di prima).
+  if [ -z "$password_backup" ] && [ -n "${password_inserita:-}" ] && password_backup_valida "$password_inserita"; then
+    scrivi_env WALLETTRACKER_BACKUP_PASSWORD "$password_inserita"
+    echo "Ho salvato nel .env la password del backup: da stanotte parte il backup automatico."
+  fi
+
+  # 4. Si riparte: il backend legge la chiave rimessa a posto, e Flyway porta il database alla versione dell'app.
+  riparti
+  echo "Ripristino completato: l'app ha i dati del backup. (Il PIN è quello di allora, come tutto il resto.)"
+fi
+
+# --- 7. Fatto ----------------------------------------------------------------------------------------------
 porta=$(valore_env WEB_PORT)
 indirizzo="http://localhost:${porta:-8000}"
 passo "WalletTracker è avviato: $indirizzo"
 if [ "$CON_TAILSCALE" = true ]; then
   echo "Dai dispositivi remoti, con Tailscale:  https://$nome_ts   (lì serve il PIN: crealo prima da qui, dal server)"
   echo "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$nome_ts/callback"
+fi
+if [ -z "$(valore_env WALLETTRACKER_BACKUP_PASSWORD)" ]; then
+  echo "Backup automatico SPENTO: per accenderlo, e fare il primo backup:  ./installa.sh --backup   (docs/48)"
 fi
 echo "Per fermarlo:  docker compose down   (i dati restano)"
 if [ "$APRI_BROWSER" = true ]; then

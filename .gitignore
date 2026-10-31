@@ -4,6 +4,9 @@ secrets/*
 !secrets/README.md
 *.pem
 .data/
+# I backup (docs/48): tutti i dati e la chiave di cifratura, anche se cifrati.
+/backup/
+*.backup
 
 # --- Build ---
 target/

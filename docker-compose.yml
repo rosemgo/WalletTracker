@@ -4,6 +4,7 @@
 #   backend  Spring Boot (backend/Dockerfile)
 #   web      nginx con la dashboard (frontend/Dockerfile): l'UNICO con porte aperte, solo su questo PC
 #   ollama   l'IA locale, FACOLTATIVA: parte solo con --profile ia
+#   backup   il backup automatico ogni notte, e i comandi di backup e ripristino (docker/backup, docs/48)
 #
 #   telefono/PC ──▶ web (nginx) ──/api/──▶ backend ──▶ db
 #                                              └────▶ ollama (se c'è)
@@ -152,6 +153,45 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  backup:
+    # Backup e ripristino (Fase 4, passo 5: docs/48). Acceso, fa un backup al giorno, cifrato con la password del
+    # .env (WALLETTRACKER_BACKUP_PASSWORD), e tiene gli ultimi BACKUP_KEEP. Senza password resta acceso ma non fa
+    # niente (lo scrive nei log). Lo script di installazione lo usa anche per i comandi:
+    #   docker compose run --rm backup crea manuale
+    #   docker compose run --rm backup ripristina <file>    (con il backend fermo: lo fa lo script, --ripristina)
+    build: ./docker/backup
+    container_name: wallettracker-backup
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # pg_dump, pg_restore e psql leggono queste variabili: il database è il servizio "db", nella rete di Docker.
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?manca POSTGRES_PASSWORD nel .env - avvia installa.ps1 o installa.sh (docs/45)}
+      WALLETTRACKER_BACKUP_PASSWORD: ${WALLETTRACKER_BACKUP_PASSWORD:-}
+      # Da che ora fare il backup del giorno, e quanti backup automatici tenere (quelli fatti a mano restano tutti).
+      BACKUP_TIME: ${BACKUP_TIME:-03:15}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      # La chiave di cifratura: si legge per il backup, si riscrive al ripristino.
+      - ./.data:/data
+      # Dove vanno i backup: di serie la cartella backup/ del progetto (esclusa da Git); BACKUP_DIR nel .env per
+      # un'altra (un disco esterno, una cartella sincronizzata con il cloud).
+      - ${BACKUP_DIR:-./backup}:/backup
+    # Come il backend: niente porte, file system in sola lettura (scrivibili solo /data, /backup e /tmp in memoria,
+    # dove si prepara l'archivio prima di cifrarlo), nessun "potere speciale" di Linux.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   ollama:
     # L'IA locale (docs/27). "profiles": parte solo con docker compose --profile ia up -d. Senza, l'app funziona

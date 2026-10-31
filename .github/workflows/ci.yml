@@ -106,8 +106,8 @@ jobs:
 
       # Sulla macchina di GitHub l'utente ha id 1001, il backend nel container 1000 (docs/45, parte F): la
       # cartella della chiave di cifratura va data all'utente 1000, come farebbe chi installa su un Linux così.
-      - name: Prepara la cartella .data
-        run: mkdir .data && sudo chown 1000:1000 .data
+      - name: Prepara le cartelle .data e backup
+        run: mkdir .data backup && sudo chown 1000:1000 .data backup
 
       - name: Installa e avvia
         run: ./installa.sh --senza-browser
@@ -191,6 +191,64 @@ jobs:
           ./installa.sh --reimposta-pin --senza-browser
           curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false,"withoutPin":false'
           test "$(curl -s -o /dev/null -w '%{http_code}' -b telefono http://localhost:8001/api/accounts)" = 401
+
+      # Passo 5 (docs/48, parte L): backup e ripristino, provati davvero. Dati inventati (un PIN e una chiave di
+      # Gemini finta, salvata cifrata con la chiave di .data), un backup, poi si cancella TUTTO e si ripristina.
+      # I file dei backup sono dell'utente 1000 con permessi 600: per leggerli qui serve sudo.
+      - name: Backup
+        run: |
+          echo 'WALLETTRACKER_BACKUP_PASSWORD=Prova-backup-CI-2026' >> .env
+          rm -f prova
+          curl -fsS -c prova -b prova http://localhost:8000/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' prova)
+          curl -fsS -c prova -b prova -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/pin > /dev/null
+          curl -fsS -b prova -X PUT -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"apiKey":"chiave-finta-WXYZ"}' http://localhost:8000/api/ai/keys/GEMINI | grep -q 'WXYZ'
+          sudo sha256sum .data/encryption.key | cut -d' ' -f1 > chiave-prima
+          ./installa.sh --backup --senza-browser
+          file=$(ls backup/wallettracker-manuale-*.backup)
+          # Cifrato davvero: comincia con il marchio di OpenSSL, e dentro non c'è niente in chiaro.
+          sudo head -c 8 "$file" | grep -q 'Salted__'
+          if sudo strings "$file" | grep -q -i -E 'flyway|WXYZ'; then echo "testo in chiaro nel backup"; exit 1; fi
+          echo "$file" > backup-da-ripristinare
+
+      - name: Ripristino, dopo aver cancellato il database e la chiave
+        run: |
+          file=$(cat backup-da-ripristinare)
+          docker compose down -v
+          sudo rm .data/encryption.key
+          ./installa.sh --senza-browser
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false'
+          # Con la password sbagliata (e poi Invio vuoto alla domanda): si ferma, e non cambia niente.
+          if printf 'RIPRISTINA\n\n' | WALLETTRACKER_BACKUP_PASSWORD=password-sbagliata ./installa.sh --ripristina "$file" --senza-browser; then
+            echo "il ripristino con la password sbagliata è riuscito"; exit 1
+          fi
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false'
+          # Con la password giusta (quella del .env).
+          printf 'RIPRISTINA\n' | ./installa.sh --ripristina "$file" --senza-browser
+          ls backup/wallettracker-prima-del-ripristino-*.backup
+          test "$(sudo sha256sum .data/encryption.key | cut -d' ' -f1)" = "$(cat chiave-prima)"
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":true'
+          rm -f prova
+          curl -fsS -c prova -b prova http://localhost:8000/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' prova)
+          curl -fsS -c prova -b prova -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/login
+          # La chiave di Gemini si legge ancora: il database e la chiave di cifratura sono tornati insieme.
+          curl -fsS -b prova http://localhost:8000/api/ai | grep -q '"keyHint":"…WXYZ"'
+
+      - name: Backup automatico
+        run: |
+          sudo rm -f backup/wallettracker-automatico-*.backup
+          echo 'BACKUP_TIME=00:00' >> .env
+          docker compose up -d backup
+          for i in $(seq 1 40); do
+            if ls backup/wallettracker-automatico-*.backup 2> /dev/null; then exit 0; fi
+            sleep 3
+          done
+          docker compose logs backup
+          exit 1
 
       # nginx -t controlla la configurazione senza riavviare il server.
       - name: Controlla la configurazione di nginx

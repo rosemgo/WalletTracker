@@ -8,6 +8,8 @@
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -SenzaBrowser        non apre il browser alla fine
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -ReimpostaPin        PIN dimenticato: lo azzera
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           l'app sui tuoi dispositivi (docs/47)
+#   powershell -ExecutionPolicy Bypass -File installa.ps1 -Backup              un backup adesso (docs/48)
+#   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ripristina FILE     SOSTITUISCE i dati con quelli del backup
 #
 # "-ExecutionPolicy Bypass": Windows, di serie, non esegue gli script scaricati. Così il permesso vale solo per
 # questo comando, senza cambiare le impostazioni del PC.
@@ -20,6 +22,8 @@ param(
     [switch]$CambiaPasswordDb,
     [switch]$ReimpostaPin,
     [switch]$Tailscale,
+    [switch]$Backup,
+    [string]$Ripristina = '',
     [switch]$SenzaBrowser
 )
 
@@ -145,7 +149,11 @@ else {
 }
 
 # --- 3. Le cartelle ----------------------------------------------------------------------------------------
-New-Item -ItemType Directory -Force -Path '.data', 'secrets' | Out-Null
+# La cartella dei backup: di serie backup/ nel progetto; BACKUP_DIR nel .env per un'altra (docs/48).
+$CartellaBackup = Valore-Env 'BACKUP_DIR'
+if ($CartellaBackup -eq '') { $CartellaBackup = './backup' }
+New-Item -ItemType Directory -Force -Path '.data', 'secrets', $CartellaBackup | Out-Null
+$CartellaBackup = (Resolve-Path $CartellaBackup).Path
 
 # --- 4. Cambiare la password del database (solo con -CambiaPasswordDb) ------------------------------------
 if ($CambiaPasswordDb) {
@@ -235,6 +243,41 @@ if ($Tailscale) {
     }
 }
 
+# --- 4d. La password dei backup (con -Backup, se manca) ---------------------------------------------------
+# Le stesse regole di installa.sh (vedi i commenti lì): almeno 12 caratteri, senza quelli che nel .env danno problemi.
+function Password-Backup-Valida([string]$p) {
+    return ($p.Length -ge 12) -and ($p -notmatch '[''"`$\\#]') -and ($p -eq $p.Trim())
+}
+
+# Legge una riga senza mostrarla (Read-Host -AsSecureString) e la restituisce come testo.
+function Leggi-Segreto([string]$domanda) {
+    $sicura = Read-Host -Prompt $domanda -AsSecureString
+    $puntatore = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sicura)
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($puntatore) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($puntatore) }
+}
+
+$PasswordBackup = Valore-Env 'WALLETTRACKER_BACKUP_PASSWORD'
+if ($Backup -and $PasswordBackup -eq '') {
+    Passo 'La password dei backup'
+    if ([Console]::IsInputRedirected) {
+        Errore 'Manca la password dei backup: lancia lo script con -Backup da PowerShell (la chiede), o scrivila nel .env come WALLETTRACKER_BACKUP_PASSWORD (docs/48).'
+    }
+    Write-Host 'Scegli la password dei backup. Ogni backup sarà cifrato con lei: chi trova il file senza la password non'
+    Write-Host 'legge niente. Almeno 12 caratteri; niente virgolette, apostrofi, $, \, ` e #, né spazi all''inizio o alla fine.'
+    Write-Host 'SCRIVILA ANCHE IN UN POSTO SICURO, FUORI DA QUESTO COMPUTER (un gestore di password): senza, i backup non si aprono.' -ForegroundColor Yellow
+    while ($true) {
+        $prima = Leggi-Segreto 'Password dei backup'
+        $seconda = Leggi-Segreto 'Ripetila'
+        if (-not (Password-Backup-Valida $prima)) { Write-Host 'Non va bene: almeno 12 caratteri, e senza i caratteri qui sopra. Riprova.' }
+        elseif ($prima -ne $seconda) { Write-Host 'Le due password non sono uguali. Riprova.' }
+        else { break }
+    }
+    Scrivi-Env 'WALLETTRACKER_BACKUP_PASSWORD' $prima
+    $PasswordBackup = $prima
+    Write-Host 'Password salvata nel .env: da stanotte parte anche il backup automatico.'
+}
+
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
 Passo 'Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)'
 if ($Ia) { & docker compose --profile ia up -d --build }
@@ -248,7 +291,84 @@ Passo 'Aspetto che il backend sia pronto'
 Aspetta-Salute 'backend' 240
 Write-Host 'Il backend è pronto.'
 
-# --- 6. Fatto ----------------------------------------------------------------------------------------------
+# --- 6. Backup e ripristino (solo con -Backup o -Ripristina) ----------------------------------------------
+# Il lavoro lo fa il container "backup" (docker/backup/wallettracker-backup.sh): vedi i commenti in installa.sh.
+if ($Backup) {
+    Passo 'Backup'
+    & docker compose run --rm -T backup crea manuale
+    if ($LASTEXITCODE -ne 0) { Errore 'Il backup non è riuscito: leggi il messaggio qui sopra.' }
+    Write-Host "Il backup è nella cartella $CartellaBackup. Copialo anche FUORI da questo computer (docs/48, parte F)."
+}
+
+if ($Ripristina -ne '') {
+    Passo "Ripristino da $Ripristina"
+    if (-not (Test-Path $Ripristina -PathType Leaf)) { Errore "Non trovo il file $Ripristina." }
+    # Il container vede solo la cartella dei backup: se il file è altrove, lo copio lì (con lo stesso nome).
+    $file = (Resolve-Path $Ripristina).Path
+    $nomeBackup = Split-Path $file -Leaf
+    $destinazione = Join-Path $CartellaBackup $nomeBackup
+    if ($file -ne $destinazione) {
+        if ((Test-Path $destinazione) -and ((Get-FileHash $file).Hash -ne (Get-FileHash $destinazione).Hash)) {
+            Errore "Nella cartella dei backup c'è già un file diverso di nome $nomeBackup`: rinomina quello da ripristinare."
+        }
+        Copy-Item $file $destinazione -Force
+        Write-Host "Copiato $nomeBackup nella cartella dei backup ($CartellaBackup)."
+    }
+
+    Write-Host ''
+    Write-Host 'ATTENZIONE: il ripristino SOSTITUISCE tutti i dati di adesso (conti, movimenti, regole, impostazioni, PIN)' -ForegroundColor Yellow
+    Write-Host 'con quelli del backup. Prima ne faccio una copia di sicurezza, se nel .env c''è la password dei backup.' -ForegroundColor Yellow
+    $risposta = Read-Host 'Per continuare scrivi RIPRISTINA'
+    if ($risposta -cne 'RIPRISTINA') { Errore 'Ripristino annullato: non è cambiato niente.' }
+
+    # 1. La copia di sicurezza di adesso, con la password del .env.
+    if (Password-Backup-Valida $PasswordBackup) {
+        $env:WALLETTRACKER_BACKUP_PASSWORD = $PasswordBackup
+        & docker compose run --rm -T backup crea prima-del-ripristino
+        if ($LASTEXITCODE -ne 0) { Errore 'Non riesco a fare la copia di sicurezza dei dati di adesso: ripristino annullato, non è cambiato niente.' }
+    }
+    else { Write-Host 'Nel .env non c''è la password dei backup: niente copia di sicurezza dei dati di adesso.' }
+    # Il primo tentativo usa la password del .env: niente variabile d'ambiente che la copra.
+    Remove-Item Env:WALLETTRACKER_BACKUP_PASSWORD -ErrorAction SilentlyContinue
+
+    # 2. Fermi il backend e il backup automatico.
+    & docker compose stop backend backup | Out-Null
+    function Riparti {
+        & docker compose start backend backup | Out-Null
+        Aspetta-Salute 'backend' 240
+    }
+
+    # 3. Il ripristino; con "password sbagliata o mancante" (codici 3 e 4) la chiedo, fino a tre volte.
+    $tentativi = 0
+    $passwordInserita = ''
+    while ($true) {
+        & docker compose run --rm -T backup ripristina $nomeBackup
+        $codice = $LASTEXITCODE
+        if ($codice -eq 0) { break }
+        if (($codice -ne 3 -and $codice -ne 4) -or $tentativi -ge 3) {
+            Riparti
+            Errore 'Il ripristino non è riuscito (leggi il messaggio qui sopra). Se si è fermato prima di "Svuoto il database", non è cambiato niente.'
+        }
+        $tentativi++
+        $passwordInserita = Leggi-Segreto 'Password di QUESTO backup (Invio vuoto per annullare)'
+        if ($passwordInserita -eq '') { Riparti; Errore 'Ripristino annullato: non è cambiato niente.' }
+        # Docker Compose preferisce le variabili dell'ambiente a quelle del .env.
+        $env:WALLETTRACKER_BACKUP_PASSWORD = $passwordInserita
+    }
+    Remove-Item Env:WALLETTRACKER_BACKUP_PASSWORD -ErrorAction SilentlyContinue
+
+    # Un computer nuovo, senza password dei backup nel .env: tengo quella appena usata.
+    if ($PasswordBackup -eq '' -and (Password-Backup-Valida $passwordInserita)) {
+        Scrivi-Env 'WALLETTRACKER_BACKUP_PASSWORD' $passwordInserita
+        Write-Host 'Ho salvato nel .env la password del backup: da stanotte parte il backup automatico.'
+    }
+
+    # 4. Si riparte: il backend legge la chiave rimessa a posto, e Flyway porta il database alla versione dell'app.
+    Riparti
+    Write-Host 'Ripristino completato: l''app ha i dati del backup. (Il PIN è quello di allora, come tutto il resto.)'
+}
+
+# --- 7. Fatto ----------------------------------------------------------------------------------------------
 $porta = Valore-Env 'WEB_PORT'
 if ($porta -eq '') { $porta = '8000' }
 $indirizzo = "http://localhost:$porta"
@@ -256,6 +376,9 @@ Passo "WalletTracker è avviato: $indirizzo"
 if ($Tailscale) {
     Write-Host "Dai dispositivi remoti, con Tailscale:  https://$NomeTs   (lì serve il PIN: crealo prima da qui, dal server)"
     Write-Host "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$NomeTs/callback"
+}
+if ((Valore-Env 'WALLETTRACKER_BACKUP_PASSWORD') -eq '') {
+    Write-Host 'Backup automatico SPENTO: per accenderlo, e fare il primo backup, rilancia lo script con -Backup (docs/48).'
 }
 Write-Host 'Per fermarlo:  docker compose down   (i dati restano)'
 if (-not $SenzaBrowser) { Start-Process $indirizzo }

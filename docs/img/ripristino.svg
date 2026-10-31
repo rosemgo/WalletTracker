@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+</defs>
+<rect width="1200" height="800" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il ripristino, passo per passo</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">installa --ripristina FILE: prima si controlla tutto, poi si cambia; se qualcosa non va prima del passo ⑥, non è cambiato niente</text>
+
+<!-- column: script -->
+<text x="300" y="104" text-anchor="middle" font-size="16" font-weight="700" fill="#334155">Lo script (sul server)</text>
+<text x="900" y="104" text-anchor="middle" font-size="16" font-weight="700" fill="#334155">Il container "backup"</text>
+
+<rect x="40" y="120" width="520" height="70" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="60" y="148" font-size="14" font-weight="700" fill="#0f172a">① Il file c'è? Se è fuori dalla cartella dei backup,</text>
+<text x="60" y="170" font-size="13" fill="#334155">lo copia lì: il container vede solo quella cartella</text>
+
+<rect x="40" y="205" width="520" height="70" rx="12" fill="#fffbeb" stroke="#b45309" stroke-width="2"/>
+<text x="60" y="233" font-size="14" font-weight="700" fill="#0f172a">② "Per continuare scrivi RIPRISTINA"</text>
+<text x="60" y="255" font-size="13" fill="#334155">qualsiasi altra risposta: annullato, niente è cambiato</text>
+
+<rect x="40" y="290" width="520" height="70" rx="12" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="60" y="318" font-size="14" font-weight="700" fill="#0f172a">③ Copia di sicurezza dei dati di ADESSO</text>
+<text x="60" y="340" font-size="13" fill="#334155">wallettracker-prima-del-ripristino-… (password del .env)</text>
+
+<rect x="40" y="375" width="520" height="70" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="60" y="403" font-size="14" font-weight="700" fill="#0f172a">④ Ferma il backend e il backup automatico</text>
+<text x="60" y="425" font-size="13" fill="#334155">nessuno deve scrivere nel database mentre lo si sostituisce</text>
+
+<rect x="40" y="610" width="520" height="90" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="60" y="638" font-size="14" font-weight="700" fill="#0f172a">⑧ Riavvia backend e backup automatico</text>
+<text x="60" y="660" font-size="13" fill="#334155">il backend legge la chiave rimessa a posto; Flyway porta il</text>
+<text x="60" y="680" font-size="13" fill="#334155">database alla versione dell'app (se il backup è più vecchio)</text>
+
+<!-- container -->
+<rect x="640" y="375" width="520" height="90" rx="12" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+<text x="660" y="403" font-size="14" font-weight="700" fill="#0f172a">⑤ Decifra e controlla le impronte (SHA256SUMS)</text>
+<text x="660" y="425" font-size="13" fill="#334155">password sbagliata → codice 3: lo script la chiede (3 volte)</text>
+<text x="660" y="447" font-size="13" fill="#334155">impronte che non tornano → codice 5: "usane un altro"</text>
+
+<rect x="640" y="480" width="520" height="70" rx="12" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="660" y="508" font-size="14" font-weight="700" fill="#0f172a">⑥ DROP SCHEMA public CASCADE; CREATE SCHEMA public</text>
+<text x="660" y="530" font-size="13" fill="#334155">poi pg_restore --no-owner --exit-on-error: il backup dentro</text>
+
+<rect x="640" y="565" width="520" height="70" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="660" y="593" font-size="14" font-weight="700" fill="#0f172a">⑦ La chiave di cifratura del backup in .data</text>
+<text x="660" y="615" font-size="13" fill="#334155">quella di prima resta accanto: encryption.key.prima-del-…</text>
+
+<line x1="300" y1="190" x2="300" y2="203" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="275" x2="300" y2="288" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="360" x2="300" y2="373" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="560" y1="410" x2="636" y2="415" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+<text x="598" y="400" text-anchor="middle" font-size="11" fill="#475569">run --rm</text>
+<line x1="900" y1="465" x2="900" y2="478" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="900" y1="550" x2="900" y2="563" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="640" y1="625" x2="564" y2="648" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<rect x="40" y="720" width="1120" height="60" rx="12" fill="#f0fdf4" stroke="#15803d"/>
+<text x="600" y="746" text-anchor="middle" font-size="14" font-weight="700" fill="#14532d">Il confine è il passo ⑥: prima si può sempre tornare indietro senza danni; dopo, se pg_restore si fermasse a metà,</text>
+<text x="600" y="768" text-anchor="middle" font-size="14" fill="#14532d">si rilancia il ripristino, e c'è comunque la copia di sicurezza del passo ③.</text>
+</svg>

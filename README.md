@@ -112,6 +112,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 45. [Fase 4, passo 2: lo script di installazione, la password del database generata e come cambiarla](docs/45-fase-4-passo-2-installazione-e-segreti.md)
 46. [Fase 4, passo 3: il PIN per aprire l'app, facoltativo dal PC (Spring Security dalle basi: filtri, sessione, CSRF, hash, blocco, codice di recupero)](docs/46-fase-4-passo-3-pin.md)
 47. [Fase 4, passo 4: Tailscale, l'app dal telefono con https vero (reti, VPN e certificati dalle basi; `tailscale serve`; più indirizzi di ritorno per Enable Banking)](docs/47-fase-4-passo-4-tailscale.md)
+48. [Fase 4, passo 5: backup e ripristino (pg_dump, cifratura con password, backup automatico ogni notte, ripristino provato davvero, spostare l'app su un altro computer)](docs/48-fase-4-passo-5-backup.md)
 
 ## Piano di lavoro
 
@@ -146,7 +147,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
   - [x] passo 2: lo script di installazione (`installa.ps1` / `installa.sh`): `.env` con la password del database generata a caso, cambio della password, avvio e attesa del backend (`docs/45`)
   - [x] passo 3: il PIN per aprire l'app (Spring Security), facoltativo dal PC: due porte per distinguere il PC dagli altri dispositivi, codice di recupero, sessione di 12 ore, blocco dopo 5 errori, CSRF, copia dei dati sul telefono solo a sessione aperta (`docs/46`)
   - [x] passo 4: Tailscale, l'app dal telefono con https vero: `installa --tailscale` configura `tailscale serve` verso la porta "remota", nome del PC e indirizzo di ritorno di Enable Banking nel `.env`; cookie `Secure` dal telefono, Funnel rifiutato, `X-Forwarded-Host` non più inoltrato (`docs/47`)
-  - [ ] passo 5: backup e ripristino (provato davvero)
+  - [x] passo 5: backup e ripristino (provato davvero): `installa --backup` e `--ripristina <file>`, file cifrato con una password tua (AES-256, PBKDF2), backup automatico ogni notte in un container dedicato (tiene gli ultimi 14), ripristino con conferma e copia di sicurezza, provato nella CI cancellando tutto (`docs/48`)
   - [ ] passo 6: aggiornamenti e la guida per chi non è informatico
   - da valutare (decisione rimandata): accesso dai dispositivi remoti anche con una VPN già esistente, al posto di Tailscale. Servirebbero: la porta remota pubblicata solo sull'indirizzo della VPN (mai `0.0.0.0` né l'indirizzo della rete di casa), un certificato https per il nome scelto, quel nome in `WALLETTRACKER_ALLOWED_HOSTS` e negli indirizzi di ritorno di Enable Banking
 
