@@ -127,6 +127,49 @@ perde. È proprio per questo che il backup è **cifrato**: la protezione passa d
 **password** tenuta separata (parte D). Senza la chiave nel backup, invece, un server rotto vorrebbe dire segreti
 persi per sempre.
 
+### B1. Due chiavi, due compiti
+
+![Due chiavi, due compiti](img/due-chiavi.svg)
+
+È facile confonderle, quindi una alla volta.
+
+**1. La chiave dei segreti: `.data/encryption.key`.**
+- **Che cos'è:** 32 byte casuali, cioè una chiave AES da 256 bit, che il **backend** genera da solo al primo avvio
+  (`SecretCipher`) e scrive in `.data/encryption.key`, in Base64.
+- **Che cosa cifra:** **solo i segreti** salvati nel database: la chiave privata di Enable Banking e la chiave di
+  Gemini (AES-256-GCM, `docs/17` n. 5).
+- **Che cosa non cifra:** i movimenti, i conti, le categorie e tutto il resto sono nel database **in chiaro**: li
+  protegge il fatto che il database sta sul server, senza porte aperte.
+- **Dove sta:** in un file, **fuori** dal database. Chi ruba solo il database (o una sua copia) vede i segreti come
+  testo illeggibile.
+
+**2. La chiave dei backup: non sta da nessuna parte.**
+Per i backup non c'è un file con una chiave: c'è una **password**, la tua (`WALLETTRACKER_BACKUP_PASSWORD` nel `.env`,
+e nel tuo gestore di password). La chiave AES vera si **calcola dalla password** ogni volta, e poi si butta:
+1. al momento del backup OpenSSL sceglie un **sale** casuale di 8 byte;
+2. mescola password e sale con **PBKDF2** (600 000 giri di SHA-256): ne esce una chiave AES-256;
+3. con quella chiave cifra il file, e scrive il sale all'inizio del file, dopo `Salted__`;
+4. la chiave resta solo nella memoria del container, per quei secondi: non viene salvata da nessuna parte.
+
+Al ripristino si rifà lo stesso calcolo: la stessa password e il sale letto dal file danno la stessa chiave, e il file
+si apre. Un'altra password dà un'altra chiave, e il file non si apre (parte D3).
+
+**Come stanno insieme: una scatola dentro l'altra.** Il file di backup, chiuso dalla chiave della password, contiene
+`database.dump` (dove i segreti sono **ancora** cifrati con la chiave dei segreti) e `encryption.key` (la chiave che li
+apre).
+
+| | Chiave dei segreti | Chiave dei backup |
+|---|---|---|
+| da dove viene | 32 byte casuali generati dal backend | calcolata dalla tua password + il sale (PBKDF2) |
+| dove sta | `.data/encryption.key` sul server, e **dentro** ogni backup | da nessuna parte: si ricalcola dalla password |
+| che cosa protegge | i segreti nel database (Enable Banking, Gemini) | **tutto** il file di backup, compresa la chiave dei segreti |
+| chi la usa | il backend, ogni volta che gli serve un segreto | solo il container dei backup, per fare e aprire i backup |
+| se la perdi | i segreti non si leggono: li reinserisci in Impostazioni | se perdi la **password**, i backup non si aprono più |
+
+Perché la chiave dei segreti viaggia **dentro** il backup? Senza, un backup ripristinato su un server nuovo avrebbe i
+segreti illeggibili ("illeggibile: inseriscila di nuovo"). È al sicuro perché tutto il file è chiuso dalla password.
+Sono due chiavi indipendenti: perderne una non apre l'altra.
+
 ---
 
 ## Parte C: salvare un database: `pg_dump`
