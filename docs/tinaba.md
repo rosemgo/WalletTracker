@@ -12,6 +12,7 @@ Fuori dalla numerazione, come `docs/investimenti.md`: scritta in parallelo alla 
 | F | i test, e la prova nel browser |
 | G | come usarlo |
 | H | due correzioni: la causale intera, e i giroconti scelti a mano |
+| I | le regole di Tinaba cercano tutte le parole (`V32`) |
 
 ---
 
@@ -130,7 +131,7 @@ Con il segno giusto, resta da dire **che cosa** è ogni movimento. La migrazione
 `V31__regole_tinaba.sql` aggiunge tre regole predefinite, a priorità 20 (prima della regola 40 sui bonifici, vedi
 `docs/investimenti.md`, parte H):
 
-| Regola | Se il testo contiene | Verso | Allora |
+| Regola | Se il testo contiene (tutte le parole, da `V32`) | Verso | Allora |
 |---|---|---|---|
 | Versamento nel Robo advisor (Tinaba) | `versamento Robo advisor` | uscita | **Acquisto titoli** |
 | Credito Power (Tinaba) | `Ricarica effettuata Tinaba Power` | uscita | **Spesa**, "Costi bancari" |
@@ -275,8 +276,35 @@ l'anteprima mostra "Ricevuto da Mario Rossi · Trasferimento a mio conto", e rei
 vecchia maniera" 2 movimenti vengono completati, senza doppioni.
 
 **Da sapere.** Le regole guardano la causale intera, seguita dalla controparte. Il testo aggiunto va in fondo alla
-causale, quindi "inizia con" non cambia. Cambia invece un "contiene" che scavalca il punto in cui causale e
-controparte si toccano: la regola `V31` della ricarica Power cerca "Ricarica effettuata Tinaba Power", cioè la fine
-della causale più la controparte. Oggi funziona perché in quelle righe la seconda colonna è vuota; se un giorno non lo
-fosse, la regola andrebbe cambiata (per esempio con "tutte le parole"). Per le tue regole, "Prova" dice subito se
-trovano ancora i loro movimenti.
+causale: una regola "contiene" che cerca una frase a cavallo tra causale e controparte può non trovarla più. Per le
+regole di Tinaba è risolto subito, nella parte I; per le tue regole, "Prova" dice se trovano ancora i loro movimenti.
+
+---
+
+## Parte I: le regole di Tinaba cercano tutte le parole
+
+**Il buco.** La regola `V31` della ricarica Power cercava, con "contiene", la frase "Ricarica effettuata Tinaba
+Power": la fine della causale ("Ricarica effettuata") attaccata alla controparte ("Tinaba Power"). Funzionava solo
+finché la seconda colonna di quelle righe restava vuota. Con un messaggio il testo diventa
+
+```
+Ricarica effettuata · Credito per le commissioni Tinaba Power
+```
+
+e la frase attaccata non c'è più: la ricarica restava una spesa **senza categoria**.
+
+**La soluzione.** Il modo "tutte le parole" (`ALL_WORDS`, `docs/40`): la regola trova il movimento se il testo ha
+tutte le sue parole, intere, in qualsiasi ordine e con altre parole in mezzo. È quello giusto per un testo che è
+l'unione di più colonne. La migrazione `V32__regole_tinaba_tutte_le_parole.sql` lo usa per tutte e tre le regole di
+Tinaba, ma **solo** se sono ancora come le aveva create `V31` (stesso nome, stesso testo, modo "contiene"): una
+regola che hai modificato tu resta la tua.
+
+**Perché non un "contiene" più corto** ("Tinaba Power")? Perché basterebbe a questa riga, ma non dice niente del
+caso generale: "tutte le parole" resiste a qualsiasi testo in mezzo.
+
+**Il test** (`CsvImportControllerTest.theTinabaFileGetsTheSignsAndTheTypesRight`) ora ha una ricarica Power **con**
+un messaggio. Senza `V32` fallisce (la ricarica non ha la categoria "Costi bancari"); con `V32` passa.
+
+Una nota per chi prova a mano: togliendo un file di migrazione da `src/main/resources`, la sua copia resta in
+`target/classes` e Flyway la applica lo stesso. Per una prova "senza" bisogna cancellare anche quella (o fare
+`mvn clean`).

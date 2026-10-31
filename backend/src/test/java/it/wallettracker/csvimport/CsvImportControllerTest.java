@@ -178,7 +178,7 @@ class CsvImportControllerTest {
                 28/10/2026 01:32:31,Bonifici,Mario Rossi,Ricevuto da Mario Rossi,Trasferimento a mio conto,ABC,200,no
                 13/10/2026 15:52:28,PAYMENT_TRANSFER,Tinaba Cashback,Trasferimento ricevuto per campagna cashback,Cashback Power,,"46,74",no
                 02/10/2026 17:04:33,Robo advisor,,Nuovo versamento Robo advisor,,,200,no
-                07/04/2026 14:21:03,PAYMENT_TRANSFER,Tinaba Power,Ricarica effettuata,,,50,no
+                07/04/2026 14:21:03,PAYMENT_TRANSFER,Tinaba Power,Ricarica effettuata,Credito per le commissioni,,50,no
                 """;
 
         // La proposta riconosce il file: importi senza segno, entrate le righe "ricevuto".
@@ -205,7 +205,8 @@ class CsvImportControllerTest {
         // Il versamento nel Robo advisor: acquisto titoli, non una spesa (regola di partenza V31).
         assertThat(byText.get("Nuovo versamento Robo advisor").getType()).isEqualTo(TransactionType.SECURITIES_BUY);
         // Il credito Power: una spesa; il cashback: il suo rimborso (spesa con il più), nella stessa categoria.
-        BankTransaction power = byText.get("Ricarica effettuata");
+        // Anche con un messaggio tra la causale e la controparte (V32: "tutte le parole", non una frase attaccata).
+        BankTransaction power = byText.get("Ricarica effettuata · Credito per le commissioni");
         BankTransaction cashback = byText.get("Trasferimento ricevuto per campagna cashback · Cashback Power");
         assertThat(power.getType()).isEqualTo(TransactionType.EXPENSE);
         assertThat(cashback.getType()).isEqualTo(TransactionType.EXPENSE);
