@@ -1195,6 +1195,7 @@ il messaggio esatto (senza dati personali).
 | Che cosa vedi | Perché | Che cosa fare |
 |---|---|---|
 | lo script: "Non trovo Tailscale" | non installato, o non nel `PATH` | installalo (parte C); su Windows chiudi e riapri PowerShell |
+| PowerShell: "Termine 'tailscale' non riconosciuto…", ma lo script ha funzionato | la finestra di PowerShell era aperta **prima** di installare Tailscale: si porta dietro il `PATH` vecchio. Lo script trova lo stesso il programma nella sua cartella (parte E3b, punto 1); tu no | chiudi e riapri PowerShell; oppure scrivi il percorso intero: `& "C:\Program Files\Tailscale\tailscale.exe" serve status` |
 | lo script: "installato ma non collegato" | non hai fatto l'accesso, o è in pausa | apri Tailscale → **Log in** / **Connect** |
 | lo script: "Non trovo il nome del server" | MagicDNS spento | console → **DNS** → **Enable MagicDNS** (parte E2) |
 | lo script resta fermo dopo "Chiedo a Tailscale…" e mostra un indirizzo | l'https non è ancora attivo nella tailnet | apri l'indirizzo, attiva, e lo script prosegue |
