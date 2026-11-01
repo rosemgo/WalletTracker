@@ -85,6 +85,7 @@ function investments(period: InvestmentPeriod): Investments {
     ],
     transfers,
     onlyTransfers: [],
+    cash: [],
   };
 }
 
@@ -204,6 +205,42 @@ describe('Investments', () => {
     await fixture.whenStable();
     expect(transfers.querySelectorAll('a.movement').length).toBe(10);
     expect(transfers.querySelector('button.show-all')).toBeNull();
+  });
+
+  it('shows the cash on the investment accounts, and how to get a balance that is missing', async () => {
+    answer = (period) => ({
+      ...investments(period),
+      cash: [
+        {
+          accountId: 2,
+          account: 'Trade Republic',
+          manual: false,
+          balance: { amount: 118.5, date: '2026-10-14', source: 'BANK', startDate: null },
+        },
+        {
+          accountId: 3,
+          account: 'Tinaba · Wallet',
+          manual: true,
+          balance: { amount: 46.74, date: '2026-10-28', source: 'MANUAL', startDate: '2026-10-28' },
+        },
+        { accountId: 4, account: 'Fondo Beta · PAC', manual: true, balance: null },
+      ],
+    });
+    const { page: p } = await page();
+    const card = p.querySelector('.cash-card') as HTMLElement;
+    const text = card.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    // Il totale somma i saldi che si conoscono.
+    expect(card.querySelector('.mid-figure')?.textContent).toMatch(/165\s€/);
+    expect(text).toMatch(/Trade Republic al 14 ott 2026 · dalla banca 118,50\s€/);
+    expect(text).toMatch(/Tinaba · Wallet al 28 ott 2026 · dal saldo che hai scritto 46,74\s€/);
+    expect(text).toContain('Fondo Beta · PAC saldo non scritto: scrivilo in Conti');
+    expect(card.querySelector('a')?.getAttribute('href')).toBe('/conti');
+  });
+
+  it('without investment accounts there is no cash card', async () => {
+    const { page: p } = await page();
+    expect(p.querySelector('.cash-card')).toBeNull();
   });
 
   it('warns about the accounts where only the transfers are seen', async () => {

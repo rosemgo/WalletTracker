@@ -31,6 +31,7 @@
           <th>Banca</th>
           <th>Conto</th>
           <th>Ruolo</th>
+          <th>Saldo</th>
           <th>Consenso valido fino al</th>
           <th>Ultimo aggiornamento</th>
         </tr>
@@ -80,6 +81,43 @@
                 }
               </select>
             </td>
+            <td data-label="Saldo" class="balance-cell">
+              <!-- Il saldo (docs/saldi.md): dalla banca, o scritto da te per un conto manuale. -->
+              @if (editingBalance() === account.id) {
+                <app-balance-form
+                  [account]="account"
+                  (saved)="onBalanceSaved($event)"
+                  (cancelled)="editingBalance.set(null)"
+                />
+              } @else {
+                @if (account.balance; as b) {
+                  <strong class="balance">{{ b.amount | money: account.currency }}</strong>
+                  <div class="secondary">
+                    al {{ b.date | date: 'd MMM y' }} ·
+                    @if (b.source === 'BANK') {
+                      dalla banca
+                    } @else if (b.startDate === b.date) {
+                      scritto da te
+                    } @else {
+                      dal tuo saldo del {{ b.startDate | date: 'd MMM' }}, più i movimenti dopo
+                    }
+                  </div>
+                } @else if (account.source === 'MANUAL') {
+                  <span class="secondary">non ancora scritto</span>
+                } @else if (account.lastSyncAt) {
+                  <span class="secondary">la banca non lo dà</span>
+                } @else {
+                  <span class="secondary">al prossimo aggiornamento</span>
+                }
+                @if (account.source === 'MANUAL') {
+                  <div>
+                    <button type="button" class="link" (click)="editingBalance.set(account.id)">
+                      {{ account.balance ? 'correggi il saldo' : 'scrivi il saldo' }}
+                    </button>
+                  </div>
+                }
+              }
+            </td>
             @if (account.source === 'MANUAL') {
               <!-- Conto manuale: niente consenso PSD2, i movimenti arrivano da file. -->
               <td data-label="Consenso" class="secondary">conto manuale</td>
@@ -127,7 +165,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="5">Nessun conto: collega una banca o aggiungi un conto manuale.</td>
+            <td colspan="6">Nessun conto: collega una banca o aggiungi un conto manuale.</td>
           </tr>
         }
       </tbody>

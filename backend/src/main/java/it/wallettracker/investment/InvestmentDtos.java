@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 
+import it.wallettracker.account.CurrentBalance;
 import it.wallettracker.transaction.TransactionDto;
 
 /** I record dell'API degli investimenti (docs/investimenti.md), in un file solo perché sono piccoli e vanno insieme. */
@@ -57,12 +58,22 @@ public final class InvestmentDtos {
      *                            recente
      * @param onlyTransfers       i conti di investimento di cui si vedono bonifici ma, in tutta la storia, nessun acquisto
      *                            né vendita: per loro l'investito non si vede
+     * @param cash                la liquidità: il saldo di ogni conto di investimento nella valuta scelta (docs/saldi.md)
      */
     public record Overview(String currency, List<String> currencies, Period period, YearMonth from, YearMonth to,
             BigDecimal investedTotal, BigDecimal investedThisYear, BigDecimal investedThisMonth,
             BigDecimal transferredTotal, BigDecimal incomeThisYear, BigDecimal boughtInPeriod,
             BigDecimal soldInPeriod, BigDecimal transferredInPeriod, BigDecimal incomeInPeriod,
             BigDecimal taxesInPeriod, List<Month> months, List<Group> incomeByType, List<Group> incomeBySource,
-            List<TransactionDto> trades, List<TransactionDto> transfers, List<String> onlyTransfers) {
+            List<TransactionDto> trades, List<TransactionDto> transfers, List<String> onlyTransfers,
+            List<Cash> cash) {
+    }
+
+    /**
+     * Il saldo di un conto di investimento: i soldi sul conto, non investiti in titoli (docs/saldi.md, parte D).
+     *
+     * @param balance il saldo, o null se la banca non lo dà e l'utente non l'ha scritto
+     */
+    public record Cash(Long accountId, String account, boolean manual, CurrentBalance balance) {
     }
 }

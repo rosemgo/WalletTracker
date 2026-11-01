@@ -15,7 +15,10 @@ import java.util.regex.Pattern;
 
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.account.AccountService;
+import it.wallettracker.account.AccountSource;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.investment.InvestmentDtos.Cash;
 import it.wallettracker.investment.InvestmentDtos.Overview;
 import it.wallettracker.investment.InvestmentDtos.Period;
 import it.wallettracker.investment.Investments.Movement;
@@ -46,10 +49,13 @@ public class InvestmentService {
 
     private final BankTransactionRepository repository;
     private final AccountRepository accountRepository;
+    private final AccountService accountService;
 
-    public InvestmentService(BankTransactionRepository repository, AccountRepository accountRepository) {
+    public InvestmentService(BankTransactionRepository repository, AccountRepository accountRepository,
+            AccountService accountService) {
         this.repository = repository;
         this.accountRepository = accountRepository;
+        this.accountService = accountService;
     }
 
     @Transactional(readOnly = true)
@@ -115,7 +121,18 @@ public class InvestmentService {
                 Investments.months(movements, first, current),
                 Investments.incomeBy(movements, from, today, Movement::category, "Altre rendite"),
                 Investments.incomeBy(movements, from, today, Movement::source, "Senza descrizione"),
-                trades, transfers, onlyTransfers(transactions));
+                trades, transfers, onlyTransfers(transactions), cash(chosen));
+    }
+
+    /**
+     * La liquidità: il saldo di ogni conto di investimento nella valuta scelta, con il suo nome (docs/saldi.md, parte
+     * D). Un conto senza saldo c'è lo stesso, con il saldo null: la pagina dice come averlo.
+     */
+    private List<Cash> cash(String currency) {
+        return accountService.allAccounts().stream()
+                .filter(a -> a.role() == AccountRole.INVESTMENT && a.currency().equals(currency))
+                .map(a -> new Cash(a.id(), a.label(), a.source() == AccountSource.MANUAL, a.balance()))
+                .toList();
     }
 
     /**

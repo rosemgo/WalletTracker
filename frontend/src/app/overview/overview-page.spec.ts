@@ -83,6 +83,7 @@ const NO_INVESTMENTS = {
   trades: [],
   transfers: [],
   onlyTransfers: [],
+  cash: [],
 } as Investments;
 
 describe('OverviewPage', () => {

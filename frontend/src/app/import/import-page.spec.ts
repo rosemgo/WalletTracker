@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
-import { Account, ImportMapping, ImportPreview, ImportResult } from '../api/models';
+import { Account, ImportMapping, ImportPreview, ImportResult, Transaction } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { ImportPage, MAX_FILE_BYTES } from './import-page';
 
@@ -25,6 +25,7 @@ function account(id: number, source: Account['source'], bank: string): Account {
     consentValidUntil: null,
     lastSyncAt: null,
     lastSyncError: null,
+    balance: null,
   };
 }
 
@@ -77,6 +78,7 @@ describe('ImportPage', () => {
   let nextPreview: (mapping: ImportMapping | null) => Observable<ImportPreview>;
   let importResponse: Observable<ImportResult>;
   let queryConto: string | null;
+  let balances: { accountId: number; balance: number | null }[];
 
   beforeEach(() => {
     accounts = [
@@ -90,8 +92,39 @@ describe('ImportPage', () => {
     nextPreview = (mapping) => of(previewOf(mapping ?? GUESSED));
     importResponse = of({ imported: 1, duplicates: 0, completed: 0 });
     queryConto = null;
+    balances = [];
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of(accounts),
+      // L'ultimo movimento del conto, per scrivere il saldo (docs/saldi.md).
+      transactions: () =>
+        of({
+          items: [
+            {
+              id: 70,
+              bookingDate: '2026-10-03',
+              amount: -12.99,
+              currency: 'EUR',
+              description: 'NETFLIX.COM',
+            } as unknown as Transaction,
+          ],
+          page: 0,
+          size: 1,
+          totalItems: 1,
+          totalPages: 1,
+        }),
+      changeBalance: (accountId: number, balance: number | null) => {
+        balances.push({ accountId, balance });
+        const updated = accounts.find((a) => a.id === accountId)!;
+        return of({
+          ...updated,
+          balance: {
+            amount: balance!,
+            date: '2026-10-03',
+            source: 'MANUAL',
+            startDate: '2026-10-03',
+          },
+        } as Account);
+      },
       previewImport: (_file: File, accountId: number, mapping: ImportMapping | null) => {
         previews.push({ accountId, mapping });
         return nextPreview(mapping);
@@ -188,6 +221,24 @@ describe('ImportPage', () => {
 
     expect(imports).toEqual([{ accountId: 5, mapping: GUESSED }]);
     expect(page.textContent).toContain('1 movimento importato');
+
+    // Il conto non ha ancora un saldo: si chiede subito, mostrando l'ultimo movimento da cercare nella banca.
+    const check = page.querySelector('.balance-check') as HTMLElement;
+    expect(check.textContent?.replace(/\s+/g, ' ')).toContain(
+      '3 ottobre 2026 · Netflix.com · -12,99',
+    );
+    const input = check.querySelector('input') as HTMLInputElement;
+    input.value = '1.234,56';
+    (
+      Array.from(check.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Salva il saldo'),
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+
+    expect(balances).toEqual([{ accountId: 5, balance: 1234.56 }]);
+    expect(check.textContent?.replace(/\s+/g, ' ')).toMatch(/1\.234,56\s€ al 3 ottobre 2026/);
+    expect(check.textContent).toContain('Salvato');
   });
 
   it('changing a menu asks for a new preview with that mapping', async () => {

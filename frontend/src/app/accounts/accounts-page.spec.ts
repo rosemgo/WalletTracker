@@ -1,10 +1,14 @@
+import { registerLocaleData } from '@angular/common';
+import localeIt from '@angular/common/locales/it';
+import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Account, AccountRole, ManualAccountRequest, SyncRound } from '../api/models';
+import { Account, AccountRole, ManualAccountRequest, SyncRound, Transaction } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AccountsPage } from './accounts-page';
+import { parseBalance } from './balance-form';
 
 const CARD: Account = {
   id: 3,
@@ -19,6 +23,7 @@ const CARD: Account = {
   consentValidUntil: '2027-01-05T14:35:51Z',
   lastSyncAt: null,
   lastSyncError: 'HTTP 429 troppe letture',
+  balance: null,
 };
 
 /** Un conto manuale: i movimenti arrivano da file CSV. */
@@ -35,6 +40,7 @@ const BROKER: Account = {
   consentValidUntil: null,
   lastSyncAt: null,
   lastSyncError: null,
+  balance: null,
 };
 
 /**
@@ -47,6 +53,7 @@ describe('AccountsPage', () => {
   const created: ManualAccountRequest[] = [];
   const deleted: number[] = [];
   const renamed: [number, string][] = [];
+  const balances: [number, number | null][] = [];
   let syncCalls = 0;
   let accounts: Account[];
 
@@ -55,6 +62,7 @@ describe('AccountsPage', () => {
     created.length = 0;
     deleted.length = 0;
     renamed.length = 0;
+    balances.length = 0;
     syncCalls = 0;
     accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
@@ -84,6 +92,34 @@ describe('AccountsPage', () => {
         changedRoles.push([id, role]);
         return of({ ...CARD, role });
       },
+      changeBalance: (id: number, balance: number | null) => {
+        balances.push([id, balance]);
+        return of({
+          ...BROKER,
+          balance: {
+            amount: balance!,
+            date: '2026-10-28',
+            source: 'MANUAL',
+            startDate: '2026-10-28',
+          },
+        } as Account);
+      },
+      transactions: () =>
+        of({
+          items: [
+            {
+              id: 9,
+              bookingDate: '2026-10-28',
+              amount: 200,
+              currency: 'EUR',
+              description: 'Ricevuto da Mario Rossi',
+            } as unknown as Transaction,
+          ],
+          page: 0,
+          size: 1,
+          totalItems: 1,
+          totalPages: 1,
+        }),
       syncNow: () => {
         syncCalls++;
         return of<SyncRound>({ updated: 2, failed: 1, notDue: 0 });
@@ -93,6 +129,58 @@ describe('AccountsPage', () => {
       imports: [AccountsPage],
       providers: [{ provide: WalletApi, useValue: fakeApi }, provideRouter([])],
     });
+  });
+
+  it('shows the balance of the bank, and lets you write the one of a manual account', async () => {
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    accounts = [
+      {
+        ...CARD,
+        balance: { amount: 1234.56, date: '2026-10-31', source: 'BANK', startDate: null },
+      },
+      BROKER,
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const cells = Array.from(page.querySelectorAll('td.balance-cell')) as HTMLElement[];
+    const text = (cell: HTMLElement) => cell.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    expect(text(cells[0])).toMatch(/1\.234,56\s€ al 31 ott 2026 · dalla banca/);
+    expect(cells[0].querySelector('button')).toBeNull(); // il saldo della banca non si scrive a mano
+    expect(text(cells[1])).toContain('non ancora scritto');
+
+    (cells[1].querySelector('button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    // L'ultimo movimento importato, da cercare nell'app della banca.
+    expect(text(cells[1])).toContain('28 ottobre 2026 · Ricevuto da Mario Rossi');
+    const input = cells[1].querySelector('input') as HTMLInputElement;
+    input.value = 'dodici';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await fixture.whenStable();
+    expect(text(cells[1])).toContain('Scrivi un importo');
+    expect(balances).toEqual([]);
+
+    input.value = '350,00';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await fixture.whenStable();
+    expect(balances).toEqual([[8, 350]]);
+    expect(text(page.querySelectorAll('td.balance-cell')[1] as HTMLElement)).toMatch(
+      /350,00\s€ al 28 ott 2026 · scritto da te/,
+    );
+  });
+
+  it('reads the amounts written the Italian or the English way', () => {
+    expect(parseBalance('1.234,56')).toBe(1234.56);
+    expect(parseBalance('1234,5')).toBe(1234.5);
+    expect(parseBalance('1234.56')).toBe(1234.56);
+    expect(parseBalance('1.234')).toBe(1234);
+    expect(parseBalance('-12,30 €')).toBe(-12.3);
+    expect(parseBalance('0')).toBe(0);
+    expect(parseBalance('12,345')).toBeNull();
+    expect(parseBalance('')).toBeNull();
+    expect(parseBalance('dodici')).toBeNull();
   });
 
   it('shows the accounts with their role and the last sync error', async () => {

@@ -22,6 +22,8 @@ import java.time.Instant;
  * @param source            da dove arrivano i movimenti: Enable Banking o file CSV (conto manuale)
  * @param consentValidUntil fino a quando vale il consenso dato alla banca; null per un conto manuale
  * @param lastSyncError     il motivo dell'ultimo errore di importazione, null se è andata bene
+ * @param balance           il saldo (docs/saldi.md): dalla banca, o scritto dall'utente per un conto manuale; null se
+ *                          non si sa
  */
 public record AccountDto(
         Long id,
@@ -35,10 +37,11 @@ public record AccountDto(
         AccountSource source,
         Instant consentValidUntil,
         Instant lastSyncAt,
-        String lastSyncError) {
+        String lastSyncError,
+        CurrentBalance balance) {
 
     /** Da entità a DTO. Va chiamato dentro una transazione, perché legge il collegamento (LAZY). */
-    static AccountDto from(Account account) {
+    static AccountDto from(Account account, CurrentBalance balance) {
         return new AccountDto(
                 account.getId(),
                 account.label(),
@@ -51,6 +54,7 @@ public record AccountDto(
                 account.getSource(),
                 account.getConnection() != null ? account.getConnection().getValidUntil() : null,
                 account.getLastSyncAt(),
-                account.getLastSyncError());
+                account.getLastSyncError(),
+                balance);
     }
 }

@@ -119,60 +119,103 @@
           </section>
         </div>
 
-        <section class="card">
-          <span class="secondary">Cedole, dividendi e interessi · {{ periodLabel(d.period) }}</span>
-          <span class="mid-figure">{{
-            d.incomeInPeriod | money: d.currency : 'symbol' : '1.0-0'
-          }}</span>
-          @if (d.taxesInPeriod !== 0) {
-            <p class="secondary">
-              Tasse sugli investimenti nello stesso periodo:
-              {{ d.taxesInPeriod | money: d.currency : 'symbol' : '1.0-0' }}
+        <div>
+          <section class="card">
+            <span class="secondary"
+              >Cedole, dividendi e interessi · {{ periodLabel(d.period) }}</span
+            >
+            <span class="mid-figure">{{
+              d.incomeInPeriod | money: d.currency : 'symbol' : '1.0-0'
+            }}</span>
+            @if (d.taxesInPeriod !== 0) {
+              <p class="secondary">
+                Tasse sugli investimenti nello stesso periodo:
+                {{ d.taxesInPeriod | money: d.currency : 'symbol' : '1.0-0' }}
+              </p>
+            }
+            <app-bar-chart
+              [values]="income()"
+              [labels]="barLabels()"
+              [names]="incomeBarNames()"
+              [selected]="lastIncome()"
+              [description]="incomeDescription()"
+            />
+            @if (d.incomeByType.length > 0) {
+              <h3>Per tipo</h3>
+              <ul class="rows">
+                @for (g of d.incomeByType; track g.name) {
+                  <li>
+                    <span>
+                      {{ g.name }}
+                      <span class="secondary">{{
+                        g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                      }}</span>
+                    </span>
+                    <strong>{{ g.amount | money: d.currency }}</strong>
+                  </li>
+                }
+              </ul>
+              <h3>Da dove</h3>
+              <ul class="rows">
+                @for (g of d.incomeBySource; track g.name) {
+                  <li>
+                    <span>
+                      {{ g.name | readable }}
+                      <span class="secondary">{{
+                        g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                      }}</span>
+                    </span>
+                    <strong>{{ g.amount | money: d.currency }}</strong>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="secondary">Nessuna rendita in questo periodo.</p>
+            }
+            <p class="secondary note-value">
+              Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito.
             </p>
+          </section>
+
+          @if (d.cash.length > 0) {
+            <!-- La liquidità (docs/saldi.md, parte D): il saldo di ogni conto di investimento. -->
+            <section class="card cash-card">
+              <span class="secondary">Liquidità sui conti di investimento</span>
+              <span class="mid-figure">{{
+                cashTotal() | money: d.currency : 'symbol' : '1.0-0'
+              }}</span>
+              <ul class="rows">
+                @for (c of d.cash; track c.accountId) {
+                  <li>
+                    <span>
+                      {{ c.account }}
+                      <span class="secondary">
+                        @if (c.balance; as b) {
+                          al {{ b.date | date: 'd MMM y' }} ·
+                          {{ b.source === 'BANK' ? 'dalla banca' : 'dal saldo che hai scritto' }}
+                        } @else if (c.manual) {
+                          saldo non scritto: <a routerLink="/conti">scrivilo in Conti</a>
+                        } @else {
+                          la banca non dà il saldo
+                        }
+                      </span>
+                    </span>
+                    @if (c.balance; as b) {
+                      <strong>{{ b.amount | money: d.currency }}</strong>
+                    } @else {
+                      <strong class="secondary">—</strong>
+                    }
+                  </li>
+                }
+              </ul>
+              <p class="secondary note-value">
+                I soldi sui conti di investimento non (ancora) investiti in titoli: il saldo che dà
+                la banca, o quello che hai scritto per un conto manuale. Non si calcola dai
+                movimenti, che nell'app non sono mai tutti.
+              </p>
+            </section>
           }
-          <app-bar-chart
-            [values]="income()"
-            [labels]="barLabels()"
-            [names]="incomeBarNames()"
-            [selected]="lastIncome()"
-            [description]="incomeDescription()"
-          />
-          @if (d.incomeByType.length > 0) {
-            <h3>Per tipo</h3>
-            <ul class="rows">
-              @for (g of d.incomeByType; track g.name) {
-                <li>
-                  <span>
-                    {{ g.name }}
-                    <span class="secondary">{{
-                      g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                    }}</span>
-                  </span>
-                  <strong>{{ g.amount | money: d.currency }}</strong>
-                </li>
-              }
-            </ul>
-            <h3>Da dove</h3>
-            <ul class="rows">
-              @for (g of d.incomeBySource; track g.name) {
-                <li>
-                  <span>
-                    {{ g.name | readable }}
-                    <span class="secondary">{{
-                      g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                    }}</span>
-                  </span>
-                  <strong>{{ g.amount | money: d.currency }}</strong>
-                </li>
-              }
-            </ul>
-          } @else {
-            <p class="secondary">Nessuna rendita in questo periodo.</p>
-          }
-          <p class="secondary note-value">
-            Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito.
-          </p>
-        </section>
+        </div>
       </div>
 
       <app-investment-movements

@@ -9,9 +9,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -19,9 +21,13 @@ import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.account.BalanceSource;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Amount;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.RawTransaction;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
+import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.sync.SyncService.Round;
@@ -156,6 +162,61 @@ class SyncServiceTest {
         assertThat(reload(withExpiredConsent).getLastSyncError())
                 .startsWith("consenso scaduto")
                 .endsWith("ricollega Banca Scaduta");
+    }
+
+    @Test
+    void afterTheMovementsTheBankBalanceIsSavedAndInBackgroundReadOnceADay() {
+        Account account = account(validConnection(), "uid-a");
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Disponibile", new Amount(new BigDecimal("2500.00"), "EUR"), "ITAV", null),
+                new Balance("Contabile", new Amount(new BigDecimal("1234.56"), "EUR"), "CLBD",
+                        LocalDate.of(2026, 10, 31))));
+
+        syncService.syncAllInBackground();
+
+        Account reloaded = reload(account);
+        assertThat(reloaded.getBalance()).isEqualByComparingTo("1234.56");
+        assertThat(reloaded.getBalanceDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(reloaded.getBalanceSource()).isEqualTo(BalanceSource.BANK);
+
+        // Un altro giro in background poco dopo (movimenti scaduti di nuovo): il saldo non si rilegge.
+        accountRepository.recordSync(account.getId(), Instant.now().minus(properties.interval()).minusSeconds(60),
+                null);
+        syncService.syncAllInBackground();
+        verify(client, times(2)).getTransactions(eq("uid-a"), any(), any(), any());
+        verify(client, times(1)).getBalances(eq("uid-a"), any());
+
+        // Con l'utente presente ("Aggiorna ora") si rilegge sempre.
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        verify(client, times(2)).getBalances(eq("uid-a"), any());
+    }
+
+    @Test
+    void aBalanceThatDoesNotArriveNeverFailsTheSync() {
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("99.00"), LocalDate.of(2026, 10, 1),
+                BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        when(client.getBalances(eq("uid-a"), any())).thenThrow(tooManyRequests());
+
+        Round round = syncService.syncAllInBackground();
+
+        // I movimenti sono andati: la sincronizzazione è riuscita, e il saldo di prima resta.
+        assertThat(round).isEqualTo(new Round(1, 0, 0));
+        assertThat(reload(account).getLastSyncError()).isNull();
+        assertThat(reload(account).getBalance()).isEqualByComparingTo("99.00");
+    }
+
+    @Test
+    void aBankThatGivesNoBalanceLeavesTheAccountWithout() {
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("99.00"), LocalDate.of(2026, 10, 1),
+                BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        // Il client finto, senza istruzioni, risponde con una lista vuota.
+
+        syncService.syncAllInBackground();
+
+        assertThat(reload(account).getBalance()).isNull();
+        assertThat(reload(account).getBalanceSource()).isNull();
     }
 
     private BankConnection validConnection() {

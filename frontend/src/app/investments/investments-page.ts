@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate } from '@angular/common';
+import { DatePipe, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -31,7 +31,15 @@ const PERIODS: { value: InvestmentPeriod; label: string }[] = [
  */
 @Component({
   selector: 'app-investments-page',
-  imports: [BarChart, InvestmentMovements, MoneyPipe, ReadablePipe, RouterLink, TrendChart],
+  imports: [
+    BarChart,
+    DatePipe,
+    InvestmentMovements,
+    MoneyPipe,
+    ReadablePipe,
+    RouterLink,
+    TrendChart,
+  ],
   templateUrl: './investments-page.html',
 })
 export class InvestmentsPage implements OnInit {
@@ -64,6 +72,11 @@ export class InvestmentsPage implements OnInit {
       )
     );
   });
+
+  /** La liquidità: la somma dei saldi conosciuti dei conti di investimento. */
+  protected readonly cashTotal = computed(() =>
+    (this.data()?.cash ?? []).reduce((sum, c) => sum + (c.balance?.amount ?? 0), 0),
+  );
 
   protected readonly invested = computed(
     () => this.data()?.months.map((m) => m.investedCumulative) ?? [],

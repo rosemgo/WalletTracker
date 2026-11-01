@@ -1,6 +1,7 @@
 package it.wallettracker.transaction;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -265,4 +266,24 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
                              it.wallettracker.transaction.TransactionType.INVESTMENT_TAX)
             """)
     List<BankTransaction> findInvestmentMovements();
+
+    /**
+     * Per il saldo di un conto manuale (V34, docs/saldi.md): la somma dei movimenti contabilizzati arrivati dopo il
+     * saldo scritto dall'utente. "Dopo" vuol dire con una data successiva al giorno del saldo, oppure con lo stesso
+     * giorno ma importati dopo che l'utente l'ha scritto (quelli di prima li aveva già davanti).
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.bookingDate > :date OR (t.bookingDate = :date AND t.importedAt > :at))
+            """)
+    BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
+
+    /** Il giorno dell'ultimo movimento contabilizzato di un conto, o null se non ne ha. */
+    @Query("""
+            SELECT MAX(t.bookingDate) FROM BankTransaction t
+            WHERE t.account.id = :accountId AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+            """)
+    LocalDate lastBookingDate(@Param("accountId") Long accountId);
 }

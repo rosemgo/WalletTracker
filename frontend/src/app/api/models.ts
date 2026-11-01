@@ -40,6 +40,18 @@ export interface Account {
   consentValidUntil: string | null; // data e ora ISO, es. "2027-01-05T14:35:51Z"; null nei conti manuali
   lastSyncAt: string | null;
   lastSyncError: string | null;
+  balance: CurrentBalance | null; // il saldo (docs/saldi.md); null se la banca non lo dà e non l'hai scritto
+}
+
+/** Da dove viene un saldo: dalla banca, o scritto da te per un conto manuale. */
+export type BalanceSource = 'BANK' | 'MANUAL';
+
+/** Il saldo di un conto (docs/saldi.md). */
+export interface CurrentBalance {
+  amount: number;
+  date: string; // il giorno a cui si riferisce: "2026-10-31"
+  source: BalanceSource;
+  startDate: string | null; // solo per un conto manuale: il giorno del saldo che hai scritto, da cui si parte
 }
 
 /** Il corpo di POST /api/accounts: un conto manuale, i cui movimenti si caricano da file CSV. */
@@ -746,4 +758,13 @@ export interface Investments {
   trades: Transaction[]; // acquisti e vendite del periodo, dal più recente
   transfers: Transaction[]; // i bonifici del periodo che fanno le barre, dal più recente
   onlyTransfers: string[]; // conti di investimento con bonifici ma senza nessun acquisto: l'investito non si vede
+  cash: InvestmentCash[]; // il saldo di ogni conto di investimento: la liquidità, non investita in titoli
+}
+
+/** Il saldo di un conto di investimento (docs/saldi.md, parte D). */
+export interface InvestmentCash {
+  accountId: number;
+  account: string;
+  manual: boolean;
+  balance: CurrentBalance | null;
 }

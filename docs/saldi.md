@@ -1,0 +1,248 @@
+# Il saldo dei conti
+
+Fuori dalla numerazione, come `docs/investimenti.md` e `docs/tinaba.md`. Viene dalla consegna degli investimenti
+(`docs/consegne-investimenti.md`, sezione 9): per mostrare la **liquidità** sui conti di investimento serve il saldo
+vero dei conti, e fino a qui l'app non lo salvava.
+
+| Parte | Cosa |
+|---|---|
+| A | il principio: un saldo non si calcola dai movimenti |
+| B | i conti collegati: il saldo della banca |
+| C | i conti manuali: il saldo scritto da te, e poi i movimenti |
+| D | dove si vede: Conti, Importa, Investimenti |
+| E | i test, e la prova nel browser |
+| F | esercizi guidati |
+
+---
+
+## Parte A: il principio
+
+Un saldo **non** si calcola sommando i movimenti dell'app. La storia di un conto nell'app non è mai completa:
+
+- Enable Banking dà al massimo un anno di movimenti, spesso solo 90 giorni (`docs/08`);
+- un file CSV parte da quando la banca lo fa partire;
+- prima del primo movimento c'erano già dei soldi sul conto, e l'app non sa quanti.
+
+La somma dei movimenti è quindi un numero **sbagliato**, e un saldo sbagliato presentato come vero è peggio di
+nessun saldo. Per questo il saldo viene sempre da un valore vero:
+
+| Conto | Da dove viene il saldo |
+|---|---|
+| collegato (Enable Banking) | dalla banca, a ogni aggiornamento. Se la banca non lo dà, non c'è |
+| manuale (CSV) | lo scrivi tu una volta, dopo aver controllato l'ultimo movimento; poi si aggiorna con i movimenti importati dopo |
+
+## La migrazione `V34`
+
+```sql
+ALTER TABLE account ADD COLUMN balance            NUMERIC(19, 2);
+ALTER TABLE account ADD COLUMN balance_date       DATE;
+ALTER TABLE account ADD COLUMN balance_source     VARCHAR(10) CHECK (balance_source IN ('BANK', 'MANUAL'));
+ALTER TABLE account ADD COLUMN balance_updated_at TIMESTAMPTZ;
+```
+
+`NUMERIC(19, 2)`, come gli importi dei movimenti: mai `double` per i soldi. Il file è
+`backend/src/main/resources/db/migration/V34__saldo_dei_conti.sql`; nell'entità `Account` i campi `balance`,
+`balanceDate`, `balanceSource` (l'enum `BalanceSource`: `BANK` o `MANUAL`) e `balanceUpdatedAt`.
+
+---
+
+## Parte B: i conti collegati, il saldo della banca
+
+Enable Banking ha `GET /accounts/{uid}/balances`. Il client lo sapeva già chiamare (`EnableBankingClient.getBalances`),
+ma lo usava solo il programma di prova della Fase 0 (`PocRunner`).
+
+### Quale saldo
+
+Una banca può mandare più saldi dello stesso conto, ognuno con un tipo dello standard ISO 20022:
+
+| Tipo | Che cosa | Si usa? |
+|---|---|---|
+| `ITBD`, `CLBD` | **contabile**, in giornata o a fine giornata: solo i movimenti contabilizzati | sì, per primi |
+| `XPCD` | **previsto**: contabile più i movimenti in attesa | se manca il contabile |
+| `ITAV`, `CLAV`, `FWAV` | **disponibile**: può comprendere un fido, quindi non sono i soldi del conto | se manca anche il previsto |
+| altri (`OPBD`, `OTHR`…) | | solo se non c'è nient'altro |
+
+Il contabile è il "saldo contabile" dell'app della banca, ed è quello che torna con i movimenti. Dentro un gruppo
+vince il più recente; a parità di giorno, l'ordine della tabella. Contano solo i saldi nella valuta del conto. Se la
+banca non dice a quale giorno si riferisce, vale oggi.
+
+La scelta è una funzione pura, `BankBalance.choose(balances, currency, today)`, provata da `BankBalanceTest`.
+
+### Quando si legge
+
+In `SyncService.syncAccount`, **dopo** i movimenti:
+
+```java
+ImportResult result = importService.importAccount(account, psu);
+accountRepository.recordSync(account.getId(), Instant.now(), null);
+...
+refreshBalance(account, psu, Instant.now());
+```
+
+Tre regole:
+
+1. **Il saldo è un "di più".** Se la banca risponde con un errore (anche un 429, troppe letture), il saldo di prima
+   resta, e la sincronizzazione è **riuscita** lo stesso: i movimenti sono già salvati.
+2. **Se la banca risponde senza un saldo utilizzabile**, il saldo si toglie: meglio niente che un numero vecchio
+   mostrato come attuale.
+3. **In background al massimo una volta in 20 ore** (`BACKGROUND_BALANCE_INTERVAL`). Ogni lettura senza l'utente
+   presente conta nel limite PSD2 di circa 4 al giorno per conto (`docs/08`), e i movimenti vengono prima. Con
+   "Aggiorna ora" l'utente è presente (gli header PSU), e il saldo si legge sempre.
+
+Il salvataggio usa `AccountRepository.recordBalance`, una `UPDATE` che tocca solo le colonne del saldo, in una
+transazione sua: lo stesso motivo di `recordSync` (`syncAccount` non è `@Transactional`, vedi il suo commento).
+
+---
+
+## Parte C: i conti manuali, il saldo scritto da te
+
+Per un conto manuale (Tinaba, Trade Republic da file) la banca non dà niente all'app. I CSV di Tinaba e di Trade
+Republic non hanno una colonna del saldo. Allora il saldo lo scrivi tu, **una volta**:
+
+1. l'app mostra l'**ultimo movimento importato** del conto ("28 ottobre 2026 · Ricevuto da Mario Rossi · 200,00 €");
+2. apri l'app della banca, trovi quel movimento e leggi il saldo **dopo** di lui;
+3. lo scrivi.
+
+Da lì il saldo si aggiorna da solo: il saldo scritto più i movimenti importati **dopo**.
+
+### Che cosa vuol dire "dopo"
+
+Quando scrivi il saldo, l'app salva:
+
+- `balance`: il saldo che hai scritto;
+- `balance_date`: il giorno dell'ultimo movimento (oggi, se il conto non ne ha ancora);
+- `balance_updated_at`: l'istante in cui l'hai scritto.
+
+Il saldo di oggi è `balance` più la somma dei movimenti contabilizzati che hanno:
+
+- una data **successiva** a `balance_date`, **oppure**
+- la **stessa** data, ma sono stati importati **dopo** `balance_updated_at`.
+
+```java
+@Query("""
+        SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+        WHERE t.account.id = :accountId
+          AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+          AND (t.bookingDate > :date OR (t.bookingDate = :date AND t.importedAt > :at))
+        """)
+BigDecimal sumAfter(...);
+```
+
+Perché la seconda condizione? Un file nuovo può portare un movimento **dello stesso giorno** dell'ultimo che avevi
+controllato, che prima non c'era: non era dentro il saldo che hai scritto, quindi va aggiunto. Quelli dello stesso
+giorno già importati prima invece li avevi davanti, e sono già nel saldo.
+
+E un file con **più storia** (movimenti più vecchi)? Hanno una data precedente: non contano, erano già dentro il saldo.
+
+Il calcolo sta in `CurrentBalance.of` (che cosa mostrare) e in `AccountService.dtoOf` (le due query). Il giorno
+mostrato è quello dell'ultimo movimento contato.
+
+### L'API
+
+```
+PUT /api/accounts/{id}/balance        {"balance": 1234.56}     null lo toglie
+```
+
+- solo per un conto **manuale**: per uno collegato risponde **409** ("Il saldo di un conto collegato lo dà la
+  banca"). Due saldi diversi per lo stesso conto non avrebbero senso;
+- al massimo due decimali (`@Digits(integer = 17, fraction = 2)`), altrimenti 400.
+
+`GET /api/accounts` ha per ogni conto un campo `balance`:
+
+```json
+"balance": { "amount": 164.33, "date": "2026-10-31", "source": "MANUAL", "startDate": "2026-10-28" }
+```
+
+`startDate` c'è solo per un conto manuale: è il giorno del saldo che hai scritto. Senza saldo, `balance` è `null`.
+
+---
+
+## Parte D: dove si vede
+
+### Conti
+
+Una colonna **Saldo**:
+
+- conto collegato: "2.310,45 € · al 31 ott 2026 · dalla banca"; senza saldo, "la banca non lo dà" (o "al prossimo
+  aggiornamento" se il conto non è mai stato aggiornato);
+- conto manuale: "117,59 € · al 28 ott 2026 · scritto da te", oppure, dopo altri movimenti, "dal tuo saldo del
+  28 ott, più i movimenti dopo"; senza saldo, "non ancora scritto". Sotto, **scrivi il saldo** o **correggi il
+  saldo**.
+
+Il modulo (`BalanceForm`, in `frontend/src/app/accounts/balance-form.ts`) mostra l'ultimo movimento, con la ricerca dei
+movimenti che c'era già (`GET /api/transactions?accountId=…&size=1`, ordinata dal più recente). Per correggere, il
+campo parte dal saldo di oggi.
+
+**Gli importi si scrivono come vuoi** (`parseBalance`): "1.234,56", "1234,56", "1234.56", "-12,30 €". Un punto seguito
+da tre cifre senza virgola separa le migliaia ("1.234" è milleduecentotrentaquattro). Più di due decimali, o testo,
+danno l'errore "Scrivi un importo, come 1.234,56".
+
+### Importa
+
+Dopo un'importazione, sotto "Importazione completata", la sezione **Il saldo del conto**:
+
+- se il conto non ha ancora un saldo, il modulo compare subito;
+- se ce l'ha, il saldo aggiornato con i movimenti appena importati: "164,33 € al 31 ottobre 2026. È quello che vedi
+  nell'app della banca? **No, correggilo**". È il controllo pratico che il file sia stato letto bene: se il saldo non
+  torna, manca un movimento o un segno è sbagliato (`docs/tinaba.md`).
+
+### Investimenti: la liquidità
+
+La scheda **Liquidità sui conti di investimento** (`InvestmentDtos.Cash`, campo `cash` di `GET /api/investments`):
+per ogni conto con il ruolo Investimenti nella valuta scelta, il suo saldo, e in alto la somma di quelli conosciuti.
+Un conto senza saldo c'è lo stesso, con "saldo non scritto: scrivilo in Conti" (manuale) o "la banca non dà il
+saldo". La scheda non compare se non ci sono conti di investimento.
+
+Sono i soldi arrivati sui conti di investimento e non investiti in titoli: il caso 1 della tabella di
+`docs/investimenti.md`, parte I (bonifico al broker, nessun acquisto).
+
+---
+
+## Parte E: i test, e la prova nel browser
+
+Backend:
+
+- `BankBalanceTest` (puri): il contabile vince sul disponibile; tra i contabili il più recente, e a parità di giorno
+  quello in giornata; senza contabili il previsto, poi il disponibile, poi qualsiasi; un'altra valuta o niente di
+  utilizzabile non dà saldo;
+- `SyncServiceTest`: dopo i movimenti il saldo della banca si salva; in background non si rilegge prima di 20 ore,
+  con "Aggiorna ora" sì; un errore sul saldo non fa fallire la sincronizzazione e lascia il saldo di prima; una banca
+  che non dà saldo lo toglie;
+- `AccountBalanceTest`: il saldo scritto parte dall'ultimo movimento; dopo, un movimento dello stesso giorno e uno
+  nuovo contano, uno vecchio no (350 + 46,74 − 50 = 346,74); un conto senza movimenti parte da oggi; un conto
+  collegato risponde 409; tre decimali danno 400; null toglie il saldo;
+- `InvestmentServiceTest`: la liquidità ha solo i conti di investimento, con il saldo della banca o senza.
+
+Frontend: la colonna Saldo della pagina Conti (banca e manuale, l'errore su un importo sbagliato, il salvataggio);
+`parseBalance`; dopo un'importazione il modulo che compare e il saldo salvato; la scheda della liquidità.
+
+Nel browser (telefono e PC), con dati inventati (Banca Alfa con il saldo della banca, Tinaba, Trade Republic e Fondo
+Beta come conti manuali):
+
+| Passo | Atteso | Visto |
+|---|---|---|
+| Conti, conto corrente | 2.310,45 € al 31 ott 2026 · dalla banca | sì |
+| Tinaba, "scrivi il saldo" | l'ultimo movimento: 28 ottobre 2026 · Ricevuto da Mario Rossi · 200,00 € | sì |
+| scrivo "117,59" | 117,59 € al 28 ott 2026 · scritto da te | sì |
+| importo un CSV di Tinaba con un cashback di 46,74 € del 31 ottobre | 164,33 € al 31 ottobre 2026, "È quello che vedi nell'app della banca?" | sì |
+| Investimenti, liquidità | Tinaba 164,33 €; Trade Republic e Fondo Beta "saldo non scritto" | sì |
+
+Nessuna pagina più larga dello schermo, nessun errore nella console. Un ritocco trovato così: sul PC il modulo
+nella colonna stretta andava a capo a ogni parola; ora la colonna si allarga quando il modulo è aperto.
+
+**Non provato:** il saldo di una banca vera. Nel cloud Enable Banking non è raggiungibile: il saldo del conto
+corrente della prova è stato scritto nel database. Alla prima sincronizzazione vera, il log dice quale tipo è stato
+scelto ("saldo 1234.56 (CLBD) al 2026-10-31"); se la tua banca non lo dà, la pagina Conti dice "la banca non lo dà".
+
+---
+
+## Parte F: esercizi guidati
+
+1. **Il saldo di ING.** Dopo "Aggiorna ora", cerca nel log del backend la riga "saldo … (…)". Quale tipo ha scelto
+   l'app? Confronta la cifra con l'app di ING.
+2. **Lo stesso giorno.** In `AccountBalanceTest`, togli la condizione `t.importedAt > :at` da `sumAfter` (lasciando
+   solo `t.bookingDate > :date`). Quale numero cambia, e perché è sbagliato?
+3. **Il controllo dopo l'importazione.** Importa un file di Tinaba, scrivi il saldo, poi importa un file con un
+   movimento in più. Il saldo che l'app propone è quello dell'app di Tinaba? Se no, che cosa manca?
+4. **Un saldo calcolato?** Perché non basta `SUM(amount)` di tutti i movimenti del conto? Prova a immaginare un conto
+   aperto nel 2020 e collegato all'app nel 2026.

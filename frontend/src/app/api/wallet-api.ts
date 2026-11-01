@@ -82,6 +82,11 @@ export class WalletApi {
   }
 
   /** PUT /api/accounts/{id}/display-name: il nome del conto scelto dall'utente; vuoto lo toglie. */
+  /** Il saldo di un conto manuale (docs/saldi.md); null lo toglie. */
+  changeBalance(accountId: number, balance: number | null): Observable<Account> {
+    return this.http.put<Account>(`/api/accounts/${accountId}/balance`, { balance });
+  }
+
   renameAccount(accountId: number, displayName: string): Observable<Account> {
     return this.http.put<Account>(`/api/accounts/${accountId}/display-name`, { displayName });
   }

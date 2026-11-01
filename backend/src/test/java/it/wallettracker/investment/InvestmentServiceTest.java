@@ -12,10 +12,12 @@ import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.account.BalanceSource;
 import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
+import it.wallettracker.investment.InvestmentDtos.Cash;
 import it.wallettracker.investment.InvestmentDtos.Group;
 import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.investment.InvestmentDtos.Overview;
@@ -170,6 +172,25 @@ class InvestmentServiceTest {
         assertThat(o.months().getFirst().investedCumulative()).isEqualByComparingTo("0");
         assertThat(o.transferredInPeriod()).isEqualByComparingTo("3100");
         assertThat(o.transfers()).hasSize(13);
+    }
+
+    @Test
+    void theCashIsTheBalanceOfEachInvestmentAccountWhenItIsKnown() {
+        // Il conto titoli è collegato: il saldo lo dà la banca. Fondo Beta è manuale: nessuno l'ha scritto.
+        accountRepository.recordBalance(broker.getId(), new BigDecimal("118.50"), LocalDate.of(2026, 10, 14),
+                BalanceSource.BANK, Instant.now());
+
+        Overview o = investmentService.overview(Period.YEAR, null, TODAY);
+
+        // Solo i conti di investimento: il conto corrente no.
+        assertThat(o.cash()).extracting(Cash::accountId).containsExactlyInAnyOrder(broker.getId(), fund.getId());
+        Cash brokerCash = o.cash().stream().filter(c -> c.accountId().equals(broker.getId())).findFirst()
+                .orElseThrow();
+        assertThat(brokerCash.balance().amount()).isEqualByComparingTo("118.50");
+        assertThat(brokerCash.manual()).isFalse();
+        Cash fundCash = o.cash().stream().filter(c -> c.accountId().equals(fund.getId())).findFirst().orElseThrow();
+        assertThat(fundCash.balance()).isNull();
+        assertThat(fundCash.manual()).isTrue();
     }
 
     @Test

@@ -3030,6 +3030,35 @@ a.button.primary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* ---- Il saldo dei conti (docs/saldi.md) ---- */
+.balance-cell button.link {
+  text-align: left;
+}
+
+/* Con il modulo aperto, la colonna del saldo si allarga quanto serve. */
+.balance-cell:has(app-balance-form) {
+  min-width: 260px;
+}
+
+.balance-form .balance-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.balance-form .hint {
+  margin-top: 0;
+}
+
+.balance-check {
+  margin: 16px 0;
+}
+
+.balance-check h3 {
+  margin: 0 0 6px;
+}
+
 /* ---- Investimenti (docs/investimenti.md) ---- */
 .investments.loading {
   opacity: 0.6;

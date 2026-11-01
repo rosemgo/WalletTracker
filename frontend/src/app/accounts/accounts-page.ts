@@ -7,6 +7,8 @@ import { ROLES, ROLE_LABELS } from '../api/labels';
 import { Account, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isTradeRepublic } from '../import/completion-page';
+import { MoneyPipe } from '../privacy/money.pipe';
+import { BalanceForm } from './balance-form';
 
 /**
  * La pagina dei conti: elenco dei conti, con il ruolo modificabile da un menu a tendina.
@@ -15,12 +17,15 @@ import { isTradeRepublic } from '../import/completion-page';
  * "manuali", per le banche che Enable Banking non copre: li crei qui e ci carichi i movimenti da un file
  * CSV (pagina Importa CSV). Solo i conti manuali si possono eliminare da qui.
  *
+ * Il saldo (docs/saldi.md): per un conto collegato lo dà la banca a ogni aggiornamento; per un conto manuale lo scrivi
+ * tu una volta, dopo aver controllato l'ultimo movimento, e poi si aggiorna con i movimenti importati.
+ *
  * È un componente "standalone": non serve dichiararlo in un NgModule. Le cose che il template usa
  * (qui la pipe `date`) si elencano direttamente in `imports`.
  */
 @Component({
   selector: 'app-accounts-page',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [BalanceForm, DatePipe, MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './accounts-page.html',
 })
 export class AccountsPage implements OnInit {
@@ -41,6 +46,7 @@ export class AccountsPage implements OnInit {
   protected readonly syncing = signal(false);
   protected readonly confirmingDelete = signal<number | null>(null);
   protected readonly renaming = signal<number | null>(null); // il conto di cui si sta cambiando il nome // il conto da eliminare, in attesa di conferma
+  protected readonly editingBalance = signal<number | null>(null); // il conto manuale di cui si scrive il saldo
 
   /**
    * Il modulo del conto manuale. Gli stessi controlli del backend (ManualAccountRequest): qui servono a
@@ -192,5 +198,15 @@ export class AccountsPage implements OnInit {
       },
       error: (response) => this.error.set(response.error?.detail ?? 'Il nome non è stato salvato.'),
     });
+  }
+
+  /** Il saldo di un conto manuale è stato salvato. */
+  onBalanceSaved(updated: Account): void {
+    this.editingBalance.set(null);
+    this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
+    this.message.set(
+      `Saldo di "${updated.label}" salvato: da qui si aggiorna con i movimenti che importerai.`,
+    );
+    this.error.set(null);
   }
 }

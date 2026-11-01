@@ -13,6 +13,7 @@ import {
   ImportPreview,
   ImportResult,
 } from '../api/models';
+import { BalanceForm } from '../accounts/balance-form';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { FileDrop } from '../ui/file-drop';
@@ -51,7 +52,7 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
  */
 @Component({
   selector: 'app-import-page',
-  imports: [DatePipe, FileDrop, MoneyPipe, ReactiveFormsModule, RouterLink],
+  imports: [BalanceForm, DatePipe, FileDrop, MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './import-page.html',
 })
 export class ImportPage implements OnInit {
@@ -67,6 +68,12 @@ export class ImportPage implements OnInit {
   protected readonly file = signal<File | null>(null);
   protected readonly preview = signal<ImportPreview | null>(null);
   protected readonly result = signal<ImportResult | null>(null);
+  /** Dopo l'importazione: il conto con il saldo aggiornato (docs/saldi.md, parte C). */
+  protected readonly importedAccount = signal<Account | null>(null);
+  /** Si sta scrivendo il saldo (subito, se il conto non ne ha ancora uno). */
+  protected readonly editingBalance = signal(false);
+  /** Il saldo appena salvato, per il messaggio. */
+  protected readonly balanceSaved = signal(false);
   protected readonly importing = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -200,6 +207,7 @@ export class ImportPage implements OnInit {
       next: (result) => {
         this.importing.set(false);
         this.result.set(result);
+        this.loadImportedAccount(accountId);
       },
       error: (response) => {
         this.importing.set(false);
@@ -211,8 +219,32 @@ export class ImportPage implements OnInit {
     });
   }
 
+  /**
+   * Il conto appena importato, con il saldo aggiornato dai movimenti nuovi. Se non ha ancora un saldo, si chiede
+   * subito; altrimenti si mostra, da confrontare con la banca.
+   */
+  private loadImportedAccount(accountId: number): void {
+    this.balanceSaved.set(false);
+    this.api.accounts().subscribe({
+      next: (accounts) => {
+        const account = accounts.find((a) => a.id === accountId) ?? null;
+        this.importedAccount.set(account);
+        this.editingBalance.set(account !== null && account.balance === null);
+      },
+      error: () => this.importedAccount.set(null), // il saldo è un di più: l'importazione è fatta
+    });
+  }
+
+  onBalanceSaved(account: Account): void {
+    this.importedAccount.set(account);
+    this.editingBalance.set(false);
+    this.balanceSaved.set(true);
+  }
+
   /** "Importa un altro file": si ricomincia, con lo stesso conto. */
   restart(): void {
+    this.importedAccount.set(null);
+    this.editingBalance.set(false);
     this.result.set(null);
     this.preview.set(null);
     this.file.set(null);

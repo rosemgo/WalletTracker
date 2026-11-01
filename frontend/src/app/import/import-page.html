@@ -34,6 +34,38 @@
       <a routerLink="/movimenti">Vai ai movimenti</a>, filtra per questo conto e controlla quelli
       "Da verificare": molti CSV non hanno causale, e senza testo il programma non indovina.
     </p>
+    @if (importedAccount(); as a) {
+      <!-- Il saldo del conto (docs/saldi.md, parte C): da confrontare con la banca, o da scrivere. -->
+      <section class="balance-check">
+        <h3>Il saldo del conto</h3>
+        @if (editingBalance()) {
+          <app-balance-form
+            [account]="a"
+            (saved)="onBalanceSaved($event)"
+            (cancelled)="editingBalance.set(false)"
+          />
+        } @else if (a.balance; as b) {
+          <p>
+            <strong>{{ b.amount | money: a.currency }}</strong> al {{ b.date | date: 'd MMMM y' }}.
+            @if (balanceSaved()) {
+              Salvato: da qui si aggiorna con i movimenti che importerai.
+            } @else {
+              È quello che vedi nell'app della banca?
+              <button type="button" class="link" (click)="editingBalance.set(true)">
+                No, correggilo
+              </button>
+            }
+          </p>
+        } @else {
+          <p class="hint">
+            Senza saldo il conto non mostra quanti soldi ci sono.
+            <button type="button" class="link" (click)="editingBalance.set(true)">
+              Scrivi il saldo
+            </button>
+          </p>
+        }
+      </section>
+    }
     <button type="button" (click)="restart()">Importa un altro file</button>
   </div>
 } @else {

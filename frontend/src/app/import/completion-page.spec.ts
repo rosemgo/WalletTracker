@@ -25,6 +25,7 @@ function account(id: number, source: Account['source'], bank: string): Account {
     consentValidUntil: null,
     lastSyncAt: null,
     lastSyncError: null,
+    balance: null,
   };
 }
 

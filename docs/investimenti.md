@@ -409,7 +409,8 @@ Che cosa si impara:
   Riepilogo, Budget e Analisi. Il grafico dei bonifici dice "ho spostato 200 €", e resta vero.
 - **Il caso 1 senza il caso 2**: i soldi sono arrivati al broker ma non sono stati investiti. I bonifici dicono
   200, l'investito 0. La differenza tra le due cifre è la liquidità ferma sui conti di investimento: per mostrarla
-  davvero servono i **saldi dei conti**, il prossimo passo (`docs/consegne-investimenti.md`, sezione 9).
+  davvero servono i **saldi dei conti**: ci sono da `V34`, e la pagina ha la scheda "Liquidità sui conti di
+  investimento" (`docs/saldi.md`, parte D).
 - **Il caso 10**: per Tinaba la regola di `V31` fa del "versamento Robo advisor" un Acquisto titoli. Non sono i
   singoli ETF comprati dal robo, ma è il momento in cui i soldi entrano nel portafoglio.
 

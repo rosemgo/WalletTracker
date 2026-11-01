@@ -1,12 +1,16 @@
 package it.wallettracker.sync;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.account.BalanceSource;
+import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
@@ -45,19 +49,27 @@ public class SyncService {
      */
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
+    /**
+     * In background il saldo si legge al massimo una volta in questo intervallo (docs/saldi.md, parte B): ogni lettura
+     * senza l'utente presente conta nel limite di circa 4 al giorno per conto, e i movimenti vengono prima.
+     */
+    static final Duration BACKGROUND_BALANCE_INTERVAL = Duration.ofHours(20);
+
     private final ConnectionService connectionService;
     private final AccountRepository accountRepository;
     private final TransactionImportService importService;
     private final ClassificationService classificationService;
+    private final EnableBankingClient client;
     private final SyncProperties properties;
 
     public SyncService(ConnectionService connectionService, AccountRepository accountRepository,
             TransactionImportService importService, ClassificationService classificationService,
-            SyncProperties properties) {
+            EnableBankingClient client, SyncProperties properties) {
         this.connectionService = connectionService;
         this.accountRepository = accountRepository;
         this.importService = importService;
         this.classificationService = classificationService;
+        this.client = client;
         this.properties = properties;
     }
 
@@ -99,6 +111,7 @@ public class SyncService {
             accountRepository.recordSync(account.getId(), Instant.now(), null);
             log.info("{}: {} nuovi, {} già presenti, {} in attesa", account.getName(), result.inserted(),
                     result.alreadyPresent(), result.pending());
+            refreshBalance(account, psu, Instant.now());
             return new AccountSync(result, null);
         } catch (RestClientResponseException e) {
             // Errore previsto: la banca o Enable Banking hanno risposto con un errore (es. 429, troppe letture).
@@ -184,6 +197,39 @@ public class SyncService {
             classificationService.classifyAll();
         }
         return new Round(updated, failed, notDue);
+    }
+
+    /**
+     * Legge il saldo del conto dalla banca e lo salva (docs/saldi.md, parte B). Si fa dopo i movimenti, ed è un "di
+     * più": se la banca non risponde, il saldo che c'era resta, e la sincronizzazione è riuscita lo stesso. Se la banca
+     * risponde senza un saldo utilizzabile, il saldo si toglie: meglio niente che un numero vecchio presentato come
+     * attuale.
+     *
+     * <p>Con l'utente presente ({@code psu}) si legge sempre; in background al massimo una volta in
+     * {@link #BACKGROUND_BALANCE_INTERVAL}.
+     */
+    void refreshBalance(Account account, PsuHeaders psu, Instant now) {
+        Instant last = account.getBalanceSource() == BalanceSource.BANK ? account.getBalanceUpdatedAt() : null;
+        if (psu == null && last != null && last.isAfter(now.minus(BACKGROUND_BALANCE_INTERVAL))) {
+            return;
+        }
+        try {
+            LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+            Optional<BankBalance.Chosen> chosen = BankBalance.choose(client.getBalances(account.getProviderUid(), psu),
+                    account.getCurrency(), today);
+            if (chosen.isPresent()) {
+                accountRepository.recordBalance(account.getId(), chosen.get().amount(), chosen.get().date(),
+                        BalanceSource.BANK, now);
+                log.info("{}: saldo {} ({}) al {}", account.getName(), chosen.get().amount(), chosen.get().type(),
+                        chosen.get().date());
+            } else {
+                accountRepository.recordBalance(account.getId(), null, null, null, null);
+                log.info("{}: la banca non dà un saldo utilizzabile", account.getName());
+            }
+        } catch (RuntimeException e) {
+            // Anche un 429: il saldo è un di più, i movimenti sono già salvati. Resta quello di prima.
+            log.warn("{}: saldo non letto: {}", account.getName(), e.getMessage());
+        }
     }
 
     /** True se il conto non è mai stato aggiornato o se l'ultimo tentativo è più vecchio dell'intervallo. */
