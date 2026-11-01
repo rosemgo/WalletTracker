@@ -9,6 +9,12 @@ IBAN IT00X…); non modificare migrazioni già applicate (`V31` compresa: si cam
 prima di scegliere il numero della migrazione, guardare **tutti** i rami remoti (la sessione della Fase 4 aggiunge
 migrazioni in parallelo); test, prova nel browser e guida in italiano in `docs/`.
 
+> **Decisioni prese (sessione successiva).** Domanda A: il principio è confermato, nessun cambio nel codice.
+> Domanda B: né l'opzione 2 né la 3. Il cashback è un bonus della promozione, quindi diventa **Entrata** in
+> "Rimborsi fiscali e bonus" (categoria che c'era già); la ricarica Power resta una spesa in "Costi bancari".
+> Fatto con `V33` (la `V32` era già stata usata per le regole "tutte le parole"). Tutto in `docs/tinaba.md`, parte J.
+> Il resto del file è la discussione com'era prima della decisione.
+
 ---
 
 ## 1. Dove siamo

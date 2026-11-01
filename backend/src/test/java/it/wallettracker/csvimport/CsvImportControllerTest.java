@@ -204,17 +204,18 @@ class CsvImportControllerTest {
         assertThat(byText.get("Ricevuto da Mario Rossi · Trasferimento a mio conto").getType()).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
         // Il versamento nel Robo advisor: acquisto titoli, non una spesa (regola di partenza V31).
         assertThat(byText.get("Nuovo versamento Robo advisor").getType()).isEqualTo(TransactionType.SECURITIES_BUY);
-        // Il credito Power: una spesa; il cashback: il suo rimborso (spesa con il più), nella stessa categoria.
-        // Anche con un messaggio tra la causale e la controparte (V32: "tutte le parole", non una frase attaccata).
+        // Il credito Power: una spesa in "Costi bancari", anche con un messaggio tra la causale e la controparte
+        // (V32: "tutte le parole", non una frase attaccata). Il cashback: un bonus, quindi un'entrata (V33).
         BankTransaction power = byText.get("Ricarica effettuata · Credito per le commissioni");
         BankTransaction cashback = byText.get("Trasferimento ricevuto per campagna cashback · Cashback Power");
         assertThat(power.getType()).isEqualTo(TransactionType.EXPENSE);
-        assertThat(cashback.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(cashback.getType()).isEqualTo(TransactionType.INCOME);
         assertThat(cashback.getAmount()).isPositive();
         // L'id della categoria si legge senza database (il nome no: qui siamo fuori da una transazione).
         Long bankCosts = categoryRepository.findByNameIgnoreCase("Costi bancari").orElseThrow().getId();
+        Long bonus = categoryRepository.findByNameIgnoreCase("Rimborsi fiscali e bonus").orElseThrow().getId();
         assertThat(power.getCategory().getId()).isEqualTo(bankCosts);
-        assertThat(cashback.getCategory().getId()).isEqualTo(bankCosts);
+        assertThat(cashback.getCategory().getId()).isEqualTo(bonus);
     }
 
     @Test

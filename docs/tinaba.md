@@ -13,6 +13,7 @@ Fuori dalla numerazione, come `docs/investimenti.md`: scritta in parallelo alla 
 | G | come usarlo |
 | H | due correzioni: la causale intera, e i giroconti scelti a mano |
 | I | le regole di Tinaba cercano tutte le parole (`V32`) |
+| J | il cashback è un'entrata, non un rimborso (`V33`); a che cosa servono le categorie |
 
 ---
 
@@ -135,7 +136,7 @@ Con il segno giusto, resta da dire **che cosa** è ogni movimento. La migrazione
 |---|---|---|---|
 | Versamento nel Robo advisor (Tinaba) | `versamento Robo advisor` | uscita | **Acquisto titoli** |
 | Credito Power (Tinaba) | `Ricarica effettuata Tinaba Power` | uscita | **Spesa**, "Costi bancari" |
-| Cashback delle commissioni (Tinaba) | `Tinaba Cashback` | entrata | **Spesa** positiva, "Costi bancari" |
+| Cashback delle commissioni (Tinaba) | `Tinaba Cashback` | entrata | **Entrata**, "Rimborsi fiscali e bonus" (da `V33`; prima spesa positiva in "Costi bancari") |
 
 Il perché di ciascuna:
 
@@ -145,10 +146,9 @@ Il perché di ciascuna:
   giusto nei movimenti del conto.
 - **Ricarica Power → spesa in Costi bancari.** È il credito che Tinaba usa per le commissioni: soldi spesi, come una
   commissione pagata in anticipo.
-- **Cashback → rimborso in Costi bancari.** Tinaba restituisce una parte di quelle commissioni. Non è una rendita
-  dell'investimento: è un **rimborso** di una spesa. Nell'app un rimborso è una spesa con importo positivo, nella
-  stessa categoria (`docs/19`, "Rimborso di una spesa"): così "Costi bancari" mostra quanto si è speso
-  davvero, al netto del cashback.
+- **Cashback → entrata in "Rimborsi fiscali e bonus"** (da `V33`). È un bonus di una promozione della banca. `V31`
+  lo trattava come un rimborso della ricarica (spesa positiva in "Costi bancari"), ma così la categoria andava in
+  attivo: il perché del cambio è nella parte J.
 
 La categoria si cerca per nome (`LEFT JOIN category c ON lower(c.name) = lower(r.category)`): se qualcuno l'ha
 rinominata, la regola si crea lo stesso, senza categoria, invece di far fallire la migrazione.
@@ -191,7 +191,8 @@ Backend, 375 test:
   conto ING con il bonifico di −200, un conto Tinaba con ruolo Investimenti, un CSV Tinaba. Controlla:
   - l'anteprima propone il modo senza segno e mostra 200, 46,74, −200, −50;
   - dopo l'importazione: il bonifico ricevuto accoppiato come Versamento investimenti, il Robo advisor come Acquisto
-    titoli, la ricarica Power come spesa, il cashback come spesa positiva, entrambi in "Costi bancari".
+    titoli, la ricarica Power come spesa in "Costi bancari", il cashback come entrata in "Rimborsi fiscali e bonus"
+    (da `V33`; prima: spesa positiva in "Costi bancari").
 
 Frontend: la pagina Importa mostra i campi del modo senza segno e li manda al backend.
 
@@ -308,3 +309,85 @@ un messaggio. Senza `V32` fallisce (la ricarica non ha la categoria "Costi banca
 Una nota per chi prova a mano: togliendo un file di migrazione da `src/main/resources`, la sua copia resta in
 `target/classes` e Flyway la applica lo stesso. Per una prova "senza" bisogna cancellare anche quella (o fare
 `mvn clean`).
+
+---
+
+## Parte J: il cashback è un'entrata (`V33`); a che cosa servono le categorie
+
+### Il tipo e la categoria
+
+Ogni movimento ha due informazioni diverse:
+
+- il **tipo** dice che cosa succede ai soldi: Spesa, Entrata, Giroconto, Versamento investimenti, Acquisto titoli,
+  Rendita, Tassa… Riepilogo e Investimenti guardano **solo il tipo** (`SummaryService`, `Investments`);
+- la **categoria** dice *per che cosa*. Ha un gruppo (Spesa, Entrata, Investimento, Altro, `V12`) che mette in cima
+  al menu le categorie adatte, senza vietare le altre.
+
+La categoria serve dove c'è una risposta che il tipo non dà già:
+
+| Tipo | Categoria | Perché |
+|---|---|---|
+| Spesa, Entrata | sì, sempre | Budget, Analisi, abbonamenti |
+| Rendite e tasse degli investimenti | sì (Cedole, Dividendi, Imposta di bollo…) | "Per tipo" nella pagina Investimenti |
+| Giroconti, versamenti, prelievi, acquisti e vendite di titoli | no | il tipo dice già tutto; "da dove e verso dove" lo dice il conto |
+
+Per questo nell'elenco dei movimenti "senza categoria" compare **solo** per spese ed entrate
+(`transactions-page.ts`, `metaOf()`): per gli altri tipi la riga mostra il tipo ("acquisto titoli", "versamento
+investimenti"), che non è un difetto da sistemare. Anche in Analisi la riga "Senza categoria" c'è solo per spese ed
+entrate (`docs/43`). I versamenti nel Robo advisor e i bonifici accoppiati di Tinaba senza categoria sono quindi
+giusti.
+
+### Il problema del cashback
+
+`V31` metteva ricarica Power e cashback nella stessa categoria, il cashback come rimborso (una spesa con il più,
+`docs/19`). Ma il cashback non rimborsa la ricarica: è un **bonus** di una promozione della banca, e in un anno
+restituisce molto più di quanto costano le ricariche. Con dati simili a quelli veri:
+
+| | Importo |
+|---|---|
+| una ricarica Power | −50,00 € |
+| cinque cashback | +167,59 € |
+| "Costi bancari" | **+117,59 €**: una categoria di spesa in attivo |
+
+Nel Budget e in Analisi una spesa negativa non ha senso, e mescolava i costi veri del conto con un bonus.
+
+### La soluzione
+
+| Movimento | Tipo | Categoria |
+|---|---|---|
+| Ricarica effettuata, Tinaba Power | Spesa (come prima) | "Costi bancari" (come prima) |
+| Tinaba Cashback | **Entrata** | **"Rimborsi fiscali e bonus"**, categoria di partenza di `V12` |
+
+- **La ricarica resta una spesa**, nel momento in cui si fa: sono soldi che escono per pagare le commissioni del
+  conto, come un costo pagato in anticipo. Con il cashback spostato, "Costi bancari" torna a mostrare solo costi.
+- **Il cashback è un'entrata**: soldi che la banca dà, non un guadagno del mercato. Per questo non è una Rendita
+  degli investimenti (che finirebbe accanto a cedole e dividendi), e nemmeno serve una categoria nuova: "Rimborsi
+  fiscali e bonus" c'è già.
+- **Il versato non cambia.** Il versato conta i soldi usciti dai conti normali verso gli investimenti
+  (`docs/investimenti.md`, parte B): il cashback nasce sul conto Tinaba, e si vede tra le entrate del Riepilogo.
+
+### La migrazione
+
+`backend/src/main/resources/db/migration/V33__cashback_tinaba_entrata.sql` fa due cose:
+
+1. cambia la regola "Cashback delle commissioni (Tinaba)" in Entrata con la categoria "Rimborsi fiscali e bonus",
+   **solo** se è ancora come l'avevano lasciata `V31` e `V32` (stesso nome e testo, spesa in "Costi bancari"): una
+   regola modificata dall'utente resta la sua. La categoria si cerca per nome, come in `V31`: se è stata rinominata,
+   la regola diventa un'entrata senza categoria;
+2. aggiorna subito i movimenti già classificati da quella regola, con lo stesso calcolo di `classifyAll()`. Serve
+   perché l'app riclassifica a ogni sincronizzazione, importazione o modifica, ma **non** all'avvio: senza questo
+   passo i cashback già importati resterebbero spese finché non succede una di queste cose. Un tipo scelto a mano li
+   tiene fuori; una categoria scelta a mano resta quella.
+
+`V31` e `V32` non si toccano: una migrazione già applicata non si modifica, si aggiunge la successiva.
+
+### I test
+
+- `db.migration.V33CashbackTinabaEntrataTest`, con un database vero portato alla `V32` (Testcontainers, come i test
+  di `V16` e `V28`):
+  - la regola del cashback diventa Entrata in "Rimborsi fiscali e bonus", quella della ricarica resta com'è;
+  - un cashback già importato diventa un'entrata; uno con il tipo scelto a mano resta com'era; uno con la categoria
+    scelta a mano la tiene;
+  - una regola che l'utente aveva cambiato non viene toccata.
+- `CsvImportControllerTest.theTinabaFileGetsTheSignsAndTheTypesRight`: dopo l'importazione il cashback è un'entrata
+  in "Rimborsi fiscali e bonus", la ricarica una spesa in "Costi bancari".
