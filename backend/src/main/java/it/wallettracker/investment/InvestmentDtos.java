@@ -20,14 +20,17 @@ public final class InvestmentDtos {
     /**
      * Un mese.
      *
-     * @param contributed quanto è andato dai conti normali agli investimenti, meno quanto è tornato (può essere
-     *                    negativo: un mese in cui hai ripreso più di quanto hai versato)
-     * @param cumulative  il versato netto dall'inizio della storia fino alla fine di questo mese: la linea del grafico
-     * @param income      cedole, dividendi e interessi incassati nel mese
-     * @param taxes       tasse sugli investimenti del mese (ritenute, bollo): di solito negativo
+     * @param bought             acquisti di titoli del mese (positivo)
+     * @param sold               quanto è rientrato dalle vendite di titoli nel mese (positivo)
+     * @param investedCumulative l'investito netto (acquisti meno vendite) dall'inizio della storia fino alla fine di
+     *                           questo mese: la linea del grafico
+     * @param transferred        bonifici dai conti di tutti i giorni verso i conti di investimento, meno quelli tornati
+     *                           indietro (può essere negativo): le barre del secondo grafico
+     * @param income             cedole, dividendi e interessi incassati nel mese
+     * @param taxes              tasse sugli investimenti del mese (ritenute, bollo): di solito negativo
      */
-    public record Month(YearMonth month, BigDecimal contributed, BigDecimal cumulative, BigDecimal income,
-            BigDecimal taxes) {
+    public record Month(YearMonth month, BigDecimal bought, BigDecimal sold, BigDecimal investedCumulative,
+            BigDecimal transferred, BigDecimal income, BigDecimal taxes) {
     }
 
     /** Una voce di un elenco: "Cedole", o un titolo; l'importo e quanti movimenti. */
@@ -37,21 +40,29 @@ public final class InvestmentDtos {
     /**
      * Tutto quello che mostrano la scheda del Riepilogo e la pagina Investimenti.
      *
-     * @param contributedTotal    il versato netto di tutta la storia, fino a oggi
-     * @param contributedThisYear il versato netto dal 1° gennaio
-     * @param contributedThisMonth il versato netto del mese in corso
+     * @param investedTotal       l'investito netto in titoli (acquisti meno vendite) di tutta la storia, fino a oggi
+     * @param investedThisYear    l'investito netto dal 1° gennaio
+     * @param investedThisMonth   l'investito netto del mese in corso
+     * @param transferredTotal    i bonifici netti verso i conti di investimento di tutta la storia
      * @param incomeThisYear      le rendite dal 1° gennaio
-     * @param contributedInPeriod il versato netto nei mesi del periodo
+     * @param boughtInPeriod      gli acquisti di titoli nei mesi del periodo
+     * @param soldInPeriod        quanto è rientrato dalle vendite nei mesi del periodo
+     * @param transferredInPeriod i bonifici netti verso i conti di investimento nei mesi del periodo
      * @param incomeInPeriod      le rendite nei mesi del periodo
      * @param taxesInPeriod       le tasse nei mesi del periodo
      * @param incomeByType        le rendite del periodo per categoria (Cedole, Dividendi, Interessi)
      * @param incomeBySource      le rendite del periodo per titolo o esercente
-     * @param recentContributions gli ultimi versamenti e prelievi (al massimo {@link InvestmentService#RECENT})
+     * @param trades              gli acquisti e le vendite del periodo, dal più recente
+     * @param transfers           i bonifici del periodo che fanno le barre (il lato dei conti di tutti i giorni), dal più
+     *                            recente
+     * @param onlyTransfers       i conti di investimento di cui si vedono bonifici ma, in tutta la storia, nessun acquisto
+     *                            né vendita: per loro l'investito non si vede
      */
     public record Overview(String currency, List<String> currencies, Period period, YearMonth from, YearMonth to,
-            BigDecimal contributedTotal, BigDecimal contributedThisYear, BigDecimal contributedThisMonth,
-            BigDecimal incomeThisYear, BigDecimal contributedInPeriod, BigDecimal incomeInPeriod,
+            BigDecimal investedTotal, BigDecimal investedThisYear, BigDecimal investedThisMonth,
+            BigDecimal transferredTotal, BigDecimal incomeThisYear, BigDecimal boughtInPeriod,
+            BigDecimal soldInPeriod, BigDecimal transferredInPeriod, BigDecimal incomeInPeriod,
             BigDecimal taxesInPeriod, List<Month> months, List<Group> incomeByType, List<Group> incomeBySource,
-            List<TransactionDto> recentContributions) {
+            List<TransactionDto> trades, List<TransactionDto> transfers, List<String> onlyTransfers) {
     }
 }

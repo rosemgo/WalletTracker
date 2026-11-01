@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,17 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Gli investimenti (docs/investimenti.md): quanto hai versato e quanto ti hanno reso cedole, dividendi e interessi.
- * Legge i movimenti con una query e passa i calcoli a {@link Investments}.
+ * Gli investimenti (docs/investimenti.md, parte I): quanto hai investito in titoli (acquisti e vendite), quanto hai
+ * spostato con i bonifici verso i conti di investimento, e quanto ti hanno reso cedole, dividendi e interessi. Legge i
+ * movimenti con una query e passa i calcoli a {@link Investments}.
  *
  * <p>Attenzione a che cosa <b>non</b> è: il valore di oggi degli investimenti. Per quello servirebbero le quotazioni
- * dei titoli, che l'app non conosce. "Versato" sono i soldi messi, non quanto valgono adesso.
+ * dei titoli, che l'app non conosce. L'investito sono i soldi messi nei titoli, non quanto valgono adesso.
  */
 @Service
 public class InvestmentService {
-
-    /** Quanti versamenti recenti mostrare. */
-    static final int RECENT = 8;
 
     /** "Tutto": al massimo 10 anni di mesi nel grafico. */
     static final int MAX_MONTHS = 120;
@@ -82,26 +81,66 @@ public class InvestmentService {
         LocalDate yearStart = today.withDayOfYear(1);
         LocalDate monthStart = today.withDayOfMonth(1);
 
-        List<TransactionDto> recent = new ArrayList<>();
+        // Gli elenchi sotto i grafici: i movimenti del periodo che li fanno, dal più recente.
+        List<TransactionDto> trades = new ArrayList<>();
+        List<TransactionDto> transfers = new ArrayList<>();
         for (int i = 0; i < inCurrency.size(); i++) {
-            if (Investments.contribution(movements.get(i)).signum() != 0) {
-                recent.add(TransactionDto.from(inCurrency.get(i)));
+            Movement m = movements.get(i);
+            if (m.date().isBefore(from)) {
+                continue;
+            }
+            if (Investments.bought(m).signum() != 0 || Investments.sold(m).signum() != 0) {
+                trades.add(TransactionDto.from(inCurrency.get(i)));
+            }
+            if (Investments.transferred(m).signum() != 0) {
+                transfers.add(TransactionDto.from(inCurrency.get(i)));
             }
         }
-        recent.sort(Comparator.comparing(TransactionDto::bookingDate).thenComparing(TransactionDto::id).reversed());
+        Comparator<TransactionDto> newestFirst = Comparator.comparing(TransactionDto::bookingDate)
+                .thenComparing(TransactionDto::id).reversed();
+        trades.sort(newestFirst);
+        transfers.sort(newestFirst);
 
         return new Overview(chosen, new ArrayList<>(currencies), period, first, current,
-                Investments.sum(movements, Investments::contribution, LocalDate.MIN, today),
-                Investments.sum(movements, Investments::contribution, yearStart, today),
-                Investments.sum(movements, Investments::contribution, monthStart, today),
+                Investments.sum(movements, Investments::invested, LocalDate.MIN, today),
+                Investments.sum(movements, Investments::invested, yearStart, today),
+                Investments.sum(movements, Investments::invested, monthStart, today),
+                Investments.sum(movements, Investments::transferred, LocalDate.MIN, today),
                 Investments.sum(movements, Investments::income, yearStart, today),
-                Investments.sum(movements, Investments::contribution, from, today),
+                Investments.sum(movements, Investments::bought, from, today),
+                Investments.sum(movements, Investments::sold, from, today),
+                Investments.sum(movements, Investments::transferred, from, today),
                 Investments.sum(movements, Investments::income, from, today),
                 Investments.sum(movements, Investments::taxes, from, today),
                 Investments.months(movements, first, current),
                 Investments.incomeBy(movements, from, today, Movement::category, "Altre rendite"),
                 Investments.incomeBy(movements, from, today, Movement::source, "Senza descrizione"),
-                recent.subList(0, Math.min(RECENT, recent.size())));
+                trades, transfers, onlyTransfers(transactions));
+    }
+
+    /**
+     * I conti di investimento con dei bonifici (versamenti o prelievi) ma, in tutta la storia, nessun acquisto né
+     * vendita di titoli: per loro l'investito non si vede, e la pagina lo dice. Succede con un broker di cui si è
+     * creato il conto ma non si importano i movimenti. In ordine di nome.
+     */
+    static List<String> onlyTransfers(List<BankTransaction> transactions) {
+        Map<Long, String> withTransfers = new TreeMap<>();
+        Set<Long> withTrades = new HashSet<>();
+        for (BankTransaction t : transactions) {
+            if (t.getAccount().getRole() != AccountRole.INVESTMENT) {
+                continue;
+            }
+            switch (t.getType()) {
+                case INVESTMENT_DEPOSIT, INVESTMENT_WITHDRAWAL -> withTransfers.put(t.getAccount().getId(),
+                        t.getAccount().label());
+                case SECURITIES_BUY, SECURITIES_SELL -> withTrades.add(t.getAccount().getId());
+                default -> {
+                    // rendite e tasse: non dicono niente sugli acquisti
+                }
+            }
+        }
+        withTrades.forEach(withTransfers::remove);
+        return withTransfers.values().stream().sorted().toList();
     }
 
     private static Movement movementOf(BankTransaction t, List<Set<String>> owners) {

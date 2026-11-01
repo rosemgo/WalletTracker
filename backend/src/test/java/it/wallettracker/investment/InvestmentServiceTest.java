@@ -37,12 +37,15 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 /**
  * Gli investimenti con un database vero; "oggi" è il 15 ottobre 2026. La storia, inventata:
  * <ul>
- *   <li>un PAC: ogni mese il 5, 200 € da ING verso un conto che non si può collegare (si vede solo l'uscita), da
+ *   <li>un PAC: ogni mese il 5, 200 € da ING verso un conto che non è nell'app (si vede solo l'uscita), da
  *       gennaio a ottobre 2026, e una volta ad agosto 2025;</li>
- *   <li>a marzo 1.000 € da ING a Trade Republic: l'uscita, l'entrata (l'altra metà) e l'acquisto di un ETF;</li>
- *   <li>a settembre 100 € tornano da Trade Republic a ING (le due metà);</li>
- *   <li>cedole da 30 € su ING a dicembre 2025 e ad aprile 2026, un dividendo da 12,50 € e il bollo da 2 € su Trade
- *       Republic.</li>
+ *   <li>a marzo 1.000 € da ING al conto titoli: l'uscita, l'entrata (l'altra metà) e l'acquisto di un ETF;</li>
+ *   <li>a maggio un acquisto da 500 € nel deposito titoli del conto corrente (Compravendita Titoli);</li>
+ *   <li>ad agosto una vendita da 300 € sul conto titoli; a settembre 100 € tornano dal conto titoli a ING (le due
+ *       metà); a ottobre una spesa da 30 € con la carta del conto titoli;</li>
+ *   <li>un secondo conto di investimento, "Fondo Beta", con un versamento e nessun acquisto;</li>
+ *   <li>cedole da 30 € su ING a dicembre 2025 e ad aprile 2026, un dividendo da 12,50 € e il bollo da 2 € sul conto
+ *       titoli.</li>
  * </ul>
  */
 @SpringBootTest
@@ -75,6 +78,7 @@ class InvestmentServiceTest {
 
     private Account ing;
     private Account broker;
+    private Account fund;
     private int counter;
 
     @BeforeEach
@@ -91,6 +95,11 @@ class InvestmentServiceTest {
             save(ing, LocalDate.of(2026, month, 5).toString(), "-200", TransactionType.INVESTMENT_DEPOSIT,
                     "Bonifico PAC", null);
         }
+        fund = accountRepository.save(Account.manual("Fondo Beta", "PAC", null, "EUR", AccountRole.INVESTMENT));
+        save(fund, "2026-02-05", "200", TransactionType.INVESTMENT_DEPOSIT, "Versamento", null);
+        save(ing, "2026-05-20", "-500", TransactionType.SECURITIES_BUY, "Compravendita Titoli BTP", null);
+        save(broker, "2026-08-10", "300", TransactionType.SECURITIES_SELL, "Sell trade ETF MONDO", null);
+        save(broker, "2026-10-02", "-30", TransactionType.EXPENSE, "Carta: LIBRERIA ROSSI", null); // non conta
         save(ing, "2026-03-10", "-1000", TransactionType.INVESTMENT_DEPOSIT, "Bonifico al conto titoli", null);
         save(broker, "2026-03-10", "1000", TransactionType.INVESTMENT_DEPOSIT, "Deposito", null);
         save(broker, "2026-03-11", "-1000", TransactionType.SECURITIES_BUY, "Buy trade ETF MONDO", null);
@@ -112,31 +121,43 @@ class InvestmentServiceTest {
     }
 
     @Test
-    void theInvestedMoneyIsCountedOnceAndTheIncomeIsAddedUp() {
+    void theInvestedMoneyAndTheTransfersAreTwoThingsEachCountedOnce() {
         Overview o = investmentService.overview(Period.YEAR, null, TODAY);
 
-        // 200 (2025) + 10 × 200 + 1.000 − 100: l'entrata su Trade Republic e l'acquisto dell'ETF non si sommano.
-        assertThat(o.contributedTotal()).isEqualByComparingTo("3100");
-        assertThat(o.contributedThisYear()).isEqualByComparingTo("2900");
-        assertThat(o.contributedThisMonth()).isEqualByComparingTo("200");
+        // Investito in titoli: 1.000 (ETF) + 500 (deposito titoli del conto corrente) − 300 (vendita).
+        assertThat(o.investedTotal()).isEqualByComparingTo("1200");
+        assertThat(o.investedThisYear()).isEqualByComparingTo("1200");
+        assertThat(o.investedThisMonth()).isEqualByComparingTo("0");
+        assertThat(o.boughtInPeriod()).isEqualByComparingTo("1500");
+        assertThat(o.soldInPeriod()).isEqualByComparingTo("300");
+        // Bonifici: 200 (2025) + 10 × 200 + 1.000 − 100. L'altra metà sul conto titoli e il versamento su Fondo Beta
+        // non si sommano; la spesa con la carta del conto titoli non tocca niente.
+        assertThat(o.transferredTotal()).isEqualByComparingTo("3100");
+        assertThat(o.transferredInPeriod()).isEqualByComparingTo("2900");
         assertThat(o.incomeThisYear()).isEqualByComparingTo("42.50");
         assertThat(o.currency()).isEqualTo("EUR");
 
-        // 12 mesi, da novembre 2025: la linea parte dai 200 € di agosto 2025.
+        // 12 mesi, da novembre 2025.
         assertThat(o.from()).isEqualTo(YearMonth.of(2025, 11));
         assertThat(o.months()).hasSize(12);
-        assertThat(o.months()).extracting(Month::cumulative).extracting(BigDecimal::intValue)
-                .containsExactly(200, 200, 400, 600, 1800, 2000, 2200, 2400, 2600, 2800, 2900, 3100);
+        assertThat(o.months()).extracting(Month::investedCumulative).extracting(BigDecimal::intValue)
+                .containsExactly(0, 0, 0, 0, 1000, 1000, 1500, 1500, 1500, 1200, 1200, 1200);
+        assertThat(o.months()).extracting(Month::transferred).extracting(BigDecimal::intValue)
+                .containsExactly(0, 0, 200, 200, 1200, 200, 200, 200, 200, 200, 100, 200);
         assertThat(o.incomeInPeriod()).isEqualByComparingTo("72.50");
         assertThat(o.taxesInPeriod()).isEqualByComparingTo("-2");
         assertThat(o.incomeByType()).extracting(Group::name).containsExactly("Cedole", "Dividendi");
         assertThat(o.incomeByType().get(0).amount()).isEqualByComparingTo("60");
 
-        // Gli ultimi versamenti: solo quelli dai conti normali, dal più recente.
-        assertThat(o.recentContributions()).hasSize(InvestmentService.RECENT);
-        TransactionDto latest = o.recentContributions().getFirst();
-        assertThat(latest.bookingDate()).isEqualTo(LocalDate.of(2026, 10, 5));
-        assertThat(o.recentContributions()).allMatch(t -> t.accountId().equals(ing.getId()));
+        // Gli elenchi: acquisti e vendite di tutti i conti; i bonifici dal lato di ING. Dal più recente.
+        assertThat(o.trades()).extracting(TransactionDto::bookingDate).containsExactly(LocalDate.of(2026, 8, 10),
+                LocalDate.of(2026, 5, 20), LocalDate.of(2026, 3, 11));
+        assertThat(o.transfers()).hasSize(12);
+        assertThat(o.transfers().getFirst().bookingDate()).isEqualTo(LocalDate.of(2026, 10, 5));
+        assertThat(o.transfers()).allMatch(t -> t.accountId().equals(ing.getId()));
+
+        // Fondo Beta ha solo un versamento: il suo investito non si vede. Il conto titoli ha acquisti: nessun avviso.
+        assertThat(o.onlyTransfers()).containsExactly(fund.label());
     }
 
     @Test
@@ -145,8 +166,10 @@ class InvestmentServiceTest {
 
         assertThat(o.from()).isEqualTo(YearMonth.of(2025, 8));
         assertThat(o.months()).hasSize(15);
-        assertThat(o.months().getFirst().cumulative()).isEqualByComparingTo("200");
-        assertThat(o.contributedInPeriod()).isEqualByComparingTo("3100");
+        assertThat(o.months().getFirst().transferred()).isEqualByComparingTo("200");
+        assertThat(o.months().getFirst().investedCumulative()).isEqualByComparingTo("0");
+        assertThat(o.transferredInPeriod()).isEqualByComparingTo("3100");
+        assertThat(o.transfers()).hasSize(13);
     }
 
     @Test

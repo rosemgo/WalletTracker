@@ -12,6 +12,8 @@ import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.investment.Investments.Movement;
 import it.wallettracker.transaction.TransactionType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** Test "puri" dei calcoli degli investimenti: niente database. */
 class InvestmentsTest {
@@ -21,27 +23,50 @@ class InvestmentsTest {
         return new Movement(LocalDate.parse(date), new BigDecimal(amount), type, investmentAccount, category, source);
     }
 
-    @Test
-    void onlyWhatLeavesAnOrdinaryAccountCountsSoNothingIsCountedTwice() {
-        // 200 € da ING a Trade Republic e poi in un ETF: tre movimenti, gli stessi soldi.
-        Movement out = m("2026-03-10", "-200", TransactionType.INVESTMENT_DEPOSIT, false, null, null);
-        Movement in = m("2026-03-10", "200", TransactionType.INVESTMENT_DEPOSIT, true, null, null);
-        Movement buy = m("2026-03-11", "-200", TransactionType.SECURITIES_BUY, true, null, null);
+    /**
+     * La tabella dei casi di docs/investimenti.md, parte I: un movimento per riga, con quanto aggiunge all'investito in
+     * titoli e ai bonifici verso i conti di investimento. "inv" dice se il movimento è su un conto di investimento.
+     */
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', textBlock = """
+            # caso                                                        | importo | tipo                  | inv   | investito | bonifici
+            1. bonifico di 200 da ING al broker: il lato di ING           | -200    | INVESTMENT_DEPOSIT    | false | 0         | 200
+            1. lo stesso bonifico, il lato del broker                     | 200     | INVESTMENT_DEPOSIT    | true  | 0         | 0
+            2. il broker compra un ETF da 200                             | -200    | SECURITIES_BUY        | true  | 200       | 0
+            3. acquisto di 200 nel deposito titoli del conto corrente     | -200    | SECURITIES_BUY        | false | 200       | 0
+            4. vendita di titoli per 150 sul broker                       | 150     | SECURITIES_SELL       | true  | -150      | 0
+            5. 150 tornano dal broker a ING: il lato del broker           | -150    | INVESTMENT_WITHDRAWAL | true  | 0         | 0
+            5. lo stesso bonifico, il lato di ING                         | 150     | INVESTMENT_WITHDRAWAL | false | 0         | -150
+            6. dividendo di 10 sul broker (va nelle rendite)              | 10      | INVESTMENT_INCOME     | true  | 0         | 0
+            7. spesa di 30 con la carta del broker                        | -30     | EXPENSE               | true  | 0         | 0
+            8. prelievo di 50 al bancomat dal conto del broker            | -50     | EXPENSE               | true  | 0         | 0
+            9. 200 dal broker a un altro conto di investimento            | -200    | INTERNAL_TRANSFER     | true  | 0         | 0
+            10. Tinaba: il bonifico da ING                                | -200    | INVESTMENT_DEPOSIT    | false | 0         | 200
+            10. Tinaba: "Nuovo versamento Robo advisor"                   | -200    | SECURITIES_BUY        | true  | 200       | 0
+            una spesa al supermercato dal conto corrente                  | -40     | EXPENSE               | false | 0         | 0
+            """)
+    void eachCaseCountsInTheRightPlace(String story, String amount, TransactionType type, boolean investmentAccount,
+            String invested, String transferred) {
+        Movement movement = m("2026-03-10", amount, type, investmentAccount, null, null);
 
-        assertThat(Investments.contribution(out)).isEqualByComparingTo("200");
-        assertThat(Investments.contribution(in)).isEqualByComparingTo("0");
-        assertThat(Investments.contribution(buy)).isEqualByComparingTo("0");
-        // Un prelievo che torna sul conto corrente toglie; un acquisto dal dossier titoli della banca conta.
-        assertThat(Investments.contribution(m("2026-04-01", "50", TransactionType.INVESTMENT_WITHDRAWAL, false, null,
-                null))).isEqualByComparingTo("-50");
-        assertThat(Investments.contribution(m("2026-04-02", "-1000", TransactionType.SECURITIES_BUY, false, null,
-                null))).isEqualByComparingTo("1000");
-        // Una spesa non è un investimento; una cedola è una rendita, non un versamento.
-        assertThat(Investments.contribution(m("2026-04-03", "-30", TransactionType.EXPENSE, false, null, null)))
-                .isEqualByComparingTo("0");
+        assertThat(Investments.invested(movement)).as("investito").isEqualByComparingTo(invested);
+        assertThat(Investments.transferred(movement)).as("bonifici").isEqualByComparingTo(transferred);
+    }
+
+    @Test
+    void purchasesAndSalesAreAlsoSeenApartAndNeverAsIncome() {
+        Movement buy = m("2026-03-11", "-200", TransactionType.SECURITIES_BUY, true, null, null);
+        Movement sale = m("2026-05-11", "150", TransactionType.SECURITIES_SELL, true, null, null);
         Movement coupon = m("2026-04-04", "15", TransactionType.INVESTMENT_INCOME, false, "Cedole", "BTP");
-        assertThat(Investments.contribution(coupon)).isEqualByComparingTo("0");
+
+        assertThat(Investments.bought(buy)).isEqualByComparingTo("200");
+        assertThat(Investments.sold(buy)).isEqualByComparingTo("0");
+        assertThat(Investments.bought(sale)).isEqualByComparingTo("0");
+        assertThat(Investments.sold(sale)).isEqualByComparingTo("150");
+        // Una vendita restituisce soprattutto capitale: non è una rendita. Una cedola sì, e non è un acquisto.
+        assertThat(Investments.income(sale)).isEqualByComparingTo("0");
         assertThat(Investments.income(coupon)).isEqualByComparingTo("15");
+        assertThat(Investments.invested(coupon)).isEqualByComparingTo("0");
         assertThat(Investments.taxes(m("2026-04-05", "-2", TransactionType.INVESTMENT_TAX, true, null, null)))
                 .isEqualByComparingTo("-2");
     }
@@ -49,9 +74,12 @@ class InvestmentsTest {
     @Test
     void theLineStartsFromAllTheHistoryBeforeThePeriod() {
         List<Movement> movements = List.of(
-                m("2025-01-05", "-500", TransactionType.INVESTMENT_DEPOSIT, false, null, null),
+                m("2025-01-05", "-500", TransactionType.SECURITIES_BUY, true, null, null),
                 m("2026-01-05", "-200", TransactionType.INVESTMENT_DEPOSIT, false, null, null),
-                m("2026-03-05", "-200", TransactionType.INVESTMENT_DEPOSIT, false, null, null),
+                m("2026-01-06", "-200", TransactionType.SECURITIES_BUY, true, null, null),
+                m("2026-03-05", "-300", TransactionType.SECURITIES_BUY, true, null, null),
+                m("2026-03-15", "100", TransactionType.SECURITIES_SELL, true, null, null),
+                m("2026-03-16", "100", TransactionType.INVESTMENT_WITHDRAWAL, false, null, null),
                 m("2026-03-20", "10", TransactionType.INVESTMENT_INCOME, false, "Cedole", "BTP"),
                 m("2026-03-21", "-1", TransactionType.INVESTMENT_TAX, false, null, null));
 
@@ -59,10 +87,14 @@ class InvestmentsTest {
 
         assertThat(months).extracting(Month::month)
                 .containsExactly(YearMonth.of(2026, 1), YearMonth.of(2026, 2), YearMonth.of(2026, 3));
-        assertThat(months).extracting(Month::contributed).extracting(BigDecimal::intValue).containsExactly(200, 0, 200);
+        assertThat(months).extracting(Month::bought).extracting(BigDecimal::intValue).containsExactly(200, 0, 300);
+        assertThat(months).extracting(Month::sold).extracting(BigDecimal::intValue).containsExactly(0, 0, 100);
         // Il 2025 è prima del periodo, ma la linea parte da lì: 500, poi 700, 700, 900.
-        assertThat(months).extracting(Month::cumulative).extracting(BigDecimal::intValue)
+        assertThat(months).extracting(Month::investedCumulative).extracting(BigDecimal::intValue)
                 .containsExactly(700, 700, 900);
+        // I bonifici: 200 a gennaio, e a marzo 100 tornati indietro.
+        assertThat(months).extracting(Month::transferred).extracting(BigDecimal::intValue)
+                .containsExactly(200, 0, -100);
         assertThat(months.get(2).income()).isEqualByComparingTo("10");
         assertThat(months.get(2).taxes()).isEqualByComparingTo("-1");
     }

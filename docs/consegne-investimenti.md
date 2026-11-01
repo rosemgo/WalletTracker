@@ -264,6 +264,9 @@ Test al momento della consegna: backend 375 (tutti verdi), frontend 226 (tutti v
 
 ## 9. Decisioni e progetto (sessione successiva)
 
+> **Fatto** (tranne i saldi dei conti e la liquidità, che restano il passo successivo): calcolo, API, pagina, scheda
+> del Riepilogo, test e prova nel browser. La guida è `docs/investimenti.md`, parte I.
+
 ### Le risposte dell'utente
 
 | Domanda (sezione 6) | Decisione |

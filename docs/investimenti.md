@@ -1,8 +1,14 @@
-# Investimenti: quanto hai versato, e quanto ti hanno reso
+# Investimenti: quanto hai investito, quanto hai spostato, e quanto ti hanno reso
 
-**Obiettivo:** una scheda **"Investito"** nel Riepilogo e una pagina **Investimenti** con due grafici:
-- quanto hai messo negli investimenti (un PAC, un broker, i titoli comprati dalla banca);
+**Obiettivo:** una scheda **"Investito"** nel Riepilogo e una pagina **Investimenti** con tre grafici:
+- quanto hai investito in titoli: acquisti meno vendite (un ETF su Trade Republic, il robo advisor di Tinaba, un
+  BTP comprato dalla banca);
+- i bonifici che hai fatto verso i conti di investimento;
 - quanto ti hanno reso: cedole, dividendi, interessi.
+
+> **Da leggere per prima la Parte I.** La prima versione (parti B-D) contava un solo "versato" che mescolava bonifici
+> e acquisti. La Parte I lo divide in due grandezze, ognuna con il suo nome: dove le parti B-D dicono "versato",
+> vale quello che dice la Parte I.
 
 > Questa guida non ha un numero: è stata scritta mentre un'altra sessione lavorava alla Fase 4 (le guide 44-48 e
 > le successive). Senza numero non si scontra con le loro. Il lavoro parte dalla Fase 4 al passo 5 (PIN, nginx,
@@ -18,6 +24,7 @@
 | F | i test, e la prova nel browser |
 | G | esercizi guidati |
 | H | aggiunta: la prova delle regole dice chi vince, e altri due ritocchi |
+| I | **due grandezze, non una**: l'investito in titoli e i bonifici verso i conti di investimento |
 
 ---
 
@@ -49,6 +56,9 @@ Se non c'è ancora niente, la pagina Investimenti mostra proprio questi tre modi
 ---
 
 ## Parte B: i calcoli, contare una volta sola
+
+> **Superata dalla Parte I.** Il problema dei "tre movimenti" resta vero, ma la soluzione qui sotto (`contribution`,
+> un "versato" solo) mescolava bonifici e acquisti, e non esiste più. Resta come storia del ragionamento.
 
 **Il problema.** 200 € che vanno da ING a Trade Republic e poi in un ETF compaiono **tre volte**:
 
@@ -102,6 +112,9 @@ restituiscono i numeri. Si provano con test semplici, senza database.
 
 ## Parte C: l'API e la scheda del Riepilogo
 
+> I campi dell'API e le cifre della scheda sono cambiati con la Parte I ("Investito in titoli quest'anno" al posto di
+> "Versato quest'anno"). Il resto di questa parte vale ancora.
+
 ```
 GET /api/investments?period=YEAR          (YEAR = 12 mesi, TWO_YEARS = 24, ALL = tutta la storia, max 10 anni)
 ```
@@ -136,6 +149,10 @@ Il piccolo grafico usa la stessa curva del grafico grande (`smoothPath`). Due de
 
 ## Parte D: la pagina e i suoi grafici
 
+> La pagina di oggi è descritta nella Parte I: la linea è l'investito in titoli, i bonifici hanno le loro barre, e
+> gli elenchi sotto sono due. Questa parte vale ancora per i dettagli dei grafici, della modalità discreta e delle
+> sigle.
+
 La pagina `/investimenti` si apre dalla scheda, e anche dall'elenco "Altro" (sul PC, dalla colonna).
 
 **In alto**: 12 mesi · 2 anni · Tutto.
@@ -167,11 +184,11 @@ anche le sigle dei titoli: BTP, BOT, CCT, CTZ, ETF, ETC.
 
 ## Parte E: che cosa **non** è, il valore di oggi
 
-"Versato" sono **i soldi messi**, non quanto valgono adesso. Se il PAC è salito del 10%, la pagina non lo sa:
+L'investito sono **i soldi messi nei titoli**, non quanto valgono adesso. Se il PAC è salito del 10%, la pagina non lo sa:
 - per saperlo servirebbero le **quotazioni** dei titoli (un servizio di prezzi);
 - e le **quantità** possedute (le posizioni del conto titoli).
 
-L'app non ha né le une né le altre. La pagina lo dice sotto il grafico: "non quanto valgono oggi". Un grafico che
+L'app non ha né le une né le altre. La pagina lo dice sotto il grafico: "Non è quanto valgono oggi". Un grafico che
 sembrasse un rendimento sarebbe un dato falso. È un possibile progetto futuro, non un difetto.
 
 ---
@@ -213,12 +230,15 @@ Tre ritocchi trovati così:
 
 ## Parte G: esercizi guidati
 
-1. **Il PAC di Tinaba.** Crea il conto manuale "Tinaba" con il ruolo Investimenti e il suo IBAN, oppure la regola
-   "TINABA". Apri un bonifico verso Tinaba: che tipo ha adesso? E la scheda "Investito"?
-2. **Senza contare due volte.** In `InvestmentsTest`, togli il controllo `onInvestmentAccount()` da `contribution`.
-   Quale test fallisce, e con quale numero? Perché?
-3. **Il rendimento delle cedole.** Aggiungi alla pagina "rendite / versato" in percentuale, per l'anno. Perché non è
-   il rendimento vero del portafoglio (pensa ai soldi versati a dicembre)?
+1. **Il PAC di Tinaba.** Crea il conto manuale "Tinaba" con il ruolo Investimenti e il suo IBAN, e importa il suo
+   CSV (`docs/tinaba.md`). Apri un bonifico verso Tinaba: che tipo ha adesso? In quale grafico della pagina conta? E
+   il "Nuovo versamento Robo advisor"?
+2. **Senza contare due volte.** In `Investments.transferred`, togli il controllo `onInvestmentAccount()`. Quali
+   righe della tabella di `InvestmentsTest` falliscono, e con quale numero? Perché?
+3. **Il rendimento delle cedole.** Aggiungi alla pagina "rendite / investito" in percentuale, per l'anno. Perché non
+   è il rendimento vero del portafoglio (pensa ai titoli comprati a dicembre)?
+4. **L'avviso.** Crea un conto manuale con ruolo Investimenti e mettigli solo un versamento (con "Conta come"). Che
+   cosa dice la pagina? Che cosa succede quando gli aggiungi un acquisto?
 
 ---
 
@@ -298,3 +318,184 @@ li mette insieme. Per separarli servirebbe una regola nuova in `MerchantKey`: il
 quando il nome è il tuo. Cambiando la chiave serve anche una migrazione che ricalcoli le chiavi salvate (`docs/40`).
 È da fare quando la Fase 4 sarà finita, per non scontrarsi con le sue migrazioni.
 
+
+---
+
+## Parte I: due grandezze, non una
+
+### Il problema, trovato usando l'app
+
+La pagina aveva un solo numero, il **versato**, con sotto la frase "Sono i soldi che hai messo negli investimenti,
+meno quelli che hai ripreso". Ma quel numero contava soprattutto i **bonifici** verso i conti di investimento, e un
+bonifico non è un investimento: i soldi arrivati sul conto del broker possono restare lì fermi, essere spesi con la
+carta del broker, tornare indietro. Investire vuol dire **comprare** titoli; quello che torna da un investimento è
+una **vendita** (o una cedola, un dividendo).
+
+Erano due domande diverse sotto una parola sola:
+
+| Grandezza | Che domanda risolve | Come si calcola |
+|---|---|---|
+| **Investito in titoli** | quanto ho comprato, meno quanto mi è tornato vendendo? | su **tutti** i conti: −importo di Acquisto titoli e Vendita titoli |
+| **Bonifici verso i conti di investimento** | quanti soldi ho spostato dai conti di tutti i giorni verso broker e wallet? | solo sui conti che **non** hanno il ruolo Investimenti: −importo di Versamento e Prelievo investimenti |
+
+### Le parole
+
+- **Conto di investimento**: un conto con il ruolo **Investimenti** in Conti (Trade Republic, Tinaba, un conto
+  titoli). Tutti gli altri (Principale, Spese, Carta di credito…) sono i **conti di tutti i giorni**.
+- **Il deposito titoli della banca**: molte banche permettono di comprare azioni o BTP direttamente dal conto
+  corrente. L'acquisto compare tra i movimenti del conto corrente come "Compravendita Titoli", e la regola di
+  partenza di `V4` lo fa diventare Acquisto titoli. È un investimento vero anche se il conto non è di investimento:
+  per questo l'investito si conta su tutti i conti.
+
+### Il calcolo
+
+In `Investments`, al posto di `contribution` ci sono quattro funzioni, ognuna con un nome che dice che cosa conta:
+
+```java
+/** Quanto il movimento ha comprato di titoli: un acquisto di -200 è 200. */
+public static BigDecimal bought(Movement m) {
+    return m.type() == TransactionType.SECURITIES_BUY ? m.amount().negate() : BigDecimal.ZERO;
+}
+
+/** Quanto è rientrato vendendo titoli: una vendita di +150 è 150. */
+public static BigDecimal sold(Movement m) {
+    return m.type() == TransactionType.SECURITIES_SELL ? m.amount() : BigDecimal.ZERO;
+}
+
+/** L'investito netto in titoli: acquisti meno vendite. */
+public static BigDecimal invested(Movement m) {
+    return bought(m).subtract(sold(m));
+}
+
+/** Quanto il movimento aggiunge ai bonifici verso i conti di investimento. */
+public static BigDecimal transferred(Movement m) {
+    if (m.onInvestmentAccount()) {
+        return BigDecimal.ZERO;                     // l'altra metà dello stesso bonifico
+    }
+    return switch (m.type()) {
+        case INVESTMENT_DEPOSIT, INVESTMENT_WITHDRAWAL -> m.amount().negate();
+        default -> BigDecimal.ZERO;
+    };
+}
+```
+
+**Perché il segno si gira** (`negate()`): dal punto di vista del conto, un acquisto o un bonifico verso il broker è
+un'uscita (−200); per gli investimenti sono +200.
+
+**Perché l'investito non conta mai due volte.** Un acquisto è un movimento solo, su un conto solo. Il bonifico
+invece ha due metà (l'uscita da ING e l'entrata sul broker, tutte e due "Versamento investimenti"): si conta solo
+quella sul conto di tutti i giorni. È anche l'unica che c'è quando il broker non è nell'app.
+
+### I casi, uno per uno
+
+È la tabella di `InvestmentsTest.eachCaseCountsInTheRightPlace`: un caso per riga, provato davvero.
+
+| # | Storia | Investito | Bonifici |
+|---|---|---|---|
+| 1 | bonifico di 200 da ING al broker (le due metà) | 0 | +200 |
+| 2 | il broker compra un ETF da 200 | +200 | 0 |
+| 3 | acquisto di 200 nel deposito titoli del conto corrente | +200 | 0 |
+| 4 | vendita di titoli per 150 sul broker | −150 | 0 |
+| 5 | 150 tornano dal broker a ING (le due metà) | 0 | −150 |
+| 6 | dividendo di 10 sul broker | 0 (va nelle rendite) | 0 |
+| 7 | spesa di 30 con la carta del broker | 0 | 0 |
+| 8 | prelievo di 50 al bancomat dal conto del broker | 0 | 0 |
+| 9 | 200 dal broker a un altro conto di investimento | 0 | 0 |
+| 10 | Tinaba: il bonifico da ING, poi "Nuovo versamento Robo advisor" | +200 | +200 |
+
+Che cosa si impara:
+
+- **I casi 7 e 8** (soldi del broker spesi o prelevati) non toccano niente: sono **spese normali**, e si vedono già in
+  Riepilogo, Budget e Analisi. Il grafico dei bonifici dice "ho spostato 200 €", e resta vero.
+- **Il caso 1 senza il caso 2**: i soldi sono arrivati al broker ma non sono stati investiti. I bonifici dicono
+  200, l'investito 0. La differenza tra le due cifre è la liquidità ferma sui conti di investimento: per mostrarla
+  davvero servono i **saldi dei conti**, il prossimo passo (`docs/consegne-investimenti.md`, sezione 9).
+- **Il caso 10**: per Tinaba la regola di `V31` fa del "versamento Robo advisor" un Acquisto titoli. Non sono i
+  singoli ETF comprati dal robo, ma è il momento in cui i soldi entrano nel portafoglio.
+
+### Le vendite non sono rendite
+
+Una **cedola** o un **dividendo** è un guadagno: soldi in più. Una **vendita** restituisce soprattutto il
+**capitale** che c'era dentro, più (o meno) un guadagno. Quanto sia guadagno l'app non lo sa: servirebbe il prezzo
+di carico di ogni titolo, che i movimenti bancari non danno. Per questo le vendite fanno **scendere** l'investito, si
+vedono a parte ("Rientrato dalle vendite") e non si sommano mai alle rendite.
+
+### L'API
+
+`GET /api/investments` ora risponde con nomi che dicono la verità:
+
+| Campo | Che cosa |
+|---|---|
+| `investedTotal`, `investedThisYear`, `investedThisMonth` | l'investito netto: in tutto, dal 1° gennaio, nel mese |
+| `boughtInPeriod`, `soldInPeriod` | acquistato e rientrato dalle vendite nel periodo, separati |
+| `transferredTotal`, `transferredInPeriod` | i bonifici netti verso i conti di investimento |
+| `incomeThisYear`, `incomeInPeriod`, `taxesInPeriod` | rendite e tasse, come prima |
+| `months[]` | per mese: `bought`, `sold`, `investedCumulative` (la linea), `transferred` (le barre), `income`, `taxes` |
+| `trades`, `transfers` | **tutti** i movimenti del periodo che fanno i due grafici, dal più recente |
+| `onlyTransfers` | i conti di investimento con bonifici ma, in tutta la storia, nessun acquisto né vendita |
+
+API e frontend stanno nello stesso repository e si cambiano insieme: nessun campo vecchio da tenere.
+
+### L'avviso "si vedono solo i bonifici"
+
+Un broker di cui hai creato il conto (per far riconoscere i bonifici) ma di cui non importi i movimenti: i bonifici
+si vedono, gli acquisti no, e l'investito è più basso del vero. `InvestmentService.onlyTransfers` trova questi
+conti: ruolo Investimenti, almeno un versamento o un prelievo, nessun acquisto né vendita. La pagina lo dice in cima:
+"Per <conto> si vedono solo i bonifici, nessun acquisto: quello che hai comprato lì non è nell'investito. Importa i
+movimenti del conto in Importa per vederlo."
+
+Un limite: un bonifico verso un broker che **non** è nell'app (classificato con una regola o con "Conta come") non ha
+un conto da nominare, e l'avviso non lo vede. Il rimedio è creare il conto manuale con il suo IBAN.
+
+### La pagina
+
+Dall'alto, prima per il telefono:
+
+1. **Investito in titoli**: la cifra grande (scorrendo la linea, "Investito fino a <mese>"), "… quest'anno · …
+   questo mese", la linea del cumulato, e sotto due cifre del periodo, **Acquistato** e **Rientrato dalle
+   vendite**. La frase: "Acquisti di titoli meno vendite, da tutti i conti. Non è quanto valgono oggi: per quello
+   servirebbero le quotazioni."
+2. **Bonifici verso i conti di investimento**: la cifra del periodo e le **barre** mese per mese. Sono un flusso, non
+   un accumulo: le barre mostrano quando hai spostato soldi. Con `diverging` del grafico di Analisi, un mese in cui
+   sono tornati più soldi di quanti ne sono andati scende sotto lo zero. La frase: "Non dicono quanti ne hai
+   investiti: quello è l'investito in titoli."
+3. **Cedole, dividendi e interessi**, come prima, con in fondo: "Le vendite non sono qui".
+4. Due elenchi: **Acquisti e vendite** e **Bonifici verso i conti di investimento** del periodo. Sono gli stessi
+   movimenti dei due grafici: si vedono i primi 8, gli altri con "Mostra tutti (N)" (`InvestmentMovements`, con un
+   `linkedSignal` che richiude l'elenco quando cambia il periodo). Ogni riga porta al dettaglio del movimento.
+
+Sul PC, a sinistra investito e bonifici, a destra le rendite.
+
+La pagina vuota spiega come far riconoscere anche gli **acquisti** (le regole di partenza, "Conta come"), non solo i
+bonifici.
+
+**La scheda del Riepilogo**: "Investito in titoli quest'anno" e "Rendite quest'anno", con la piccola linea
+dell'investito a 12 mesi.
+
+### I test, e la prova nel browser
+
+Backend:
+
+- `InvestmentsTest`: la tabella dei casi (14 righe, con le due metà dei bonifici), acquisti e vendite separati e mai
+  rendite, la linea che parte dalla storia prima del periodo, le barre dei bonifici con un mese negativo;
+- `InvestmentServiceTest`, con un database vero: un PAC verso un conto che non è nell'app, un bonifico al conto
+  titoli con l'acquisto di un ETF, un acquisto nel deposito titoli del conto corrente, una vendita, un prelievo, una
+  spesa con la carta del conto titoli (che non conta), un secondo conto di investimento con un solo versamento
+  (l'avviso), cedole, un dividendo, il bollo.
+
+Frontend: la pagina (le tre schede, acquistato e rientrato, le barre in su e in giù, la frase vera), i due elenchi
+con "Mostra tutti", l'avviso, lo scorrimento della linea, la pagina vuota, la modalità discreta, la scheda del
+Riepilogo.
+
+Nel browser (telefono e PC), con un anno inventato: 200 € al mese da ING a Tinaba e nel robo advisor, 1.000 € a
+Trade Republic in un ETF, un BTP da 500 € dal deposito titoli, una vendita da 300 €, 100 € tornati a ING, una spesa
+con la carta di Trade Republic, un conto "Fondo Beta" con un solo versamento. I numeri, controllati a mano:
+
+| Cifra | Conto | Pagina |
+|---|---|---|
+| investito in totale | 12 × 200 + 1.000 + 500 − 300 | 3.600 € |
+| acquistato negli ultimi 12 mesi (da dicembre) | 11 × 200 + 1.000 + 500 | 3.700 € |
+| bonifici negli ultimi 12 mesi | 11 × 200 + 1.000 + 200 (Fondo Beta) − 100 | 3.300 € |
+| avviso | | "Per Fondo Beta · PAC si vedono solo i bonifici" |
+
+La spesa con la carta non compare da nessuna parte nella pagina, come deciso.

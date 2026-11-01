@@ -3066,6 +3066,28 @@ ul.steps li + li {
   margin-top: 6px;
 }
 
+/* Acquistato e rientrato dalle vendite: due cifre affiancate sotto la linea dell'investito. */
+.trade-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.trade-figures strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Mostra tutti" sotto gli elenchi dei movimenti. */
+.day button.show-all {
+  display: block;
+  margin: 8px auto 4px;
+}
+
 /* La scheda del Riepilogo: tutta toccabile, porta alla pagina. */
 a.card.investments-card {
   display: block;

@@ -18,26 +18,27 @@
     }
 
     @if (empty()) {
-      <!-- Niente da mostrare: come farli riconoscere (docs/investimenti.md, parte A). -->
+      <!-- Niente da mostrare: come farli riconoscere (docs/investimenti.md, parti A e I). -->
       <section class="card soft">
         <h2>Ancora nessun investimento</h2>
         <p>
-          Qui compaiono i soldi che metti negli investimenti e le cedole, i dividendi e gli
-          interessi che incassi. Perché un bonifico verso il conto del tuo PAC o del tuo broker
-          conti come investimento, deve avere il tipo
-          <strong>Versamento investimenti</strong>. Tre modi:
+          Qui compaiono i titoli che compri e vendi, i bonifici che fai verso i conti di
+          investimento e le cedole, i dividendi e gli interessi che incassi. L'app li riconosce dal
+          <strong>tipo</strong> dei movimenti:
         </p>
         <ul class="steps">
           <li>
-            in <a routerLink="/conti">Conti</a>, il conto di investimento con il ruolo
-            <strong>Investimenti</strong>
-            (anche un conto manuale, con il suo IBAN, se la banca non si può collegare);
+            un acquisto deve avere il tipo <strong>Acquisto titoli</strong> (una vendita,
+            <strong>Vendita titoli</strong>): per Trade Republic, Tinaba e il deposito titoli della
+            banca ci sono già le <a routerLink="/regole">regole</a>; per gli altri, una regola nuova
+            o, per un movimento solo, <strong>Conta come</strong> nella sua scheda;
           </li>
           <li>
-            una <a routerLink="/regole">regola</a>: "se il testo contiene" il nome del broker,
-            "allora il tipo è" Versamento investimenti;
+            un bonifico verso il broker diventa <strong>Versamento investimenti</strong> da solo se
+            in <a routerLink="/conti">Conti</a> il conto del broker ha il ruolo
+            <strong>Investimenti</strong> (anche un conto manuale, con il suo IBAN, se la banca non
+            si può collegare).
           </li>
-          <li>per un movimento solo: nella sua scheda, <strong>Conta come</strong>.</li>
         </ul>
       </section>
     } @else {
@@ -53,26 +54,70 @@
         }
       </div>
 
-      <div class="investments-grid">
-        <section class="card hero">
-          <span class="secondary">{{ figure()?.label }}</span>
-          <span class="big-figure">{{
-            figure()?.value ?? d.contributedTotal | money: d.currency : 'symbol' : '1.0-0'
-          }}</span>
-          <p class="comparison">{{ comparison() }}</p>
-          <app-trend-chart
-            [values]="cumulative()"
-            [labels]="monthLabels()"
-            [names]="monthNames()"
-            [description]="lineDescription()"
-            [currency]="d.currency"
-            (scrubbed)="scrubIndex.set($event)"
-          />
-          <p class="secondary note-value">
-            Sono i soldi che hai messo negli investimenti, meno quelli che hai ripreso: non quanto
-            valgono oggi.
+      @if (d.onlyTransfers.length > 0) {
+        <!-- Conti di cui si vedono i bonifici ma nessun acquisto: il loro investito manca (parte I). -->
+        <section class="card warning only-transfers">
+          <p>
+            Per <strong>{{ d.onlyTransfers.join(', ') }}</strong> si vedono solo i bonifici, nessun
+            acquisto: quello che hai comprato lì non è nell'investito. Importa i movimenti del conto
+            in <a routerLink="/importa">Importa</a> per vederlo.
           </p>
         </section>
+      }
+
+      <div class="investments-grid">
+        <div>
+          <section class="card hero">
+            <span class="secondary">{{ figure()?.label }}</span>
+            <span class="big-figure">{{
+              figure()?.value ?? d.investedTotal | money: d.currency : 'symbol' : '1.0-0'
+            }}</span>
+            <p class="comparison">{{ comparison() }}</p>
+            <app-trend-chart
+              [values]="invested()"
+              [labels]="monthLabels()"
+              [names]="monthNames()"
+              [description]="lineDescription()"
+              [currency]="d.currency"
+              (scrubbed)="scrubIndex.set($event)"
+            />
+            <div class="trade-figures">
+              <div>
+                <span class="secondary">Acquistato · {{ periodLabel(d.period) }}</span>
+                <strong>{{ d.boughtInPeriod | money: d.currency : 'symbol' : '1.0-0' }}</strong>
+              </div>
+              <div>
+                <span class="secondary">Rientrato dalle vendite</span>
+                <strong>{{ d.soldInPeriod | money: d.currency : 'symbol' : '1.0-0' }}</strong>
+              </div>
+            </div>
+            <p class="secondary note-value">
+              Acquisti di titoli meno vendite, da tutti i conti. Non è quanto valgono oggi: per
+              quello servirebbero le quotazioni.
+            </p>
+          </section>
+
+          <section class="card transfers-card">
+            <span class="secondary"
+              >Bonifici verso i conti di investimento · {{ periodLabel(d.period) }}</span
+            >
+            <span class="mid-figure">{{
+              d.transferredInPeriod | money: d.currency : 'symbol' : '1.0-0'
+            }}</span>
+            <app-bar-chart
+              [values]="transferred()"
+              [labels]="barLabels()"
+              [names]="transferBarNames()"
+              [selected]="lastTransfer()"
+              [diverging]="true"
+              [description]="transferDescription()"
+            />
+            <p class="secondary note-value">
+              Soldi spostati dai conti di tutti i giorni verso broker e wallet, meno quelli tornati
+              indietro. Non dicono quanti ne hai investiti: quello è l'investito in titoli.
+            </p>
+          </section>
+        </div>
 
         <section class="card">
           <span class="secondary">Cedole, dividendi e interessi · {{ periodLabel(d.period) }}</span>
@@ -88,9 +133,9 @@
           <app-bar-chart
             [values]="income()"
             [labels]="barLabels()"
-            [names]="barNames()"
+            [names]="incomeBarNames()"
             [selected]="lastIncome()"
-            [description]="barDescription()"
+            [description]="incomeDescription()"
           />
           @if (d.incomeByType.length > 0) {
             <h3>Per tipo</h3>
@@ -124,32 +169,20 @@
           } @else {
             <p class="secondary">Nessuna rendita in questo periodo.</p>
           }
+          <p class="secondary note-value">
+            Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito.
+          </p>
         </section>
       </div>
 
-      @if (d.recentContributions.length > 0) {
-        <h2 class="days-title">Gli ultimi versamenti</h2>
-        <section class="day">
-          <ul>
-            @for (t of d.recentContributions; track t.id) {
-              <li>
-                <a class="movement" [routerLink]="['/movimenti', t.id]">
-                  <span class="avatar" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
-                    initialOf(t)
-                  }}</span>
-                  <span class="movement-text">
-                    <span class="name">{{ nameOf(t) }}</span>
-                    <span class="secondary">{{ t.bookingDate | date: 'd MMMM y' }}</span>
-                  </span>
-                  <span class="amount" [class.positive]="t.amount > 0">{{
-                    t.amount | money: t.currency
-                  }}</span>
-                </a>
-              </li>
-            }
-          </ul>
-        </section>
-      }
+      <app-investment-movements
+        [title]="'Acquisti e vendite · ' + periodLabel(d.period)"
+        [movements]="d.trades"
+      />
+      <app-investment-movements
+        [title]="'Bonifici verso i conti di investimento · ' + periodLabel(d.period)"
+        [movements]="d.transfers"
+      />
     }
   </div>
 } @else if (loading()) {

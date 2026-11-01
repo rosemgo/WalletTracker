@@ -705,8 +705,10 @@ export type InvestmentPeriod = 'YEAR' | 'TWO_YEARS' | 'ALL';
 /** Un mese degli investimenti. */
 export interface InvestmentMonth {
   month: string; // "2026-10"
-  contributed: number; // versato netto nel mese (verso gli investimenti, meno quello che è tornato)
-  cumulative: number; // versato netto dall'inizio della storia fino a questo mese: la linea del grafico
+  bought: number; // acquisti di titoli del mese (positivo)
+  sold: number; // quanto è rientrato dalle vendite di titoli nel mese (positivo)
+  investedCumulative: number; // acquisti meno vendite dall'inizio della storia a questo mese: la linea del grafico
+  transferred: number; // bonifici verso i conti di investimento, meno quelli tornati indietro: le barre
   income: number; // cedole, dividendi e interessi
   taxes: number; // tasse sugli investimenti (di solito negativo)
 }
@@ -718,22 +720,30 @@ export interface InvestmentGroup {
   movements: number;
 }
 
-/** GET /api/investments: quanto hai versato e quanto ti hanno reso gli investimenti (non quanto valgono oggi). */
+/**
+ * GET /api/investments (docs/investimenti.md, parte I): quanto hai investito in titoli (acquisti meno vendite), i
+ * bonifici verso i conti di investimento e le rendite. Non quanto valgono oggi gli investimenti.
+ */
 export interface Investments {
   currency: string;
   currencies: string[];
   period: InvestmentPeriod;
   from: string; // "2025-11"
   to: string;
-  contributedTotal: number;
-  contributedThisYear: number;
-  contributedThisMonth: number;
+  investedTotal: number;
+  investedThisYear: number;
+  investedThisMonth: number;
+  transferredTotal: number;
   incomeThisYear: number;
-  contributedInPeriod: number;
+  boughtInPeriod: number;
+  soldInPeriod: number;
+  transferredInPeriod: number;
   incomeInPeriod: number;
   taxesInPeriod: number;
   months: InvestmentMonth[];
   incomeByType: InvestmentGroup[];
   incomeBySource: InvestmentGroup[];
-  recentContributions: Transaction[];
+  trades: Transaction[]; // acquisti e vendite del periodo, dal più recente
+  transfers: Transaction[]; // i bonifici del periodo che fanno le barre, dal più recente
+  onlyTransfers: string[]; // conti di investimento con bonifici ma senza nessun acquisto: l'investito non si vede
 }
