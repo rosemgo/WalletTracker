@@ -259,3 +259,97 @@ Ramo `claude/quirky-brahmagupta-c4kk7j`. Commit principali della sezione:
 - `426458c`: consegna sulle categorie degli investimenti e sul cashback.
 
 Test al momento della consegna: backend 375 (tutti verdi), frontend 226 (tutti verdi).
+
+---
+
+## 9. Decisioni e progetto (sessione successiva)
+
+### Le risposte dell'utente
+
+| Domanda (sezione 6) | Decisione |
+|---|---|
+| 1. grafico principale | **B, "Investito in titoli"**: acquisti meno vendite, su tutti i conti; linea del cumulato |
+| 2. grafico secondario | **A, "Bonifici verso i conti di investimento"**, meno quelli tornati indietro; **barre** mese per mese |
+| 3. liquidità (C) | **più avanti**: l'app non salva il saldo dei conti (`Account` non ha un campo saldo); calcolata dai movimenti sarebbe esatta solo con la storia completa. Da valutare dopo: salvare il saldo di Enable Banking, o inserirlo a mano per i conti manuali |
+| 4. spese e prelievi dai conti di investimento | **restano spese normali**: nella pagina Investimenti non compaiono e non toccano né B né A |
+| 5. vendite | nella scheda di B, "Acquisti … · Vendite …" del periodo, e nell'elenco "Gli ultimi acquisti e vendite"; **mai** sommate alle rendite |
+| 6. conti di cui si vedono solo i bonifici | strada 3 (B e A sempre, con etichette chiare) **più** un avviso per quei conti |
+| 7. scheda del Riepilogo | **"Investito in titoli quest'anno"** e **"Rendite quest'anno"**, con la piccola linea di B a 12 mesi |
+| 8. cashback di Tinaba | deciso a parte: è un'**Entrata** in "Rimborsi fiscali e bonus" (`V33`), non entra in questa pagina |
+
+Restano come oggi: i movimenti in attesa (`PENDING`) contano; si sceglie una valuta e si filtra; nessuna migrazione.
+
+### Backend
+
+**`Investments`**: `contribution` sparisce, al suo posto due misure con il nome giusto.
+
+```java
+/** B. Quanto il movimento aggiunge all'investito in titoli: un acquisto di -200 è +200, una vendita di +150 è -150. */
+public static BigDecimal invested(Movement m) {
+    return switch (m.type()) {
+        case SECURITIES_BUY, SECURITIES_SELL -> m.amount().negate();   // su TUTTI i conti (caso 3: il dossier di ING)
+        default -> BigDecimal.ZERO;
+    };
+}
+
+/** A. Quanto il movimento aggiunge ai bonifici verso i conti di investimento. */
+public static BigDecimal transfers(Movement m) {
+    if (m.onInvestmentAccount()) {
+        return BigDecimal.ZERO;                                        // l'altra metà dello stesso giroconto
+    }
+    return switch (m.type()) {
+        case INVESTMENT_DEPOSIT, INVESTMENT_WITHDRAWAL -> m.amount().negate();
+        default -> BigDecimal.ZERO;
+    };
+}
+```
+
+B non conta mai due volte: un acquisto è un movimento solo, su un conto solo. `income` e `taxes` restano come sono.
+
+**`InvestmentDtos`**, nomi che dicono la verità (API e frontend si cambiano insieme):
+
+- `Month(month, invested, investedCumulative, transfers, income, taxes)`;
+- `Overview`: `investedTotal`, `investedThisYear`, `investedThisMonth`, `investedInPeriod`, `boughtInPeriod`,
+  `soldInPeriod`, `transfersInPeriod`, `incomeThisYear`, `incomeInPeriod`, `taxesInPeriod`, `months`,
+  `incomeByType`, `incomeBySource`, `recentTrades` (gli ultimi acquisti e vendite), `onlyTransfers` (l'avviso).
+
+**L'avviso "si vedono solo i bonifici"** (`onlyTransfers`): i nomi dei conti con ruolo Investimenti che hanno
+versamenti ma, in tutta la storia, nessun acquisto né vendita; più una voce "senza conto" se ci sono versamenti sui
+conti normali che non si sono abbinati a nessun conto (classificati da una regola o a mano: il conto di arrivo non
+è nell'app). Serve sapere se un movimento ha l'altra metà: `Movement` riceve anche `accountName` e `paired`.
+
+**Test.** In `InvestmentsTest` la tabella della sezione 4 diventa un test con un caso per riga (colonne "B" e
+"A"): è il modo per non sbagliare i segni. In `InvestmentServiceTest`, con dati inventati: il dossier di Banca Alfa
+(caso 3), la carta del broker (caso 7: non cambia niente), un broker con solo bonifici (l'avviso).
+
+### Frontend (prima per il telefono)
+
+Dall'alto in basso, in `investments-page`:
+
+1. **Investito in titoli** (scheda principale): la cifra (o "fino a <mese>" scorrendo), il confronto, la linea del
+   cumulato (`trend-chart`), sotto "Acquisti 2.000 € · Vendite 150 €" del periodo, e la frase: *"Acquisti di
+   titoli meno vendite. Non è quanto valgono oggi: per quello servirebbero le quotazioni."*
+2. **Bonifici verso i conti di investimento**: il totale del periodo e le barre mese per mese (`bar-chart`), con la
+   frase: *"Soldi spostati dai conti di tutti i giorni verso broker e wallet, meno quelli tornati indietro. Non
+   dice quanti sono stati investiti."*
+3. **L'avviso**, se `onlyTransfers` non è vuoto: *"Per <conto> si vedono solo i bonifici: importa i suoi
+   movimenti per vedere gli acquisti."*
+4. **Cedole, dividendi e interessi**: come oggi.
+5. **Gli ultimi acquisti e vendite** al posto di "Gli ultimi versamenti".
+6. **Stato vuoto**: spiega anche come far riconoscere gli acquisti (regole, tipo "Acquisto titoli").
+
+`investments-card` (Riepilogo): "Investito in titoli quest'anno", "Rendite quest'anno", la linea di B a 12 mesi.
+`investments.spec.ts` aggiornato; prova nel browser con Playwright e dati inventati (conto corrente, broker con
+ruolo Investimenti, bonifici, acquisti, una vendita, un dividendo, una spesa con la carta del broker), controllando
+i numeri a mano contro la tabella della sezione 4.
+
+### Guida
+
+Parte nuova in `docs/investimenti.md` ("Parte I: due grandezze, non una"), con la tabella dei casi; parti B, C, D,
+E e gli esercizi della parte G corretti dove dicono "versato" nel senso vecchio.
+
+### Da verificare durante il lavoro
+
+- **Piani di accumulo di Trade Republic**: se le esecuzioni hanno un testo diverso da "Buy trade", nessuna regola le
+  copre e B le perde. Serve un esempio della causale dall'utente; in quel caso una migrazione con una regola nuova
+  (numero libero su tutti i rami: oggi l'ultima è `V33`).
