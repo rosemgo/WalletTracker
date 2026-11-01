@@ -270,9 +270,9 @@ Test al momento della consegna: backend 375 (tutti verdi), frontend 226 (tutti v
 |---|---|
 | 1. grafico principale | **B, "Investito in titoli"**: acquisti meno vendite, su tutti i conti; linea del cumulato |
 | 2. grafico secondario | **A, "Bonifici verso i conti di investimento"**, meno quelli tornati indietro; **barre** mese per mese |
-| 3. liquidità (C) | **più avanti**: l'app non salva il saldo dei conti (`Account` non ha un campo saldo); calcolata dai movimenti sarebbe esatta solo con la storia completa. Da valutare dopo: salvare il saldo di Enable Banking, o inserirlo a mano per i conti manuali |
+| 3. liquidità (C) | **più avanti**, dopo i **saldi dei conti** (vedi sotto): mai calcolata dai movimenti, perché la storia non è mai completa |
 | 4. spese e prelievi dai conti di investimento | **restano spese normali**: nella pagina Investimenti non compaiono e non toccano né B né A |
-| 5. vendite | nella scheda di B, "Acquisti … · Vendite …" del periodo, e nell'elenco "Gli ultimi acquisti e vendite"; **mai** sommate alle rendite |
+| 5. acquisti e vendite | oltre al netto, **separati**: "Acquistato" e "Rientrato dalle vendite" del periodo, ognuno con la sua cifra, e l'elenco dei movimenti; **mai** sommati alle rendite (che sono solo cedole, dividendi e interessi) |
 | 6. conti di cui si vedono solo i bonifici | strada 3 (B e A sempre, con etichette chiare) **più** un avviso per quei conti |
 | 7. scheda del Riepilogo | **"Investito in titoli quest'anno"** e **"Rendite quest'anno"**, con la piccola linea di B a 12 mesi |
 | 8. cashback di Tinaba | deciso a parte: è un'**Entrata** in "Rimborsi fiscali e bonus" (`V33`), non entra in questa pagina |
@@ -335,7 +335,9 @@ Dall'alto in basso, in `investments-page`:
 3. **L'avviso**, se `onlyTransfers` non è vuoto: *"Per <conto> si vedono solo i bonifici: importa i suoi
    movimenti per vedere gli acquisti."*
 4. **Cedole, dividendi e interessi**: come oggi.
-5. **Gli ultimi acquisti e vendite** al posto di "Gli ultimi versamenti".
+5. **Gli ultimi acquisti e vendite** e, a parte, **gli ultimi bonifici verso i conti di investimento** (quelli che
+   fanno le barre del punto 2: all'utente piace vedere i movimenti dietro il grafico). Ogni elenco ha "Vedi tutti",
+   che porta a Movimenti con il filtro del tipo.
 6. **Stato vuoto**: spiega anche come far riconoscere gli acquisti (regole, tipo "Acquisto titoli").
 
 `investments-card` (Riepilogo): "Investito in titoli quest'anno", "Rendite quest'anno", la linea di B a 12 mesi.
@@ -348,8 +350,20 @@ i numeri a mano contro la tabella della sezione 4.
 Parte nuova in `docs/investimenti.md` ("Parte I: due grandezze, non una"), con la tabella dei casi; parti B, C, D,
 E e gli esercizi della parte G corretti dove dicono "versato" nel senso vecchio.
 
-### Da verificare durante il lavoro
+### Piani di accumulo di Trade Republic
 
-- **Piani di accumulo di Trade Republic**: se le esecuzioni hanno un testo diverso da "Buy trade", nessuna regola le
-  copre e B le perde. Serve un esempio della causale dall'utente; in quel caso una migrazione con una regola nuova
-  (numero libero su tutti i rami: oggi l'ultima è `V33`).
+L'utente non ne ha: nessuna regola nuova. Se un giorno ne avrà, le esecuzioni andranno controllate (testo diverso
+da "Buy trade"?).
+
+### Dopo: i saldi dei conti (poi la liquidità, C)
+
+Un passo a parte, dopo la sezione Investimenti, perché tocca conti, sincronizzazione e importazione:
+
+- **conti collegati**: Enable Banking ha `GET /accounts/{uid}/balances` (`EnableBankingClient.getBalances`, oggi
+  usato solo da `PocRunner`). La sincronizzazione lo legge e lo salva con la sua data; la pagina Conti lo mostra.
+  Se per un conto la banca non lo dà, il saldo **non** si mostra (calcolarlo dai movimenti sarebbe sbagliato:
+  la storia non è mai completa);
+- **conti manuali** (CSV): dopo un'importazione, se il file non ha il saldo, l'app chiede "Qual è il saldo
+  attuale?", mostrando l'ultimo movimento importato da confrontare con la banca. Da lì in avanti il saldo si
+  aggiorna con i movimenti importati dopo quella data (esatto, perché parte da un valore vero);
+- poi C: la liquidità dei conti di investimento è il loro saldo.
