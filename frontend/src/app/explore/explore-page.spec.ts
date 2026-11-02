@@ -177,6 +177,10 @@ describe('ExplorePage', () => {
     button('Esercente').click();
     await fixture.whenStable();
     expect(groupQueries.at(-1)).toMatchObject({ by: 'MERCHANT', from: '2026-02-01' });
+    // Ogni esercente porta ai suoi movimenti della barra, in Movimenti.
+    const merchant =
+      page.querySelector<HTMLAnchorElement>('a.group-row')?.getAttribute('href') ?? '';
+    expect(merchant).toMatch(/^\/movimenti\?from=2026-02-01&to=2026-02-28&type=EXPENSE&text=/);
 
     button('6 mesi').click();
     await fixture.whenStable();

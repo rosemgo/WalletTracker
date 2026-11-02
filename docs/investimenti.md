@@ -31,6 +31,7 @@
 | M | solo il netto: niente lordo e ritenute, anche negli elenchi |
 | N | il periodo "Quest'anno" (YTD) |
 | O | la ritenuta sta nel giorno della sua cedola, anche a cavallo di due mesi |
+| P | le righe di "Per tipo", "Da dove" e "Altre tasse" portano ai movimenti (`docs/collegamenti.md`) |
 
 ---
 
@@ -740,3 +741,11 @@ senza la ritenuta, ottobre con la cedola netta di 455 €; una ritenuta lontana 
 sposta); `InvestmentsTest.twoCouponsOfTheSameBondEachGetTheirOwnWithholding` (due cedole dello stesso BTP, ognuna con
 la sua; una ritenuta più grande della cedola resta sola). Nel browser, con una cedola inventata del 30 settembre e la
 ritenuta del 1° ottobre: settembre 300 € e −37,50 €, nessuna ritenuta non abbinata.
+
+---
+
+## Parte P: le righe portano ai movimenti
+
+Le righe di "Per tipo", "Da dove" e "Altre tasse" ora sono link a Movimenti, con il periodo guardato. Il perché e il
+come sono in `docs/collegamenti.md`; qui l'unica cosa nuova dell'API: `Group` ha `accountId` e `search` per le righe che
+sono un conto (le rendite senza il nome di un titolo), così il link trova proprio quei movimenti.

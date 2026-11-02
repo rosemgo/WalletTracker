@@ -225,4 +225,14 @@ class InvestmentsTest {
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 4, 1),
                 LocalDate.of(2026, 10, 1));
     }
+
+    @Test
+    void theSearchWordsAreTheFixedPartOfTheText() {
+        assertThat(Investments.searchWords("Interest payment for payout collection 019e8191-0af0-76fc-a8ac-1d6ee06c92c0"))
+                .isEqualTo("interest payment for payout collection");
+        assertThat(Investments.searchWords("Interessi Portafoglio 2026 trimestre III ottobre novembre"))
+                .isEqualTo("interessi portafoglio trimestre iii ottobre");
+        assertThat(Investments.searchWords("2026-10")).isNull();
+        assertThat(Investments.searchWords(null)).isNull();
+    }
 }

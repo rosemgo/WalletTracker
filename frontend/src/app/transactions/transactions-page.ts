@@ -137,6 +137,11 @@ export class TransactionsPage implements OnInit {
       this.from.set(from);
       this.to.set(to);
     }
+    // Da Conti e da Analisi ("per conto"): ?accountId=3.
+    const accountId = Number(params.get('accountId'));
+    if (Number.isInteger(accountId) && accountId > 0) {
+      this.accountId.set(accountId);
+    }
     const categoryId = Number(params.get('categoryId'));
     if (Number.isInteger(categoryId) && categoryId > 0) {
       this.category.set({ id: categoryId, name: 'Una categoria' });

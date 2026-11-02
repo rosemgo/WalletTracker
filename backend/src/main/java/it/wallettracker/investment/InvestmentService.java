@@ -173,7 +173,9 @@ public class InvestmentService {
         return new Movement(t.getBookingDate(), t.getAmount(), t.getType(),
                 t.getAccount().getRole() == AccountRole.INVESTMENT,
                 t.getCategory() == null ? null : t.getCategory().getName(),
-                security != null ? security : t.getAccount().label());
+                security != null ? security : t.getAccount().label(),
+                security != null ? null : t.getAccount().getId(),
+                security != null ? null : Investments.searchWords(text));
     }
 
     /**

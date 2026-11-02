@@ -13,6 +13,7 @@ import {
   Transaction,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { merchantSearch } from '../transactions/merchant-search';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { ReadablePipe } from '../text/readable';
@@ -221,6 +222,33 @@ export class ExplorePage implements OnInit {
       from: b.bar.from,
       to: b.bar.to,
     };
+  }
+
+  /**
+   * I filtri di Movimenti per una riga che non è una categoria da scegliere: i movimenti di quell'esercente o di quel
+   * conto (o di quella categoria, quando non si può sceglierla qui), nel periodo della barra. Null se non c'è niente.
+   */
+  protected movementsQuery(row: Row): Record<string, string> | null {
+    const b = this.bar();
+    if (b === null) {
+      return null;
+    }
+    const query: Record<string, string> = { from: b.bar.from, to: b.bar.to };
+    const metric = this.metric();
+    if (metric !== 'NET') {
+      query['type'] = metric === 'EXPENSES' ? 'EXPENSE' : 'INCOME';
+    }
+    const key = row.group.key;
+    if (this.by() === 'MERCHANT' && key) {
+      query['text'] = merchantSearch(key);
+    } else if (this.by() === 'ACCOUNT' && key) {
+      query['accountId'] = key;
+    } else if (row.group.categoryId !== null) {
+      query['categoryId'] = String(row.group.categoryId);
+    } else {
+      return null;
+    }
+    return query;
   }
 
   /** Il mese per la pagina della categoria: quello della barra, se è un mese; altrimenti quello in corso. */

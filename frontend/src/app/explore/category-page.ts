@@ -2,10 +2,11 @@ import { DecimalPipe, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
-import { CategoryOverview } from '../api/models';
+import { CategoryOverview, ExploreGroup } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { merchantSearch } from '../transactions/merchant-search';
 import { BarChart } from './bar-chart';
 
 /** Sotto questa differenza (in euro) si è "in linea con il solito", come nel Riepilogo. */
@@ -139,6 +140,20 @@ export class CategoryPage implements OnInit {
     const o = this.overview();
     return o?.usualMonth == null ? '' : `di solito ${this.euros(o.usualMonth, o.currency)}`;
   });
+
+  /** I filtri di Movimenti per un esercente della categoria, nel mese guardato. */
+  protected merchantQuery(m: ExploreGroup): Record<string, string> {
+    const o = this.overview()!;
+    const query: Record<string, string> = {
+      categoryId: String(o.categoryId),
+      from: `${o.month}-01`,
+      to: o.day,
+    };
+    if (m.key) {
+      query['text'] = merchantSearch(m.key);
+    }
+    return query;
+  }
 
   ngOnInit(): void {
     const month = this.route.snapshot.queryParamMap.get('mese');

@@ -738,6 +738,8 @@ export interface InvestmentGroup {
   name: string;
   amount: number;
   movements: number;
+  accountId?: number | null; // quando la voce è un conto (una rendita senza il nome di un titolo)...
+  search?: string | null; // ...e le parole fisse del testo, per trovare proprio quei movimenti
 }
 
 /**

@@ -288,6 +288,12 @@ describe('TransactionsPage', () => {
     expect((page.querySelector('input[type="date"]') as HTMLInputElement).value).toBe('2026-09-01');
   });
 
+  it('from Conti and Analisi: the account in the address is the starting filter', async () => {
+    routeParams = { accountId: '7', type: 'INCOME' };
+    await render();
+    expect(requests[0]).toMatchObject({ accountId: 7, type: 'INCOME' });
+  });
+
   it('dates in the address that are not real dates are ignored', () => {
     expect(isoDateParam('2026-09-30')).toBe('2026-09-30');
     expect(isoDateParam('2026-02-30')).toBeNull(); // il 30 febbraio non esiste

@@ -5,14 +5,17 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import it.wallettracker.investment.InvestmentDtos.Group;
 import it.wallettracker.investment.InvestmentDtos.Month;
@@ -41,9 +44,37 @@ public final class Investments {
     private Investments() {
     }
 
-    /** Un movimento, con quello che serve ai calcoli. */
+    /**
+     * Un movimento, con quello che serve ai calcoli.
+     *
+     * @param sourceAccountId quando {@code source} è il nome del conto (il testo non ha il nome di un titolo): l'id di
+     *                        quel conto, per aprirne i movimenti; altrimenti null
+     * @param sourceSearch    in quel caso, le parole fisse del testo da cercare in Movimenti ("interest payment for payout
+     *                        collection"): con il conto, trovano proprio quei movimenti
+     */
     public record Movement(LocalDate date, BigDecimal amount, TransactionType type, boolean onInvestmentAccount,
-            String category, String source) {
+            String category, String source, Long sourceAccountId, String sourceSearch) {
+
+        public Movement(LocalDate date, BigDecimal amount, TransactionType type, boolean onInvestmentAccount,
+                String category, String source) {
+            this(date, amount, type, onInvestmentAccount, category, source, null, null);
+        }
+    }
+
+    /**
+     * Le parole fisse di un testo, per cercarlo in Movimenti (docs/investimenti.md, parte P): le prime cinque senza
+     * cifre. "Interest payment for payout collection 019e8191-…" dà "interest payment for payout collection", uguale per
+     * ogni mese. Null se non ce ne sono.
+     */
+    public static String searchWords(String text) {
+        if (text == null) {
+            return null;
+        }
+        String words = Arrays.stream(text.toLowerCase(Locale.ROOT).split("\\s+"))
+                .filter(w -> !w.isEmpty() && w.chars().noneMatch(Character::isDigit))
+                .limit(5)
+                .collect(Collectors.joining(" "));
+        return words.isEmpty() ? null : words;
     }
 
     /** Quanto il movimento ha comprato di titoli: un acquisto di -200 è 200. */
@@ -241,7 +272,7 @@ public final class Investments {
             if (best != null) {
                 pairedIncomes.add(best);
                 result.set(i, new Movement(movements.get(best).date(), w.amount(), w.type(), w.onInvestmentAccount(),
-                        w.category(), w.source()));
+                        w.category(), w.source(), w.sourceAccountId(), w.sourceSearch()));
             }
         }
         return result;
@@ -260,6 +291,8 @@ public final class Investments {
         Map<String, String> typeOfSource = new LinkedHashMap<>();
         Map<String, BigDecimal> amounts = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
+        Map<String, Long> accounts = new LinkedHashMap<>();
+        Map<String, String> searches = new LinkedHashMap<>();
         List<Movement> withholdings = new ArrayList<>();
         for (Movement m : movements) {
             if (m.date().isBefore(from) || m.date().isAfter(to)) {
@@ -273,6 +306,12 @@ public final class Investments {
                 String key = byType ? type : (m.source() == null ? "Senza nome del titolo" : m.source());
                 amounts.merge(key, m.amount(), BigDecimal::add);
                 counts.merge(key, 1, Integer::sum);
+                if (!byType && m.sourceAccountId() != null) {
+                    accounts.putIfAbsent(key, m.sourceAccountId());
+                    if (m.sourceSearch() != null) {
+                        searches.putIfAbsent(key, m.sourceSearch());
+                    }
+                }
             } else if (isWithholding(m)) {
                 withholdings.add(m);
             }
@@ -284,7 +323,8 @@ public final class Investments {
             counts.merge(key, type == null ? 1 : 0, Integer::sum);
         }
         return amounts.entrySet().stream()
-                .map(e -> new Group(e.getKey(), e.getValue(), counts.get(e.getKey())))
+                .map(e -> new Group(e.getKey(), e.getValue(), counts.get(e.getKey()), accounts.get(e.getKey()),
+                        searches.get(e.getKey())))
                 .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(Group::name))
                 .toList();
     }

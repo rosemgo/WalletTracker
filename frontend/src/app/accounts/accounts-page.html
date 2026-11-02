@@ -62,6 +62,11 @@
                   rinomina
                 </button>
               }
+              <div>
+                <a routerLink="/movimenti" [queryParams]="{ accountId: account.id }"
+                  >vedi i movimenti</a
+                >
+              </div>
               <div class="secondary">
                 {{ account.iban ?? 'senza IBAN' }} · {{ account.currency }}
                 @if (account.name && account.source !== 'MANUAL') {

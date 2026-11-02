@@ -156,13 +156,15 @@
               <ul class="rows">
                 @for (g of d.incomeByType; track g.name) {
                   <li>
-                    <span>
-                      {{ g.name }}
-                      <span class="secondary">{{
-                        g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                      }}</span>
-                    </span>
-                    <strong>{{ g.amount | money: d.currency }}</strong>
+                    <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
+                      <span>
+                        {{ g.name }}
+                        <span class="secondary">{{
+                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                        }}</span>
+                      </span>
+                      <strong>{{ g.amount | money: d.currency }}</strong>
+                    </a>
                   </li>
                 }
               </ul>
@@ -170,13 +172,15 @@
               <ul class="rows">
                 @for (g of d.incomeBySource; track g.name) {
                   <li>
-                    <span>
-                      {{ g.name | readable }}
-                      <span class="secondary">{{
-                        g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                      }}</span>
-                    </span>
-                    <strong>{{ g.amount | money: d.currency }}</strong>
+                    <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
+                      <span>
+                        {{ g.name | readable }}
+                        <span class="secondary">{{
+                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                        }}</span>
+                      </span>
+                      <strong>{{ g.amount | money: d.currency }}</strong>
+                    </a>
                   </li>
                 }
               </ul>
@@ -191,13 +195,15 @@
               <ul class="rows">
                 @for (g of d.otherTaxesByType; track g.name) {
                   <li>
-                    <span>
-                      {{ g.name }}
-                      <span class="secondary">{{
-                        g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                      }}</span>
-                    </span>
-                    <strong>{{ g.amount | money: d.currency }}</strong>
+                    <a routerLink="/movimenti" [queryParams]="taxQuery(d, g)">
+                      <span>
+                        {{ g.name }}
+                        <span class="secondary">{{
+                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                        }}</span>
+                      </span>
+                      <strong>{{ g.amount | money: d.currency }}</strong>
+                    </a>
                   </li>
                 }
               </ul>

@@ -221,6 +221,11 @@ describe('AccountsPage', () => {
 
     expect(page.textContent).toContain('Carta di credito');
     expect(page.textContent).toContain('HTTP 429 troppe letture');
+    // Ogni conto porta ai suoi movimenti.
+    const link = Array.from(page.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('vedi i movimenti'),
+    );
+    expect(link?.getAttribute('href')).toBe('/movimenti?accountId=3');
     const select = page.querySelector('select') as HTMLSelectElement;
     expect(select.selectedOptions[0].textContent?.trim()).toBe('Conto spese');
   });
@@ -267,7 +272,9 @@ describe('AccountsPage', () => {
     const row = page.querySelectorAll('tbody tr')[1] as HTMLElement;
 
     expect(row.textContent).toContain('conto manuale');
-    const link = row.querySelector('a') as HTMLAnchorElement;
+    const link = Array.from(row.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('importa un file'),
+    ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/importa?conto=8');
 
     // "elimina" chiede conferma; solo "Elimina" cancella davvero.

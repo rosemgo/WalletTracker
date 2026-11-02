@@ -34,7 +34,10 @@
           @for (s of o.subscriptions; track s.id) {
             <tr [class.disabled]="s.late">
               <td class="card-title">
-                {{ s.name | readable }}
+                <!-- Il nome porta ai pagamenti di questo abbonamento, in Movimenti. -->
+                <a routerLink="/movimenti" [queryParams]="{ text: search(s.merchantKey) }">{{
+                  s.name | readable
+                }}</a>
                 @if (s.priceChanged) {
                   <div class="secondary">
                     <!-- Un rincaro si nota: era l'importo al momento della conferma. -->

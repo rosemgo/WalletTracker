@@ -147,6 +147,16 @@
                   >
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
                   </button>
+                } @else if (movementsQuery(r); as query) {
+                  <!-- Un esercente, un conto: i suoi movimenti del periodo, in Movimenti. -->
+                  <a
+                    class="group-row"
+                    routerLink="/movimenti"
+                    [queryParams]="query"
+                    [attr.aria-label]="(r.name | readable) + ': apri i movimenti'"
+                  >
+                    <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
+                  </a>
                 } @else {
                   <div class="group-row">
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />

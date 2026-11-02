@@ -67,7 +67,13 @@
               }
             </td>
             <td data-label="Movimenti" class="amount secondary">
-              {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
+              @if (category.uses > 0) {
+                <a routerLink="/movimenti" [queryParams]="{ categoryId: category.id }">
+                  {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
+                </a>
+              } @else {
+                nessun movimento
+              }
             </td>
             <td data-label="Gruppo" class="group">
               <select

@@ -172,6 +172,30 @@ describe('OverviewPage', () => {
       '1 categoria suggerita',
     ]);
     expect(links[0].getAttribute('href')).toBe('/movimenti?type=TO_REVIEW');
+    // "In arrivo" porta agli abbonamenti.
+    const upcoming = Array.from(page.querySelectorAll('section.card')).find((c) =>
+      c.textContent?.includes('In arrivo'),
+    ) as HTMLElement;
+    expect(upcoming.querySelector('a')?.getAttribute('href')).toBe('/abbonamenti');
+  });
+
+  it('"Senza categoria" leads to the expenses of the month without a category', async () => {
+    respond = (month) =>
+      of(
+        overview({
+          month: month ?? monthOf(new Date()),
+          categories: [category(null, 437, 392), category('Famiglia e amici', 360, 40)],
+        }),
+      );
+    const { page } = await render();
+
+    const link = Array.from(page.querySelectorAll<HTMLAnchorElement>('a.bar-link')).find((a) =>
+      a.textContent?.includes('Senza categoria'),
+    );
+    const month = monthOf(new Date());
+    expect(link?.getAttribute('href')).toBe(
+      `/movimenti?uncategorized=true&type=EXPENSE&from=${month}-01&to=${month}-25`,
+    );
   });
 
   it('goes back to past months and not beyond the current one', async () => {

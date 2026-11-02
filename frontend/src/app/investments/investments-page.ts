@@ -2,14 +2,18 @@ import { DatePipe, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { InvestmentPeriod, Investments } from '../api/models';
+import { InvestmentGroup, InvestmentPeriod, Investments } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { BarChart } from '../explore/bar-chart';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { ReadablePipe } from '../text/readable';
+import { merchantSearch } from '../transactions/merchant-search';
 import { InvestmentMovements } from './investment-movements';
 import { TrendChart } from './trend-chart';
+
+/** La riga delle ritenute senza la loro rendita (Investments.UNMATCHED_WITHHOLDING nel backend). */
+const UNMATCHED_WITHHOLDING = 'Ritenute non abbinate a una rendita';
 
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
   { value: 'YEAR', label: '12 mesi' },
@@ -213,6 +217,53 @@ export class InvestmentsPage implements OnInit {
       ? ''
       : `Cedole, dividendi e interessi netti, mese per mese: ${this.euros(this.netIncome(), d.currency)} nel periodo`;
   });
+
+  /** Il periodo guardato, per i filtri di Movimenti: dal primo giorno del primo mese all'ultimo dell'ultimo. */
+  private periodRange(d: Investments): { from: string; to: string } {
+    const [year, month] = d.to.split('-').map(Number);
+    const last = new Date(year, month, 0).getDate();
+    return { from: `${d.from}-01`, to: `${d.to}-${String(last).padStart(2, '0')}` };
+  }
+
+  /** "Per tipo": le rendite di quel tipo nel periodo (la ricerca trova anche il nome della categoria). */
+  protected typeQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
+    const range = this.periodRange(d);
+    if (g.name === 'Altre rendite') {
+      return { ...range, type: 'INVESTMENT_INCOME', uncategorized: 'true' };
+    }
+    if (g.name === UNMATCHED_WITHHOLDING) {
+      return { ...range, type: 'INVESTMENT_TAX', text: 'ritenute' };
+    }
+    return { ...range, type: 'INVESTMENT_INCOME', text: g.name.toLowerCase() };
+  }
+
+  /** "Da dove": i movimenti di quel titolo nel periodo (rendite e ritenute), o di quel conto. */
+  protected sourceQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
+    const range = this.periodRange(d);
+    if (g.accountId) {
+      const query: Record<string, string> = {
+        ...range,
+        accountId: String(g.accountId),
+        type: 'INVESTMENT_INCOME',
+      };
+      if (g.search) {
+        query['text'] = g.search;
+      }
+      return query;
+    }
+    if (g.name === UNMATCHED_WITHHOLDING) {
+      return { ...range, type: 'INVESTMENT_TAX', text: 'ritenute' };
+    }
+    return { ...range, text: merchantSearch(g.name) };
+  }
+
+  /** "Altre tasse": le tasse di quella categoria nel periodo. */
+  protected taxQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
+    const range = this.periodRange(d);
+    return g.name === 'Senza categoria'
+      ? { ...range, type: 'INVESTMENT_TAX', uncategorized: 'true' }
+      : { ...range, type: 'INVESTMENT_TAX', text: g.name.toLowerCase() };
+  }
 
   ngOnInit(): void {
     this.load();

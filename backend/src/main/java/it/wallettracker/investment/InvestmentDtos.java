@@ -38,8 +38,17 @@ public final class InvestmentDtos {
             BigDecimal transferred, BigDecimal income, BigDecimal withholding, BigDecimal otherTaxes) {
     }
 
-    /** Una voce di un elenco: "Cedole", o un titolo; l'importo e quanti movimenti. */
-    public record Group(String name, BigDecimal amount, int movements) {
+    /**
+     * Una voce di un elenco: "Cedole", o un titolo; l'importo e quanti movimenti. {@code accountId} e {@code search} ci
+     * sono quando la voce è un conto (una rendita senza il nome di un titolo, docs/investimenti.md parti L e P): il conto
+     * e le parole fisse del testo, per aprirne proprio quei movimenti.
+     */
+    public record Group(String name, BigDecimal amount, int movements, Long accountId, String search) {
+
+        /** Un gruppo che non è un conto. */
+        public Group(String name, BigDecimal amount, int movements) {
+            this(name, amount, movements, null, null);
+        }
     }
 
     /**

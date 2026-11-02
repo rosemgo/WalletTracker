@@ -174,6 +174,17 @@ describe('CategoryPage', () => {
     );
   });
 
+  it('each merchant of the month leads to its movements in this category', async () => {
+    const page = await render();
+    const link = Array.from(page.querySelectorAll<HTMLAnchorElement>('ul.rows a')).find((a) =>
+      a.textContent?.includes('ESSELUNGA'),
+    );
+    const o = overview();
+    expect(link?.getAttribute('href')).toBe(
+      `/movimenti?categoryId=${o.categoryId}&from=2026-10-01&to=2026-10-25&text=esselunga`,
+    );
+  });
+
   it('says when the category does not exist', async () => {
     answer = () => throwError(() => ({ status: 404 }));
     const page = await render();

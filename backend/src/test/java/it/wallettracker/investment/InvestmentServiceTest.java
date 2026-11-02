@@ -233,7 +233,14 @@ class InvestmentServiceTest {
                 .doesNotContain("Senza nome del titolo");
         // Gli interessi, con un codice diverso ogni mese, stanno tutti sotto il conto.
         assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals(broker.label()))
-                .singleElement().satisfies(g -> assertThat(g.movements()).isEqualTo(2));
+                .singleElement().satisfies(g -> {
+                    assertThat(g.movements()).isEqualTo(2);
+                    // ...e dicono quale conto è, per aprirne i movimenti; un titolo no.
+                    assertThat(g.accountId()).isEqualTo(broker.getId());
+                    assertThat(g.search()).isEqualTo("interest payment for payout collection");
+                });
+        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("ROMANIA-7OT45 6,5%")).singleElement()
+                .satisfies(g -> assertThat(g.accountId()).isNull());
     }
 
     @Test

@@ -116,6 +116,14 @@ export class OverviewPage implements OnInit {
       : comparisonSentence(o, this.isCurrent(), (v) => this.euros(v, o.currency));
   });
 
+  /** I filtri di Movimenti per le spese senza categoria del mese guardato (fino a oggi, per il mese in corso). */
+  protected readonly uncategorizedQuery = computed(() => {
+    const o = this.overview();
+    return o === null
+      ? {}
+      : { uncategorized: 'true', type: 'EXPENSE', from: `${o.month}-01`, to: o.day };
+  });
+
   protected readonly topCategories = computed(() =>
     (this.overview()?.categories ?? []).slice(0, TOP_CATEGORIES),
   );

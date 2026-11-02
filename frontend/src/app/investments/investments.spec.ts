@@ -227,6 +227,38 @@ describe('Investments', () => {
     );
   });
 
+  it('the rows of the income and of the taxes lead to their movements', async () => {
+    answer = (period) => ({
+      ...investments(period),
+      incomeBySource: [
+        { name: 'ROMANIA-7OT45 6,5%', amount: 455, movements: 1 },
+        {
+          name: 'Trade Republic',
+          amount: 6.69,
+          movements: 2,
+          accountId: 9,
+          search: 'interest payment for payout collection',
+        },
+      ],
+    });
+    const { page: p } = await page();
+    const href = (text: string) =>
+      Array.from(p.querySelectorAll<HTMLAnchorElement>('ul.rows a'))
+        .find((a) => a.textContent?.includes(text))
+        ?.getAttribute('href');
+    const period = 'from=2025-11-01&to=2026-10-31';
+
+    expect(href('Cedole')).toBe(`/movimenti?${period}&type=INVESTMENT_INCOME&text=cedole`);
+    // Un titolo: cedole e ritenute, cercando il suo nome; un conto: le rendite di quel conto.
+    expect(href('Romania')).toBe(`/movimenti?${period}&text=romania-7ot45%206,5%25`);
+    expect(href('Trade Republic')).toBe(
+      `/movimenti?${period}&accountId=9&type=INVESTMENT_INCOME&text=interest%20payment%20for%20payout%20collection`,
+    );
+    expect(href('Imposta di bollo')).toBe(
+      `/movimenti?${period}&type=INVESTMENT_TAX&text=imposta%20di%20bollo`,
+    );
+  });
+
   it('lists the purchases and sales and the transfers, eight at first, then all', async () => {
     const { fixture, page: p } = await page();
     const lists = Array.from(p.querySelectorAll('app-investment-movements'));
