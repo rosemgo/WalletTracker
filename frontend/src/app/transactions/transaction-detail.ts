@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import { categoryGroups, kindOf } from '../api/category-groups';
+import { WITHOUT_CATEGORY, categoryGroups, kindOf, needsCategory } from '../api/category-groups';
 import { TYPES, TYPE_LABELS } from '../api/labels';
 import {
   Account,
@@ -113,6 +113,23 @@ export class TransactionDetail implements OnInit {
     return t === null ? '' : (this.accounts().find((a) => a.id === t.accountId)?.label ?? '');
   });
 
+  /**
+   * La categoria non serve (docs/categorie-e-tipi.md): un acquisto di titoli, un giroconto... senza categoria. Al
+   * posto di "Nessuna categoria", che sembrerebbe un buco da riempire, la scheda dice perché non serve; chi la vuole
+   * la può aggiungere lo stesso.
+   */
+  protected readonly categoryNotNeeded = computed(() => {
+    const t = this.transaction();
+    return t !== null && t.category === null && !needsCategory(t.type);
+  });
+
+  /** "Per un acquisto di titoli non serve una categoria: il tipo dice già che cos'è." */
+  protected readonly notNeededText = computed(() => {
+    const type = this.transaction()?.type;
+    const what = (type && WITHOUT_CATEGORY[type]) ?? 'questo tipo di movimento';
+    return `Per ${what} non serve una categoria: il tipo dice già che cos'è.`;
+  });
+
   /** Perché ha questa categoria, in una frase. */
   protected readonly categoryWhy = computed(() => {
     const d = this.detail();
@@ -125,7 +142,10 @@ export class TransactionDetail implements OnInit {
       case 'RULE':
         return d.ruleName ? `Messa dalla regola «${d.ruleName}».` : 'Messa da una regola.';
       default:
-        return d.transaction.type === 'EXPENSE' || d.transaction.type === 'INCOME'
+        if (d.transaction.type === null || d.transaction.type === 'TO_REVIEW') {
+          return 'Nessuna categoria: prima scegli il tipo, in «Conta come».';
+        }
+        return needsCategory(d.transaction.type)
           ? 'Nessuna categoria: sceglila tu, o crea una regola.'
           : 'Nessuna categoria.';
     }

@@ -2380,7 +2380,8 @@ button.icon svg {
   padding-bottom: 4px;
 }
 
-button.detail-row {
+/* Anche la riga "Categoria: Non serve", che non è un pulsante (docs/categorie-e-tipi.md). */
+.detail-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2394,7 +2395,7 @@ button.detail-row {
   text-align: left;
 }
 
-button.detail-row > span:first-child {
+.detail-row > span:first-child {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2405,7 +2406,7 @@ button.detail-row strong {
   font-weight: 600;
 }
 
-button.detail-row + .why + button.detail-row {
+.detail-row + .why + button.detail-row {
   border-top: 1px solid var(--line);
 }
 

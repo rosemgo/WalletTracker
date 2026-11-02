@@ -33,14 +33,28 @@
     </section>
 
     <section class="card detail-rows">
-      <button type="button" class="detail-row" (click)="openCategories()">
-        <span>
-          <span class="secondary">Categoria</span>
-          <strong>{{ t.category ?? 'Nessuna categoria' }}</strong>
-        </span>
-        <span class="action">Cambia</span>
-      </button>
-      <p class="secondary why">{{ categoryWhy() }}</p>
+      @if (categoryNotNeeded()) {
+        <!-- A un acquisto di titoli, a un giroconto... la categoria non serve (docs/categorie-e-tipi.md). -->
+        <div class="detail-row category-not-needed">
+          <span>
+            <span class="secondary">Categoria</span>
+            <span>Non serve</span>
+          </span>
+        </div>
+        <p class="secondary why">
+          {{ notNeededText() }}
+          <button type="button" class="link" (click)="openCategories()">Aggiungila comunque</button>
+        </p>
+      } @else {
+        <button type="button" class="detail-row" (click)="openCategories()">
+          <span>
+            <span class="secondary">Categoria</span>
+            <strong>{{ t.category ?? 'Nessuna categoria' }}</strong>
+          </span>
+          <span class="action">Cambia</span>
+        </button>
+        <p class="secondary why">{{ categoryWhy() }}</p>
+      }
       <button type="button" class="detail-row" (click)="sheet.set('type')">
         <span>
           <span class="secondary">Conta come</span>
@@ -55,7 +69,7 @@
       </button>
     </section>
 
-    @if (d.suggestion; as s) {
+    @if (categoryNotNeeded() ? null : d.suggestion; as s) {
       <section class="card soft suggestion-card">
         <p>
           Suggerita: <strong>{{ s.category }}</strong>

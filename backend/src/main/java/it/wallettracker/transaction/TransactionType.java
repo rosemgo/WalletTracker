@@ -1,5 +1,8 @@
 package it.wallettracker.transaction;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 /**
  * Il tipo di un movimento, assegnato dalla classificazione (vedi ClassificationService e docs/03).
  * Solo EXPENSE e INCOME contano come spese ed entrate "vere".
@@ -47,5 +50,14 @@ public enum TransactionType {
      * Da verificare: il movimento non ha nessuna informazione (né testo né abbinamento), quindi il
      * programma non può sapere cos'è. Resta fuori dai totali finché l'utente non lo classifica a mano.
      */
-    TO_REVIEW
+    TO_REVIEW;
+
+    /**
+     * I tipi per cui la categoria serve (docs/categorie-e-tipi.md): risponde a una domanda che il tipo lascia aperta.
+     * Una spesa, ma per che cosa? Una rendita, ma quale (cedola, dividendo, interessi)? Per gli altri (acquisti e
+     * vendite di titoli, versamenti, giroconti, saldo carta) il tipo dice già tutto: "senza categoria" non è un buco
+     * da riempire, e il filtro "Senza categoria" di Movimenti non li mostra.
+     */
+    public static final Set<TransactionType> WITH_CATEGORY = EnumSet.of(EXPENSE, INCOME, INVESTMENT_INCOME,
+            INVESTMENT_TAX);
 }

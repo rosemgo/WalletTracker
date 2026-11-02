@@ -279,6 +279,66 @@ describe('TransactionDetail', () => {
     expect(calls).toEqual(['accept PIZZERIA DA GINO 1']);
   });
 
+  it('a purchase of securities says that it needs no category, but one can still be added', async () => {
+    current = detail(
+      {
+        categoryOrigin: 'NONE',
+        // un suggerimento per l'esercente non si mostra: la categoria non serve
+        suggestion: {
+          merchantKey: 'ACQUISTO ETF',
+          categoryId: 1,
+          category: 'Shopping',
+          model: null,
+        },
+      },
+      {
+        type: 'SECURITIES_BUY',
+        category: null,
+        categoryId: null,
+        manualCategoryId: null,
+        description: 'Buy trade ETF MONDO',
+      },
+    );
+    const { fixture, page, button } = await render();
+    const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    expect(text).toMatch(/Categoria\s*Non serve/);
+    expect(text).toContain(
+      "Per un acquisto di titoli non serve una categoria: il tipo dice già che cos'è.",
+    );
+    expect(text).not.toContain('Nessuna categoria');
+    expect(text).not.toContain('Suggerita');
+
+    button('Aggiungila comunque').click();
+    await fixture.whenStable();
+    expect(page.querySelector('dialog')?.textContent).toContain('Scegli una categoria');
+  });
+
+  it('a coupon without category asks for one, like a spending', async () => {
+    current = detail(
+      { categoryOrigin: 'NONE' },
+      {
+        type: 'INVESTMENT_INCOME',
+        amount: 15,
+        category: null,
+        categoryId: null,
+        manualCategoryId: null,
+      },
+    );
+    const { page } = await render();
+
+    expect(page.textContent).toContain('Nessuna categoria: sceglila tu, o crea una regola.');
+    expect(page.textContent).not.toContain('Non serve');
+  });
+
+  it('a purchase of securities with a category keeps showing it', async () => {
+    current = detail({}, { type: 'SECURITIES_BUY' });
+    const { page } = await render();
+
+    expect(page.textContent).toContain('Shopping');
+    expect(page.textContent).not.toContain('Non serve');
+  });
+
   it('the note is written here', async () => {
     const { fixture, page, button } = await render();
     button('Aggiungi una nota').click();
