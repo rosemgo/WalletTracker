@@ -104,13 +104,18 @@
             <span class="mid-figure">{{
               d.transferredInPeriod | money: d.currency : 'symbol' : '1.0-0'
             }}</span>
+            <p class="bar-pick">{{ transferBarText() }}</p>
             <app-bar-chart
               [values]="transferred()"
               [labels]="barLabels()"
               [names]="transferBarNames()"
-              [selected]="lastTransfer()"
+              [selected]="transferBar()"
+              [average]="transferAverage()"
+              [averageLabel]="transferAverageLabel()"
               [diverging]="true"
+              [interactive]="true"
               [description]="transferDescription()"
+              (picked)="transferPick.set($event)"
             />
             <p class="secondary note-value">
               Soldi spostati dai conti di tutti i giorni verso broker e wallet, meno quelli tornati
@@ -125,21 +130,39 @@
               >Cedole, dividendi e interessi · {{ periodLabel(d.period) }}</span
             >
             <span class="mid-figure">{{
-              d.incomeInPeriod | money: d.currency : 'symbol' : '1.0-0'
+              netIncome() | money: d.currency : 'symbol' : '1.0-0'
             }}</span>
-            @if (d.taxesInPeriod !== 0) {
-              <p class="secondary">
-                Tasse sugli investimenti nello stesso periodo:
-                {{ d.taxesInPeriod | money: d.currency : 'symbol' : '1.0-0' }}
-              </p>
-            }
+            <span class="secondary">netti, dopo le ritenute</span>
+            <div class="trade-figures">
+              <div>
+                <span class="secondary">Lordo</span>
+                <strong>{{ d.incomeInPeriod | money: d.currency : 'symbol' : '1.0-0' }}</strong>
+              </div>
+              <div>
+                <span class="secondary">Ritenute</span>
+                <strong>{{
+                  d.withholdingInPeriod | money: d.currency : 'symbol' : '1.0-0'
+                }}</strong>
+              </div>
+            </div>
+            <p class="bar-pick">{{ incomeBarText() }}</p>
             <app-bar-chart
               [values]="income()"
               [labels]="barLabels()"
               [names]="incomeBarNames()"
-              [selected]="lastIncome()"
+              [selected]="incomeBar()"
+              [average]="incomeAverage()"
+              [averageLabel]="incomeAverageLabel()"
+              [interactive]="true"
               [description]="incomeDescription()"
+              (picked)="incomePick.set($event)"
             />
+            <p class="secondary note-value">
+              Le barre sono le rendite lorde, come le paga la banca: tocca una barra per il lordo,
+              le ritenute e il netto di quel mese. Alcune banche (come Fineco) trattengono la
+              ritenuta con un movimento a parte, categoria "Ritenute"; altre (come Trade Republic)
+              accreditano già il netto, e lì lordo e netto coincidono.
+            </p>
             @if (d.incomeByType.length > 0) {
               <h3>Per tipo</h3>
               <ul class="rows">
@@ -175,6 +198,27 @@
             <p class="secondary note-value">
               Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito.
             </p>
+            @if (d.otherTaxesByType.length > 0) {
+              <h3>Altre tasse sugli investimenti</h3>
+              <ul class="rows">
+                @for (g of d.otherTaxesByType; track g.name) {
+                  <li>
+                    <span>
+                      {{ g.name }}
+                      <span class="secondary">{{
+                        g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                      }}</span>
+                    </span>
+                    <strong>{{ g.amount | money: d.currency }}</strong>
+                  </li>
+                }
+              </ul>
+              <p class="secondary note-value">
+                Non riguardano le rendite e non si tolgono dal netto: il bollo si paga sul deposito,
+                il capital gain sulle vendite in guadagno. Una ritenuta finita qui ha la categoria
+                sbagliata: dalle la categoria "Ritenute".
+              </p>
+            }
           </section>
 
           @if (d.cash.length > 0) {
@@ -196,7 +240,7 @@
                         } @else if (c.manual) {
                           saldo non scritto: <a routerLink="/conti">scrivilo in Conti</a>
                         } @else {
-                          la banca non dà il saldo
+                          la banca non dà il saldo: <a routerLink="/conti">scrivilo in Conti</a>
                         }
                       </span>
                     </span>

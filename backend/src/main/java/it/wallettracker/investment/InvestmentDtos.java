@@ -27,11 +27,12 @@ public final class InvestmentDtos {
      *                           questo mese: la linea del grafico
      * @param transferred        bonifici dai conti di tutti i giorni verso i conti di investimento, meno quelli tornati
      *                           indietro (può essere negativo): le barre del secondo grafico
-     * @param income             cedole, dividendi e interessi incassati nel mese
-     * @param taxes              tasse sugli investimenti del mese (ritenute, bollo): di solito negativo
+     * @param income             cedole, dividendi e interessi incassati nel mese, lordi (come li paga la banca)
+     * @param withholding        le ritenute sulle rendite del mese (categoria "Ritenute"): di solito negativo
+     * @param otherTaxes         le altre tasse sugli investimenti del mese (bollo, capital gain...): di solito negativo
      */
     public record Month(YearMonth month, BigDecimal bought, BigDecimal sold, BigDecimal investedCumulative,
-            BigDecimal transferred, BigDecimal income, BigDecimal taxes) {
+            BigDecimal transferred, BigDecimal income, BigDecimal withholding, BigDecimal otherTaxes) {
     }
 
     /** Una voce di un elenco: "Cedole", o un titolo; l'importo e quanti movimenti. */
@@ -49,8 +50,10 @@ public final class InvestmentDtos {
      * @param boughtInPeriod      gli acquisti di titoli nei mesi del periodo
      * @param soldInPeriod        quanto è rientrato dalle vendite nei mesi del periodo
      * @param transferredInPeriod i bonifici netti verso i conti di investimento nei mesi del periodo
-     * @param incomeInPeriod      le rendite nei mesi del periodo
-     * @param taxesInPeriod       le tasse nei mesi del periodo
+     * @param incomeInPeriod      le rendite lorde nei mesi del periodo
+     * @param withholdingInPeriod le ritenute sulle rendite nel periodo: rendite più ritenute danno il netto
+     * @param otherTaxesInPeriod  le altre tasse sugli investimenti nel periodo (bollo, capital gain...)
+     * @param otherTaxesByType    le altre tasse del periodo per categoria
      * @param incomeByType        le rendite del periodo per categoria (Cedole, Dividendi, Interessi)
      * @param incomeBySource      le rendite del periodo per titolo o esercente
      * @param trades              gli acquisti e le vendite del periodo, dal più recente
@@ -64,7 +67,8 @@ public final class InvestmentDtos {
             BigDecimal investedTotal, BigDecimal investedThisYear, BigDecimal investedThisMonth,
             BigDecimal transferredTotal, BigDecimal incomeThisYear, BigDecimal boughtInPeriod,
             BigDecimal soldInPeriod, BigDecimal transferredInPeriod, BigDecimal incomeInPeriod,
-            BigDecimal taxesInPeriod, List<Month> months, List<Group> incomeByType, List<Group> incomeBySource,
+            BigDecimal withholdingInPeriod, BigDecimal otherTaxesInPeriod, List<Month> months,
+            List<Group> incomeByType, List<Group> incomeBySource, List<Group> otherTaxesByType,
             List<TransactionDto> trades, List<TransactionDto> transfers, List<String> onlyTransfers,
             List<Cash> cash) {
     }

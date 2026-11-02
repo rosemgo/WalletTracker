@@ -90,18 +90,20 @@ public class AccountService {
     }
 
     /**
-     * Scrive il saldo di un conto manuale (docs/saldi.md, parte C): quello che la banca mostra dopo l'ultimo movimento
-     * importato. Il giorno di partenza è quello dell'ultimo movimento (oggi, se il conto non ne ha ancora); da lì in
-     * avanti il saldo si aggiorna con i movimenti importati dopo. Con {@code balance} null il saldo si toglie.
+     * Scrive il saldo di un conto (docs/saldi.md, parti C ed E): quello che la banca mostra dopo l'ultimo movimento
+     * nell'app. Il giorno di partenza è quello dell'ultimo movimento (oggi, se il conto non ne ha ancora); da lì in
+     * avanti il saldo si aggiorna con i movimenti arrivati dopo, da un file o dalla sincronizzazione. Con
+     * {@code balance} null il saldo si toglie.
      *
-     * <p>Per un conto collegato il saldo lo dà la banca: scriverlo a mano vorrebbe dire avere due saldi diversi.
+     * <p>Vale per i conti manuali e per i collegati di cui la banca non dà il saldo (Trade Republic, a volte Fineco).
+     * Se la banca il saldo lo dà, vince lei: scriverlo a mano vorrebbe dire avere due saldi diversi.
      */
     @Transactional
     public AccountDto changeBalance(Long id, BigDecimal balance, Instant now) {
         Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
-        if (!account.isManual()) {
+        if (account.getBalanceSource() == BalanceSource.BANK) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Il saldo di un conto collegato lo dà la banca, a ogni aggiornamento.");
+                    "Il saldo di questo conto lo dà la banca, a ogni aggiornamento.");
         }
         LocalDate last = transactionRepository.lastBookingDate(account.getId());
         LocalDate start = last != null ? last : LocalDate.ofInstant(now, ZoneId.systemDefault());

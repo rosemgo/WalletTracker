@@ -23,4 +23,8 @@ describe('readable', () => {
     expect(readable('Spotify AB')).toBe('Spotify AB');
     expect(readable('regalo per Luca')).toBe('regalo per Luca');
   });
+  it('keeps the ISIN codes of the securities in capitals', () => {
+    expect(readable('IT0005436693')).toBe('IT0005436693');
+    expect(readable('CED.SU BTP ITALIA IT0005436693')).toBe('Ced.su BTP Italia IT0005436693');
+  });
 });

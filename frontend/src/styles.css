@@ -3112,6 +3112,15 @@ ul.steps li + li {
   font-variant-numeric: tabular-nums;
 }
 
+/* Sopra le barre: il mese in evidenza e la sua cifra. Alta una riga anche vuota, così il grafico non salta. */
+.bar-pick {
+  min-height: 1.4em;
+  margin: 12px 0 2px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* "Mostra tutti" sotto gli elenchi dei movimenti. */
 .day button.show-all {
   display: block;

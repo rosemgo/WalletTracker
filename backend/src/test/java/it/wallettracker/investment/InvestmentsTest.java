@@ -96,7 +96,8 @@ class InvestmentsTest {
         assertThat(months).extracting(Month::transferred).extracting(BigDecimal::intValue)
                 .containsExactly(200, 0, -100);
         assertThat(months.get(2).income()).isEqualByComparingTo("10");
-        assertThat(months.get(2).taxes()).isEqualByComparingTo("-1");
+        assertThat(months.get(2).withholding()).isEqualByComparingTo("0");
+        assertThat(months.get(2).otherTaxes()).isEqualByComparingTo("-1"); // senza categoria: non è una ritenuta
     }
 
     @Test
@@ -114,5 +115,39 @@ class InvestmentsTest {
         assertThat(byType).extracting(Group::name).containsExactly("Cedole", "Dividendi", "Altre rendite");
         assertThat(byType.get(0).amount()).isEqualByComparingTo("30");
         assertThat(byType.get(0).movements()).isEqualTo(2);
+    }
+
+    @Test
+    void theWithholdingIsTakenFromTheGrossIncomeAndTheOtherTaxesStayApart() {
+        // Fineco: la cedola lorda e la ritenuta a parte. Il bollo non riguarda le rendite.
+        Movement coupon = m("2026-10-01", "125", TransactionType.INVESTMENT_INCOME, false, "Cedole", "BTP");
+        Movement withheld = m("2026-10-01", "-15.63", TransactionType.INVESTMENT_TAX, false, "Ritenute", "BTP");
+        Movement stamp = m("2026-10-01", "-8.50", TransactionType.INVESTMENT_TAX, false, "Imposta di bollo", null);
+
+        assertThat(Investments.withholding(withheld)).isEqualByComparingTo("-15.63");
+        assertThat(Investments.otherTaxes(withheld)).isEqualByComparingTo("0");
+        assertThat(Investments.withholding(stamp)).isEqualByComparingTo("0");
+        assertThat(Investments.otherTaxes(stamp)).isEqualByComparingTo("-8.50");
+        assertThat(Investments.withholding(coupon)).isEqualByComparingTo("0");
+
+        List<Group> others = Investments.otherTaxesBy(List.of(coupon, withheld, stamp,
+                m("2026-10-02", "-3", TransactionType.INVESTMENT_TAX, true, null, null)),
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
+        // Dalla più pesante; le ritenute non ci sono.
+        assertThat(others).extracting(Group::name).containsExactly("Imposta di bollo", "Senza categoria");
+    }
+
+    @Test
+    void theNameOfTheSecurityKeepsTheIsinAndDropsTheLabel() {
+        assertThat(Investments.securityName("Ced.su 50.000 IT0005436693")).isEqualTo("IT0005436693");
+        assertThat(Investments.securityName("Ced.su BTP CUM 15/09/2032")).isEqualTo("BTP CUM");
+        assertThat(Investments.securityName("Div.su 100 ENI")).isEqualTo("ENI");
+        assertThat(Investments.securityName("Rit.ced IT0005436693")).isEqualTo("IT0005436693");
+        assertThat(Investments.securityName("Cash Dividend ACME")).isEqualTo("ACME");
+        assertThat(Investments.securityName("Interest payment for 2026-10")).isNull();
+        assertThat(Investments.securityName("Ced.su 50.000")).isNull();
+        assertThat(Investments.securityName(null)).isNull();
+        // Senza etichetta il testo resta, senza le parole con cifre.
+        assertThat(Investments.securityName("Poste Italiane 0,25")).isEqualTo("Poste Italiane");
     }
 }

@@ -117,10 +117,12 @@ public class InvestmentService {
                 Investments.sum(movements, Investments::sold, from, today),
                 Investments.sum(movements, Investments::transferred, from, today),
                 Investments.sum(movements, Investments::income, from, today),
-                Investments.sum(movements, Investments::taxes, from, today),
+                Investments.sum(movements, Investments::withholding, from, today),
+                Investments.sum(movements, Investments::otherTaxes, from, today),
                 Investments.months(movements, first, current),
                 Investments.incomeBy(movements, from, today, Movement::category, "Altre rendite"),
-                Investments.incomeBy(movements, from, today, Movement::source, "Senza descrizione"),
+                Investments.incomeBy(movements, from, today, Movement::source, "Senza nome del titolo"),
+                Investments.otherTaxesBy(movements, from, today),
                 trades, transfers, onlyTransfers(transactions), cash(chosen));
     }
 
@@ -161,11 +163,12 @@ public class InvestmentService {
     }
 
     private static Movement movementOf(BankTransaction t, List<Set<String>> owners) {
+        // "Da dove": il nome del titolo, con il codice ISIN se è l'unico nome (Investments.securityName).
         String text = MerchantKey.merchantText(t.getCounterparty(), t.getDescription(), owners);
         return new Movement(t.getBookingDate(), t.getAmount(), t.getType(),
                 t.getAccount().getRole() == AccountRole.INVESTMENT,
                 t.getCategory() == null ? null : t.getCategory().getName(),
-                text == null ? null : MerchantKey.displayName(text));
+                Investments.securityName(text));
     }
 
     /** Il primo mese del grafico: 12 o 24 mesi fa, oppure il mese del primo movimento (almeno 12, al massimo 120). */

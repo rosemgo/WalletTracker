@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import it.wallettracker.investment.InvestmentDtos.Group;
 import it.wallettracker.investment.InvestmentDtos.Month;
@@ -81,6 +82,57 @@ public final class Investments {
         return m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
     }
 
+    /** La categoria delle ritenute sulle rendite (V12), quella che le regole di partenza danno a "Rit.ced", "Rit.div". */
+    static final String WITHHOLDING = "Ritenute";
+
+    /**
+     * Le ritenute sulle rendite (docs/investimenti.md, parte J): le tasse con la categoria "Ritenute". Fineco paga la
+     * cedola lorda e trattiene la ritenuta con un movimento a parte; rendite più ritenute danno il netto. Trade Republic
+     * paga già il netto, e non c'è niente da togliere.
+     */
+    public static BigDecimal withholding(Movement m) {
+        return isWithholding(m) ? m.amount() : BigDecimal.ZERO;
+    }
+
+    /** Le altre tasse sugli investimenti (bollo, capital gain, Tobin tax...): non riguardano le rendite. */
+    public static BigDecimal otherTaxes(Movement m) {
+        return m.type() == TransactionType.INVESTMENT_TAX && !isWithholding(m) ? m.amount() : BigDecimal.ZERO;
+    }
+
+    private static boolean isWithholding(Movement m) {
+        return m.type() == TransactionType.INVESTMENT_TAX && WITHHOLDING.equalsIgnoreCase(m.category());
+    }
+
+    /**
+     * Il nome del titolo di una rendita o di una ritenuta, per "Da dove" (parte J): "Ced.su 50.000 IT0005436693"
+     * diventa "IT0005436693", "Div.su 100 ENI" diventa "ENI". Si toglie l'etichetta iniziale (il tipo lo dice già la
+     * categoria) e le parole con cifre, tranne i codici ISIN, che a volte sono l'unico nome del titolo. Null se non resta
+     * niente.
+     */
+    public static String securityName(String text) {
+        if (text == null) {
+            return null;
+        }
+        String rest = LABEL.matcher(text.strip()).replaceFirst("");
+        StringBuilder name = new StringBuilder();
+        for (String word : rest.split("\\s+")) {
+            if (word.isEmpty() || (word.chars().anyMatch(Character::isDigit) && !ISIN.matcher(word).matches())) {
+                continue;
+            }
+            name.append(name.isEmpty() ? "" : " ").append(word);
+        }
+        String result = name.toString().strip();
+        return result.isEmpty() ? null : (result.length() > 100 ? result.substring(0, 100).strip() : result);
+    }
+
+    /** Le etichette con cui iniziano le causali delle rendite e delle ritenute (le regole di V4 e V25). */
+    private static final Pattern LABEL = Pattern.compile(
+            "^(?i)(ced\\.\\s*su|div\\.\\s*su|rit\\.\\s*ced|rit\\.\\s*div|rit\\.\\s*fisc\\.?|cash dividend|"
+                    + "interest payment( for)?|capital distribution)\\b[\\s.:]*");
+
+    /** Un codice ISIN: due lettere, nove lettere o cifre, una cifra di controllo (IT0005436693). */
+    private static final Pattern ISIN = Pattern.compile("[A-Z]{2}[A-Z0-9]{9}[0-9]");
+
     /** La somma di una misura sui movimenti dal giorno {@code from} al giorno {@code to} (compresi). */
     public static BigDecimal sum(List<Movement> movements, Function<Movement, BigDecimal> measure, LocalDate from,
             LocalDate to) {
@@ -108,7 +160,8 @@ public final class Investments {
             BigDecimal sold = sum(movements, Investments::sold, from, to);
             cumulative = cumulative.add(bought).subtract(sold);
             months.add(new Month(month, bought, sold, cumulative, sum(movements, Investments::transferred, from, to),
-                    sum(movements, Investments::income, from, to), sum(movements, Investments::taxes, from, to)));
+                    sum(movements, Investments::income, from, to), sum(movements, Investments::withholding, from, to),
+                    sum(movements, Investments::otherTaxes, from, to)));
         }
         return months;
     }
@@ -119,19 +172,32 @@ public final class Investments {
      */
     public static List<Group> incomeBy(List<Movement> movements, LocalDate from, LocalDate to,
             Function<Movement, String> name, String missing) {
+        return groupBy(movements, from, to, m -> m.type() == TransactionType.INVESTMENT_INCOME, name, missing, true);
+    }
+
+    /** Le altre tasse del periodo (bollo, capital gain...) per categoria, dalla più pesante. */
+    public static List<Group> otherTaxesBy(List<Movement> movements, LocalDate from, LocalDate to) {
+        return groupBy(movements, from, to, m -> otherTaxes(m).signum() != 0, Movement::category,
+                "Senza categoria", false);
+    }
+
+    private static List<Group> groupBy(List<Movement> movements, LocalDate from, LocalDate to,
+            java.util.function.Predicate<Movement> which, Function<Movement, String> name, String missing,
+            boolean highestFirst) {
         Map<String, BigDecimal> amounts = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (Movement m : movements) {
-            if (m.type() != TransactionType.INVESTMENT_INCOME || m.date().isBefore(from) || m.date().isAfter(to)) {
+            if (!which.test(m) || m.date().isBefore(from) || m.date().isAfter(to)) {
                 continue;
             }
             String key = name.apply(m) == null ? missing : name.apply(m);
             amounts.merge(key, m.amount(), BigDecimal::add);
             counts.merge(key, 1, Integer::sum);
         }
+        Comparator<Group> byAmount = Comparator.comparing(Group::amount);
         return amounts.entrySet().stream()
                 .map(e -> new Group(e.getKey(), e.getValue(), counts.get(e.getKey())))
-                .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(Group::name))
+                .sorted((highestFirst ? byAmount.reversed() : byAmount).thenComparing(Group::name))
                 .toList();
     }
 }

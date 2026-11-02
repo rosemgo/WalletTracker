@@ -25,6 +25,7 @@
 | G | esercizi guidati |
 | H | aggiunta: la prova delle regole dice chi vince, e altri due ritocchi |
 | I | **due grandezze, non una**: l'investito in titoli e i bonifici verso i conti di investimento |
+| J | barre che dicono le cifre; rendite lorde, ritenute e nette; i nomi dei titoli in "Da dove" |
 
 ---
 
@@ -500,3 +501,86 @@ con la carta di Trade Republic, un conto "Fondo Beta" con un solo versamento. I 
 | avviso | | "Per Fondo Beta · PAC si vedono solo i bonifici" |
 
 La spesa con la carta non compare da nessuna parte nella pagina, come deciso.
+
+---
+
+## Parte J: le cifre delle barre, lordo e netto, i nomi dei titoli
+
+Tre cose emerse usando l'app con i movimenti veri.
+
+### Le barre dicono le cifre
+
+**Il problema.** I due grafici a barre (bonifici e rendite) non avevano numeri: niente cifra per mese, niente
+riferimento sull'asse, barre che non si toccavano. Una barra era colorata (l'ultimo mese con un valore) senza dire
+perché.
+
+**La soluzione**, con quello che il grafico di Analisi sapeva già fare (`BarChart`):
+
+- `[interactive]="true"`: ogni barra si tocca (o con Tab e Invio). La barra toccata si accende;
+- sopra il grafico una riga (`.bar-pick`) dice **il mese in evidenza e la sua cifra**: "marzo 2026: 1.200,00 €". Prima
+  di toccare, il mese in evidenza è l'ultimo con un valore: è quello che era colorato, ora con il suo perché;
+- `[average]`: una **linea tratteggiata della media al mese**, con l'etichetta "media 275 € al mese". È il riferimento
+  per leggere le altezze delle altre barre, senza un asse pieno di numeri (che sul telefono non ci sta).
+
+Cambiando periodo, la barra toccata si dimentica (`incomePick` e `transferPick` tornano `null`).
+
+### Rendite: lordo, ritenute, netto
+
+**Come pagano le banche.** Fineco accredita la cedola o il dividendo **lordo**, e trattiene la ritenuta con un
+**movimento a parte** ("Rit.ced …", "Rit.div …"). Le regole di partenza di `V4` danno a quei movimenti il tipo Tasse
+investimenti e la categoria **Ritenute**. Trade Republic invece accredita già il **netto**: non c'è niente da togliere.
+
+**Prima** la pagina mostrava le rendite lorde e, sotto, "Tasse sugli investimenti" tutte insieme: ritenute, bollo,
+capital gain. Il netto non si vedeva, e il bollo sembrava una tassa sulle cedole.
+
+**Ora** le tasse sono divise in due, per categoria (`Investments.withholding` e `otherTaxes`):
+
+| | Che cosa | Dove si vede |
+|---|---|---|
+| **Ritenute** | le tasse con la categoria "Ritenute": quelle sulle rendite | si tolgono dal lordo: **lordo + ritenute = netto** |
+| **Altre tasse** | bollo, capital gain, Tobin tax, tasse senza categoria | elencate a parte, per categoria; **non** si tolgono dal netto |
+
+La scheda delle rendite mostra in grande il **netto**, sotto **Lordo** e **Ritenute**, e toccando una barra
+"ottobre 2026: lordo 125,00 € · ritenute -15,63 € · netto 109,37 €". Le barre restano le rendite lorde (come le paga
+la banca): una ritenuta pagata in un mese diverso dalla sua cedola non fa scendere una barra sotto lo zero.
+
+Per Trade Republic lordo e netto coincidono, e la pagina lo dice. Una ritenuta che finisce tra le "Altre tasse" ha la
+categoria sbagliata: la nota sotto l'elenco lo dice.
+
+Nell'API: `withholdingInPeriod`, `otherTaxesInPeriod`, `otherTaxesByType`, e in ogni mese `withholding` e
+`otherTaxes` al posto di `taxes`. Il Riepilogo non cambia: le sue "rendite nette degli investimenti" erano già rendite
+più tutte le tasse.
+
+### "Da dove": il nome del titolo
+
+**Il problema.** Una voce "Ced.su" con 5 movimenti non dice niente. Il nome si ricavava con
+`MerchantKey.displayName`, che toglie tutte le parole con cifre: per un BTP che Fineco indica solo con il codice ISIN
+("Ced.su 50.000 IT0005436693") restava solo l'etichetta "Ced.su".
+
+**La soluzione**, `Investments.securityName`:
+
+- si toglie l'**etichetta iniziale** ("Ced.su", "Div.su", "Rit.ced", "Rit.div", "Cash Dividend"…): che sia una
+  cedola lo dice già "Per tipo";
+- si tolgono le parole con cifre (quantità, date), **tranne i codici ISIN**, che a volte sono l'unico nome del titolo.
+
+| Causale | Prima | Ora |
+|---|---|---|
+| `Ced.su 50.000 IT0005436693` | Ced.su | IT0005436693 |
+| `Ced.su BTP CUM 15/09/2032` | Ced.su BTP CUM | BTP CUM |
+| `Div.su 100 ENI` | Div.su ENI | ENI |
+
+Anche il filtro `readable` tiene maiuscolo un ISIN (prima diventava "It0005436693"). Il nome per esteso di un titolo
+indicato solo dall'ISIN l'app non lo sa: i movimenti della banca non lo danno, e servirebbe un servizio esterno.
+
+### I test, e la prova nel browser
+
+- `InvestmentsTest`: ritenute e altre tasse separate; il nome del titolo (ISIN tenuto, etichetta tolta);
+- `InvestmentServiceTest`: una cedola lorda con la sua ritenuta: lordo, ritenute, mese per mese, e l'ISIN in "Da
+  dove";
+- `investments.spec.ts`: netto, lordo e ritenute; le altre tasse; toccando una barra il mese e le sue cifre; la linea
+  della media; `readable.spec.ts`: l'ISIN maiuscolo.
+
+Nel browser (telefono e PC, tema scuro), con una cedola inventata "Ced.su 50.000 IT0005436693" da 125 € e la sua
+"Rit.ced" da −15,63 €, classificate dalle regole di partenza: "ottobre 2026: lordo 125,00 € · ritenute -15,63 € ·
+netto 109,37 €"; "marzo 2026: 1.200,00 €" toccando la barra dei bonifici; "IT0005436693" in "Da dove"; il bollo tra
+le altre tasse.

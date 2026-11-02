@@ -7,7 +7,8 @@ import { MoneyPipe } from '../privacy/money.pipe';
 import { nameOf } from '../transactions/day-groups';
 
 /**
- * Scrivere il saldo di un conto manuale (docs/saldi.md, parte C). Mostra l'ultimo movimento importato: l'utente apre
+ * Scrivere il saldo di un conto (docs/saldi.md, parti C ed E): un conto manuale, o un collegato di cui la banca non dà
+ * il saldo. Mostra l'ultimo movimento nell'app: l'utente apre
  * l'app della banca, controlla che quel movimento ci sia, e scrive il saldo che vede **dopo** di lui. Da lì il saldo si
  * aggiorna da solo con i movimenti importati dopo.
  *
@@ -21,7 +22,7 @@ import { nameOf } from '../transactions/day-groups';
       @if (loaded()) {
         @if (last(); as t) {
           <p class="hint">
-            Apri l'app della banca e cerca l'ultimo movimento importato:
+            Apri l'app della banca e cerca l'ultimo movimento che c'è qui:
             <strong
               >{{ t.bookingDate | date: 'd MMMM y' }} · {{ nameOf(t) }} ·
               {{ t.amount | money: t.currency }}</strong

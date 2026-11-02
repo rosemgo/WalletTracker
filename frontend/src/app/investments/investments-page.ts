@@ -68,7 +68,12 @@ export class InvestmentsPage implements OnInit {
       d.transferredTotal === 0 &&
       d.months.every(
         (m) =>
-          m.bought === 0 && m.sold === 0 && m.transferred === 0 && m.income === 0 && m.taxes === 0,
+          m.bought === 0 &&
+          m.sold === 0 &&
+          m.transferred === 0 &&
+          m.income === 0 &&
+          m.withholding === 0 &&
+          m.otherTaxes === 0,
       )
     );
   });
@@ -86,11 +91,56 @@ export class InvestmentsPage implements OnInit {
   );
   protected readonly income = computed(() => this.data()?.months.map((m) => m.income) ?? []);
 
-  /** La barra in evidenza delle rendite: l'ultimo mese con una rendita (null se non ce n'è). */
-  protected readonly lastIncome = computed(() => lastNonZero(this.income()));
+  /** La barra toccata (null = nessuna: si guarda l'ultimo mese con un valore). */
+  protected readonly incomePick = signal<number | null>(null);
+  protected readonly transferPick = signal<number | null>(null);
 
-  /** La barra in evidenza dei bonifici: l'ultimo mese con un bonifico. */
-  protected readonly lastTransfer = computed(() => lastNonZero(this.transferred()));
+  /** La barra in evidenza delle rendite: quella toccata, o l'ultimo mese con una rendita (null se non ce n'è). */
+  protected readonly incomeBar = computed(() => this.incomePick() ?? lastNonZero(this.income()));
+
+  /** La barra in evidenza dei bonifici: quella toccata, o l'ultimo mese con un bonifico. */
+  protected readonly transferBar = computed(
+    () => this.transferPick() ?? lastNonZero(this.transferred()),
+  );
+
+  /** Il netto delle rendite nel periodo: lordo più ritenute (negative). */
+  protected readonly netIncome = computed(() => {
+    const d = this.data();
+    return d === null ? 0 : d.incomeInPeriod + d.withholdingInPeriod;
+  });
+
+  /** "ottobre 2026: lordo 2.000 € · ritenute -400 € · netto 1.600 €", per la barra in evidenza. */
+  protected readonly incomeBarText = computed(() => {
+    const d = this.data();
+    const i = this.incomeBar();
+    if (d === null || i === null || !d.months[i]) {
+      return '';
+    }
+    const m = d.months[i];
+    const parts = [`lordo ${this.euros(m.income, d.currency, 2)}`];
+    if (m.withholding !== 0) {
+      parts.push(`ritenute ${this.euros(m.withholding, d.currency, 2)}`);
+      parts.push(`netto ${this.euros(m.income + m.withholding, d.currency, 2)}`);
+    }
+    return `${this.monthNames()[i]}: ${parts.join(' · ')}`;
+  });
+
+  /** "ottobre 2026: 1.200 €", per la barra in evidenza dei bonifici. */
+  protected readonly transferBarText = computed(() => {
+    const d = this.data();
+    const i = this.transferBar();
+    return d === null || i === null || !d.months[i]
+      ? ''
+      : `${this.monthNames()[i]}: ${this.euros(d.months[i].transferred, d.currency, 2)}`;
+  });
+
+  /** La media al mese delle barre, per la linea tratteggiata: un riferimento per leggere le altezze. */
+  protected readonly incomeAverage = computed(() => average(this.income()));
+  protected readonly transferAverage = computed(() => average(this.transferred()));
+  protected readonly incomeAverageLabel = computed(() => this.averageLabel(this.incomeAverage()));
+  protected readonly transferAverageLabel = computed(() =>
+    this.averageLabel(this.transferAverage()),
+  );
 
   /** I mesi abbreviati ("nov") per l'asse della linea. */
   protected readonly monthLabels = computed(
@@ -190,6 +240,8 @@ export class InvestmentsPage implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.scrubIndex.set(null);
+    this.incomePick.set(null);
+    this.transferPick.set(null);
     const request = ++this.lastRequest;
     this.api.investments(this.period(), this.currency()).subscribe({
       next: (data) => {
@@ -207,6 +259,11 @@ export class InvestmentsPage implements OnInit {
     });
   }
 
+  private averageLabel(value: number | null): string {
+    const d = this.data();
+    return d === null || value === null ? '' : `media ${this.euros(value, d.currency)} al mese`;
+  }
+
   private barNames(values: number[]): string[] {
     const d = this.data();
     return d === null
@@ -219,9 +276,10 @@ export class InvestmentsPage implements OnInit {
   }
 
   /** Un importo senza decimali, con le cifre nascoste in modalità discreta (docs/42). */
-  private euros(value: number, currency: string): string {
+  private euros(value: number, currency: string, decimals = 0): string {
+    const digits = decimals === 0 ? '1.0-0' : `1.${decimals}-${decimals}`;
     return this.privacy.hide(
-      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, '1.0-0'),
+      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, digits),
     );
   }
 }
@@ -234,4 +292,12 @@ function lastNonZero(values: number[]): number | null {
     }
   }
   return null;
+}
+
+/** La media dei valori, o null se sono tutti zero (una linea della media a zero non dice niente). */
+function average(values: number[]): number | null {
+  if (values.length === 0 || values.every((v) => v === 0)) {
+    return null;
+  }
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
 }

@@ -44,7 +44,8 @@ function investments(period: InvestmentPeriod): Investments {
       investedCumulative: cumulative,
       transferred: i === 4 ? 1200 : i === 10 ? -100 : 200,
       income: i === 5 ? 30 : i === 7 ? 12.5 : 0,
-      taxes: i === 8 ? -2 : 0,
+      withholding: i === 5 ? -3.9 : 0,
+      otherTaxes: i === 8 ? -2 : 0,
     };
   });
   // 10 bonifici, per provare "Mostra tutti" (se ne vedono 8).
@@ -72,13 +73,15 @@ function investments(period: InvestmentPeriod): Investments {
     soldInPeriod: 300,
     transferredInPeriod: 3300,
     incomeInPeriod: 42.5,
-    taxesInPeriod: -2,
+    withholdingInPeriod: -3.9,
+    otherTaxesInPeriod: -2,
     months,
     incomeByType: [
       { name: 'Cedole', amount: 30, movements: 1 },
       { name: 'Dividendi', amount: 12.5, movements: 1 },
     ],
     incomeBySource: [{ name: 'CED.SU BTP ITALIA', amount: 30, movements: 1 }],
+    otherTaxesByType: [{ name: 'Imposta di bollo', amount: -2, movements: 1 }],
     trades: [
       movement(41, '2026-10-06', -200, 'NUOVO VERSAMENTO ROBO ADVISOR', 'SECURITIES_BUY'),
       movement(42, '2026-08-10', 300, 'SELL TRADE ETF MONDO', 'SECURITIES_SELL'),
@@ -103,10 +106,12 @@ const NOTHING: Investments = {
     investedCumulative: 0,
     transferred: 0,
     income: 0,
-    taxes: 0,
+    withholding: 0,
+    otherTaxes: 0,
   })),
   incomeByType: [],
   incomeBySource: [],
+  otherTaxesByType: [],
   trades: [],
   transfers: [],
 };
@@ -178,11 +183,49 @@ describe('Investments', () => {
     expect(bars[7].classList.contains('on')).toBe(true);
     expect(text).toMatch(/Cedole\s*1 movimento\s*30,00\s€/);
     expect(text).toContain('Ced.su BTP Italia'); // leggibile, non tutto maiuscolo
-    expect(text).toMatch(/Tasse sugli investimenti nello stesso periodo: -2\s€/);
+    // Netto in grande, poi lordo e ritenute; il bollo a parte, non tolto dal netto.
+    expect(incomeCard.querySelector('.mid-figure')?.textContent).toMatch(/39\s€/); // 42,50 − 3,90
+    expect(incomeCard.textContent?.replace(/\s+/g, ' ')).toMatch(
+      /Lordo\s*43\s€\s*Ritenute\s*-4\s€/,
+    );
+    expect(text).toMatch(
+      /Altre tasse sugli investimenti\s*Imposta di bollo\s*1 movimento\s*-2,00\s€/,
+    );
     expect(text).toContain('Le vendite non sono qui');
 
     // Nessun conto con soli bonifici: nessun avviso.
     expect(p.querySelector('.only-transfers')).toBeNull();
+  });
+
+  it('touching a bar tells the month and its amounts, and a line tells the monthly average', async () => {
+    const { fixture, page: p } = await page();
+    const transfers = p.querySelector('.transfers-card') as HTMLElement;
+    const incomeCard = Array.from(p.querySelectorAll('section.card')).find((c) =>
+      c.textContent?.includes('Cedole, dividendi e interessi'),
+    ) as HTMLElement;
+    const pick = (card: HTMLElement) => card.querySelector('.bar-pick')?.textContent?.trim();
+
+    // Prima di toccare: in evidenza l'ultimo mese con un valore, e la sua cifra.
+    expect(pick(transfers)).toMatch(/^ottobre 2026: 200,00\s€$/);
+    expect(pick(incomeCard)).toMatch(/^giugno 2026: lordo 12,50\s€$/);
+    // La linea della media: 3.100 € in 12 mesi.
+    expect(transfers.querySelector('.average-label')?.textContent).toMatch(/media 258\s€ al mese/);
+
+    (transfers.querySelectorAll('app-bar-chart rect.hit')[10] as SVGElement).dispatchEvent(
+      new MouseEvent('click'),
+    );
+    (incomeCard.querySelectorAll('app-bar-chart rect.hit')[5] as SVGElement).dispatchEvent(
+      new MouseEvent('click'),
+    );
+    await fixture.whenStable();
+
+    expect(pick(transfers)).toMatch(/^settembre 2026: -100,00\s€$/);
+    expect(pick(incomeCard)).toMatch(
+      /^aprile 2026: lordo 30,00\s€ · ritenute -3,90\s€ · netto 26,10\s€$/,
+    );
+    expect(incomeCard.querySelectorAll('app-bar-chart path.bar')[5].classList.contains('on')).toBe(
+      true,
+    );
   });
 
   it('lists the purchases and sales and the transfers, eight at first, then all', async () => {

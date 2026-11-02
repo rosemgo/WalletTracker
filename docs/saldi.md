@@ -12,6 +12,7 @@ vero dei conti, e fino a qui l'app non lo salvava.
 | D | dove si vede: Conti, Importa, Investimenti |
 | E | i test, e la prova nel browser |
 | F | esercizi guidati |
+| G | aggiunta: il saldo a mano anche per i conti collegati |
 
 ---
 
@@ -246,3 +247,53 @@ scelto ("saldo 1234.56 (CLBD) al 2026-10-31"); se la tua banca non lo dà, la pa
    movimento in più. Il saldo che l'app propone è quello dell'app di Tinaba? Se no, che cosa manca?
 4. **Un saldo calcolato?** Perché non basta `SUM(amount)` di tutti i movimenti del conto? Prova a immaginare un conto
    aperto nel 2020 e collegato all'app nel 2026.
+
+---
+
+## Parte G: il saldo a mano anche per i conti collegati
+
+**Il problema, trovato usando l'app.** Nella liquidità dei conti di investimento Trade Republic e i due conti Fineco
+dicevano "la banca non dà il saldo", e la cifra era 0 €. Trade Republic con Enable Banking il saldo non lo dà; per
+Fineco va controllato (sotto). Un saldo scritto a mano si poteva mettere solo ai conti manuali.
+
+**La scelta: scriverlo, e poi aggiornarlo con i movimenti.** Per un conto collegato senza saldo della banca, ora si
+può scrivere il saldo come per un conto manuale, e da lì si aggiorna con i movimenti che arrivano dopo con la
+sincronizzazione. Perché aggiornarlo e non lasciarlo fermo:
+
+- un saldo fermo sarebbe giusto solo il giorno in cui lo scrivi, e poi sempre più sbagliato, senza dirlo;
+- la sincronizzazione porta **tutti** i movimenti da lì in avanti (rilegge sempre qualche giorno in più, senza
+  doppioni: `docs/08`), quindi partire da un valore vero e aggiungerli è esatto;
+- la data mostrata è quella dell'ultimo movimento contato, e "dal tuo saldo del …, più i movimenti dopo" dice da dove
+  viene: se non torna con la banca, si corregge in un attimo.
+
+Un limite: si contano solo i movimenti **contabilizzati**. Uno in attesa che la banca contabilizza con una data
+**precedente** al giorno del saldo scritto non viene aggiunto. Succede di rado; la correzione è riscrivere il saldo.
+
+**Le regole, nel codice:**
+
+- `AccountService.changeBalance`: si può scrivere per ogni conto, **tranne** quando la banca dà già il saldo (409):
+  due saldi per lo stesso conto non avrebbero senso;
+- `SyncService.refreshBalance`:
+  - se la banca dà un saldo, **sostituisce** quello scritto a mano;
+  - se non lo dà, uno scritto a mano **resta** (prima la sincronizzazione lo avrebbe tolto);
+  - in background, per un conto con il saldo scritto a mano, il saldo non si chiede: non si consumano letture per una
+    risposta che non arriva. Con "Aggiorna ora" sì: se un giorno la banca lo dà, prende il suo posto;
+- pagina Conti: "scrivi il saldo" per ogni conto che non ha il saldo della banca; Investimenti: "la banca non dà il
+  saldo: scrivilo in Conti".
+
+**Fineco: la banca il saldo lo dà?** Enable Banking lo chiede alla banca a ogni "Aggiorna ora" (e in background al
+massimo una volta al giorno). Nel log del backend, dopo un "Aggiorna ora", per ogni conto c'è una di queste righe:
+
+| Riga nel log | Che cosa vuol dire |
+|---|---|
+| `…: saldo 1234.56 (CLBD) al 2026-11-01` | la banca lo dà: da qui si vede |
+| `…: la banca non dà un saldo utilizzabile` | la banca risponde, ma senza saldo (o in un'altra valuta) |
+| `…: saldo non letto: …` | la richiesta è fallita (per esempio 429, troppe letture): si riprova al prossimo aggiornamento |
+
+Se non c'è nessuna di queste righe, il conto non è stato aggiornato dopo questa modifica.
+
+**I test.** `AccountBalanceTest.aLinkedAccountWithoutTheBankBalanceCanHaveOneWritten` (un conto collegato: 500 €
+scritti, poi un movimento di +12,50 € dalla sincronizzazione, 512,50 €);
+`SyncServiceTest.aBalanceWrittenByTheUserIsKeptAndTheBankOneReplacesIt` (in background non si chiede; una risposta
+vuota lo lascia; un saldo della banca lo sostituisce). Nel browser: il conto corrente collegato senza saldo della
+banca, "scrivi il saldo", 2.310,45 €, "scritto da te".

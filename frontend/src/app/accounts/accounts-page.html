@@ -109,7 +109,8 @@
                 } @else {
                   <span class="secondary">al prossimo aggiornamento</span>
                 }
-                @if (account.source === 'MANUAL') {
+                @if (account.balance?.source !== 'BANK') {
+                  <!-- Anche un conto collegato, se la banca non dà il saldo (docs/saldi.md, parte E). -->
                   <div>
                     <button type="button" class="link" (click)="editingBalance.set(account.id)">
                       {{ account.balance ? 'correggi il saldo' : 'scrivi il saldo' }}

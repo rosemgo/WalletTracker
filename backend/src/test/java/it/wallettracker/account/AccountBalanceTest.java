@@ -118,6 +118,25 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aLinkedAccountWithoutTheBankBalanceCanHaveOneWritten() {
+        // Trade Republic con Enable Banking: la banca non dà il saldo, lo scrive l'utente.
+        BankConnection connection = connectionRepository.save(new BankConnection("Trade Republic", "DE", "s-2",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account broker = accountRepository.save(new Account(connection, "k-2", "u-2", null, "MARIO ROSSI", "EUR"));
+        movement(broker, "2026-10-28", "-200");
+
+        assertThat(balance(broker, "{\"balance\": 500}")).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.balance.amount").isEqualTo(500);
+                    json.assertThat().extractingPath("$.balance.source").isEqualTo("MANUAL");
+                });
+        // I movimenti che arrivano dopo con la sincronizzazione lo aggiornano, come quelli di un file.
+        movement(broker, "2026-10-30", "12.50");
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].balance.amount").isEqualTo(512.5);
+    }
+
+    @Test
     void wrongBalancesAreRejected() {
         Account wallet = accountRepository.save(Account.manual("Tinaba", "Wallet", null, "EUR",
                 AccountRole.INVESTMENT));

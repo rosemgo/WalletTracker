@@ -147,7 +147,12 @@ class InvestmentServiceTest {
         assertThat(o.months()).extracting(Month::transferred).extracting(BigDecimal::intValue)
                 .containsExactly(0, 0, 200, 200, 1200, 200, 200, 200, 200, 200, 100, 200);
         assertThat(o.incomeInPeriod()).isEqualByComparingTo("72.50");
-        assertThat(o.taxesInPeriod()).isEqualByComparingTo("-2");
+        // Il bollo non è una ritenuta: sta tra le altre tasse, e le rendite restano lorde = nette.
+        assertThat(o.withholdingInPeriod()).isEqualByComparingTo("0");
+        assertThat(o.otherTaxesInPeriod()).isEqualByComparingTo("-2");
+        assertThat(o.otherTaxesByType()).extracting(Group::name).containsExactly("Senza categoria");
+        // "Da dove": il nome del titolo, senza l'etichetta iniziale.
+        assertThat(o.incomeBySource()).extracting(Group::name).containsExactly("BTP ITALIA", "ACME");
         assertThat(o.incomeByType()).extracting(Group::name).containsExactly("Cedole", "Dividendi");
         assertThat(o.incomeByType().get(0).amount()).isEqualByComparingTo("60");
 
@@ -191,6 +196,24 @@ class InvestmentServiceTest {
         Cash fundCash = o.cash().stream().filter(c -> c.accountId().equals(fund.getId())).findFirst().orElseThrow();
         assertThat(fundCash.balance()).isNull();
         assertThat(fundCash.manual()).isTrue();
+    }
+
+    @Test
+    void theGrossIncomeTheWithholdingAndTheNetAreSeenApart() {
+        // Una cedola lorda di Fineco con la sua ritenuta a parte (categoria "Ritenute").
+        save(ing, "2026-10-01", "125", TransactionType.INVESTMENT_INCOME, "Ced.su 50.000 IT0005436693", "Cedole");
+        save(ing, "2026-10-01", "-15.63", TransactionType.INVESTMENT_TAX, "Rit.ced IT0005436693", "Ritenute");
+        classificationService.classifyAll(); // il tipo scelto a mano diventa il tipo del movimento
+
+        Overview o = investmentService.overview(Period.YEAR, null, TODAY);
+
+        assertThat(o.incomeInPeriod()).isEqualByComparingTo("197.50"); // 72,50 + 125, lordo
+        assertThat(o.withholdingInPeriod()).isEqualByComparingTo("-15.63");
+        assertThat(o.otherTaxesInPeriod()).isEqualByComparingTo("-2");
+        assertThat(o.months().getLast().income()).isEqualByComparingTo("125");
+        assertThat(o.months().getLast().withholding()).isEqualByComparingTo("-15.63");
+        // Il BTP è indicato solo dall'ISIN: è il suo nome in "Da dove", non "Ced.su".
+        assertThat(o.incomeBySource()).extracting(Group::name).contains("IT0005436693");
     }
 
     @Test

@@ -202,8 +202,8 @@ public class SyncService {
     /**
      * Legge il saldo del conto dalla banca e lo salva (docs/saldi.md, parte B). Si fa dopo i movimenti, ed è un "di
      * più": se la banca non risponde, il saldo che c'era resta, e la sincronizzazione è riuscita lo stesso. Se la banca
-     * risponde senza un saldo utilizzabile, il saldo si toglie: meglio niente che un numero vecchio presentato come
-     * attuale.
+     * risponde senza un saldo utilizzabile, un suo saldo vecchio si toglie (meglio niente che un numero vecchio
+     * presentato come attuale); uno scritto dall'utente resta. Un saldo della banca sostituisce quello scritto a mano.
      *
      * <p>Con l'utente presente ({@code psu}) si legge sempre; in background al massimo una volta in
      * {@link #BACKGROUND_BALANCE_INTERVAL}.
@@ -211,6 +211,11 @@ public class SyncService {
     void refreshBalance(Account account, PsuHeaders psu, Instant now) {
         Instant last = account.getBalanceSource() == BalanceSource.BANK ? account.getBalanceUpdatedAt() : null;
         if (psu == null && last != null && last.isAfter(now.minus(BACKGROUND_BALANCE_INTERVAL))) {
+            return;
+        }
+        if (psu == null && account.getBalanceSource() == BalanceSource.MANUAL) {
+            // L'utente l'ha scritto perché la banca non lo dava: in background non si consumano letture per chiederlo
+            // ancora. Con "Aggiorna ora" sì: se la banca un giorno lo dà, sostituisce quello scritto.
             return;
         }
         try {
@@ -222,8 +227,11 @@ public class SyncService {
                         BalanceSource.BANK, now);
                 log.info("{}: saldo {} ({}) al {}", account.getName(), chosen.get().amount(), chosen.get().type(),
                         chosen.get().date());
-            } else {
+            } else if (account.getBalanceSource() == BalanceSource.BANK) {
+                // Il saldo della banca di prima non è più attuale: meglio niente. Uno scritto a mano invece resta.
                 accountRepository.recordBalance(account.getId(), null, null, null, null);
+                log.info("{}: la banca non dà più un saldo utilizzabile", account.getName());
+            } else {
                 log.info("{}: la banca non dà un saldo utilizzabile", account.getName());
             }
         } catch (RuntimeException e) {

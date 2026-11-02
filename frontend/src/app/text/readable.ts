@@ -36,6 +36,9 @@ const ACRONYMS = new Set([
 ]);
 
 /** Le parole piccole che in un nome restano minuscole (tranne la prima): "Pizzeria da Gino", "Luce e Gas". */
+/** Un codice ISIN: due lettere, nove lettere o cifre, una cifra di controllo. */
+const ISIN = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
+
 const SMALL_WORDS = new Set([
   'a',
   'ad',
@@ -89,8 +92,13 @@ export function readable(text: string): string {
   return text.toLowerCase().replace(/[\p{L}\p{N}']+/gu, (word, offset: number) => {
     const isFirst = first;
     first = false;
-    // Le sigle, e le lettere puntate di un'abbreviazione (S.P.A., S.R.L.): maiuscole.
-    if (ACRONYMS.has(word.toUpperCase()) || (word.length === 1 && text[offset + 1] === '.')) {
+    // Le sigle, le lettere puntate di un'abbreviazione (S.P.A., S.R.L.) e i codici ISIN dei titoli
+    // (IT0005436693, docs/investimenti.md parte J): maiuscole.
+    if (
+      ACRONYMS.has(word.toUpperCase()) ||
+      (word.length === 1 && text[offset + 1] === '.') ||
+      ISIN.test(word.toUpperCase())
+    ) {
       return word.toUpperCase();
     }
     // Dopo un punto attaccato (AMAZON.IT, NETFLIX.COM) è la fine di un indirizzo: resta minuscola.

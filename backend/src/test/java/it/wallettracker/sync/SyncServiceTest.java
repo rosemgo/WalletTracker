@@ -219,6 +219,29 @@ class SyncServiceTest {
         assertThat(reload(account).getBalanceSource()).isNull();
     }
 
+    @Test
+    void aBalanceWrittenByTheUserIsKeptAndTheBankOneReplacesIt() {
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("500.00"), LocalDate.of(2026, 10, 1),
+                BalanceSource.MANUAL, Instant.now().minus(2, ChronoUnit.DAYS));
+
+        // In background non si chiede il saldo: l'utente l'ha scritto perché la banca non lo dava.
+        syncService.syncAllInBackground();
+        verify(client, never()).getBalances(eq("uid-a"), any());
+        assertThat(reload(account).getBalance()).isEqualByComparingTo("500.00");
+
+        // "Aggiorna ora" lo chiede: una risposta vuota non tocca il saldo scritto...
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(reload(account).getBalanceSource()).isEqualTo(BalanceSource.MANUAL);
+
+        // ...uno della banca lo sostituisce.
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Contabile", new Amount(new BigDecimal("512.00"), "EUR"), "CLBD", null)));
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(reload(account).getBalance()).isEqualByComparingTo("512.00");
+        assertThat(reload(account).getBalanceSource()).isEqualTo(BalanceSource.BANK);
+    }
+
     private BankConnection validConnection() {
         counter++;
         return connectionRepository.save(new BankConnection("Banca " + counter, "IT", "session-" + counter,

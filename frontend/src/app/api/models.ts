@@ -721,8 +721,9 @@ export interface InvestmentMonth {
   sold: number; // quanto è rientrato dalle vendite di titoli nel mese (positivo)
   investedCumulative: number; // acquisti meno vendite dall'inizio della storia a questo mese: la linea del grafico
   transferred: number; // bonifici verso i conti di investimento, meno quelli tornati indietro: le barre
-  income: number; // cedole, dividendi e interessi
-  taxes: number; // tasse sugli investimenti (di solito negativo)
+  income: number; // cedole, dividendi e interessi, lordi (come li paga la banca)
+  withholding: number; // le ritenute sulle rendite (categoria "Ritenute"), di solito negativo
+  otherTaxes: number; // le altre tasse sugli investimenti (bollo, capital gain...), di solito negativo
 }
 
 /** Una voce di un elenco delle rendite: "Cedole", o un titolo. */
@@ -750,11 +751,13 @@ export interface Investments {
   boughtInPeriod: number;
   soldInPeriod: number;
   transferredInPeriod: number;
-  incomeInPeriod: number;
-  taxesInPeriod: number;
+  incomeInPeriod: number; // lordo
+  withholdingInPeriod: number; // le ritenute: lordo più ritenute dà il netto
+  otherTaxesInPeriod: number; // bollo, capital gain, Tobin tax...
   months: InvestmentMonth[];
   incomeByType: InvestmentGroup[];
   incomeBySource: InvestmentGroup[];
+  otherTaxesByType: InvestmentGroup[]; // le altre tasse per categoria
   trades: Transaction[]; // acquisti e vendite del periodo, dal più recente
   transfers: Transaction[]; // i bonifici del periodo che fanno le barre, dal più recente
   onlyTransfers: string[]; // conti di investimento con bonifici ma senza nessun acquisto: l'investito non si vede

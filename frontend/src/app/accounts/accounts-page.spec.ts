@@ -268,7 +268,8 @@ describe('AccountsPage', () => {
 
     const buttons = Array.from(row.querySelectorAll('button')).map((b) => b.textContent?.trim());
     expect(buttons).not.toContain('elimina');
-    expect(buttons).toEqual(['rinomina']); // il nome si può scegliere per ogni conto
+    // il nome si può scegliere per ogni conto; il saldo si scrive se la banca non lo dà (docs/saldi.md, parte E)
+    expect(buttons).toEqual(['rinomina', 'scrivi il saldo']);
   });
 
   it('creates a manual account from the form', async () => {

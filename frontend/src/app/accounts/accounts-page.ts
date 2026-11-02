@@ -17,8 +17,9 @@ import { BalanceForm } from './balance-form';
  * "manuali", per le banche che Enable Banking non copre: li crei qui e ci carichi i movimenti da un file
  * CSV (pagina Importa CSV). Solo i conti manuali si possono eliminare da qui.
  *
- * Il saldo (docs/saldi.md): per un conto collegato lo dà la banca a ogni aggiornamento; per un conto manuale lo scrivi
- * tu una volta, dopo aver controllato l'ultimo movimento, e poi si aggiorna con i movimenti importati.
+ * Il saldo (docs/saldi.md): per un conto collegato lo dà la banca a ogni aggiornamento; per un conto manuale, o un
+ * collegato di cui la banca non lo dà, lo scrivi tu una volta, dopo aver controllato l'ultimo movimento, e poi si
+ * aggiorna con i movimenti che arrivano dopo.
  *
  * È un componente "standalone": non serve dichiararlo in un NgModule. Le cose che il template usa
  * (qui la pipe `date`) si elencano direttamente in `imports`.
@@ -46,7 +47,7 @@ export class AccountsPage implements OnInit {
   protected readonly syncing = signal(false);
   protected readonly confirmingDelete = signal<number | null>(null);
   protected readonly renaming = signal<number | null>(null); // il conto di cui si sta cambiando il nome // il conto da eliminare, in attesa di conferma
-  protected readonly editingBalance = signal<number | null>(null); // il conto manuale di cui si scrive il saldo
+  protected readonly editingBalance = signal<number | null>(null); // il conto di cui si scrive il saldo
 
   /**
    * Il modulo del conto manuale. Gli stessi controlli del backend (ManualAccountRequest): qui servono a
@@ -200,12 +201,12 @@ export class AccountsPage implements OnInit {
     });
   }
 
-  /** Il saldo di un conto manuale è stato salvato. */
+  /** Il saldo scritto a mano è stato salvato. */
   onBalanceSaved(updated: Account): void {
     this.editingBalance.set(null);
     this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
     this.message.set(
-      `Saldo di "${updated.label}" salvato: da qui si aggiorna con i movimenti che importerai.`,
+      `Saldo di "${updated.label}" salvato: da qui si aggiorna con i movimenti che arriveranno.`,
     );
     this.error.set(null);
   }
