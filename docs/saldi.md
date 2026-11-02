@@ -15,6 +15,7 @@ vero dei conti, e fino a qui l'app non lo salvava.
 | G | aggiunta: il saldo a mano anche per i conti collegati |
 | H | aggiunta: la carta di credito non usa il saldo disponibile |
 | I | aggiunta: il plafond disponibile della carta, a parte (`V35`) |
+| J | aggiunta: una carta di credito ha solo il plafond, non un saldo |
 
 ---
 
@@ -349,3 +350,36 @@ Il saldo della carta resta quello che è: "la banca non lo dà" se manca, e si p
 `SyncServiceTest.aCreditCardDoesNotShowItsAvailableCreditAsBalance` (il plafond salvato a parte, e un conto che non è
 una carta che non lo ha); `AccountBalanceTest.aCreditCardShowsTheAvailableCredit` (nell'API solo con il ruolo Carta di
 credito); `accounts-page.spec.ts`. Nel browser, telefono e PC: la riga del plafond sotto "la banca non lo dà".
+
+---
+
+## Parte J: una carta di credito ha solo il plafond, non un saldo
+
+**La domanda dell'utente.** Con la parte I la carta mostrava il plafond, ma anche "la banca non lo dà" e "scrivi il
+saldo". Che cos'è il saldo di una carta di credito?
+
+Sarebbe **quanto hai speso e non ti è ancora stato addebitato**: il debito che il conto corrente pagherà a fine mese.
+Si potrebbe ricavare come plafond totale meno plafond disponibile, ma la banca il plafond totale non lo manda. E
+scriverlo a mano non avrebbe senso: cambia a ogni spesa e torna a zero a ogni addebito. Le spese della carta, una per
+una, sono già nei movimenti.
+
+**La scelta.** Per un conto con il ruolo **Carta di credito** c'è solo il **plafond disponibile**:
+
+- `SyncService.refreshAvailableCredit`: per una carta si legge solo il plafond (il disponibile della banca), mai un
+  saldo, anche se la banca mandasse un contabile; un saldo salvato prima di questa scelta si toglie. Il plafond cambia
+  a ogni spesa: si rilegge a ogni "Aggiorna ora", e in background al massimo una volta al giorno (se la banca l'ha
+  già dato per oggi, non si richiede);
+- `AccountService.changeBalance`: per una carta risponde 409 ("Per una carta di credito non c'è un saldo: si mostra
+  il plafond disponibile");
+- pagina Conti: la cella della carta (sul telefono con l'etichetta "Plafond") mostra solo "Plafond disponibile ·
+  2.500,00 € · al 2 nov 2026 · dalla banca", oppure "la banca non dà il plafond"; niente "scrivi il saldo".
+
+Nel log, al posto della riga del saldo, per una carta c'è `…: plafond disponibile 2500.00 al 2026-11-02`.
+
+Con questa parte la variante di `BankBalance.choose` senza i saldi disponibili (parte H) non serve più, e non c'è più:
+una carta non arriva mai alla scelta del saldo.
+
+**I test.** `SyncServiceTest.aCreditCardDoesNotShowItsAvailableCreditAsBalance` (anche con un contabile della banca,
+nessun saldo; il plafond salvato; in background, lo stesso giorno, non si rilegge);
+`AccountBalanceTest.aCreditCardShowsTheAvailableCredit` (e il 409); `accounts-page.spec.ts` (solo il plafond, nessun
+pulsante). Nel browser, telefono e PC: la carta con il solo plafond; l'API rifiuta un saldo scritto a mano.

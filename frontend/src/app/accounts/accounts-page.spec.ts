@@ -173,7 +173,7 @@ describe('AccountsPage', () => {
     );
   });
 
-  it('a credit card shows the available credit, apart from the balance', async () => {
+  it('a credit card shows only the available credit: it has no balance to write', async () => {
     registerLocaleData(localeIt);
     TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
     accounts = [
@@ -183,19 +183,23 @@ describe('AccountsPage', () => {
         lastSyncAt: '2026-11-02T16:57:00Z',
         availableCredit: { amount: 2500, date: '2026-11-02' },
       },
+      { ...CARD, id: 4, role: 'CREDIT_CARD', lastSyncAt: '2026-11-02T16:57:00Z' },
     ];
     const fixture = TestBed.createComponent(AccountsPage);
     await fixture.whenStable();
-    const cell = (fixture.nativeElement as HTMLElement).querySelector(
-      'td.balance-cell',
-    ) as HTMLElement;
-    const text = cell.textContent?.replace(/\s+/g, ' ') ?? '';
+    const cells = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('td.balance-cell'),
+    ) as HTMLElement[];
+    const text = (cell: HTMLElement) => cell.textContent?.replace(/\s+/g, ' ') ?? '';
 
-    // Il saldo non c'è (la banca dà solo il disponibile); il plafond sì, con il suo nome.
-    expect(text).toContain('la banca non lo dà');
-    expect(cell.querySelector('.available-credit')?.textContent?.replace(/\s+/g, ' ')).toMatch(
+    expect(cells[0].getAttribute('data-label')).toBe('Plafond');
+    expect(text(cells[0])).toMatch(
       /Plafond disponibile\s*2\.500,00\s€\s*al 2 nov 2026 · dalla banca/,
     );
+    expect(text(cells[0])).not.toContain('saldo');
+    expect(cells[0].querySelector('button')).toBeNull();
+    expect(text(cells[1])).toContain('la banca non dà il plafond');
+    expect(cells[1].querySelector('button')).toBeNull();
   });
 
   it('reads the amounts written the Italian or the English way', () => {

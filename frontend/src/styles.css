@@ -3036,13 +3036,10 @@ a.button.primary {
   text-align: left;
 }
 
-/* Il plafond disponibile di una carta, sotto il saldo: un'informazione diversa, con il suo nome. */
+/* Il plafond disponibile di una carta di credito, al posto del saldo (docs/saldi.md, parte J). */
 .available-credit {
   display: flex;
   flex-direction: column;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
 }
 
 /* Con il modulo aperto, la colonna del saldo si allarga quanto serve. */

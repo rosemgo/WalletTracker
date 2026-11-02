@@ -153,6 +153,8 @@ class AccountBalanceTest {
             json.assertThat().extractingPath("$[0].availableCredit.amount").isEqualTo(2187.6);
             json.assertThat().extractingPath("$[0].availableCredit.date").isEqualTo("2026-11-02");
         });
+        // Per una carta non c'è un saldo da scrivere (docs/saldi.md, parte J).
+        assertThat(balance(card, "{\"balance\": 300}")).hasStatus(409);
     }
 
     @Test

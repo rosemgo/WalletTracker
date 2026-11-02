@@ -81,9 +81,25 @@
                 }
               </select>
             </td>
-            <td data-label="Saldo" class="balance-cell">
+            <td
+              class="balance-cell"
+              [attr.data-label]="account.role === 'CREDIT_CARD' ? 'Plafond' : 'Saldo'"
+            >
               <!-- Il saldo (docs/saldi.md): dalla banca, o scritto da te per un conto manuale. -->
-              @if (editingBalance() === account.id) {
+              @if (account.role === 'CREDIT_CARD') {
+                <!-- Una carta non ha un saldo, ma il plafond che resta (docs/saldi.md, parte J). -->
+                @if (account.availableCredit; as c) {
+                  <div class="available-credit">
+                    <span class="secondary">Plafond disponibile</span>
+                    <strong>{{ c.amount | money: account.currency }}</strong>
+                    <span class="secondary">al {{ c.date | date: 'd MMM y' }} · dalla banca</span>
+                  </div>
+                } @else if (account.lastSyncAt) {
+                  <span class="secondary">la banca non dà il plafond</span>
+                } @else {
+                  <span class="secondary">al prossimo aggiornamento</span>
+                }
+              } @else if (editingBalance() === account.id) {
                 <app-balance-form
                   [account]="account"
                   (saved)="onBalanceSaved($event)"
@@ -108,14 +124,6 @@
                   <span class="secondary">la banca non lo dà</span>
                 } @else {
                   <span class="secondary">al prossimo aggiornamento</span>
-                }
-                @if (account.availableCredit; as c) {
-                  <!-- Per una carta: quanto si può ancora spendere, non un saldo (docs/saldi.md, parte I). -->
-                  <div class="available-credit">
-                    <span class="secondary">Plafond disponibile</span>
-                    <strong>{{ c.amount | money: account.currency }}</strong>
-                    <span class="secondary">al {{ c.date | date: 'd MMM y' }} · dalla banca</span>
-                  </div>
                 }
                 @if (account.balance?.source !== 'BANK') {
                   <!-- Anche un conto collegato, se la banca non dà il saldo (docs/saldi.md, parte E). -->

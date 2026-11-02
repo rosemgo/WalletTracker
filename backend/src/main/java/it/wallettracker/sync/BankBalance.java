@@ -40,7 +40,7 @@ public final class BankBalance {
     public record Chosen(BigDecimal amount, LocalDate date, String type) {
     }
 
-    /** I saldi "disponibili": per una carta di credito sono il plafond che resta, non un saldo. */
+    /** I saldi "disponibili": per una carta di credito sono il plafond che resta (docs/saldi.md, parte J). */
     static final List<String> AVAILABLE = PREFERENCE.get(2);
 
     /**
@@ -49,16 +49,6 @@ public final class BankBalance {
      * @param today il giorno da usare quando la banca non dice a quale giorno si riferisce il saldo
      */
     public static Optional<Chosen> choose(List<Balance> balances, String currency, LocalDate today) {
-        return choose(balances, currency, today, true);
-    }
-
-    /**
-     * Come sopra; con {@code withAvailable} false i saldi disponibili non si usano mai (docs/saldi.md, parte H). Serve
-     * per le carte di credito: il loro disponibile è quanto si può ancora spendere (il plafond meno le spese), e
-     * mostrarlo come saldo darebbe per esempio 2.500 € a una carta che ha speso 300 €.
-     */
-    public static Optional<Chosen> choose(List<Balance> balances, String currency, LocalDate today,
-            boolean withAvailable) {
         if (balances == null) {
             return Optional.empty();
         }
@@ -68,7 +58,6 @@ public final class BankBalance {
                         || b.balanceAmount().currency().equalsIgnoreCase(currency))
                 .map(b -> new Chosen(b.balanceAmount().amount(), b.referenceDate() != null ? b.referenceDate() : today,
                         b.balanceType() == null ? "" : b.balanceType().toUpperCase(Locale.ROOT)))
-                .filter(c -> withAvailable || !AVAILABLE.contains(c.type()))
                 .toList();
         for (List<String> group : PREFERENCE) {
             Optional<Chosen> best = usable.stream()
@@ -87,7 +76,7 @@ public final class BankBalance {
      * parità di giorno l'ordine di {@link #AVAILABLE} (in giornata prima di fine giornata).
      */
     public static Optional<Chosen> available(List<Balance> balances, String currency, LocalDate today) {
-        return balances == null ? Optional.empty() : choose(onlyAvailable(balances), currency, today, true);
+        return balances == null ? Optional.empty() : choose(onlyAvailable(balances), currency, today);
     }
 
     private static List<Balance> onlyAvailable(List<Balance> balances) {

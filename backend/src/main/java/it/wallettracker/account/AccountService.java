@@ -101,6 +101,10 @@ public class AccountService {
     @Transactional
     public AccountDto changeBalance(Long id, BigDecimal balance, Instant now) {
         Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
+        if (account.getRole() == AccountRole.CREDIT_CARD) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Per una carta di credito non c'è un saldo: si mostra il plafond disponibile.");
+        }
         if (account.getBalanceSource() == BalanceSource.BANK) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Il saldo di questo conto lo dà la banca, a ogni aggiornamento.");

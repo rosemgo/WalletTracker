@@ -250,8 +250,10 @@ class SyncServiceTest {
         // Il saldo sbagliato salvato prima della correzione: al prossimo aggiornamento sparisce.
         accountRepository.recordBalance(card.getId(), new BigDecimal("2500.00"), LocalDate.of(2026, 11, 1),
                 BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        // Anche se la banca mandasse un contabile, per una carta non c'è un saldo: solo il plafond (parte J).
         when(client.getBalances(eq("uid-c"), any())).thenReturn(List.of(
-                new Balance("Disponibile", new Amount(new BigDecimal("2500.00"), "EUR"), "ITAV", null)));
+                new Balance("Disponibile", new Amount(new BigDecimal("2500.00"), "EUR"), "ITAV", null),
+                new Balance("Contabile", new Amount(new BigDecimal("-312.40"), "EUR"), "CLBD", null)));
 
         syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
 
@@ -259,6 +261,11 @@ class SyncServiceTest {
         // Il disponibile non è il saldo, ma il plafond che resta: si salva a parte (parte I).
         assertThat(reload(card).getAvailableCredit()).isEqualByComparingTo("2500.00");
         assertThat(reload(card).getAvailableCreditDate()).isNotNull();
+        // In background, lo stesso giorno, il plafond non si rilegge (i movimenti sì: il conto è scaduto).
+        accountRepository.recordSync(card.getId(), Instant.now().minus(properties.interval()).minusSeconds(60), null);
+        syncService.syncAllInBackground();
+        verify(client, times(2)).getTransactions(eq("uid-c"), any(), any(), any());
+        verify(client, times(1)).getBalances(eq("uid-c"), any());
 
         // Un conto che non è una carta il plafond non lo ha.
         Account current = account(validConnection(), "uid-d");

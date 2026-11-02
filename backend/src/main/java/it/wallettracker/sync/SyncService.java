@@ -211,6 +211,11 @@ public class SyncService {
      * {@link #BACKGROUND_BALANCE_INTERVAL}.
      */
     void refreshBalance(Account account, PsuHeaders psu, Instant now) {
+        LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+        if (account.getRole() == AccountRole.CREDIT_CARD) {
+            refreshAvailableCredit(account, psu, today);
+            return;
+        }
         Instant last = account.getBalanceSource() == BalanceSource.BANK ? account.getBalanceUpdatedAt() : null;
         if (psu == null && last != null && last.isAfter(now.minus(BACKGROUND_BALANCE_INTERVAL))) {
             return;
@@ -221,18 +226,8 @@ public class SyncService {
             return;
         }
         try {
-            LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
-            // Per una carta di credito il "disponibile" è il plafond che resta, non un saldo: non si usa come saldo,
-            // ma si salva a parte, con il suo nome (parte I).
-            boolean card = account.getRole() == AccountRole.CREDIT_CARD;
-            List<Balance> balances = client.getBalances(account.getProviderUid(), psu);
-            if (card) {
-                Optional<BankBalance.Chosen> available = BankBalance.available(balances, account.getCurrency(), today);
-                accountRepository.recordAvailableCredit(account.getId(),
-                        available.map(BankBalance.Chosen::amount).orElse(null),
-                        available.map(BankBalance.Chosen::date).orElse(null));
-            }
-            Optional<BankBalance.Chosen> chosen = BankBalance.choose(balances, account.getCurrency(), today, !card);
+            Optional<BankBalance.Chosen> chosen = BankBalance.choose(client.getBalances(account.getProviderUid(), psu),
+                    account.getCurrency(), today);
             if (chosen.isPresent()) {
                 accountRepository.recordBalance(account.getId(), chosen.get().amount(), chosen.get().date(),
                         BalanceSource.BANK, now);
@@ -248,6 +243,31 @@ public class SyncService {
         } catch (RuntimeException e) {
             // Anche un 429: il saldo è un di più, i movimenti sono già salvati. Resta quello di prima.
             log.warn("{}: saldo non letto: {}", account.getName(), e.getMessage());
+        }
+    }
+
+    /**
+     * Per una carta di credito non c'è un saldo, ma il plafond che resta (docs/saldi.md, parte J): il disponibile della
+     * banca. Cambia a ogni spesa, quindi si rilegge a ogni aggiornamento; in background al massimo una volta al giorno.
+     * Un saldo salvato prima di questa scelta si toglie.
+     */
+    private void refreshAvailableCredit(Account account, PsuHeaders psu, LocalDate today) {
+        if (account.getBalance() != null) {
+            accountRepository.recordBalance(account.getId(), null, null, null, null);
+        }
+        if (psu == null && today.equals(account.getAvailableCreditDate())) {
+            return;
+        }
+        try {
+            List<Balance> balances = client.getBalances(account.getProviderUid(), psu);
+            Optional<BankBalance.Chosen> available = BankBalance.available(balances, account.getCurrency(), today);
+            accountRepository.recordAvailableCredit(account.getId(),
+                    available.map(BankBalance.Chosen::amount).orElse(null),
+                    available.map(BankBalance.Chosen::date).orElse(null));
+            log.info("{}: plafond disponibile {}", account.getName(),
+                    available.map(c -> c.amount() + " al " + c.date()).orElse("non dato dalla banca"));
+        } catch (RuntimeException e) {
+            log.warn("{}: plafond non letto: {}", account.getName(), e.getMessage());
         }
     }
 
