@@ -30,6 +30,7 @@
 | L | "Da dove": il nome intero del titolo, anche con le cifre |
 | M | solo il netto: niente lordo e ritenute, anche negli elenchi |
 | N | il periodo "Quest'anno" (YTD) |
+| O | la ritenuta sta nel giorno della sua cedola, anche a cavallo di due mesi |
 
 ---
 
@@ -707,3 +708,35 @@ Lo stesso periodo c'è in Analisi (`docs/38`, aggiunta "Quest'anno").
 
 **I test.** `InvestmentServiceTest.theYearToDateStartsInJanuary` (dieci mesi a metà ottobre, i bonifici del 2025
 fuori); `investments.spec.ts` (il pulsante chiede `YEAR_TO_DATE`, "da inizio anno").
+
+---
+
+## Parte O: la ritenuta sta nel giorno della sua cedola
+
+**Il problema, visto dall'utente.** Con la parte M ritenute e rendite si abbinavano solo **dentro** il periodo guardato.
+Fineco a volte registra la ritenuta il giorno dopo la cedola: una cedola il 30 ottobre e la sua ritenuta il 1°
+novembre. Guardando novembre, la ritenuta restava "non abbinata" a niente; guardando ottobre, la cedola sembrava più
+alta del vero.
+
+**Il ragionamento: competenza, non cassa.** La ritenuta non è un fatto a sé: è una parte della cedola, che la banca
+registra un po' dopo. Allora conta **nel giorno della sua cedola**, qualunque periodo si guardi.
+
+**Come** (`Investments.withholdingsOnTheirIncome`, chiamata da `InvestmentService` prima di qualsiasi conto):
+
+1. l'abbinamento si fa su **tutta la storia**, prima di scegliere il periodo;
+2. per ogni ritenuta si cerca la rendita dello **stesso titolo** (`securityName`: "Rit.ced 16.000,000 ROMANIA-7OT45
+   6,5%" e "Ced.su 16.000,000 ROMANIA-7OT45 6,5%"), registrata da **3 giorni prima a 10 giorni dopo**, la più vicina,
+   non ancora abbinata a un'altra ritenuta, e **grande almeno quanto la ritenuta** (una ritenuta più grande della
+   cedola non è la sua);
+3. trovata, la ritenuta prende la **data della cedola**: da lì in avanti stanno sempre insieme, nelle barre, nel netto e
+   negli elenchi;
+4. non trovata (la cedola è più vecchia della storia nell'app), la ritenuta tiene la sua data, e solo allora può finire
+   in "Ritenute non abbinate a una rendita".
+
+Il Riepilogo resta "di cassa": conta i soldi nel giorno in cui sono usciti dal conto, come tutto il resto.
+
+**I test.** `InvestmentsTest.aWithholdingTakesTheDateOfItsIncomeEvenAcrossTwoMonths` (l'esempio dell'utente: novembre
+senza la ritenuta, ottobre con la cedola netta di 455 €; una ritenuta lontana tiene la sua data; il bollo non si
+sposta); `InvestmentsTest.twoCouponsOfTheSameBondEachGetTheirOwnWithholding` (due cedole dello stesso BTP, ognuna con
+la sua; una ritenuta più grande della cedola resta sola). Nel browser, con una cedola inventata del 30 settembre e la
+ritenuta del 1° ottobre: settembre 300 € e −37,50 €, nessuna ritenuta non abbinata.

@@ -242,3 +242,9 @@ Lo stesso periodo c'è nella pagina Investimenti (`docs/investimenti.md`, parte 
 
 **I test.** `ExplorerTest.theBarsOfEachPeriod` (dieci mesi a fine ottobre, uno a gennaio); `explore-page.spec.ts`
 (il pulsante chiede `YEAR_TO_DATE` e scrive `questanno` nell'indirizzo).
+
+**Anche nella pagina di una categoria.** Il grafico aveva sempre gli ultimi 12 mesi; ora sopra ha **12 mesi ·
+Quest'anno**. Qui non serve cambiare l'API: dà già i 12 mesi che finiscono con il mese guardato, e da gennaio di
+quell'anno ci sono sempre tutti. Il frontend tiene solo quelli dello stesso anno (`category-page.ts`, `chartMonths`).
+Il titolo dice "Quest'anno" per l'anno in corso e "Gennaio–ottobre 2025" per un mese di un anno passato. Test:
+`category-page.spec.ts` (12 barre, poi 10 da gennaio a ottobre).

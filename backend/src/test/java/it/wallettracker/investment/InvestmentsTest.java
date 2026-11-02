@@ -182,4 +182,47 @@ class InvestmentsTest {
         assertThat(byType.stream().map(Group::amount).reduce(BigDecimal.ZERO, BigDecimal::add))
                 .isEqualByComparingTo("698.91");
     }
+
+    @Test
+    void aWithholdingTakesTheDateOfItsIncomeEvenAcrossTwoMonths() {
+        // L'esempio dell'utente: la cedola il 30 ottobre, la ritenuta di Fineco il 1° novembre.
+        String bond = "ROMANIA-7OT45 6,5%";
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                m("2026-10-30", "520", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
+                m("2026-11-01", "-65", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                // un'altra ritenuta dello stesso titolo, troppo lontana: nessuna rendita vicina, tiene la sua data
+                m("2026-03-01", "-30", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                // il bollo non è una ritenuta: non si sposta
+                m("2026-11-01", "-2", TransactionType.INVESTMENT_TAX, false, "Imposta di bollo", bond)));
+
+        assertThat(movements).extracting(Movement::date).containsExactly(LocalDate.of(2026, 10, 30),
+                LocalDate.of(2026, 10, 30), LocalDate.of(2026, 3, 1), LocalDate.of(2026, 11, 1));
+
+        // Guardando novembre la ritenuta non c'è più; guardando ottobre la cedola è netta.
+        LocalDate octoberFirst = LocalDate.of(2026, 10, 1);
+        LocalDate octoberLast = LocalDate.of(2026, 10, 31);
+        assertThat(Investments.netIncomeBy(movements, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), false))
+                .isEmpty();
+        assertThat(Investments.netIncomeBy(movements, octoberFirst, octoberLast, false)).singleElement()
+                .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("455"));
+        List<Month> months = Investments.months(movements, YearMonth.of(2026, 10), YearMonth.of(2026, 11));
+        assertThat(months.get(0).withholding()).isEqualByComparingTo("-65");
+        assertThat(months.get(1).withholding()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void twoCouponsOfTheSameBondEachGetTheirOwnWithholding() {
+        String bond = "BTP ITALIA";
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                m("2026-04-01", "30", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
+                m("2026-10-01", "30", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
+                m("2026-10-02", "-3.75", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                m("2026-04-03", "-3.75", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                // più grande della cedola: non può essere la sua ritenuta
+                m("2026-10-01", "-50", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond)));
+
+        assertThat(movements).extracting(Movement::date).containsExactly(LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 4, 1),
+                LocalDate.of(2026, 10, 1));
+    }
 }

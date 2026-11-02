@@ -80,6 +80,9 @@ public class InvestmentService {
                 movements.add(movementOf(t, owners));
             }
         }
+        // Le ritenute nel giorno della loro rendita, su tutta la storia (Investments.withholdingsOnTheirIncome): una
+        // cedola e la sua ritenuta cadono sempre nello stesso periodo. Stessa lista, stesso ordine di inCurrency.
+        movements = Investments.withholdingsOnTheirIncome(movements);
 
         YearMonth current = YearMonth.from(today);
         YearMonth first = firstMonth(period, current, movements);

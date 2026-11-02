@@ -139,6 +139,41 @@ describe('CategoryPage', () => {
     expect(page.textContent?.replace(/\s+/g, ' ')).toContain('a ottobre, finora.');
   });
 
+  it('the chart shows the last 12 months, or this year from January', async () => {
+    // Come l'API: i 12 mesi che finiscono con ottobre 2026, da novembre 2025.
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(2025, 10 + i, 1);
+      return {
+        month: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        value: 100 + i,
+      };
+    });
+    answer = () => of(overview({ months }));
+    const fixture = TestBed.createComponent(CategoryPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const chartCard = () =>
+      Array.from(page.querySelectorAll('section.card')).find((c) =>
+        c.querySelector('app-bar-chart'),
+      ) as HTMLElement;
+    const bars = () => chartCard().querySelectorAll('app-bar-chart path.bar').length;
+    const button = (label: string) =>
+      Array.from(chartCard().querySelectorAll('.segmented button')).find(
+        (b) => b.textContent?.trim() === label,
+      ) as HTMLButtonElement;
+
+    expect(chartCard().querySelector('h2')?.textContent?.trim()).toBe('Ultimi 12 mesi');
+    expect(bars()).toBe(12);
+
+    button("Quest'anno").click();
+    await fixture.whenStable();
+    expect(bars()).toBe(10); // da gennaio a ottobre 2026
+    expect(button("Quest'anno").getAttribute('aria-pressed')).toBe('true');
+    expect(chartCard().querySelector('app-bar-chart svg')?.getAttribute('aria-label')).toContain(
+      'da gennaio',
+    );
+  });
+
   it('says when the category does not exist', async () => {
     answer = () => throwError(() => ({ status: 404 }));
     const page = await render();

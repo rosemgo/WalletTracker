@@ -3,11 +3,14 @@ package it.wallettracker.investment;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -191,6 +194,57 @@ public final class Investments {
     public static List<Group> incomeBy(List<Movement> movements, LocalDate from, LocalDate to,
             Function<Movement, String> name, String missing) {
         return groupBy(movements, from, to, m -> m.type() == TransactionType.INVESTMENT_INCOME, name, missing, true);
+    }
+
+    /** Una ritenuta si cerca da tanti giorni prima della sua rendita... */
+    static final int WITHHOLDING_DAYS_BEFORE = 3;
+
+    /** ...a tanti giorni dopo: Fineco la registra a volte il giorno dopo la cedola, a cavallo di due mesi. */
+    static final int WITHHOLDING_DAYS_AFTER = 10;
+
+    /**
+     * Ogni ritenuta prende la data della sua rendita (docs/investimenti.md, parte O): una cedola del 30 ottobre con la
+     * ritenuta registrata il 1° novembre è una cedola netta di ottobre, qualunque periodo si guardi. È la "competenza":
+     * la ritenuta è una parte della cedola, non un fatto a sé.
+     *
+     * <p>L'abbinamento si fa su tutta la storia, prima di scegliere il periodo: la rendita dello stesso titolo
+     * ({@link #securityName}), da {@link #WITHHOLDING_DAYS_BEFORE} giorni prima a {@link #WITHHOLDING_DAYS_AFTER} dopo,
+     * la più vicina, non ancora abbinata, e almeno grande quanto la ritenuta. Una ritenuta senza la sua rendita (più
+     * vecchia della storia nell'app) tiene la sua data. La lista che esce ha gli stessi movimenti, nello stesso ordine.
+     */
+    public static List<Movement> withholdingsOnTheirIncome(List<Movement> movements) {
+        List<Movement> result = new ArrayList<>(movements);
+        Set<Integer> pairedIncomes = new HashSet<>();
+        for (int i = 0; i < movements.size(); i++) {
+            Movement w = movements.get(i);
+            if (!isWithholding(w) || w.source() == null) {
+                continue;
+            }
+            Integer best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (int j = 0; j < movements.size(); j++) {
+                Movement income = movements.get(j);
+                if (income.type() != TransactionType.INVESTMENT_INCOME || pairedIncomes.contains(j)
+                        || !w.source().equals(income.source())
+                        || income.amount().compareTo(w.amount().abs()) < 0) {
+                    continue;
+                }
+                long days = ChronoUnit.DAYS.between(income.date(), w.date()); // positivo: la ritenuta è dopo
+                if (days < -WITHHOLDING_DAYS_BEFORE || days > WITHHOLDING_DAYS_AFTER) {
+                    continue;
+                }
+                if (Math.abs(days) < bestDistance) {
+                    best = j;
+                    bestDistance = Math.abs(days);
+                }
+            }
+            if (best != null) {
+                pairedIncomes.add(best);
+                result.set(i, new Movement(movements.get(best).date(), w.amount(), w.type(), w.onInvestmentAccount(),
+                        w.category(), w.source()));
+            }
+        }
+        return result;
     }
 
     /** La riga delle ritenute che non si sa a quale rendita togliere. */

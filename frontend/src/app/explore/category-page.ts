@@ -15,7 +15,8 @@ const MONTH_INITIALS = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', '
 
 /**
  * La pagina di una categoria (docs/38, parte F): quanto nel mese rispetto al solito, il budget con la tacca del ritmo,
- * gli ultimi 12 mesi con la media, gli esercenti del mese; e i link ai movimenti e al budget.
+ * gli ultimi 12 mesi con la media (o solo l'anno, da gennaio: "Quest'anno"), gli esercenti del mese; e i link ai
+ * movimenti e al budget.
  */
 @Component({
   selector: 'app-category-page',
@@ -30,6 +31,8 @@ export class CategoryPage implements OnInit {
 
   protected readonly overview = signal<CategoryOverview | null>(null);
   protected readonly error = signal<string | null>(null);
+  /** Il grafico: gli ultimi 12 mesi, o l'anno del mese guardato da gennaio (YTD, docs/38 aggiunta "Quest'anno"). */
+  protected readonly chartPeriod = signal<'YEAR' | 'YEAR_TO_DATE'>('YEAR');
 
   /** "ottobre": il mese guardato, in parole. */
   protected readonly monthName = computed(() => {
@@ -87,12 +90,39 @@ export class CategoryPage implements OnInit {
     };
   });
 
-  protected readonly monthValues = computed(
-    () => this.overview()?.months.map((m) => m.value) ?? [],
+  /**
+   * I mesi del grafico. L'API dà i 12 che finiscono con il mese guardato: da gennaio ci sono sempre tutti, quindi per
+   * "Quest'anno" basta tenere quelli dello stesso anno.
+   */
+  private readonly chartMonths = computed(() => {
+    const o = this.overview();
+    if (o === null) {
+      return [];
+    }
+    const year = o.month.slice(0, 4);
+    return this.chartPeriod() === 'YEAR'
+      ? o.months
+      : o.months.filter((m) => m.month.startsWith(year));
+  });
+
+  protected readonly monthValues = computed(() => this.chartMonths().map((m) => m.value));
+  protected readonly monthLabels = computed(() =>
+    this.chartMonths().map((m) => MONTH_INITIALS[Number(m.month.slice(5, 7)) - 1]),
   );
-  protected readonly monthLabels = computed(
-    () => this.overview()?.months.map((m) => MONTH_INITIALS[Number(m.month.slice(5, 7)) - 1]) ?? [],
-  );
+
+  /** Il titolo del grafico: "Ultimi 12 mesi", "Quest'anno", o "Gennaio–ottobre 2025" per un anno passato. */
+  protected readonly chartTitle = computed(() => {
+    const o = this.overview();
+    if (this.chartPeriod() === 'YEAR' || o === null) {
+      return 'Ultimi 12 mesi';
+    }
+    if (o.month.slice(0, 4) === String(new Date().getFullYear())) {
+      return "Quest'anno";
+    }
+    return o.month.endsWith('-01')
+      ? formatDate(`${o.month}-01`, 'MMMM y', this.locale).replace(/^./, (c) => c.toUpperCase())
+      : `Gennaio–${formatDate(`${o.month}-01`, 'MMMM y', this.locale)}`;
+  });
 
   protected readonly chartDescription = computed(() => {
     const o = this.overview();
@@ -101,7 +131,8 @@ export class CategoryPage implements OnInit {
     }
     const usual =
       o.usualMonth === null ? '' : `, di solito ${this.euros(o.usualMonth, o.currency)} al mese`;
-    return `${o.name} negli ultimi 12 mesi${usual}; ${this.monthName()} ${this.euros(o.amount, o.currency)}`;
+    const when = this.chartPeriod() === 'YEAR' ? 'negli ultimi 12 mesi' : 'da gennaio';
+    return `${o.name} ${when}${usual}; ${this.monthName()} ${this.euros(o.amount, o.currency)}`;
   });
 
   protected readonly averageLabel = computed(() => {
