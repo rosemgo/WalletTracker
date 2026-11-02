@@ -27,6 +27,7 @@
 | I | **due grandezze, non una**: l'investito in titoli e i bonifici verso i conti di investimento |
 | J | barre che dicono le cifre; rendite lorde, ritenute e nette; i nomi dei titoli in "Da dove" |
 | K | le barre delle rendite sono il netto |
+| L | "Da dove": il nome intero del titolo, anche con le cifre |
 
 ---
 
@@ -611,3 +612,50 @@ Gli elenchi "Per tipo" e "Da dove" restano sul lordo: sono le rendite come le ha
 **I test.** `investments.spec.ts`: il mese in evidenza "giugno 2026: 12,50 € netti"; aprile, con una cedola di 30 € e
 la ritenuta di 3,90 €, "26,10 € netti". Nel browser: ottobre con la cedola lorda di 125 € e la ritenuta di 15,63 €,
 "109,37 € netti"; giugno e aprile la cifra accreditata.
+
+---
+
+## Parte L: "Da dove", il nome intero del titolo
+
+**Il problema, trovato con i movimenti veri.** Dopo la parte J in "Da dove" è comparsa una voce "Senza nome del
+titolo" da 3.663,10 € (6 movimenti). Una delle cedole:
+
+```
+Ced.su 16.000,000 ROMANIA-7OT45 6,5%
+```
+
+La regola della parte J toglieva l'etichetta e poi **tutte le parole con cifre**, tranne i codici ISIN. Qui le hanno
+tutte: "16.000,000" è la quantità, ma "ROMANIA-7OT45" e "6,5%" sono il nome del bond. Non restava niente. L'errore era
+nella regola: nel nome di un titolo le cifre ci sono (la scadenza, la cedola, un codice).
+
+**La regola nuova** (`Investments.securityName`): si toglie solo quello che sicuramente non è il nome, e il resto
+resta.
+
+| Si toglie | Esempio |
+|---|---|
+| l'etichetta iniziale | `Ced.su`, `Div.su`, `Rit.ced`, `Cash Dividend`, `Interest payment for payout collection` |
+| i numeri da soli, senza lettere | `16.000,000` (la quantità), `0,25` (un importo per azione) |
+| le date | `15/09/2032`, `2026-10-31`, `2026-10` |
+| i codici dei pagamenti (UUID) | `019e8191-0af0-76fc-a8ac-1d6ee06c92c0` |
+
+| Causale | Parte J | Ora |
+|---|---|---|
+| `Ced.su 16.000,000 ROMANIA-7OT45 6,5%` | (niente: "Senza nome del titolo") | ROMANIA-7OT45 6,5% |
+| `Ced.su 50.000 IT0005436693` | IT0005436693 | IT0005436693 |
+| `Div.su 100 ENI` | ENI | ENI |
+| `Interest payment for payout collection 019e…` | payout collection | (niente: il nome del conto) |
+
+Un "6,5%" resta perché ha il segno di percentuale: non è un numero da solo, è la cedola del bond.
+
+**Quando non resta niente**, al posto di "Senza nome del titolo" si usa il **nome del conto** (`InvestmentService`,
+`movementOf`): gli interessi di Trade Republic, con un codice diverso ogni mese, stanno tutti insieme sotto "Trade
+Republic ··9511", che almeno dice da dove arrivano.
+
+**La visualizzazione.** Il filtro `readable` rende leggibili i testi tutti maiuscoli ("BTP ITALIA" → "BTP Italia").
+Una parola che mescola lettere e cifre è un codice, e resta maiuscola: "ROMANIA-7OT45" diventa "Romania-7OT45", non
+"Romania-7ot45". È la stessa regola che teneva maiuscoli gli ISIN, resa generale.
+
+**I test.** `InvestmentsTest.theNameOfTheSecurityKeepsItsDigitsAndDropsLabelQuantitiesDatesAndCodes` (la tabella qui
+sopra); `InvestmentServiceTest.fromWhereUsesTheWholeNameOfTheBondOrTheAccount` (il bond rumeno, e due interessi di
+Trade Republic sotto il nome del conto); `readable.spec.ts`. Nel browser, con dati inventati: "Romania-7OT45 6,5%",
+"IT0005436693", "BTP Italia", "Trade Republic · Conto titoli · 2 movimenti".

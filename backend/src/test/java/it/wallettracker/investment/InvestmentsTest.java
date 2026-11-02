@@ -138,16 +138,20 @@ class InvestmentsTest {
     }
 
     @Test
-    void theNameOfTheSecurityKeepsTheIsinAndDropsTheLabel() {
+    void theNameOfTheSecurityKeepsItsDigitsAndDropsLabelQuantitiesDatesAndCodes() {
+        // Il caso trovato con i movimenti veri: prima diventava "Senza nome del titolo".
+        assertThat(Investments.securityName("Ced.su 16.000,000 ROMANIA-7OT45 6,5%")).isEqualTo("ROMANIA-7OT45 6,5%");
         assertThat(Investments.securityName("Ced.su 50.000 IT0005436693")).isEqualTo("IT0005436693");
         assertThat(Investments.securityName("Ced.su BTP CUM 15/09/2032")).isEqualTo("BTP CUM");
         assertThat(Investments.securityName("Div.su 100 ENI")).isEqualTo("ENI");
-        assertThat(Investments.securityName("Rit.ced IT0005436693")).isEqualTo("IT0005436693");
+        assertThat(Investments.securityName("Rit.ced 16.000,000 ROMANIA-7OT45 6,5%")).isEqualTo("ROMANIA-7OT45 6,5%");
         assertThat(Investments.securityName("Cash Dividend ACME")).isEqualTo("ACME");
+        assertThat(Investments.securityName("Poste Italiane 0,25")).isEqualTo("Poste Italiane");
+        // Niente con delle lettere: null (InvestmentService usa allora il nome del conto).
+        assertThat(Investments.securityName(
+                "Interest payment for payout collection 019e8191-0af0-76fc-a8ac-1d6ee06c92c0")).isNull();
         assertThat(Investments.securityName("Interest payment for 2026-10")).isNull();
         assertThat(Investments.securityName("Ced.su 50.000")).isNull();
         assertThat(Investments.securityName(null)).isNull();
-        // Senza etichetta il testo resta, senza le parole con cifre.
-        assertThat(Investments.securityName("Poste Italiane 0,25")).isEqualTo("Poste Italiane");
     }
 }

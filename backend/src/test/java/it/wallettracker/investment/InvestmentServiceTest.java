@@ -217,6 +217,25 @@ class InvestmentServiceTest {
     }
 
     @Test
+    void fromWhereUsesTheWholeNameOfTheBondOrTheAccount() {
+        save(ing, "2026-10-02", "520", TransactionType.INVESTMENT_INCOME, "Ced.su 16.000,000 ROMANIA-7OT45 6,5%",
+                "Cedole");
+        save(broker, "2026-10-03", "6.37", TransactionType.INVESTMENT_INCOME,
+                "Interest payment for payout collection 019e8191-0af0-76fc-a8ac-1d6ee06c92c0", "Interessi");
+        save(broker, "2026-09-01", "5.90", TransactionType.INVESTMENT_INCOME,
+                "Interest payment for payout collection 019de1d4-6643-7b21-8583-053fbf22f842", "Interessi");
+        classificationService.classifyAll();
+
+        Overview o = investmentService.overview(Period.YEAR, null, TODAY);
+
+        assertThat(o.incomeBySource()).extracting(Group::name).contains("ROMANIA-7OT45 6,5%", broker.label())
+                .doesNotContain("Senza nome del titolo");
+        // Gli interessi, con un codice diverso ogni mese, stanno tutti sotto il conto.
+        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals(broker.label()))
+                .singleElement().satisfies(g -> assertThat(g.movements()).isEqualTo(2));
+    }
+
+    @Test
     void theApiAnswersAndRejectsWrongRequests() {
         assertThat(mvc.get().uri("/api/investments?period=TWO_YEARS"))
                 .hasStatusOk()

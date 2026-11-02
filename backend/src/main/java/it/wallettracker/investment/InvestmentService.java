@@ -163,12 +163,14 @@ public class InvestmentService {
     }
 
     private static Movement movementOf(BankTransaction t, List<Set<String>> owners) {
-        // "Da dove": il nome del titolo, con il codice ISIN se è l'unico nome (Investments.securityName).
+        // "Da dove": il nome del titolo (Investments.securityName); se il testo non ne ha uno (gli interessi di Trade
+        // Republic), il nome del conto, che almeno dice da dove arriva.
         String text = MerchantKey.merchantText(t.getCounterparty(), t.getDescription(), owners);
+        String security = Investments.securityName(text);
         return new Movement(t.getBookingDate(), t.getAmount(), t.getType(),
                 t.getAccount().getRole() == AccountRole.INVESTMENT,
                 t.getCategory() == null ? null : t.getCategory().getName(),
-                Investments.securityName(text));
+                security != null ? security : t.getAccount().label());
     }
 
     /** Il primo mese del grafico: 12 o 24 mesi fa, oppure il mese del primo movimento (almeno 12, al massimo 120). */

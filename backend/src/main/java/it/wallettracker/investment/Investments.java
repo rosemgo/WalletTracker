@@ -104,34 +104,52 @@ public final class Investments {
     }
 
     /**
-     * Il nome del titolo di una rendita o di una ritenuta, per "Da dove" (parte J): "Ced.su 50.000 IT0005436693"
-     * diventa "IT0005436693", "Div.su 100 ENI" diventa "ENI". Si toglie l'etichetta iniziale (il tipo lo dice già la
-     * categoria) e le parole con cifre, tranne i codici ISIN, che a volte sono l'unico nome del titolo. Null se non resta
-     * niente.
+     * Il nome del titolo di una rendita o di una ritenuta, per "Da dove" (docs/investimenti.md, parte L). Del testo della
+     * banca si tolgono solo le parti che non sono il nome:
+     * <ul>
+     *   <li>l'etichetta iniziale ("Ced.su", "Div.su", "Rit.ced", "Cash Dividend"...): il tipo lo dice già la categoria;</li>
+     *   <li>i numeri da soli, senza lettere: quantità ("16.000,000") e importi per azione;</li>
+     *   <li>le date ("15/09/2032", "2026-10-31") e i codici dei pagamenti (gli UUID di Trade Republic).</li>
+     * </ul>
+     * Tutto il resto resta, anche con le cifre: nel nome di un titolo ci sono (scadenza, cedola, codice).
+     * "Ced.su 16.000,000 ROMANIA-7OT45 6,5%" diventa "ROMANIA-7OT45 6,5%". Null se non resta niente con delle lettere.
      */
     public static String securityName(String text) {
         if (text == null) {
             return null;
         }
         String rest = LABEL.matcher(text.strip()).replaceFirst("");
+        rest = DATE.matcher(rest).replaceAll(" ");
+        rest = UUID_CODE.matcher(rest).replaceAll(" ");
         StringBuilder name = new StringBuilder();
         for (String word : rest.split("\\s+")) {
-            if (word.isEmpty() || (word.chars().anyMatch(Character::isDigit) && !ISIN.matcher(word).matches())) {
+            if (word.isEmpty() || NUMBER.matcher(word).matches()) {
                 continue;
             }
             name.append(name.isEmpty() ? "" : " ").append(word);
         }
         String result = name.toString().strip();
-        return result.isEmpty() ? null : (result.length() > 100 ? result.substring(0, 100).strip() : result);
+        if (result.chars().noneMatch(Character::isLetter)) {
+            return null;
+        }
+        return result.length() > 100 ? result.substring(0, 100).strip() : result;
     }
 
-    /** Le etichette con cui iniziano le causali delle rendite e delle ritenute (le regole di V4 e V25). */
+    /** Le etichette con cui iniziano le causali delle rendite e delle ritenute (le regole di V4, V25 e V26). */
     private static final Pattern LABEL = Pattern.compile(
             "^(?i)(ced\\.\\s*su|div\\.\\s*su|rit\\.\\s*ced|rit\\.\\s*div|rit\\.\\s*fisc\\.?|cash dividend|"
-                    + "interest payment( for)?|capital distribution)\\b[\\s.:]*");
+                    + "interest payment( for( payout collection)?)?|capital distribution)\\b[\\s.:]*");
 
-    /** Un codice ISIN: due lettere, nove lettere o cifre, una cifra di controllo (IT0005436693). */
-    private static final Pattern ISIN = Pattern.compile("[A-Z]{2}[A-Z0-9]{9}[0-9]");
+    /** Un numero da solo (una quantità, un importo): cifre, punti e virgole, magari con il segno. */
+    private static final Pattern NUMBER = Pattern.compile("[+-]?[0-9][0-9.,]*");
+
+    /** Una data: 15/09/2032, 15.09.32, 2026-10-31, 2026-10. */
+    private static final Pattern DATE = Pattern.compile(
+            "\\b(\\d{1,2}[/.]\\d{1,2}[/.]\\d{2,4}|\\d{4}-\\d{2}(-\\d{2})?)\\b");
+
+    /** Il codice di un pagamento (un UUID): 019e8191-0af0-76fc-a8ac-1d6ee06c92c0. */
+    private static final Pattern UUID_CODE = Pattern.compile(
+            "(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b");
 
     /** La somma di una misura sui movimenti dal giorno {@code from} al giorno {@code to} (compresi). */
     public static BigDecimal sum(List<Movement> movements, Function<Movement, BigDecimal> measure, LocalDate from,
