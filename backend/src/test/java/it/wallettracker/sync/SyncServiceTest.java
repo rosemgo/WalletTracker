@@ -242,6 +242,22 @@ class SyncServiceTest {
         assertThat(reload(account).getBalanceSource()).isEqualTo(BalanceSource.BANK);
     }
 
+    @Test
+    void aCreditCardDoesNotShowItsAvailableCreditAsBalance() {
+        Account card = account(validConnection(), "uid-c");
+        card.changeRole(AccountRole.CREDIT_CARD);
+        accountRepository.save(card);
+        // Il saldo sbagliato salvato prima della correzione: al prossimo aggiornamento sparisce.
+        accountRepository.recordBalance(card.getId(), new BigDecimal("2500.00"), LocalDate.of(2026, 11, 1),
+                BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        when(client.getBalances(eq("uid-c"), any())).thenReturn(List.of(
+                new Balance("Disponibile", new Amount(new BigDecimal("2500.00"), "EUR"), "ITAV", null)));
+
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+
+        assertThat(reload(card).getBalance()).isNull();
+    }
+
     private BankConnection validConnection() {
         counter++;
         return connectionRepository.save(new BankConnection("Banca " + counter, "IT", "session-" + counter,

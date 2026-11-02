@@ -220,8 +220,10 @@ public class SyncService {
         }
         try {
             LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
+            // Per una carta di credito il "disponibile" è il plafond che resta, non un saldo: non si usa.
+            boolean withAvailable = account.getRole() != AccountRole.CREDIT_CARD;
             Optional<BankBalance.Chosen> chosen = BankBalance.choose(client.getBalances(account.getProviderUid(), psu),
-                    account.getCurrency(), today);
+                    account.getCurrency(), today, withAvailable);
             if (chosen.isPresent()) {
                 accountRepository.recordBalance(account.getId(), chosen.get().amount(), chosen.get().date(),
                         BalanceSource.BANK, now);

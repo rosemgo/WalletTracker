@@ -40,12 +40,25 @@ public final class BankBalance {
     public record Chosen(BigDecimal amount, LocalDate date, String type) {
     }
 
+    /** I saldi "disponibili": per una carta di credito sono il plafond che resta, non un saldo. */
+    static final List<String> AVAILABLE = PREFERENCE.get(2);
+
     /**
      * Sceglie il saldo da mostrare, o niente se la banca non ne dà uno utilizzabile.
      *
      * @param today il giorno da usare quando la banca non dice a quale giorno si riferisce il saldo
      */
     public static Optional<Chosen> choose(List<Balance> balances, String currency, LocalDate today) {
+        return choose(balances, currency, today, true);
+    }
+
+    /**
+     * Come sopra; con {@code withAvailable} false i saldi disponibili non si usano mai (docs/saldi.md, parte H). Serve
+     * per le carte di credito: il loro disponibile è quanto si può ancora spendere (il plafond meno le spese), e
+     * mostrarlo come saldo darebbe per esempio 2.500 € a una carta che ha speso 300 €.
+     */
+    public static Optional<Chosen> choose(List<Balance> balances, String currency, LocalDate today,
+            boolean withAvailable) {
         if (balances == null) {
             return Optional.empty();
         }
@@ -55,6 +68,7 @@ public final class BankBalance {
                         || b.balanceAmount().currency().equalsIgnoreCase(currency))
                 .map(b -> new Chosen(b.balanceAmount().amount(), b.referenceDate() != null ? b.referenceDate() : today,
                         b.balanceType() == null ? "" : b.balanceType().toUpperCase(Locale.ROOT)))
+                .filter(c -> withAvailable || !AVAILABLE.contains(c.type()))
                 .toList();
         for (List<String> group : PREFERENCE) {
             Optional<Chosen> best = usable.stream()

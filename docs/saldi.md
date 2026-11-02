@@ -13,6 +13,7 @@ vero dei conti, e fino a qui l'app non lo salvava.
 | E | i test, e la prova nel browser |
 | F | esercizi guidati |
 | G | aggiunta: il saldo a mano anche per i conti collegati |
+| H | aggiunta: la carta di credito non usa il saldo disponibile |
 
 ---
 
@@ -297,3 +298,28 @@ scritti, poi un movimento di +12,50 € dalla sincronizzazione, 512,50 €);
 `SyncServiceTest.aBalanceWrittenByTheUserIsKeptAndTheBankOneReplacesIt` (in background non si chiede; una risposta
 vuota lo lascia; un saldo della banca lo sostituisce). Nel browser: il conto corrente collegato senza saldo della
 banca, "scrivi il saldo", 2.310,45 €, "scritto da te".
+
+---
+
+## Parte H: la carta di credito non usa il saldo disponibile
+
+**Trovato con i conti veri.** Dopo il primo "Aggiorna ora" il log diceva, per la carta di credito ING:
+
+```
+saldo 2500.0 (ITAV) al 2026-11-02
+```
+
+La banca, per la carta, manda solo il saldo **disponibile** (`ITAV`), e l'app lo usava perché non c'era un contabile
+(parte B). Ma per una carta il disponibile è quanto si può ancora spendere, cioè il **plafond** meno le spese: 2.500 €
+tondi sono il plafond intero, non il saldo della carta.
+
+**La correzione.** `BankBalance.choose(..., withAvailable)`: per un conto con il ruolo **Carta di credito**
+(`SyncService.refreshBalance`) i saldi disponibili (`ITAV`, `CLAV`, `FWAV`) non si usano mai. Se la banca dà solo
+quelli, la carta resta senza saldo ("la banca non lo dà"), e si può scrivere a mano (parte G). Il saldo sbagliato
+salvato prima sparisce al primo aggiornamento: è un saldo della banca, e la banca non ne dà più uno utilizzabile.
+
+Per gli altri conti il disponibile resta l'ultima scelta: Revolut, per esempio, manda solo quello, e per un conto
+senza fido coincide con il saldo.
+
+**I test.** `BankBalanceTest.forACreditCardTheAvailableBalanceIsNeverUsed`,
+`SyncServiceTest.aCreditCardDoesNotShowItsAvailableCreditAsBalance`.

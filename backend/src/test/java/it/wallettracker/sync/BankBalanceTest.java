@@ -64,4 +64,15 @@ class BankBalanceTest {
         assertThat(BankBalance.choose(null, "EUR", TODAY)).isEmpty();
         assertThat(BankBalance.choose(List.of(new Balance("Saldo", null, "CLBD", null)), "EUR", TODAY)).isEmpty();
     }
+
+    @Test
+    void forACreditCardTheAvailableBalanceIsNeverUsed() {
+        // Il disponibile di una carta è il plafond che resta: 2.500 € non sono il saldo della carta.
+        List<Balance> card = List.of(b("ITAV", "2500.00", "EUR", "2026-11-02"));
+        assertThat(BankBalance.choose(card, "EUR", TODAY, false)).isEmpty();
+        assertThat(BankBalance.choose(List.of(b("ITAV", "2500.00", "EUR", null), b("CLBD", "-312.40", "EUR", null)),
+                "EUR", TODAY, false)).hasValueSatisfying(c -> assertThat(c.amount()).isEqualByComparingTo("-312.40"));
+        // Per gli altri conti il disponibile resta l'ultima scelta (Revolut ne dà solo uno).
+        assertThat(BankBalance.choose(card, "EUR", TODAY)).isPresent();
+    }
 }
