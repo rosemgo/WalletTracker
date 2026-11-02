@@ -18,9 +18,12 @@ public final class ExploreDtos {
         EXPENSES, INCOME, NET
     }
 
-    /** Il periodo delle barre: una settimana (barre = giorni), un mese (settimane), 6 mesi o un anno (mesi). */
+    /**
+     * Il periodo delle barre: una settimana (barre = giorni), un mese (settimane), 6 o 12 mesi (mesi), oppure l'anno in
+     * corso, da gennaio al mese di oggi (YEAR_TO_DATE, mesi).
+     */
     public enum Period {
-        WEEK, MONTH, SIX_MONTHS, YEAR
+        WEEK, MONTH, SIX_MONTHS, YEAR, YEAR_TO_DATE
     }
 
     /** Come raggruppare i movimenti di un periodo. */

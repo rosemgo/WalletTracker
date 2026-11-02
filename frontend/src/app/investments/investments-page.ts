@@ -13,6 +13,7 @@ import { TrendChart } from './trend-chart';
 
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
   { value: 'YEAR', label: '12 mesi' },
+  { value: 'YEAR_TO_DATE', label: "Quest'anno" }, // da gennaio a oggi (YTD)
   { value: 'TWO_YEARS', label: '2 anni' },
   { value: 'ALL', label: 'Tutto' },
 ];
@@ -217,13 +218,18 @@ export class InvestmentsPage implements OnInit {
     this.load();
   }
 
-  /** "ultimi 12 mesi", "ultimi 2 anni", "da sempre": accanto ai titoli delle schede e degli elenchi. */
+  /** "ultimi 12 mesi", "da inizio anno", "ultimi 2 anni", "da sempre": accanto ai titoli delle schede e degli elenchi. */
   protected periodLabel(period: InvestmentPeriod): string {
-    return period === 'YEAR'
-      ? 'ultimi 12 mesi'
-      : period === 'TWO_YEARS'
-        ? 'ultimi 2 anni'
-        : 'da sempre';
+    switch (period) {
+      case 'YEAR':
+        return 'ultimi 12 mesi';
+      case 'YEAR_TO_DATE':
+        return 'da inizio anno';
+      case 'TWO_YEARS':
+        return 'ultimi 2 anni';
+      default:
+        return 'da sempre';
+    }
   }
 
   choosePeriod(period: InvestmentPeriod): void {

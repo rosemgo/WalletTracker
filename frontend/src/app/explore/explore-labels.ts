@@ -37,7 +37,8 @@ export function barLabel(
     case 'WEEK':
       return `${from.getDate()}–${dateOf(bar.to).getDate()}`;
     case 'MONTH':
-      return period === 'YEAR'
+      // Fino a 12 barre (12 mesi, quest'anno): l'iniziale; con 6, le prime tre lettere.
+      return period === 'YEAR' || period === 'YEAR_TO_DATE'
         ? MONTHS[from.getMonth()].charAt(0).toUpperCase()
         : MONTHS[from.getMonth()].slice(0, 3);
   }

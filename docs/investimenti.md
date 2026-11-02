@@ -29,6 +29,7 @@
 | K | le barre delle rendite sono il netto |
 | L | "Da dove": il nome intero del titolo, anche con le cifre |
 | M | solo il netto: niente lordo e ritenute, anche negli elenchi |
+| N | il periodo "Quest'anno" (YTD) |
 
 ---
 
@@ -692,3 +693,17 @@ tutte le tasse.
 **I test.** `InvestmentsTest.theListsAreNetEachWithholdingGoesToTheIncomeOfTheSameSecurity` (una cedola di 520 € con
 la ritenuta di 65 € dà 455 € netti, per titolo e per tipo; una ritenuta senza rendita nella sua riga; la somma è il
 netto); `InvestmentServiceTest` (il BTP con l'ISIN: 109,37 € netti); `investments.spec.ts` (niente "Lordo").
+
+---
+
+## Parte N: il periodo "Quest'anno" (YTD)
+
+Accanto a 12 mesi, 2 anni e Tutto, il pulsante **"Quest'anno"**: da gennaio al mese di oggi (`Period.YEAR_TO_DATE`,
+`InvestmentService.firstMonth` dà gennaio dell'anno in corso). Le schede dicono "da inizio anno". La linea
+dell'investito parte, come sempre, da tutta la storia prima del periodo; le barre, le rendite e gli elenchi contano
+solo i mesi dell'anno. La scheda del Riepilogo diceva già "quest'anno" e non cambia.
+
+Lo stesso periodo c'è in Analisi (`docs/38`, aggiunta "Quest'anno").
+
+**I test.** `InvestmentServiceTest.theYearToDateStartsInJanuary` (dieci mesi a metà ottobre, i bonifici del 2025
+fuori); `investments.spec.ts` (il pulsante chiede `YEAR_TO_DATE`, "da inizio anno").

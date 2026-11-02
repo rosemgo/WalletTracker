@@ -221,3 +221,24 @@ Riepilogo.
    è di 45 giorni? E di due anni?
 3. **Investimenti.** Una pagina che mostra per mese le rendite (`INVESTMENT_INCOME`), le tasse (`INVESTMENT_TAX`) e il
    netto: puoi riusare `BarChart` con `diverging`. Quale `Metric` aggiungeresti, e dove?
+
+---
+
+## Aggiunta: "Quest'anno" (l'anno in corso, YTD)
+
+Richiesta dell'utente: poter guardare i grafici **dall'inizio dell'anno a oggi** (YTD, *year to date*).
+
+- **Il periodo nuovo** `YEAR_TO_DATE` (`ExploreDtos.Period`): le barre sono i mesi da gennaio al mese di oggi
+  (`Explorer.bars`): a novembre undici barre, a gennaio una sola. Si chiama **"Quest'anno"**, come il filtro di
+  Movimenti e la scheda "Investito" del Riepilogo; nell'indirizzo `?periodo=questanno`.
+- **"Anno" diventa "12 mesi"**: erano gli ultimi 12 mesi, non l'anno solare, e con "Quest'anno" accanto il vecchio nome
+  avrebbe confuso. Nell'indirizzo resta `?periodo=anno`, così i link salvati continuano a funzionare.
+- **Sotto le barre** l'iniziale del mese, come per i 12 mesi (`explore-labels.ts`, `barLabel`).
+- **Sul telefono** cinque pulsanti in fila non ci stavano ("Settimana" e "Quest'anno" erano tagliati): con cinque
+  scelte, sotto i 520 pixel, ogni pulsante prende la larghezza del suo testo, con un carattere un poco più piccolo
+  (`.segmented:has(> button:nth-child(5))`). Provato a 390 e a 360 pixel.
+
+Lo stesso periodo c'è nella pagina Investimenti (`docs/investimenti.md`, parte N).
+
+**I test.** `ExplorerTest.theBarsOfEachPeriod` (dieci mesi a fine ottobre, uno a gennaio); `explore-page.spec.ts`
+(il pulsante chiede `YEAR_TO_DATE` e scrive `questanno` nell'indirizzo).

@@ -13,9 +13,12 @@ public final class InvestmentDtos {
     private InvestmentDtos() {
     }
 
-    /** Quanto indietro guardare: 12 mesi, 24 mesi, tutta la storia (al massimo 10 anni). */
+    /**
+     * Quanto indietro guardare: 12 mesi, l'anno in corso (da gennaio a oggi), 24 mesi, tutta la storia (al massimo 10
+     * anni).
+     */
     public enum Period {
-        YEAR, TWO_YEARS, ALL
+        YEAR, YEAR_TO_DATE, TWO_YEARS, ALL
     }
 
     /**

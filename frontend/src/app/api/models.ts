@@ -652,7 +652,7 @@ export interface CategoryChange {
 
 /** Analisi (docs/38): che cosa si guarda, il periodo delle barre, come raggruppare. */
 export type Metric = 'EXPENSES' | 'INCOME' | 'NET';
-export type ExplorePeriod = 'WEEK' | 'MONTH' | 'SIX_MONTHS' | 'YEAR';
+export type ExplorePeriod = 'WEEK' | 'MONTH' | 'SIX_MONTHS' | 'YEAR' | 'YEAR_TO_DATE'; // YEAR = 12 mesi; YEAR_TO_DATE = da gennaio
 export type GroupBy = 'CATEGORY' | 'MERCHANT' | 'ACCOUNT';
 
 /** Una barra del grafico: un giorno, una settimana o un mese. */
@@ -719,7 +719,7 @@ export interface CategoryOverview {
 // ---- Investimenti (docs/investimenti.md) ----
 
 /** Quanto indietro guardare: 12 mesi, 24 mesi, tutta la storia. */
-export type InvestmentPeriod = 'YEAR' | 'TWO_YEARS' | 'ALL';
+export type InvestmentPeriod = 'YEAR' | 'YEAR_TO_DATE' | 'TWO_YEARS' | 'ALL'; // YEAR = 12 mesi; YEAR_TO_DATE = da gennaio
 
 /** Un mese degli investimenti. */
 export interface InvestmentMonth {

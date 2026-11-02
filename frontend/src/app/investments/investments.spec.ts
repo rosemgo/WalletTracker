@@ -303,9 +303,14 @@ describe('Investments', () => {
         (b) => b.textContent?.trim() === label,
       ) as HTMLButtonElement;
 
+    button("Quest'anno").click();
+    await fixture.whenStable();
+    expect(button("Quest'anno").getAttribute('aria-pressed')).toBe('true');
+    expect(p.textContent).toContain('da inizio anno');
+
     button('Tutto').click();
     await fixture.whenStable();
-    expect(requests).toEqual(['YEAR', 'ALL']);
+    expect(requests).toEqual(['YEAR', 'YEAR_TO_DATE', 'ALL']);
     expect(button('Tutto').getAttribute('aria-pressed')).toBe('true');
     expect(p.textContent).toContain('da sempre');
 

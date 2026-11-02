@@ -33,7 +33,10 @@ export const PERIODS: { value: ExplorePeriod; label: string; slug: string }[] = 
   { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
   { value: 'MONTH', label: 'Mese', slug: 'mese' },
   { value: 'SIX_MONTHS', label: '6 mesi', slug: '6mesi' },
-  { value: 'YEAR', label: 'Anno', slug: 'anno' },
+  // "anno" resta nell'indirizzo per i link già salvati: sono gli ultimi 12 mesi.
+  { value: 'YEAR', label: '12 mesi', slug: 'anno' },
+  // L'anno in corso, da gennaio a oggi (YTD).
+  { value: 'YEAR_TO_DATE', label: "Quest'anno", slug: 'questanno' },
 ];
 export const GROUPINGS: { value: GroupBy; label: string; slug: string }[] = [
   { value: 'CATEGORY', label: 'Categoria', slug: 'categoria' },
@@ -51,7 +54,8 @@ interface Row {
 }
 
 /**
- * Analisi (docs/38): l'esploratore. Che cosa (spese, entrate, netto) × periodo (settimana, mese, 6 mesi, anno) ×
+ * Analisi (docs/38): l'esploratore. Che cosa (spese, entrate, netto) × periodo (settimana, mese, 6 mesi, 12 mesi,
+ * quest'anno) ×
  * raggruppamento (categoria, esercente, conto). Si tocca una barra per guardare quel periodo, una categoria per
  * guardare solo lei (con i suoi movimenti, giorno per giorno). Le scelte stanno nell'indirizzo: ricaricando la pagina
  * o tornando indietro si ritrova la stessa vista.

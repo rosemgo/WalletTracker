@@ -2654,6 +2654,21 @@ button.choice .check {
   font-weight: 550;
 }
 
+/* Con cinque scelte (Analisi: settimana ... quest'anno), sul telefono le etichette non ci starebbero: ogni pulsante
+   prende la larghezza del suo testo, con un carattere un poco più piccolo. */
+@media (max-width: 520px) {
+  .segmented:has(> button:nth-child(5)) {
+    grid-auto-columns: auto;
+    gap: 2px;
+  }
+
+  .segmented:has(> button:nth-child(5)) button {
+    padding: 0 4px;
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+}
+
 @media (hover: hover) {
   .segmented button:not(:disabled):hover {
     background: transparent;

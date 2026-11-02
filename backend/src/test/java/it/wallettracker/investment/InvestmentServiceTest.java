@@ -237,6 +237,17 @@ class InvestmentServiceTest {
     }
 
     @Test
+    void theYearToDateStartsInJanuary() {
+        Overview o = investmentService.overview(Period.YEAR_TO_DATE, null, TODAY);
+
+        // Da gennaio a ottobre 2026: dieci mesi; l'investito di prima (nessuno) e i bonifici del 2025 restano fuori.
+        assertThat(o.from()).isEqualTo(YearMonth.of(2026, 1));
+        assertThat(o.months()).hasSize(10);
+        assertThat(o.transferredInPeriod()).isEqualByComparingTo("2900");
+        assertThat(mvc.get().uri("/api/investments?period=YEAR_TO_DATE")).hasStatusOk();
+    }
+
+    @Test
     void theApiAnswersAndRejectsWrongRequests() {
         assertThat(mvc.get().uri("/api/investments?period=TWO_YEARS"))
                 .hasStatusOk()

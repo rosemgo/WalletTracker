@@ -173,10 +173,14 @@ public class InvestmentService {
                 security != null ? security : t.getAccount().label());
     }
 
-    /** Il primo mese del grafico: 12 o 24 mesi fa, oppure il mese del primo movimento (almeno 12, al massimo 120). */
+    /**
+     * Il primo mese del grafico: 12 o 24 mesi fa, gennaio dell'anno in corso, oppure il mese del primo movimento (almeno
+     * 12, al massimo 120).
+     */
     static YearMonth firstMonth(Period period, YearMonth current, List<Movement> movements) {
         return switch (period) {
             case YEAR -> current.minusMonths(11);
+            case YEAR_TO_DATE -> YearMonth.of(current.getYear(), 1);
             case TWO_YEARS -> current.minusMonths(23);
             case ALL -> {
                 YearMonth oldest = movements.stream()

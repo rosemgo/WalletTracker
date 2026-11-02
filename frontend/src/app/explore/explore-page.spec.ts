@@ -186,6 +186,14 @@ describe('ExplorePage', () => {
     button('Entrate').click();
     await fixture.whenStable();
     expect(seriesQueries.at(-1)).toMatchObject({ metric: 'INCOME' });
+
+    // L'anno in corso (YTD): da gennaio a oggi; nell'indirizzo "questanno".
+    button("Quest'anno").click();
+    await fixture.whenStable();
+    expect(seriesQueries.at(-1)).toMatchObject({ period: 'YEAR_TO_DATE' });
+    expect(navigations.at(-1)).toMatchObject({ periodo: 'questanno' });
+    // "Anno" ora si chiama "12 mesi": sono gli ultimi 12, non l'anno solare.
+    expect(button('12 mesi')).toBeTruthy();
   });
 
   it('the net shows income and expenses in two lists, with bars up and down', async () => {
