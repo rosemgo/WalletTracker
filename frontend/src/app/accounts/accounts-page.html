@@ -94,10 +94,9 @@
                     <strong>{{ c.amount | money: account.currency }}</strong>
                     <span class="secondary">al {{ c.date | date: 'd MMM y' }} · dalla banca</span>
                   </div>
-                } @else if (account.lastSyncAt) {
-                  <span class="secondary">la banca non dà il plafond</span>
                 } @else {
-                  <span class="secondary">al prossimo aggiornamento</span>
+                  <!-- Non ancora letto (dopo un aggiornamento dell'app), o la banca non lo dà: si legge con "Aggiorna ora". -->
+                  <span class="secondary">plafond non ancora letto: premi «Aggiorna ora»</span>
                 }
               } @else if (editingBalance() === account.id) {
                 <app-balance-form

@@ -198,7 +198,7 @@ describe('AccountsPage', () => {
     );
     expect(text(cells[0])).not.toContain('saldo');
     expect(cells[0].querySelector('button')).toBeNull();
-    expect(text(cells[1])).toContain('la banca non dà il plafond');
+    expect(text(cells[1])).toContain('plafond non ancora letto: premi «Aggiorna ora»');
     expect(cells[1].querySelector('button')).toBeNull();
   });
 

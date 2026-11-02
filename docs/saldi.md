@@ -383,3 +383,9 @@ una carta non arriva mai alla scelta del saldo.
 nessun saldo; il plafond salvato; in background, lo stesso giorno, non si rilegge);
 `AccountBalanceTest.aCreditCardShowsTheAvailableCredit` (e il 409); `accounts-page.spec.ts` (solo il plafond, nessun
 pulsante). Nel browser, telefono e PC: la carta con il solo plafond; l'API rifiuta un saldo scritto a mano.
+
+**Trovato aggiornando l'app.** Subito dopo l'aggiornamento la carta diceva "la banca non dà il plafond": non era vero,
+il plafond non era ancora stato **letto** (nessuna sincronizzazione dopo l'aggiornamento: "Ultimo aggiornamento" era
+ancora quello di prima). Prima la versione precedente mostrava il vecchio saldo salvato, 2.500 €, e sembrava
+funzionare. La scritta ora dice "plafond non ancora letto: premi «Aggiorna ora»", vera in tutti e due i casi: se la
+banca il plafond non lo dà, resta così anche dopo.
