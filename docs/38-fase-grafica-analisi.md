@@ -248,3 +248,23 @@ Quest'anno**. Qui non serve cambiare l'API: dà già i 12 mesi che finiscono con
 quell'anno ci sono sempre tutti. Il frontend tiene solo quelli dello stesso anno (`category-page.ts`, `chartMonths`).
 Il titolo dice "Quest'anno" per l'anno in corso e "Gennaio–ottobre 2025" per un mese di un anno passato. Test:
 `category-page.spec.ts` (12 barre, poi 10 da gennaio a ottobre).
+
+---
+
+## Aggiunta: niente riquadro bianco dopo aver toccato una barra
+
+**Il difetto, visto dall'utente sul telefono.** Toccando una barra compariva un riquadro bianco arrotondato attorno a
+lei, alto quanto il grafico.
+
+**Perché.** Ogni barra ha un'area toccabile (`rect.hit`) con `tabindex="0"`, per poterla scegliere anche con la
+tastiera. Dopo un tocco l'area ha il focus; lo stile toglieva il contorno solo per il focus della tastiera
+(`:focus-visible`, dove disegna un bordo dell'accento), e per il focus dopo un tocco restava il contorno del browser
+(`outline: auto`): il riquadro bianco.
+
+**La correzione.** `.bar-chart .hit:focus { outline: none; }`: dopo un tocco niente contorno (la barra scelta si vede
+già, accesa); con la tastiera il bordo dell'accento resta. Vale per tutti i grafici a barre (Analisi, una categoria,
+Investimenti). I grafici a linea (Riepilogo, Investimenti) non avevano il difetto.
+
+**La prova.** Con Playwright e un telefono simulato (Pixel 7, tocchi veri): prima, dopo il tocco, `outline: auto`
+e il riquadro nella cattura; dopo, `outline: none` e nessun riquadro; con il tasto Tab la barra ha ancora il bordo.
+È solo CSS: i test dei componenti (jsdom) non disegnano la pagina.

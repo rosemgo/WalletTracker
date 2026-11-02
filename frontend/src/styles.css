@@ -2839,6 +2839,12 @@ button.chip-button {
   cursor: pointer;
 }
 
+/* Dopo un tocco la barra ha il focus, e il browser le disegnava il suo contorno (un riquadro bianco attorno alla
+   barra, sul telefono): niente contorno. Con la tastiera (:focus-visible) c'è il bordo dell'accento, qui sotto. */
+.bar-chart .hit:focus {
+  outline: none;
+}
+
 .bar-chart .hit:focus-visible {
   outline: none;
   stroke: var(--acc);
