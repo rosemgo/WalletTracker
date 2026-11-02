@@ -193,6 +193,48 @@ public final class Investments {
         return groupBy(movements, from, to, m -> m.type() == TransactionType.INVESTMENT_INCOME, name, missing, true);
     }
 
+    /** La riga delle ritenute che non si sa a quale rendita togliere. */
+    static final String UNMATCHED_WITHHOLDING = "Ritenute non abbinate a una rendita";
+
+    /**
+     * Le rendite NETTE del periodo raggruppate per tipo ({@code byType}) o per titolo (docs/investimenti.md, parte M):
+     * ogni ritenuta si toglie dalla rendita dello stesso titolo ("Rit.ced … ROMANIA-7OT45 6,5%" da "Ced.su …
+     * ROMANIA-7OT45 6,5%", stesso {@link #securityName}). Una ritenuta senza la sua rendita nel periodo va in una riga a
+     * parte, così la somma dei gruppi è sempre il netto. I movimenti contati sono le rendite.
+     */
+    public static List<Group> netIncomeBy(List<Movement> movements, LocalDate from, LocalDate to, boolean byType) {
+        Map<String, String> typeOfSource = new LinkedHashMap<>();
+        Map<String, BigDecimal> amounts = new LinkedHashMap<>();
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        List<Movement> withholdings = new ArrayList<>();
+        for (Movement m : movements) {
+            if (m.date().isBefore(from) || m.date().isAfter(to)) {
+                continue;
+            }
+            if (m.type() == TransactionType.INVESTMENT_INCOME) {
+                String type = m.category() == null ? "Altre rendite" : m.category();
+                if (m.source() != null) {
+                    typeOfSource.putIfAbsent(m.source(), type);
+                }
+                String key = byType ? type : (m.source() == null ? "Senza nome del titolo" : m.source());
+                amounts.merge(key, m.amount(), BigDecimal::add);
+                counts.merge(key, 1, Integer::sum);
+            } else if (isWithholding(m)) {
+                withholdings.add(m);
+            }
+        }
+        for (Movement m : withholdings) {
+            String type = m.source() == null ? null : typeOfSource.get(m.source());
+            String key = type == null ? UNMATCHED_WITHHOLDING : (byType ? type : m.source());
+            amounts.merge(key, m.amount(), BigDecimal::add);
+            counts.merge(key, type == null ? 1 : 0, Integer::sum);
+        }
+        return amounts.entrySet().stream()
+                .map(e -> new Group(e.getKey(), e.getValue(), counts.get(e.getKey())))
+                .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(Group::name))
+                .toList();
+    }
+
     /** Le altre tasse del periodo (bollo, capital gain...) per categoria, dalla più pesante. */
     public static List<Group> otherTaxesBy(List<Movement> movements, LocalDate from, LocalDate to) {
         return groupBy(movements, from, to, m -> otherTaxes(m).signum() != 0, Movement::category,

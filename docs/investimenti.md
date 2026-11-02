@@ -28,6 +28,7 @@
 | J | barre che dicono le cifre; rendite lorde, ritenute e nette; i nomi dei titoli in "Da dove" |
 | K | le barre delle rendite sono il netto |
 | L | "Da dove": il nome intero del titolo, anche con le cifre |
+| M | solo il netto: niente lordo e ritenute, anche negli elenchi |
 
 ---
 
@@ -659,3 +660,35 @@ Una parola che mescola lettere e cifre è un codice, e resta maiuscola: "ROMANIA
 sopra); `InvestmentServiceTest.fromWhereUsesTheWholeNameOfTheBondOrTheAccount` (il bond rumeno, e due interessi di
 Trade Republic sotto il nome del conto); `readable.spec.ts`. Nel browser, con dati inventati: "Romania-7OT45 6,5%",
 "IT0005436693", "BTP Italia", "Trade Republic · Conto titoli · 2 movimenti".
+
+---
+
+## Parte M: solo il netto, anche negli elenchi
+
+**Il problema.** Le cifre "Lordo" e "Ritenute" sopra il grafico mescolavano due banche diverse. Le ritenute erano solo
+quelle registrate come movimento a parte (Fineco); per Trade Republic, che accredita già il netto, non c'era niente da
+sommare, e il suo netto finiva nel "Lordo". Calcolare le ritenute mancanti con una percentuale darebbe un numero
+inventato: l'aliquota cambia (26%, 12,5% sui titoli di Stato, le ritenute dei Paesi esteri sui dividendi...).
+
+Il CSV di Trade Republic una colonna `tax` ce l'ha (`docs/31`, parte B2), ma usarla vorrebbe dire dover caricare il file
+solo per le tasse, anche il giorno in cui Trade Republic manderà i movimenti completi con Enable Banking (che dà
+l'importo accreditato, non la ritenuta). Non ne vale la pena.
+
+**La scelta: il netto, l'unico dato certo per tutte le banche.**
+
+- in grande il netto del periodo, "quello che è arrivato sul conto"; le cifre "Lordo" e "Ritenute" non ci sono più;
+- le barre erano già nette (parte K);
+- **anche "Per tipo" e "Da dove" sono netti** (`Investments.netIncomeBy`): ogni ritenuta si toglie dalla rendita dello
+  stesso titolo, riconosciuto dal nome ("Rit.ced 16.000,000 ROMANIA-7OT45 6,5%" e "Ced.su 16.000,000 ROMANIA-7OT45
+  6,5%" danno lo stesso `securityName`). Per tipo, la ritenuta va nel tipo della sua rendita (Cedole, Dividendi). Una
+  ritenuta senza la sua rendita nel periodo va nella riga "Ritenute non abbinate a una rendita": così la somma degli
+  elenchi è sempre il netto in grande. Il numero dei movimenti conta le rendite, non le ritenute.
+
+Le altre tasse (bollo, capital gain) restano a parte, come prima.
+
+L'API dà ancora `incomeInPeriod` (lordo) e `withholdingInPeriod`: servono al netto, e il Riepilogo usa le rendite più
+tutte le tasse.
+
+**I test.** `InvestmentsTest.theListsAreNetEachWithholdingGoesToTheIncomeOfTheSameSecurity` (una cedola di 520 € con
+la ritenuta di 65 € dà 455 € netti, per titolo e per tipo; una ritenuta senza rendita nella sua riga; la somma è il
+netto); `InvestmentServiceTest` (il BTP con l'ISIN: 109,37 € netti); `investments.spec.ts` (niente "Lordo").

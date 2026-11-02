@@ -120,8 +120,8 @@ public class InvestmentService {
                 Investments.sum(movements, Investments::withholding, from, today),
                 Investments.sum(movements, Investments::otherTaxes, from, today),
                 Investments.months(movements, first, current),
-                Investments.incomeBy(movements, from, today, Movement::category, "Altre rendite"),
-                Investments.incomeBy(movements, from, today, Movement::source, "Senza nome del titolo"),
+                Investments.netIncomeBy(movements, from, today, true),
+                Investments.netIncomeBy(movements, from, today, false),
                 Investments.otherTaxesBy(movements, from, today),
                 trades, transfers, onlyTransfers(transactions), cash(chosen));
     }

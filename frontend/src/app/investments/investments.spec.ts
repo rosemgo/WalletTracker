@@ -183,11 +183,11 @@ describe('Investments', () => {
     expect(bars[7].classList.contains('on')).toBe(true);
     expect(text).toMatch(/Cedole\s*1 movimento\s*30,00\s€/);
     expect(text).toContain('Ced.su BTP Italia'); // leggibile, non tutto maiuscolo
-    // Netto in grande, poi lordo e ritenute; il bollo a parte, non tolto dal netto.
-    expect(incomeCard.querySelector('.mid-figure')?.textContent).toMatch(/39\s€/); // 42,50 − 3,90
-    expect(incomeCard.textContent?.replace(/\s+/g, ' ')).toMatch(
-      /Lordo\s*43\s€\s*Ritenute\s*-4\s€/,
-    );
+    // Solo il netto (42,50 − 3,90): niente lordo e ritenute, che con Trade Republic non si
+    // conoscono. Il bollo a parte, non tolto dal netto.
+    expect(incomeCard.querySelector('.mid-figure')?.textContent).toMatch(/39\s€/);
+    expect(incomeCard.textContent).not.toContain('Lordo');
+    expect(incomeCard.textContent).toContain('netti: quello che è arrivato sul conto');
     expect(text).toMatch(
       /Altre tasse sugli investimenti\s*Imposta di bollo\s*1 movimento\s*-2,00\s€/,
     );

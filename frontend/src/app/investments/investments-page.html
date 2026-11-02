@@ -132,19 +132,7 @@
             <span class="mid-figure">{{
               netIncome() | money: d.currency : 'symbol' : '1.0-0'
             }}</span>
-            <span class="secondary">netti, dopo le ritenute</span>
-            <div class="trade-figures">
-              <div>
-                <span class="secondary">Lordo</span>
-                <strong>{{ d.incomeInPeriod | money: d.currency : 'symbol' : '1.0-0' }}</strong>
-              </div>
-              <div>
-                <span class="secondary">Ritenute</span>
-                <strong>{{
-                  d.withholdingInPeriod | money: d.currency : 'symbol' : '1.0-0'
-                }}</strong>
-              </div>
-            </div>
+            <span class="secondary">netti: quello che è arrivato sul conto</span>
             <p class="bar-pick">{{ incomeBarText() }}</p>
             <app-bar-chart
               [values]="income()"
@@ -158,10 +146,10 @@
               (picked)="incomePick.set($event)"
             />
             <p class="secondary note-value">
-              Le barre sono le rendite nette di ogni mese: tocca una barra per la cifra. Alcune
+              Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese. Alcune
               banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a
-              parte, categoria "Ritenute", che qui si toglie; altre (come Trade Republic)
-              accreditano già il netto. Lordo e ritenute del periodo sono le cifre qui sopra.
+              parte, categoria "Ritenute", che qui si toglie dalla rendita dello stesso titolo;
+              altre (come Trade Republic) accreditano già il netto.
             </p>
             @if (d.incomeByType.length > 0) {
               <h3>Per tipo</h3>

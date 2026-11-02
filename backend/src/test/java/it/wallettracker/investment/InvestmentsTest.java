@@ -154,4 +154,32 @@ class InvestmentsTest {
         assertThat(Investments.securityName("Ced.su 50.000")).isNull();
         assertThat(Investments.securityName(null)).isNull();
     }
+
+    @Test
+    void theListsAreNetEachWithholdingGoesToTheIncomeOfTheSameSecurity() {
+        String bond = "ROMANIA-7OT45 6,5%";
+        List<Movement> movements = List.of(
+                m("2026-10-20", "520", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
+                m("2026-10-20", "-65", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                m("2026-05-20", "247.91", TransactionType.INVESTMENT_INCOME, true, "Dividendi", "Intesa Sanpaolo"),
+                m("2026-06-01", "-4", TransactionType.INVESTMENT_TAX, false, "Ritenute", "Titolo sconosciuto"),
+                m("2026-07-01", "-2", TransactionType.INVESTMENT_TAX, true, "Imposta di bollo", null)); // non c'entra
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
+
+        List<Group> bySource = Investments.netIncomeBy(movements, from, to, false);
+        assertThat(bySource).extracting(Group::name)
+                .containsExactly(bond, "Intesa Sanpaolo", Investments.UNMATCHED_WITHHOLDING);
+        assertThat(bySource.get(0).amount()).isEqualByComparingTo("455"); // 520 − 65
+        assertThat(bySource.get(0).movements()).isEqualTo(1); // la ritenuta non è una rendita in più
+        assertThat(bySource.get(2).amount()).isEqualByComparingTo("-4");
+
+        List<Group> byType = Investments.netIncomeBy(movements, from, to, true);
+        assertThat(byType).extracting(Group::name)
+                .containsExactly("Cedole", "Dividendi", Investments.UNMATCHED_WITHHOLDING);
+        assertThat(byType.get(0).amount()).isEqualByComparingTo("455");
+        // La somma dei gruppi è il netto: 520 − 65 + 247,91 − 4.
+        assertThat(byType.stream().map(Group::amount).reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("698.91");
+    }
 }

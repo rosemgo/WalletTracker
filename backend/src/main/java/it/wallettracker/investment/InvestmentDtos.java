@@ -54,8 +54,8 @@ public final class InvestmentDtos {
      * @param withholdingInPeriod le ritenute sulle rendite nel periodo: rendite più ritenute danno il netto
      * @param otherTaxesInPeriod  le altre tasse sugli investimenti nel periodo (bollo, capital gain...)
      * @param otherTaxesByType    le altre tasse del periodo per categoria
-     * @param incomeByType        le rendite del periodo per categoria (Cedole, Dividendi, Interessi)
-     * @param incomeBySource      le rendite del periodo per titolo o esercente
+     * @param incomeByType        le rendite nette del periodo per categoria (Cedole, Dividendi, Interessi)
+     * @param incomeBySource      le rendite nette del periodo per titolo (o per conto, se il titolo non ha nome)
      * @param trades              gli acquisti e le vendite del periodo, dal più recente
      * @param transfers           i bonifici del periodo che fanno le barre (il lato dei conti di tutti i giorni), dal più
      *                            recente

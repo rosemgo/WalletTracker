@@ -212,8 +212,9 @@ class InvestmentServiceTest {
         assertThat(o.otherTaxesInPeriod()).isEqualByComparingTo("-2");
         assertThat(o.months().getLast().income()).isEqualByComparingTo("125");
         assertThat(o.months().getLast().withholding()).isEqualByComparingTo("-15.63");
-        // Il BTP è indicato solo dall'ISIN: è il suo nome in "Da dove", non "Ced.su".
-        assertThat(o.incomeBySource()).extracting(Group::name).contains("IT0005436693");
+        // Il BTP è indicato solo dall'ISIN: è il suo nome in "Da dove", non "Ced.su"; e la cifra è netta.
+        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("IT0005436693")).singleElement()
+                .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("109.37"));
     }
 
     @Test
