@@ -23,7 +23,7 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   INVESTMENT_WITHDRAWAL: 'Prelievo investimenti',
   SECURITIES_BUY: 'Acquisto titoli',
   SECURITIES_SELL: 'Vendita titoli',
-  INVESTMENT_INCOME: 'Cedole e dividendi',
+  INVESTMENT_INCOME: 'Cedole, dividendi e interessi',
   INVESTMENT_TAX: 'Tasse investimenti',
   IGNORED: 'Ignorato',
   TO_REVIEW: 'Da verificare',

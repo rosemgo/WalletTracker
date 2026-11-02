@@ -38,7 +38,7 @@ parte".
 | Versamento investimenti | il bonifico mensile verso il conto del PAC, o verso il broker |
 | Prelievo investimenti | soldi che tornano dal conto investimenti al conto corrente |
 | Acquisto / Vendita titoli | un ETF comprato su Trade Republic; un BTP comprato dal dossier titoli della banca |
-| Cedole e dividendi (`INVESTMENT_INCOME`) | categorie Cedole, Dividendi, Interessi; le regole per ING ("Ced.su", "Div.su") e Trade Republic ci sono già |
+| Cedole, dividendi e interessi (`INVESTMENT_INCOME`) | categorie Cedole, Dividendi, Interessi; le regole per ING ("Ced.su", "Div.su") e Trade Republic ci sono già |
 | Tasse investimenti | ritenute, imposta di bollo |
 
 Perché un bonifico verso il conto del PAC conti, deve avere il tipo **Versamento investimenti**. Tre modi:

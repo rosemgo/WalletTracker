@@ -118,7 +118,7 @@ describe('RulesPage', () => {
 
     expect(text).toContain('inizia con «Div.su»');
     expect(text).toContain('solo entrate');
-    expect(text).toContain('Cedole e dividendi');
+    expect(text).toContain('Cedole, dividendi e interessi');
     expect(text).toContain('regola di partenza');
   });
 
