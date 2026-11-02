@@ -81,4 +81,19 @@ public final class BankBalance {
         }
         return usable.stream().max(Comparator.comparing(Chosen::date));
     }
+
+    /**
+     * Il saldo disponibile più recente, per il plafond che resta su una carta di credito (docs/saldi.md, parte I); a
+     * parità di giorno l'ordine di {@link #AVAILABLE} (in giornata prima di fine giornata).
+     */
+    public static Optional<Chosen> available(List<Balance> balances, String currency, LocalDate today) {
+        return balances == null ? Optional.empty() : choose(onlyAvailable(balances), currency, today, true);
+    }
+
+    private static List<Balance> onlyAvailable(List<Balance> balances) {
+        return balances.stream()
+                .filter(b -> b != null && b.balanceType() != null
+                        && AVAILABLE.contains(b.balanceType().toUpperCase(Locale.ROOT)))
+                .toList();
+    }
 }

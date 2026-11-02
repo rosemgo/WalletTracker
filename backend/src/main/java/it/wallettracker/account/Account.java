@@ -107,6 +107,13 @@ public class Account {
     @Column(name = "balance_updated_at")
     private Instant balanceUpdatedAt;
 
+    /** Per una carta di credito (V35): il plafond che resta, dato dalla banca; null se non si sa. */
+    @Column(name = "available_credit")
+    private BigDecimal availableCredit;
+
+    @Column(name = "available_credit_date")
+    private LocalDate availableCreditDate;
+
     protected Account() {
     }
 
@@ -239,6 +246,14 @@ public class Account {
         this.balanceDate = balance == null ? null : date;
         this.balanceSource = balance == null ? null : source;
         this.balanceUpdatedAt = balance == null ? null : at;
+    }
+
+    public BigDecimal getAvailableCredit() {
+        return availableCredit;
+    }
+
+    public LocalDate getAvailableCreditDate() {
+        return availableCreditDate;
     }
 
     public BigDecimal getBalance() {

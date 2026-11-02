@@ -41,6 +41,13 @@ export interface Account {
   lastSyncAt: string | null;
   lastSyncError: string | null;
   balance: CurrentBalance | null; // il saldo (docs/saldi.md); null se la banca non lo dà e non l'hai scritto
+  availableCredit: AvailableCredit | null; // solo per una carta di credito: il plafond che resta (docs/saldi.md, parte I)
+}
+
+/** Il plafond che resta su una carta di credito, dato dalla banca. */
+export interface AvailableCredit {
+  amount: number;
+  date: string; // "2026-11-02"
 }
 
 /** Da dove viene un saldo: dalla banca, o scritto da te per un conto manuale. */

@@ -24,6 +24,7 @@ const CARD: Account = {
   lastSyncAt: null,
   lastSyncError: 'HTTP 429 troppe letture',
   balance: null,
+  availableCredit: null,
 };
 
 /** Un conto manuale: i movimenti arrivano da file CSV. */
@@ -41,6 +42,7 @@ const BROKER: Account = {
   lastSyncAt: null,
   lastSyncError: null,
   balance: null,
+  availableCredit: null,
 };
 
 /**
@@ -168,6 +170,31 @@ describe('AccountsPage', () => {
     expect(balances).toEqual([[8, 350]]);
     expect(text(page.querySelectorAll('td.balance-cell')[1] as HTMLElement)).toMatch(
       /350,00\s€ al 28 ott 2026 · scritto da te/,
+    );
+  });
+
+  it('a credit card shows the available credit, apart from the balance', async () => {
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    accounts = [
+      {
+        ...CARD,
+        role: 'CREDIT_CARD',
+        lastSyncAt: '2026-11-02T16:57:00Z',
+        availableCredit: { amount: 2500, date: '2026-11-02' },
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const cell = (fixture.nativeElement as HTMLElement).querySelector(
+      'td.balance-cell',
+    ) as HTMLElement;
+    const text = cell.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    // Il saldo non c'è (la banca dà solo il disponibile); il plafond sì, con il suo nome.
+    expect(text).toContain('la banca non lo dà');
+    expect(cell.querySelector('.available-credit')?.textContent?.replace(/\s+/g, ' ')).toMatch(
+      /Plafond disponibile\s*2\.500,00\s€\s*al 2 nov 2026 · dalla banca/,
     );
   });
 

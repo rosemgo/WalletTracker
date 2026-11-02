@@ -14,6 +14,7 @@ vero dei conti, e fino a qui l'app non lo salvava.
 | F | esercizi guidati |
 | G | aggiunta: il saldo a mano anche per i conti collegati |
 | H | aggiunta: la carta di credito non usa il saldo disponibile |
+| I | aggiunta: il plafond disponibile della carta, a parte (`V35`) |
 
 ---
 
@@ -323,3 +324,28 @@ senza fido coincide con il saldo.
 
 **I test.** `BankBalanceTest.forACreditCardTheAvailableBalanceIsNeverUsed`,
 `SyncServiceTest.aCreditCardDoesNotShowItsAvailableCreditAsBalance`.
+
+---
+
+## Parte I: il plafond disponibile della carta, a parte (`V35`)
+
+Con la parte H il disponibile di una carta non è più il suo saldo. Ma è un'informazione utile: quanto si può ancora
+spendere. Allora si salva **a parte**, con il suo nome.
+
+- `V35__plafond_carta.sql`: le colonne `available_credit` e `available_credit_date` di `account`;
+- `BankBalance.available`: tra i saldi della banca, il disponibile più recente (`ITAV`, `CLAV`, `FWAV`);
+- `SyncService.refreshBalance`: per un conto con il ruolo **Carta di credito**, a ogni lettura del saldo salva anche il
+  plafond (`AccountRepository.recordAvailableCredit`); se la banca non lo dà più, si toglie;
+- `AccountDto.availableCredit`: c'è solo per le carte di credito (un conto corrente con un fido non lo mostra: il suo
+  disponibile resta, se serve, l'ultima scelta per il saldo).
+
+Nella pagina Conti, sotto il saldo della carta, separato da una riga:
+
+> **Plafond disponibile** · 2.500,00 € · al 2 nov 2026 · dalla banca
+
+Il saldo della carta resta quello che è: "la banca non lo dà" se manca, e si può scrivere a mano (parte G).
+
+**I test.** `BankBalanceTest.theAvailableCreditOfACardIsTheMostRecentAvailableBalance`;
+`SyncServiceTest.aCreditCardDoesNotShowItsAvailableCreditAsBalance` (il plafond salvato a parte, e un conto che non è
+una carta che non lo ha); `AccountBalanceTest.aCreditCardShowsTheAvailableCredit` (nell'API solo con il ruolo Carta di
+credito); `accounts-page.spec.ts`. Nel browser, telefono e PC: la riga del plafond sotto "la banca non lo dà".

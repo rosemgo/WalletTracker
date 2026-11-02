@@ -109,6 +109,14 @@
                 } @else {
                   <span class="secondary">al prossimo aggiornamento</span>
                 }
+                @if (account.availableCredit; as c) {
+                  <!-- Per una carta: quanto si può ancora spendere, non un saldo (docs/saldi.md, parte I). -->
+                  <div class="available-credit">
+                    <span class="secondary">Plafond disponibile</span>
+                    <strong>{{ c.amount | money: account.currency }}</strong>
+                    <span class="secondary">al {{ c.date | date: 'd MMM y' }} · dalla banca</span>
+                  </div>
+                }
                 @if (account.balance?.source !== 'BANK') {
                   <!-- Anche un conto collegato, se la banca non dà il saldo (docs/saldi.md, parte E). -->
                   <div>

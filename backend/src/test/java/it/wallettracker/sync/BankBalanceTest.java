@@ -75,4 +75,15 @@ class BankBalanceTest {
         // Per gli altri conti il disponibile resta l'ultima scelta (Revolut ne dà solo uno).
         assertThat(BankBalance.choose(card, "EUR", TODAY)).isPresent();
     }
+
+    @Test
+    void theAvailableCreditOfACardIsTheMostRecentAvailableBalance() {
+        assertThat(BankBalance.available(List.of(
+                b("CLBD", "-312.40", "EUR", "2026-11-02"),
+                b("CLAV", "2100.00", "EUR", "2026-11-01"),
+                b("ITAV", "2187.60", "EUR", "2026-11-02")), "EUR", TODAY))
+                .hasValueSatisfying(c -> assertThat(c.amount()).isEqualByComparingTo("2187.60"));
+        assertThat(BankBalance.available(List.of(b("CLBD", "-312.40", "EUR", null)), "EUR", TODAY)).isEmpty();
+        assertThat(BankBalance.available(null, "EUR", TODAY)).isEmpty();
+    }
 }

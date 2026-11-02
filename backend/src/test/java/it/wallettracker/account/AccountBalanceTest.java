@@ -137,6 +137,25 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aCreditCardShowsTheAvailableCredit() {
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account card = accountRepository.save(new Account(connection, "k-3", "u-3", null, "Carta", "EUR"));
+        accountRepository.recordAvailableCredit(card.getId(), new BigDecimal("2187.60"), LocalDate.of(2026, 11, 2));
+
+        // Finché il conto non ha il ruolo Carta di credito, il plafond non si mostra.
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].availableCredit").isNull();
+        Account reloaded = accountRepository.findById(card.getId()).orElseThrow();
+        reloaded.changeRole(AccountRole.CREDIT_CARD);
+        accountRepository.save(reloaded);
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].availableCredit.amount").isEqualTo(2187.6);
+            json.assertThat().extractingPath("$[0].availableCredit.date").isEqualTo("2026-11-02");
+        });
+    }
+
+    @Test
     void wrongBalancesAreRejected() {
         Account wallet = accountRepository.save(Account.manual("Tinaba", "Wallet", null, "EUR",
                 AccountRole.INVESTMENT));

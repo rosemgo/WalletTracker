@@ -3036,6 +3036,15 @@ a.button.primary {
   text-align: left;
 }
 
+/* Il plafond disponibile di una carta, sotto il saldo: un'informazione diversa, con il suo nome. */
+.available-credit {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
 /* Con il modulo aperto, la colonna del saldo si allarga quanto serve. */
 .balance-cell:has(app-balance-form) {
   min-width: 260px;

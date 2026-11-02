@@ -4,12 +4,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
 import it.wallettracker.account.BalanceSource;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
@@ -220,10 +222,17 @@ public class SyncService {
         }
         try {
             LocalDate today = LocalDate.ofInstant(now, ZoneId.systemDefault());
-            // Per una carta di credito il "disponibile" è il plafond che resta, non un saldo: non si usa.
-            boolean withAvailable = account.getRole() != AccountRole.CREDIT_CARD;
-            Optional<BankBalance.Chosen> chosen = BankBalance.choose(client.getBalances(account.getProviderUid(), psu),
-                    account.getCurrency(), today, withAvailable);
+            // Per una carta di credito il "disponibile" è il plafond che resta, non un saldo: non si usa come saldo,
+            // ma si salva a parte, con il suo nome (parte I).
+            boolean card = account.getRole() == AccountRole.CREDIT_CARD;
+            List<Balance> balances = client.getBalances(account.getProviderUid(), psu);
+            if (card) {
+                Optional<BankBalance.Chosen> available = BankBalance.available(balances, account.getCurrency(), today);
+                accountRepository.recordAvailableCredit(account.getId(),
+                        available.map(BankBalance.Chosen::amount).orElse(null),
+                        available.map(BankBalance.Chosen::date).orElse(null));
+            }
+            Optional<BankBalance.Chosen> chosen = BankBalance.choose(balances, account.getCurrency(), today, !card);
             if (chosen.isPresent()) {
                 accountRepository.recordBalance(account.getId(), chosen.get().amount(), chosen.get().date(),
                         BalanceSource.BANK, now);

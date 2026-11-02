@@ -256,6 +256,17 @@ class SyncServiceTest {
         syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
 
         assertThat(reload(card).getBalance()).isNull();
+        // Il disponibile non è il saldo, ma il plafond che resta: si salva a parte (parte I).
+        assertThat(reload(card).getAvailableCredit()).isEqualByComparingTo("2500.00");
+        assertThat(reload(card).getAvailableCreditDate()).isNotNull();
+
+        // Un conto che non è una carta il plafond non lo ha.
+        Account current = account(validConnection(), "uid-d");
+        when(client.getBalances(eq("uid-d"), any())).thenReturn(List.of(
+                new Balance("Disponibile", new Amount(new BigDecimal("70.30"), "EUR"), "ITAV", null)));
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(reload(current).getAvailableCredit()).isNull();
+        assertThat(reload(current).getBalance()).isEqualByComparingTo("70.30");
     }
 
     private BankConnection validConnection() {

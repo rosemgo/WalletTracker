@@ -26,6 +26,7 @@ function account(id: number, source: Account['source'], bank: string): Account {
     lastSyncAt: null,
     lastSyncError: null,
     balance: null,
+    availableCredit: null,
   };
 }
 

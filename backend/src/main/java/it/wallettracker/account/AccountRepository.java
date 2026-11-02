@@ -63,4 +63,11 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
             """)
     void recordBalance(@Param("id") Long id, @Param("balance") BigDecimal balance, @Param("date") LocalDate date,
             @Param("source") BalanceSource source, @Param("at") Instant at);
+
+    /** Salva il plafond disponibile di una carta (V35), come {@link #recordBalance}; null lo toglie. */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Account a SET a.availableCredit = :amount, a.availableCreditDate = :date WHERE a.id = :id")
+    void recordAvailableCredit(@Param("id") Long id, @Param("amount") BigDecimal amount,
+            @Param("date") LocalDate date);
 }
