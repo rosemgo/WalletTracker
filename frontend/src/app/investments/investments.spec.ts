@@ -207,7 +207,7 @@ describe('Investments', () => {
 
     // Prima di toccare: in evidenza l'ultimo mese con un valore, e la sua cifra.
     expect(pick(transfers)).toMatch(/^ottobre 2026: 200,00\s€$/);
-    expect(pick(incomeCard)).toMatch(/^giugno 2026: lordo 12,50\s€$/);
+    expect(pick(incomeCard)).toMatch(/^giugno 2026: 12,50\s€ netti$/);
     // La linea della media: 3.100 € in 12 mesi.
     expect(transfers.querySelector('.average-label')?.textContent).toMatch(/media 258\s€ al mese/);
 
@@ -220,9 +220,8 @@ describe('Investments', () => {
     await fixture.whenStable();
 
     expect(pick(transfers)).toMatch(/^settembre 2026: -100,00\s€$/);
-    expect(pick(incomeCard)).toMatch(
-      /^aprile 2026: lordo 30,00\s€ · ritenute -3,90\s€ · netto 26,10\s€$/,
-    );
+    // Aprile: cedola lorda di 30 € con la ritenuta di 3,90 €; la barra e la cifra sono il netto.
+    expect(pick(incomeCard)).toMatch(/^aprile 2026: 26,10\s€ netti$/);
     expect(incomeCard.querySelectorAll('app-bar-chart path.bar')[5].classList.contains('on')).toBe(
       true,
     );

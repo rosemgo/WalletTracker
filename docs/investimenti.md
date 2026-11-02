@@ -26,6 +26,7 @@
 | H | aggiunta: la prova delle regole dice chi vince, e altri due ritocchi |
 | I | **due grandezze, non una**: l'investito in titoli e i bonifici verso i conti di investimento |
 | J | barre che dicono le cifre; rendite lorde, ritenute e nette; i nomi dei titoli in "Da dove" |
+| K | le barre delle rendite sono il netto |
 
 ---
 
@@ -584,3 +585,29 @@ Nel browser (telefono e PC, tema scuro), con una cedola inventata "Ced.su 50.000
 "Rit.ced" da −15,63 €, classificate dalle regole di partenza: "ottobre 2026: lordo 125,00 € · ritenute -15,63 € ·
 netto 109,37 €"; "marzo 2026: 1.200,00 €" toccando la barra dei bonifici; "IT0005436693" in "Da dove"; il bollo tra
 le altre tasse.
+
+---
+
+## Parte K: le barre delle rendite sono il netto
+
+**Il problema, trovato con i movimenti veri.** Con la parte J le barre erano le rendite **lorde**, e toccandone una si
+leggeva "lordo · ritenute · netto" solo nei mesi con una ritenuta. Ma le banche pagano in due modi:
+
+- Fineco paga il lordo e trattiene la ritenuta a parte: lì il mese mostrava lordo, ritenute e netto;
+- Trade Republic accredita già il netto: lì il mese mostrava solo "lordo", che in realtà era un netto.
+
+Due mesi uguali si leggevano in due modi diversi.
+
+**La scelta: il netto, sempre.** Ogni barra è il netto del mese, `income + withholding` (le ritenute sono negative),
+e toccandola si legge "maggio 2026: 1.233,79 € netti", per ogni mese e ogni banca. Anche la linea della media è sul
+netto. Lordo e ritenute restano, per tutto il periodo, nelle cifre sopra il grafico.
+
+Il calcolo sta tutto nel frontend (`investments-page.ts`, `income`): l'API dava già, per ogni mese, `income` e
+`withholding`. Una ritenuta pagata in un mese diverso dalla sua cedola farebbe scendere quella barra sotto lo zero:
+con Fineco non succede, perché cedola e ritenuta hanno lo stesso giorno.
+
+Gli elenchi "Per tipo" e "Da dove" restano sul lordo: sono le rendite come le ha pagate la banca, titolo per titolo.
+
+**I test.** `investments.spec.ts`: il mese in evidenza "giugno 2026: 12,50 € netti"; aprile, con una cedola di 30 € e
+la ritenuta di 3,90 €, "26,10 € netti". Nel browser: ottobre con la cedola lorda di 125 € e la ritenuta di 15,63 €,
+"109,37 € netti"; giugno e aprile la cifra accreditata.

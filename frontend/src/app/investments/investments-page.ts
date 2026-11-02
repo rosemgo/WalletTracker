@@ -89,7 +89,14 @@ export class InvestmentsPage implements OnInit {
   protected readonly transferred = computed(
     () => this.data()?.months.map((m) => m.transferred) ?? [],
   );
-  protected readonly income = computed(() => this.data()?.months.map((m) => m.income) ?? []);
+  /**
+   * Le barre delle rendite: il NETTO di ogni mese, lordo più ritenute (docs/investimenti.md, parte K). Così ogni mese
+   * si legge allo stesso modo, che la banca paghi il lordo e trattenga la ritenuta a parte (Fineco) o accrediti già il
+   * netto (Trade Republic).
+   */
+  protected readonly income = computed(
+    () => this.data()?.months.map((m) => m.income + m.withholding) ?? [],
+  );
 
   /** La barra toccata (null = nessuna: si guarda l'ultimo mese con un valore). */
   protected readonly incomePick = signal<number | null>(null);
@@ -109,20 +116,13 @@ export class InvestmentsPage implements OnInit {
     return d === null ? 0 : d.incomeInPeriod + d.withholdingInPeriod;
   });
 
-  /** "ottobre 2026: lordo 2.000 € · ritenute -400 € · netto 1.600 €", per la barra in evidenza. */
+  /** "ottobre 2026: 1.600,00 € netti", per la barra in evidenza: lo stesso per ogni mese e ogni banca. */
   protected readonly incomeBarText = computed(() => {
     const d = this.data();
     const i = this.incomeBar();
-    if (d === null || i === null || !d.months[i]) {
-      return '';
-    }
-    const m = d.months[i];
-    const parts = [`lordo ${this.euros(m.income, d.currency, 2)}`];
-    if (m.withholding !== 0) {
-      parts.push(`ritenute ${this.euros(m.withholding, d.currency, 2)}`);
-      parts.push(`netto ${this.euros(m.income + m.withholding, d.currency, 2)}`);
-    }
-    return `${this.monthNames()[i]}: ${parts.join(' · ')}`;
+    return d === null || i === null || !d.months[i]
+      ? ''
+      : `${this.monthNames()[i]}: ${this.euros(this.income()[i], d.currency, 2)} netti`;
   });
 
   /** "ottobre 2026: 1.200 €", per la barra in evidenza dei bonifici. */
@@ -210,7 +210,7 @@ export class InvestmentsPage implements OnInit {
     const d = this.data();
     return d === null
       ? ''
-      : `Cedole, dividendi e interessi, mese per mese: ${this.euros(d.incomeInPeriod, d.currency)} nel periodo`;
+      : `Cedole, dividendi e interessi netti, mese per mese: ${this.euros(this.netIncome(), d.currency)} nel periodo`;
   });
 
   ngOnInit(): void {
