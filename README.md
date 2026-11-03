@@ -121,6 +121,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 46. [Fase 4, passo 3: il PIN per aprire l'app, facoltativo dal PC (Spring Security dalle basi: filtri, sessione, CSRF, hash, blocco, codice di recupero)](docs/46-fase-4-passo-3-pin.md)
 47. [Fase 4, passo 4: Tailscale, l'app dal telefono con https vero (reti, VPN e certificati dalle basi; `tailscale serve`; più indirizzi di ritorno per Enable Banking)](docs/47-fase-4-passo-4-tailscale.md)
 48. [Fase 4, passo 5: backup e ripristino (pg_dump, cifratura con password, backup automatico ogni notte, ripristino provato davvero, spostare l'app su un altro computer)](docs/48-fase-4-passo-5-backup.md)
+49. [Il server in cloud: WalletTracker sempre acceso su Oracle Cloud "Always Free" (VM ARM gratuita, Docker, Tailscale senza porte aperte, i limiti dimezzati nel 2026, il recupero delle VM inattive, i backup fuori da Oracle)](docs/49-server-in-cloud-oracle.md)
 
 ## Piano di lavoro
 
