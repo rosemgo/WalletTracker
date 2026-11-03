@@ -2392,12 +2392,11 @@ button.icon svg {
 
 .avatar-bank {
   position: absolute;
-  right: -5px;
-  bottom: -5px;
+  right: -7px;
+  bottom: -7px;
   box-sizing: border-box;
-  width: 19px;
-  height: 19px;
-  padding: 1px;
+  width: 26px;
+  height: 26px;
   border: 2px solid var(--card);
   border-radius: 50%;
   background: #fff;
@@ -2405,10 +2404,10 @@ button.icon svg {
 }
 
 .avatar.large .avatar-bank {
-  width: 26px;
-  height: 26px;
-  right: -4px;
-  bottom: -4px;
+  width: 36px;
+  height: 36px;
+  right: -8px;
+  bottom: -8px;
 }
 
 .detail-head h1 {
