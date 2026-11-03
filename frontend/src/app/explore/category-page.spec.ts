@@ -125,7 +125,8 @@ describe('CategoryPage', () => {
       );
     routeQuery = { mese: '2026-09' };
     const page = await render();
-    expect(requested).toEqual([[1, '2026-09']]);
+    // Il mese aperto (prima, se è negli ultimi 12 mesi, anche il grafico fino a oggi).
+    expect(requested.at(-1)).toEqual([1, '2026-09']);
     expect(page.querySelector('.pace-mark')).toBeNull();
     expect(page.querySelector('.pace-fill')?.classList.contains('over')).toBe(true);
     expect(page.textContent).toMatch(/superato di 20\s€/);
@@ -236,6 +237,37 @@ describe('CategoryPage', () => {
     expect(bars().length).toBe(12);
     expect(bars()[10].classList.contains('on')).toBe(true);
     expect(bars()[11].classList.contains('on')).toBe(false);
+  });
+
+  it('opened on an earlier month, the chart still reaches the current month', async () => {
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const today = new Date();
+    const current = iso(today);
+    const previous = iso(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+    const months = Array.from({ length: 12 }, (_, i) => ({
+      month: iso(new Date(today.getFullYear(), today.getMonth() - 11 + i, 1)),
+      value: 100 + i,
+    }));
+    routeQuery = { mese: previous }; // per esempio, dal Riepilogo del mese scorso
+    answer = () =>
+      of(
+        requested.at(-1)?.[1] === previous
+          ? overview({ month: previous, day: `${previous}-28`, amount: 110, months })
+          : overview({ month: current, day: `${current}-02`, amount: 111, months }),
+      );
+    const fixture = TestBed.createComponent(CategoryPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const bars = Array.from(page.querySelectorAll('app-bar-chart path.bar'));
+
+    // Due richieste: il grafico (fino a oggi) e il mese aperto.
+    expect(requested).toEqual([
+      [1, null],
+      [1, previous],
+    ]);
+    expect(bars.length).toBe(12);
+    expect(bars[10].classList.contains('on')).toBe(true); // il mese aperto, non l'ultimo
+    expect(page.querySelector('.big-figure')?.textContent).toMatch(/110\s€/);
   });
 
   it('says when the category does not exist', async () => {

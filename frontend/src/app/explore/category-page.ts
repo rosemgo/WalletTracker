@@ -1,6 +1,7 @@
 import { DecimalPipe, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
 
 import { CategoryOverview, ExploreGroup } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -198,23 +199,31 @@ export class CategoryPage implements OnInit {
   }
 
   ngOnInit(): void {
-    const month = this.route.snapshot.queryParamMap.get('mese');
+    const param = this.route.snapshot.queryParamMap.get('mese');
+    const month = param && /^\d{4}-\d{2}$/.test(param) ? param : null;
     this.route.paramMap.subscribe((params) => {
       this.categoryId = Number(params.get('id'));
-      this.api
-        .categoryOverview(this.categoryId, month && /^\d{4}-\d{2}$/.test(month) ? month : null)
-        .subscribe({
-          next: (overview) => {
-            this.chart.set(overview);
-            this.overview.set(overview);
-          },
-          error: (response) =>
-            this.error.set(
-              response.status === 404
-                ? 'Questa categoria non esiste più.'
-                : 'Impossibile caricare la categoria: il backend è avviato?',
-            ),
-        });
+      // Il grafico arriva sempre fino al mese in corso (la richiesta senza mese), e la barra accesa è quella del mese
+      // aperto. Solo un mese più vecchio delle 12 barre ha il grafico che finisce con lui: altrimenti non ci sarebbe.
+      const chartMonth = month !== null && monthsBefore(month, currentMonth()) < 12 ? null : month;
+      const chart$ = this.api.categoryOverview(this.categoryId, chartMonth);
+      // Il mese aperto, se non è già quello del grafico (null: niente seconda richiesta).
+      const detail$ =
+        month === null || chartMonth === month || month === currentMonth()
+          ? of(null)
+          : this.api.categoryOverview(this.categoryId, month);
+      forkJoin({ chart: chart$, detail: detail$ }).subscribe({
+        next: ({ chart, detail }) => {
+          this.chart.set(chart);
+          this.overview.set(detail ?? chart);
+        },
+        error: (response) =>
+          this.error.set(
+            response.status === 404
+              ? 'Questa categoria non esiste più.'
+              : 'Impossibile caricare la categoria: il backend è avviato?',
+          ),
+      });
     });
   }
 
@@ -267,4 +276,17 @@ function daysInMonth(month: string): number {
 
 function lastDayOf(month: string): string {
   return `${month}-${String(daysInMonth(month)).padStart(2, '0')}`;
+}
+
+/** Il mese in corso, "2026-11". */
+function currentMonth(): string {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Quanti mesi da {@code month} a {@code later} ("2026-10", "2026-11" → 1). */
+function monthsBefore(month: string, later: string): number {
+  const [y1, m1] = month.split('-').map(Number);
+  const [y2, m2] = later.split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
 }

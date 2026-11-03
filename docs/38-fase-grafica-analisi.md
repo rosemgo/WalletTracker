@@ -295,3 +295,10 @@ pagina della categoria prende allora quello in corso. Ora il link porta `?mese=`
 is"; `overview-page.spec.ts` (il link porta `?mese=`). Nel browser, con un telefono simulato: dal Riepilogo di
 ottobre, "Spesa alimentare" apre ottobre (140 €); toccando settembre, 85 €, "settembre 2026: 85,40 €" e "Dove, a
 settembre", con le stesse 12 barre.
+
+**Il grafico arriva sempre fino al mese in corso.** Con il link del Riepilogo, aperta a ottobre, la pagina mostrava i 12
+mesi fino a ottobre, e novembre (il mese in corso) spariva. Ora si caricano due cose (`forkJoin`): il grafico senza
+mese, cioè fino a oggi, e il mese aperto per la cifra, il budget e "Dove". La barra accesa è quella del mese aperto.
+Solo un mese più vecchio delle 12 barre (per esempio da un budget di due anni fa) ha il grafico che finisce con lui,
+altrimenti la sua barra non ci sarebbe. Test: `category-page.spec.ts`, "opened on an earlier month, the chart still
+reaches the current month". Nel browser: dal Riepilogo di ottobre, barre fino a novembre con ottobre acceso.
