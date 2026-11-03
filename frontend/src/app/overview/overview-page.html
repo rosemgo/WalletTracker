@@ -44,7 +44,18 @@
       <span class="big-figure">{{
         figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
       }}</span>
-      <p class="comparison">{{ comparison() }}</p>
+      <p
+        class="comparison"
+        [class.trend-under]="trend() === 'under'"
+        [class.trend-over]="trend() === 'over'"
+      >
+        @if (trend() === 'over') {
+          <span aria-hidden="true">▲ </span>
+        } @else if (trend() === 'under') {
+          <span aria-hidden="true">▼ </span>
+        }
+        {{ comparison() }}
+      </p>
       <app-month-chart
         [spentByDay]="o.spentByDay"
         [usualByDay]="o.usualByDay"
@@ -53,10 +64,18 @@
         [description]="chartDescription()"
         [currency]="o.currency"
         [live]="isCurrent()"
+        [trend]="trend()"
         (scrubbed)="scrubDay.set($event)"
       />
       <div class="chart-keys">
-        <span><span class="key month"></span>{{ monthTitle() }}</span>
+        <span
+          ><span
+            class="key month"
+            [class.trend-under]="trend() === 'under'"
+            [class.trend-over]="trend() === 'over'"
+          ></span
+          >{{ monthTitle() }}</span
+        >
         @if (o.usualMonths > 0) {
           <span>
             <span class="key usual"></span>Un mese tipico (media di

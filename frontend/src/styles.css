@@ -37,18 +37,18 @@
   ); /* il bordo dei campi: un po' più deciso delle linee */
   --track: light-dark(#eef0f4, #232831); /* il fondo di una barra, i pulsanti secondari */
   --acc: light-dark(
-    #3557ee,
-    #7d97ff
+    #1d4ed8,
+    #60a5fa
   ); /* l'accento per testi e linee: link, la sezione attiva, i grafici */
-  --acc-2: light-dark(#7a4cf2, #b48cff); /* il secondo colore delle sfumature dei grafici (viola) */
+  --acc-2: light-dark(#0891b2, #0ea5c6); /* il secondo colore delle sfumature dei grafici (ciano) */
   --acc-strong: light-dark(
-    #3557ee,
-    #4566ff
+    #1d4ed8,
+    #2563eb
   ); /* l'accento come sfondo pieno (pulsanti): con il testo bianco */
   --on-acc: #ffffff; /* il testo sopra l'accento pieno, in entrambi i temi */
-  --soft: light-dark(#ebefff, #1d2440); /* un riquadro da notare, la scelta attiva di una pillola */
+  --soft: light-dark(#e6eeff, #13213f); /* un riquadro da notare, la scelta attiva di una pillola */
   --bar: light-dark(#c3c9d4, #3a404b); /* le linee "di confronto" dei grafici (il mese tipico) */
-  --pos: light-dark(#3557ee, #7d97ff); /* entrate, risparmio */
+  --pos: light-dark(#1d4ed8, #60a5fa); /* entrate, risparmio */
   --neg: light-dark(#e2620f, #ff9a4d); /* uscite oltre le entrate, valori negativi da notare */
   --ok: light-dark(#14894a, #4cc38a); /* stati: tutto bene */
   --warn: light-dark(#f2ae0c, #f5c451); /* stati: attenzione (solo come sfondo di un'icona) */
@@ -233,17 +233,11 @@ ul.rows strong {
 
 /* Il marchio: un quadrato arrotondato con la sfumatura dell'accento, come l'icona di un'app. */
 .brand-mark {
-  display: flex;
+  /* Il marchio (public/icons/icon.svg, docs/tema-blu-oceano.md): lo stesso disegno dell'icona dell'app. */
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--acc-strong), var(--acc-2));
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 800;
+  border-radius: 9px;
 }
 
 /* La barra in alto (docs/42, parte B): sul telefono il nome dell'app a sinistra e l'occhio a destra. */
@@ -1649,6 +1643,30 @@ button.icon svg {
 }
 
 /* ---- Il grafico del mese (app-month-chart, docs/41 parte G) ---- */
+
+/*
+ * Il colore del grafico (docs/tema-blu-oceano.md, parte C): verde sotto il solito, rosso sopra, l'accento senza un
+ * solito. Una variabile sola, --trend, per la linea, la sfumatura, l'alone e il punto di oggi; anche la frase sopra e
+ * il trattino della legenda.
+ */
+:root {
+  --trend: var(--acc);
+}
+
+.trend-under {
+  --trend: var(--ok);
+}
+
+.trend-over {
+  --trend: var(--bad);
+}
+
+.comparison.trend-under,
+.comparison.trend-over {
+  color: var(--trend);
+  font-weight: 600;
+}
+
 .month-chart-wrap {
   position: relative;
   margin: 30px -4px 4px; /* sopra, il posto per l'etichetta del giorno scelto */
@@ -1721,24 +1739,24 @@ button.icon svg {
 }
 
 .month-chart .area {
-  fill: var(--acc);
+  fill: var(--trend);
 }
 
 /* L'alone sotto la linea: un'ombra dell'accento, che la fa "brillare" sulla scheda. */
 .line-layer {
-  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--acc) 35%, transparent));
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--trend) 35%, transparent));
 }
 
 .month-chart .month {
   fill: none;
-  stroke: var(--acc);
+  stroke: var(--trend);
   stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .month-chart .today {
-  fill: var(--acc);
+  fill: var(--trend);
   stroke: var(--card);
   stroke-width: 2.5;
 }
@@ -1756,7 +1774,7 @@ button.icon svg {
 }
 
 .month-chart .halo {
-  fill: var(--acc);
+  fill: var(--trend);
   pointer-events: none;
 }
 
@@ -1849,7 +1867,7 @@ button.icon svg {
   height: 0;
   margin-right: 6px;
   vertical-align: middle;
-  border-top: 2.5px solid var(--acc);
+  border-top: 2.5px solid var(--trend);
   border-radius: 2px;
 }
 
@@ -2812,22 +2830,34 @@ button.chip-button {
   }
 }
 
-/* Il netto: in su (risparmiato) e in giù (speso più delle entrate) in due colori; la barra scelta piena. */
+/* Il netto (docs/tema-blu-oceano.md, parte D): in su (risparmiato) in verde, in giù (speso più delle entrate) in
+   rosso; tenui, e la barra scelta piena. */
 .bar-chart .bar.pos {
-  fill: color-mix(in srgb, var(--pos) 30%, var(--card));
+  fill: color-mix(in srgb, var(--ok) 55%, var(--card));
 }
 
 .bar-chart .bar.neg {
-  fill: color-mix(in srgb, var(--neg) 35%, var(--card));
+  fill: color-mix(in srgb, var(--bad) 55%, var(--card));
 }
 
 .bar-chart .bar.pos.on {
-  fill: var(--pos);
+  fill: var(--ok);
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--ok) 45%, transparent));
 }
 
 .bar-chart .bar.neg.on {
-  fill: var(--neg);
-  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--neg) 45%, transparent));
+  fill: var(--bad);
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--bad) 45%, transparent));
+}
+
+@media (hover: hover) {
+  .bar-chart .slot:hover .bar.pos:not(.on) {
+    fill: color-mix(in srgb, var(--ok) 75%, var(--card));
+  }
+
+  .bar-chart .slot:hover .bar.neg:not(.on) {
+    fill: color-mix(in srgb, var(--bad) 75%, var(--card));
+  }
 }
 
 /* Le barre crescono dalla linea dello zero, una dopo l'altra (--i è il numero della barra: 25 ms di ritardo

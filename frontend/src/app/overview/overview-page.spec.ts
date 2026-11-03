@@ -13,6 +13,7 @@ import {
   categoryNote,
   comparisonSentence,
   monthOf,
+  trendOf,
 } from './overview-page';
 
 /** Un Riepilogo inventato del mese in corso: 1.284 € spesi, di solito 1.410 € allo stesso giorno. */
@@ -228,6 +229,30 @@ describe('OverviewPage', () => {
     await fixture.whenStable();
 
     expect(requests.at(-1)).toEqual([monthOf(new Date()), 'USD']);
+  });
+
+  it('colors the chart and the sentence: green under the usual, red over it', async () => {
+    const { fixture, page } = await render();
+    // 1.284 € contro 1.410 € di solito: sotto.
+    expect(page.querySelector('.comparison')?.classList.contains('trend-under')).toBe(true);
+    expect(page.querySelector('.comparison')?.textContent).toContain('▼');
+    expect(page.querySelector('.month-chart-wrap')?.classList.contains('trend-under')).toBe(true);
+
+    respond = () => of(overview({ spent: 1500, usualSoFar: 1410 }));
+    fixture.componentInstance.load();
+    await fixture.whenStable();
+    expect(page.querySelector('.comparison')?.textContent).toContain('▲');
+    expect(page.querySelector('.month-chart-wrap')?.classList.contains('trend-over')).toBe(true);
+    expect(page.querySelector('.chart-keys .key.month')?.classList.contains('trend-over')).toBe(
+      true,
+    );
+  });
+
+  it('is under the usual when in line, over only from 5 € more, and neither without a usual', () => {
+    expect(trendOf(overview({ spent: 1412, usualSoFar: 1410 }))).toBe('under');
+    expect(trendOf(overview({ spent: 1415, usualSoFar: 1410 }))).toBe('over');
+    expect(trendOf(overview({ spent: 1300, usualSoFar: 1410 }))).toBe('under');
+    expect(trendOf(overview({ usualSoFar: null }))).toBeNull();
   });
 
   it('explains an error of the backend', async () => {

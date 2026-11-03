@@ -8,7 +8,7 @@ import { WalletApi } from '../api/wallet-api';
 import { InvestmentsCard } from '../investments/investments-card';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
-import { MonthChart } from './month-chart';
+import { MonthChart, Trend } from './month-chart';
 
 /** Quante categorie mostrare in "Dove vanno": le altre sono in Analisi. */
 export const TOP_CATEGORIES = 5;
@@ -109,6 +109,12 @@ export class OverviewPage implements OnInit {
   });
 
   /** La frase sotto la cifra grande: com'è il mese rispetto al solito. */
+  /** Sotto o sopra il solito (docs/tema-blu-oceano.md, parte C): il colore del grafico e della frase. */
+  protected readonly trend = computed(() => {
+    const o = this.overview();
+    return o === null ? null : trendOf(o);
+  });
+
   protected readonly comparison = computed(() => {
     const o = this.overview();
     return o === null
@@ -224,6 +230,18 @@ export class OverviewPage implements OnInit {
  *
  * @param euros come scrivere un importo ("126 €")
  */
+/**
+ * Sotto o sopra il solito: la spesa fino a oggi contro quella di un mese tipico (la media degli ultimi mesi) allo
+ * stesso giorno. "In linea" (meno di SAME_AS_USUAL di differenza) conta come sotto: non è un allarme. Null senza un
+ * solito.
+ */
+export function trendOf(o: Overview): Trend | null {
+  if (o.usualSoFar === null) {
+    return null;
+  }
+  return o.spent - o.usualSoFar >= SAME_AS_USUAL ? 'over' : 'under';
+}
+
 export function comparisonSentence(
   o: Overview,
   isCurrent: boolean,

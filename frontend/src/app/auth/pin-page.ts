@@ -26,7 +26,7 @@ export const VALID_PIN = /^\d{6,10}$/;
   template: `
     <main class="pin-page">
       <span class="pin-brand"
-        ><span class="brand-mark" aria-hidden="true">W</span>WalletTracker</span
+        ><img class="brand-mark" src="icons/icon.svg" alt="" />WalletTracker</span
       >
 
       @if (newCode(); as code) {
