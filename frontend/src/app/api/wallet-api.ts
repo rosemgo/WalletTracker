@@ -82,6 +82,18 @@ export class WalletApi {
   }
 
   /** PUT /api/accounts/{id}/display-name: il nome del conto scelto dall'utente; vuoto lo toglie. */
+  /** PUT /api/accounts/{id}/logo: il logo di un conto manuale (docs/loghi.md). PNG, JPEG o WebP, al massimo 256 KB. */
+  uploadAccountLogo(accountId: number, file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.put<void>(`/api/accounts/${accountId}/logo`, form);
+  }
+
+  /** DELETE /api/accounts/{id}/logo: toglie il logo caricato. */
+  deleteAccountLogo(accountId: number): Observable<void> {
+    return this.http.delete<void>(`/api/accounts/${accountId}/logo`);
+  }
+
   /** Il saldo di un conto manuale (docs/saldi.md); null lo toglie. */
   changeBalance(accountId: number, balance: number | null): Observable<Account> {
     return this.http.put<Account>(`/api/accounts/${accountId}/balance`, { balance });

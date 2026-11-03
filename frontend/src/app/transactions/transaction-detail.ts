@@ -25,11 +25,13 @@ import {
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
-import { avatarHue, initialOf, nameOf } from './day-groups';
+import { nameOf } from './day-groups';
 import { merchantSearch } from './merchant-search';
 
 export { MAX_SEARCH_WORDS, merchantSearch } from './merchant-search';
 import { TransactionsChanged } from './transactions-changed';
+import { shortAccountName } from '../accounts/accounts-store';
+import { Avatar } from './avatar';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
 export const TYPE_HINTS: Record<TransactionType, string> = {
@@ -74,7 +76,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [DatePipe, MoneyPipe, RouterLink],
+  imports: [Avatar, DatePipe, MoneyPipe, RouterLink],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {
@@ -88,8 +90,6 @@ export class TransactionDetail implements OnInit {
   protected readonly typeHints = TYPE_HINTS;
   protected readonly origins = ORIGINS;
   protected readonly nameOf = nameOf;
-  protected readonly initialOf = initialOf;
-  protected readonly avatarHue = avatarHue;
   protected readonly maxNoteLength = 300;
 
   protected readonly detail = signal<Detail | null>(null);
@@ -113,7 +113,8 @@ export class TransactionDetail implements OnInit {
 
   protected readonly accountName = computed(() => {
     const t = this.transaction();
-    return t === null ? '' : (this.accounts().find((a) => a.id === t.accountId)?.label ?? '');
+    const account = t === null ? undefined : this.accounts().find((a) => a.id === t.accountId);
+    return account ? shortAccountName(account, this.accounts()) : '';
   });
 
   /**

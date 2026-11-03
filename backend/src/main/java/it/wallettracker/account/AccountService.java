@@ -7,6 +7,8 @@ import java.time.ZoneId;
 import java.util.List;
 
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.logo.AccountLogo;
+import it.wallettracker.logo.AccountLogoRepository;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
@@ -21,12 +23,14 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
+    private final AccountLogoRepository logoRepository;
 
     public AccountService(AccountRepository accountRepository, BankTransactionRepository transactionRepository,
-            ClassificationService classificationService) {
+            ClassificationService classificationService, AccountLogoRepository logoRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
+        this.logoRepository = logoRepository;
     }
 
     /** Tutti i conti, ordinati per banca e nome. */
@@ -126,6 +130,10 @@ public class AccountService {
         } else {
             balance = CurrentBalance.of(account, BigDecimal.ZERO, null);
         }
-        return AccountDto.from(account, balance);
+        Long logoVersion = logoRepository.findById(account.getId())
+                .filter(AccountLogo::hasImage)
+                .map(l -> l.getCheckedAt().toEpochMilli())
+                .orElse(null);
+        return AccountDto.from(account, balance, logoVersion);
     }
 }

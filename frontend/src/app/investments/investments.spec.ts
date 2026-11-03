@@ -126,6 +126,7 @@ describe('Investments', () => {
     requests.length = 0;
     answer = investments;
     const fakeApi: Partial<WalletApi> = {
+      accounts: () => of([]), // per i loghi nel cerchio dei movimenti (AccountsStore)
       investments: (period: InvestmentPeriod) => {
         requests.push(period);
         return of(answer(period));

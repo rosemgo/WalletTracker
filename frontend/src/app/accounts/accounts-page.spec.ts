@@ -25,6 +25,7 @@ const CARD: Account = {
   lastSyncError: 'HTTP 429 troppe letture',
   balance: null,
   availableCredit: null,
+  logoVersion: null,
 };
 
 /** Un conto manuale: i movimenti arrivano da file CSV. */
@@ -43,6 +44,7 @@ const BROKER: Account = {
   lastSyncError: null,
   balance: null,
   availableCredit: null,
+  logoVersion: null,
 };
 
 /**
@@ -56,6 +58,7 @@ describe('AccountsPage', () => {
   const deleted: number[] = [];
   const renamed: [number, string][] = [];
   const balances: [number, number | null][] = [];
+  const logos: [number, string][] = [];
   let syncCalls = 0;
   let accounts: Account[];
 
@@ -65,6 +68,7 @@ describe('AccountsPage', () => {
     deleted.length = 0;
     renamed.length = 0;
     balances.length = 0;
+    logos.length = 0;
     syncCalls = 0;
     accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
@@ -93,6 +97,11 @@ describe('AccountsPage', () => {
       changeRole: (id: number, role: AccountRole) => {
         changedRoles.push([id, role]);
         return of({ ...CARD, role });
+      },
+      uploadAccountLogo: (id: number, file: File) => {
+        logos.push([id, file.name]);
+        accounts = accounts.map((a) => (a.id === id ? { ...a, logoVersion: 2 } : a));
+        return of(undefined);
       },
       changeBalance: (id: number, balance: number | null) => {
         balances.push([id, balance]);
@@ -200,6 +209,44 @@ describe('AccountsPage', () => {
     expect(cells[0].querySelector('button')).toBeNull();
     expect(text(cells[1])).toContain('plafond non ancora letto: premi «Aggiorna ora»');
     expect(cells[1].querySelector('button')).toBeNull();
+  });
+
+  it('a manual account gets the logo chosen by the user, and shows it next to its name', async () => {
+    accounts = [BROKER];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const input = page.querySelector('.logo-upload input') as HTMLInputElement;
+    expect(page.querySelector('.logo-upload')?.textContent).toContain('carica il logo');
+
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'tr.png', {
+      type: 'image/png',
+    });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(logos).toEqual([[8, 'tr.png']]);
+    expect(page.querySelector('img.account-logo')?.getAttribute('src')).toBe(
+      '/api/accounts/8/logo?v=2',
+    );
+    expect(page.querySelector('.logo-upload')?.textContent).toContain('cambia il logo');
+  });
+
+  it('a logo too big is refused before sending it', async () => {
+    accounts = [BROKER];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const input = page.querySelector('.logo-upload input') as HTMLInputElement;
+
+    const big = new File([new Uint8Array(300 * 1024)], 'grande.png', { type: 'image/png' });
+    Object.defineProperty(input, 'files', { value: [big] });
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(logos).toEqual([]);
+    expect(page.textContent).toContain('Il logo è troppo grande');
   });
 
   it('reads the amounts written the Italian or the English way', () => {

@@ -15,9 +15,11 @@ import { Account, Transaction, TransactionType } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { SuggestionsPanel } from '../suggestions/suggestions-panel';
-import { avatarHue, groupByDay, initialOf, nameOf } from './day-groups';
+import { groupByDay, nameOf } from './day-groups';
 import { PERIODS, PERIOD_LABELS, Period, isoDate, periodRange } from './period';
 import { TransactionsChanged } from './transactions-changed';
+import { shortAccountName } from '../accounts/accounts-store';
+import { Avatar } from './avatar';
 
 /** Quanti movimenti per volta: i primi all'apertura, altrettanti a ogni "Mostra altri". */
 export const PAGE_SIZE = 50;
@@ -39,7 +41,7 @@ const SIDE_BY_SIDE = '(min-width: 1100px)';
  */
 @Component({
   selector: 'app-transactions-page',
-  imports: [MoneyPipe, RouterLink, RouterLinkActive, RouterOutlet, SuggestionsPanel],
+  imports: [Avatar, MoneyPipe, RouterLink, RouterLinkActive, RouterOutlet, SuggestionsPanel],
   templateUrl: './transactions-page.html',
 })
 export class TransactionsPage implements OnInit {
@@ -55,8 +57,6 @@ export class TransactionsPage implements OnInit {
   protected readonly periods = PERIODS;
   protected readonly periodLabels = PERIOD_LABELS;
   protected readonly nameOf = nameOf;
-  protected readonly initialOf = initialOf;
-  protected readonly avatarHue = avatarHue;
 
   protected readonly accounts = signal<Account[]>([]);
   /** I movimenti caricati finora (la prima pagina, più quelle di "Mostra altri"). */
@@ -87,8 +87,9 @@ export class TransactionsPage implements OnInit {
   /** Dove era l'elenco sul telefono prima di aprire un dettaglio: ci si torna chiudendolo. */
   private listScroll = 0;
 
+  /** Il nome di ogni conto accanto ai movimenti: breve se è l'unico della sua banca (docs/loghi.md, parte D). */
   protected readonly accountNames = computed(
-    () => new Map(this.accounts().map((a) => [a.id, a.label])),
+    () => new Map(this.accounts().map((a) => [a.id, shortAccountName(a, this.accounts())])),
   );
 
   /** I movimenti per giorno: si ricalcola quando cambiano i movimenti caricati. */

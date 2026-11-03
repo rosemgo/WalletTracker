@@ -19,9 +19,7 @@
     @let t = d.transaction;
 
     <section class="card detail-head">
-      <span class="avatar large" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
-        initialOf(t)
-      }}</span>
+      <span class="avatar large" [appAvatar]="t"></span>
       <h1>{{ nameOf(t) }}</h1>
       <span class="detail-amount" [class.positive]="t.amount > 0">{{
         t.amount | money: t.currency

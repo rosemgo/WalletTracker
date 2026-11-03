@@ -4,7 +4,8 @@ import { RouterLink } from '@angular/router';
 
 import { Transaction } from '../api/models';
 import { MoneyPipe } from '../privacy/money.pipe';
-import { avatarHue, initialOf, nameOf } from '../transactions/day-groups';
+import { nameOf } from '../transactions/day-groups';
+import { Avatar } from '../transactions/avatar';
 
 /** Quanti movimenti si vedono prima di "Mostra tutti". */
 export const FIRST_MOVEMENTS = 8;
@@ -16,7 +17,7 @@ export const FIRST_MOVEMENTS = 8;
  */
 @Component({
   selector: 'app-investment-movements',
-  imports: [DatePipe, MoneyPipe, RouterLink],
+  imports: [Avatar, DatePipe, MoneyPipe, RouterLink],
   template: `
     @if (movements().length > 0) {
       <h2 class="days-title">{{ title() }}</h2>
@@ -25,9 +26,7 @@ export const FIRST_MOVEMENTS = 8;
           @for (t of shown(); track t.id) {
             <li>
               <a class="movement" [routerLink]="['/movimenti', t.id]">
-                <span class="avatar" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
-                  initialOf(t)
-                }}</span>
+                <span class="avatar" [appAvatar]="t"></span>
                 <span class="movement-text">
                   <span class="name">{{ nameOf(t) }}</span>
                   <span class="secondary">{{ t.bookingDate | date: 'd MMMM y' }}</span>
@@ -53,8 +52,6 @@ export class InvestmentMovements {
   readonly movements = input.required<Transaction[]>();
 
   protected readonly nameOf = nameOf;
-  protected readonly initialOf = initialOf;
-  protected readonly avatarHue = avatarHue;
 
   /** true dopo "Mostra tutti"; torna false quando arrivano movimenti nuovi (un altro periodo). */
   protected readonly all = linkedSignal({ source: this.movements, computation: () => false });

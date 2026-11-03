@@ -63,7 +63,7 @@ class EnableBankingClientTest {
         List<Aspsp> banks = client.listAspsps("IT");
 
         assertThat(banks).containsExactly(new Aspsp("ING", "IT", List.of("personal"), 15552000L,
-                List.of("Psu-Ip-Address")));
+                List.of("Psu-Ip-Address"), "https://example.com/ing.png"));
         server.verify();
     }
 

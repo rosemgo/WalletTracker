@@ -2353,6 +2353,64 @@ button.icon svg {
   font-size: 24px;
 }
 
+/* Il logo accanto al nome del conto, nella pagina Conti. */
+.account-logo {
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* "carica il logo": un link che apre la scelta del file; il campo vero resta nascosto. */
+.logo-upload {
+  color: var(--acc);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Con la tastiera il campo nascosto ha il focus: il contorno va sul link che si vede. */
+.logo-upload:focus-within {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.logo-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* Il logo della banca del conto, piccolo nell'angolo in basso del cerchio (docs/loghi.md). Il bordo del colore della
+   scheda lo stacca dal cerchio; lo sfondo chiaro tiene leggibili i loghi scuri anche di notte. */
+.avatar {
+  position: relative;
+}
+
+.avatar-bank {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  box-sizing: border-box;
+  width: 19px;
+  height: 19px;
+  padding: 1px;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: #fff;
+  object-fit: contain;
+}
+
+.avatar.large .avatar-bank {
+  width: 26px;
+  height: 26px;
+  right: -4px;
+  bottom: -4px;
+}
+
 .detail-head h1 {
   margin: 8px 0 0;
   font-size: 1.2rem;

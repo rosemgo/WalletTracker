@@ -17,9 +17,10 @@ import { merchantSearch } from '../transactions/merchant-search';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { ReadablePipe } from '../text/readable';
-import { avatarHue, groupByDay, initialOf, nameOf } from '../transactions/day-groups';
+import { groupByDay, nameOf } from '../transactions/day-groups';
 import { BarChart } from './bar-chart';
 import { barLabel, barName, lastPastBar, monthOfDay, perUnit } from './explore-labels';
+import { Avatar } from '../transactions/avatar';
 
 /** Sotto questa differenza (in euro) una categoria è "come al solito", come nel Riepilogo. */
 const SAME_AS_USUAL = 5;
@@ -63,7 +64,7 @@ interface Row {
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [BarChart, MoneyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
+  imports: [Avatar, BarChart, MoneyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
   templateUrl: './explore-page.html',
 })
 export class ExplorePage implements OnInit {
@@ -77,8 +78,6 @@ export class ExplorePage implements OnInit {
   protected readonly periods = PERIODS;
   protected readonly groupings = GROUPINGS;
   protected readonly nameOf = nameOf;
-  protected readonly initialOf = initialOf;
-  protected readonly avatarHue = avatarHue;
 
   protected readonly metric = signal<Metric>('EXPENSES');
   protected readonly period = signal<ExplorePeriod>('YEAR');

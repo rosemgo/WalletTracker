@@ -42,6 +42,7 @@ export interface Account {
   lastSyncError: string | null;
   balance: CurrentBalance | null; // il saldo (docs/saldi.md); null se la banca non lo dà e non l'hai scritto
   availableCredit: AvailableCredit | null; // solo per una carta di credito: il plafond che resta (docs/saldi.md, parte I)
+  logoVersion: number | null; // se ha un logo (docs/loghi.md): cambia quando cambia il logo; null senza
 }
 
 /** Il plafond che resta su una carta di credito, dato dalla banca. */

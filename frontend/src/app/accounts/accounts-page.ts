@@ -8,6 +8,7 @@ import { Account, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isTradeRepublic } from '../import/completion-page';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { AccountsStore, logoUrl } from './accounts-store';
 import { BalanceForm } from './balance-form';
 
 /**
@@ -32,6 +33,9 @@ import { BalanceForm } from './balance-form';
 export class AccountsPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly store = inject(AccountsStore);
+
+  protected readonly logoUrl = logoUrl;
 
   // Le costanti che il template deve vedere vanno esposte come proprietà del componente.
   protected readonly roles = ROLES;
@@ -94,6 +98,7 @@ export class AccountsPage implements OnInit {
     this.api.accounts().subscribe({
       next: (accounts) => {
         this.accounts.set(accounts);
+        this.store.accounts.set(accounts); // i loghi e i nomi accanto ai movimenti seguono (docs/loghi.md)
         this.loading.set(false);
       },
       error: () => {
@@ -210,4 +215,40 @@ export class AccountsPage implements OnInit {
     );
     this.error.set(null);
   }
+
+  /** Il logo scelto per un conto manuale: si carica subito (docs/loghi.md, parte C). */
+  uploadLogo(account: Account, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // per poter scegliere di nuovo lo stesso file
+    if (!file) {
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      this.error.set("Il logo è troppo grande: al massimo 256 KB. Scegli un'immagine più piccola.");
+      return;
+    }
+    this.api.uploadAccountLogo(account.id, file).subscribe({
+      next: () => {
+        this.message.set(`Logo di "${account.label}" salvato.`);
+        this.error.set(null);
+        this.loadAccounts();
+      },
+      error: (response) => this.error.set(response.error?.detail ?? 'Il logo non è stato salvato.'),
+    });
+  }
+
+  removeLogo(account: Account): void {
+    this.api.deleteAccountLogo(account.id).subscribe({
+      next: () => {
+        this.message.set(`Logo di "${account.label}" tolto.`);
+        this.error.set(null);
+        this.loadAccounts();
+      },
+      error: (response) => this.error.set(response.error?.detail ?? 'Il logo non è stato tolto.'),
+    });
+  }
 }
+
+/** Il limite del backend (LogoImage.MAX_BYTES): oltre, si dice subito senza mandare il file. */
+const MAX_LOGO_BYTES = 256 * 1024;

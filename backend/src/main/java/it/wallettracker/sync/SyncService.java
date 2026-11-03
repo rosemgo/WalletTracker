@@ -17,6 +17,7 @@ import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.ConnectionService;
+import it.wallettracker.logo.LogoService;
 import it.wallettracker.transaction.TransactionImportService;
 import it.wallettracker.transaction.TransactionImportService.ImportResult;
 import org.slf4j.Logger;
@@ -62,16 +63,18 @@ public class SyncService {
     private final TransactionImportService importService;
     private final ClassificationService classificationService;
     private final EnableBankingClient client;
+    private final LogoService logoService;
     private final SyncProperties properties;
 
     public SyncService(ConnectionService connectionService, AccountRepository accountRepository,
             TransactionImportService importService, ClassificationService classificationService,
-            EnableBankingClient client, SyncProperties properties) {
+            EnableBankingClient client, LogoService logoService, SyncProperties properties) {
         this.connectionService = connectionService;
         this.accountRepository = accountRepository;
         this.importService = importService;
         this.classificationService = classificationService;
         this.client = client;
+        this.logoService = logoService;
         this.properties = properties;
     }
 
@@ -198,6 +201,8 @@ public class SyncService {
         if (updated > 0) {
             classificationService.classifyAll();
         }
+        // I loghi delle banche che mancano (docs/loghi.md): di solito niente da fare; un errore non ferma niente.
+        logoService.refreshBankLogos(now);
         return new Round(updated, failed, notDue);
     }
 

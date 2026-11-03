@@ -21,6 +21,7 @@ import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.logo.LogoService;
 import it.wallettracker.sync.SyncService;
 import it.wallettracker.sync.SyncService.AccountSync;
 import org.springframework.http.HttpStatus;
@@ -79,14 +80,17 @@ public class BankLinkService {
     private final SyncService syncService;
     private final ClassificationService classificationService;
 
+    private final LogoService logoService;
+
     public BankLinkService(EnableBankingClient client, EnableBankingProperties properties,
             ConnectionService connectionService, SyncService syncService,
-            ClassificationService classificationService) {
+            ClassificationService classificationService, LogoService logoService) {
         this.client = client;
         this.properties = properties;
         this.connectionService = connectionService;
         this.syncService = syncService;
         this.classificationService = classificationService;
+        this.logoService = logoService;
     }
 
     /** Le banche di un paese supportate da Enable Banking, in ordine alfabetico. */
@@ -150,6 +154,7 @@ public class BankLinkService {
             }
         }
         classificationService.classifyAll();
+        logoService.refreshBankLogos(Instant.now()); // il logo della banca appena collegata (docs/loghi.md)
         return new LinkResult(connection.getAspspName(), accounts.size(), imported, errors);
     }
 

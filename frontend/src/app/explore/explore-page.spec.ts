@@ -67,6 +67,7 @@ describe('ExplorePage', () => {
     routeParams = {};
     navigations = [];
     const fakeApi: Partial<WalletApi> = {
+      accounts: () => of([]), // per i loghi nel cerchio dei movimenti (AccountsStore)
       exploreSeries: (query) => {
         seriesQueries.push(query);
         return of(series(query));

@@ -28,6 +28,8 @@ import java.time.LocalDate;
  *                          non si sa
  * @param availableCredit   solo per una carta di credito: il plafond che resta, dato dalla banca (V35); null se non si
  *                          sa
+ * @param logoVersion       se il conto ha un logo (docs/loghi.md): un numero che cambia quando cambia il logo, da mettere
+ *                          nell'indirizzo dell'immagine ({@code /api/accounts/3/logo?v=...}); null senza logo
  */
 public record AccountDto(
         Long id,
@@ -43,14 +45,15 @@ public record AccountDto(
         Instant lastSyncAt,
         String lastSyncError,
         CurrentBalance balance,
-        AvailableCredit availableCredit) {
+        AvailableCredit availableCredit,
+        Long logoVersion) {
 
     /** Il plafond che resta su una carta di credito, e il giorno a cui si riferisce. */
     public record AvailableCredit(BigDecimal amount, LocalDate date) {
     }
 
     /** Da entità a DTO. Va chiamato dentro una transazione, perché legge il collegamento (LAZY). */
-    static AccountDto from(Account account, CurrentBalance balance) {
+    static AccountDto from(Account account, CurrentBalance balance, Long logoVersion) {
         return new AccountDto(
                 account.getId(),
                 account.label(),
@@ -67,6 +70,7 @@ public record AccountDto(
                 balance,
                 account.getRole() == AccountRole.CREDIT_CARD && account.getAvailableCredit() != null
                         ? new AvailableCredit(account.getAvailableCredit(), account.getAvailableCreditDate())
-                        : null);
+                        : null,
+                logoVersion);
     }
 }
