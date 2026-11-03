@@ -268,3 +268,30 @@ Investimenti). I grafici a linea (Riepilogo, Investimenti) non avevano il difett
 **La prova.** Con Playwright e un telefono simulato (Pixel 7, tocchi veri): prima, dopo il tocco, `outline: auto`
 e il riquadro nella cattura; dopo, `outline: none` e nessun riquadro; con il tasto Tab la barra ha ancora il bordo.
 È solo CSS: i test dei componenti (jsdom) non disegnano la pagina.
+
+---
+
+## Aggiunta: la pagina di una categoria, nel mese giusto e con le barre da toccare
+
+Due difetti trovati dall'utente.
+
+**1. Dal Riepilogo di ottobre si apriva novembre.** Il link di una categoria in "Dove vanno" non diceva il mese, e la
+pagina della categoria prende allora quello in corso. Ora il link porta `?mese=` con il mese guardato nel Riepilogo
+(come facevano già il Budget e Analisi).
+
+**2. Le barre non si potevano toccare.** Ora funzionano come in Analisi:
+
+- toccando una barra si accende, e sopra il grafico c'è il mese con la sua cifra ("settembre 2026: 85,40 €");
+- la cifra grande con il confronto con il solito, il budget e **"Dove"** passano a quel mese ("Dove, a settembre");
+- **il grafico resta fermo**: sono i 12 mesi del primo caricamento. Se ogni tocco ricaricasse anche le barre, l'API
+  darebbe i 12 mesi che finiscono con quello toccato e il grafico "scapperebbe" sotto il dito. Nel codice
+  (`category-page.ts`) ci sono due dati: `chart` (le barre e la loro media, fermi) e `overview` (il mese guardato,
+  ricaricato con `categoryOverview(id, mese)` a ogni tocco);
+- l'indirizzo diventa `?mese=2026-09` (`replaceUrl`: il tasto indietro non deve ripassare per ogni barra toccata), così
+  ricaricando la pagina si resta sullo stesso mese;
+- la barra accesa è quella del mese guardato, non per forza l'ultima.
+
+**I test.** `category-page.spec.ts`, "touching a bar shows that month, its figure and where; the chart stays as it
+is"; `overview-page.spec.ts` (il link porta `?mese=`). Nel browser, con un telefono simulato: dal Riepilogo di
+ottobre, "Spesa alimentare" apre ottobre (140 €); toccando settembre, 85 €, "settembre 2026: 85,40 €" e "Dove, a
+settembre", con le stesse 12 barre.

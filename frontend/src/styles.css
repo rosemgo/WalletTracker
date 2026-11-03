@@ -3088,6 +3088,7 @@ a.button.primary {
 }
 
 /* ---- Investimenti (docs/investimenti.md) ---- */
+.category-page.loading,
 .investments.loading {
   opacity: 0.6;
 }

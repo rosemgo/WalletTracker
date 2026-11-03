@@ -10,7 +10,7 @@
 }
 
 @if (overview(); as o) {
-  <div class="category-page">
+  <div class="category-page" [class.loading]="loadingMonth()">
     <section class="card hero">
       <h1>{{ o.name }}</h1>
       <span class="big-figure">{{ o.amount | money: o.currency : 'symbol' : '1.0-0' }}</span>
@@ -70,13 +70,18 @@
           Quest'anno
         </button>
       </div>
+      <!-- Tocca una barra: il mese e la sua cifra qui sopra; la cifra grande, il budget e "Dove" passano a quel mese. -->
+      <p class="bar-pick">{{ barText() }}</p>
       <app-bar-chart
         [values]="monthValues()"
         [labels]="monthLabels()"
-        [selected]="monthValues().length - 1"
-        [average]="o.usualMonth"
+        [names]="barNames()"
+        [selected]="selectedBar()"
+        [average]="chartAverage()"
         [averageLabel]="averageLabel()"
+        [interactive]="true"
         [description]="chartDescription()"
+        (picked)="pickMonth($event)"
       />
     </section>
 

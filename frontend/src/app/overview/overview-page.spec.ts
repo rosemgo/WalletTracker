@@ -151,7 +151,8 @@ describe('OverviewPage', () => {
     const links = Array.from(page.querySelectorAll('ul.bars a.bar-link')).map((a) =>
       a.getAttribute('href'),
     );
-    expect(links[0]).toMatch(/^\/analisi\/categoria\/\d+$/);
+    // ...nel mese guardato qui (prima si apriva sempre nel mese in corso).
+    expect(links[0]).toMatch(new RegExp(`^/analisi/categoria/\\d+\\?mese=${monthOf(new Date())}$`));
     expect(links.length).toBe(5);
     // La barra più lunga è la prima.
     const widths = Array.from(page.querySelectorAll<HTMLElement>('.bar-line .fill')).map(

@@ -1,6 +1,6 @@
 import { DecimalPipe, formatCurrency, formatDate } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CategoryOverview, ExploreGroup } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -30,7 +30,19 @@ export class CategoryPage implements OnInit {
   private readonly locale = inject(LOCALE_ID);
   private readonly privacy = inject(PrivacyStore);
 
+  private readonly router = inject(Router);
+
+  /** Il mese guardato: la cifra grande, il budget e "Dove". Cambia toccando una barra. */
   protected readonly overview = signal<CategoryOverview | null>(null);
+  /**
+   * I mesi del grafico: quelli del primo caricamento, che restano fermi quando si tocca una barra (così si confrontano
+   * i mesi). Se ogni tocco ricaricasse anche il grafico, i 12 mesi finirebbero con quello toccato e le barre
+   * "scapperebbero".
+   */
+  private readonly chart = signal<CategoryOverview | null>(null);
+  /** Si sta caricando il mese toccato. */
+  protected readonly loadingMonth = signal(false);
+  private categoryId = 0;
   protected readonly error = signal<string | null>(null);
   /** Il grafico: gli ultimi 12 mesi, o l'anno del mese guardato da gennaio (YTD, docs/38 aggiunta "Quest'anno"). */
   protected readonly chartPeriod = signal<'YEAR' | 'YEAR_TO_DATE'>('YEAR');
@@ -96,7 +108,7 @@ export class CategoryPage implements OnInit {
    * "Quest'anno" basta tenere quelli dello stesso anno.
    */
   private readonly chartMonths = computed(() => {
-    const o = this.overview();
+    const o = this.chart();
     if (o === null) {
       return [];
     }
@@ -111,9 +123,36 @@ export class CategoryPage implements OnInit {
     this.chartMonths().map((m) => MONTH_INITIALS[Number(m.month.slice(5, 7)) - 1]),
   );
 
+  /** La barra in evidenza: il mese guardato (null se con "Quest'anno" non è tra le barre). */
+  protected readonly selectedBar = computed(() => {
+    const month = this.overview()?.month;
+    const i = this.chartMonths().findIndex((m) => m.month === month);
+    return i < 0 ? null : i;
+  });
+
+  /** Sopra il grafico: "ottobre 2026: 360,00 €", il mese in evidenza e la sua cifra. */
+  protected readonly barText = computed(() => {
+    const o = this.overview();
+    const i = this.selectedBar();
+    if (o === null || i === null) {
+      return '';
+    }
+    const m = this.chartMonths()[i];
+    return `${formatDate(`${m.month}-01`, 'MMMM y', this.locale)}: ${this.euros(m.value, o.currency, 2)}`;
+  });
+
+  /** Il nome di ogni barra per il lettore di schermo: "ottobre 2026, 360 €". */
+  protected readonly barNames = computed(() => {
+    const o = this.chart();
+    return this.chartMonths().map(
+      (m) =>
+        `${formatDate(`${m.month}-01`, 'MMMM y', this.locale)}, ${this.euros(m.value, o?.currency ?? 'EUR')}`,
+    );
+  });
+
   /** Il titolo del grafico: "Ultimi 12 mesi", "Quest'anno", o "Gennaio–ottobre 2025" per un anno passato. */
   protected readonly chartTitle = computed(() => {
-    const o = this.overview();
+    const o = this.chart();
     if (this.chartPeriod() === 'YEAR' || o === null) {
       return 'Ultimi 12 mesi';
     }
@@ -136,8 +175,11 @@ export class CategoryPage implements OnInit {
     return `${o.name} ${when}${usual}; ${this.monthName()} ${this.euros(o.amount, o.currency)}`;
   });
 
+  /** La linea "di solito" del grafico: quella del primo caricamento, come le barre (non cambia toccandole). */
+  protected readonly chartAverage = computed(() => this.chart()?.usualMonth ?? null);
+
   protected readonly averageLabel = computed(() => {
-    const o = this.overview();
+    const o = this.chart();
     return o?.usualMonth == null ? '' : `di solito ${this.euros(o.usualMonth, o.currency)}`;
   });
 
@@ -158,13 +200,14 @@ export class CategoryPage implements OnInit {
   ngOnInit(): void {
     const month = this.route.snapshot.queryParamMap.get('mese');
     this.route.paramMap.subscribe((params) => {
+      this.categoryId = Number(params.get('id'));
       this.api
-        .categoryOverview(
-          Number(params.get('id')),
-          month && /^\d{4}-\d{2}$/.test(month) ? month : null,
-        )
+        .categoryOverview(this.categoryId, month && /^\d{4}-\d{2}$/.test(month) ? month : null)
         .subscribe({
-          next: (overview) => this.overview.set(overview),
+          next: (overview) => {
+            this.chart.set(overview);
+            this.overview.set(overview);
+          },
           error: (response) =>
             this.error.set(
               response.status === 404
@@ -175,10 +218,44 @@ export class CategoryPage implements OnInit {
     });
   }
 
-  private euros(value: number, currency: string): string {
+  /**
+   * Una barra toccata: la cifra, il budget e "Dove" passano a quel mese; il grafico resta com'è. Anche l'indirizzo
+   * (?mese=) cambia, così ricaricando la pagina si torna allo stesso mese.
+   */
+  pickMonth(index: number): void {
+    const month = this.chartMonths()[index]?.month;
+    const chart = this.chart();
+    if (!month || chart === null || month === this.overview()?.month) {
+      return;
+    }
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { mese: month },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    if (month === chart.month) {
+      this.overview.set(chart);
+      return;
+    }
+    this.loadingMonth.set(true);
+    this.api.categoryOverview(this.categoryId, month).subscribe({
+      next: (overview) => {
+        this.overview.set(overview);
+        this.loadingMonth.set(false);
+      },
+      error: () => {
+        this.loadingMonth.set(false);
+        this.error.set('Impossibile caricare quel mese: il backend è avviato?');
+      },
+    });
+  }
+
+  private euros(value: number, currency: string, decimals = 0): string {
     // Con la modalità discreta, le cifre nascoste (docs/42): anche nelle frasi costruite qui.
+    const digits = decimals === 0 ? '1.0-0' : `1.${decimals}-${decimals}`;
     return this.privacy.hide(
-      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, '1.0-0'),
+      formatCurrency(value, this.locale, currency === 'EUR' ? '€' : currency, currency, digits),
     );
   }
 }

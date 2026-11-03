@@ -80,7 +80,12 @@
           @for (c of topCategories(); track c.categoryId) {
             <li>
               @if (c.categoryId !== null) {
-                <a class="bar-link" [routerLink]="['/analisi/categoria', c.categoryId]">
+                <!-- Nel mese guardato qui, non in quello in corso. -->
+                <a
+                  class="bar-link"
+                  [routerLink]="['/analisi/categoria', c.categoryId]"
+                  [queryParams]="{ mese: o.month }"
+                >
                   <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
                 </a>
               } @else {

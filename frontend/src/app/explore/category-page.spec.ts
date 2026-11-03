@@ -105,7 +105,8 @@ describe('CategoryPage', () => {
     expect(Number(fill.style.width.replace('%', ''))).toBeCloseTo(91.56, 1);
     expect(Number(mark.style.left.replace('%', ''))).toBeCloseTo(80.67, 1);
     expect(page.querySelectorAll('path.bar').length).toBe(12);
-    expect(page.querySelector('path.bar.on')).toBe(page.querySelectorAll('path.bar')[11]);
+    // Accesa la barra del mese guardato (ottobre, la decima di questi dati), non per forza l'ultima.
+    expect(page.querySelector('path.bar.on')).toBe(page.querySelectorAll('path.bar')[9]);
     expect(text).toMatch(/ESSELUNGA MILANO\s*6 volte/);
     expect(text).toMatch(/LIDL\s*1 volta/);
     expect(page.querySelector('a.button.primary')?.getAttribute('href')).toBe(
@@ -183,6 +184,58 @@ describe('CategoryPage', () => {
     expect(link?.getAttribute('href')).toBe(
       `/movimenti?categoryId=${o.categoryId}&from=2026-10-01&to=2026-10-25&text=esselunga`,
     );
+  });
+
+  it('touching a bar shows that month, its figure and where; the chart stays as it is', async () => {
+    // Come l'API: i 12 mesi fino a ottobre 2026. Ottobre 360 €, settembre 120 € (due esercenti diversi).
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(2025, 10 + i, 1);
+      return {
+        month: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        value: i === 10 ? 120 : i === 11 ? 360 : 50,
+      };
+    });
+    const october = overview({ months, amount: 360 });
+    const september = overview({
+      month: '2026-09',
+      day: '2026-09-30',
+      amount: 120,
+      months: months.map((m) => ({ ...m })), // l'API dà i 12 mesi fino a settembre: qui non contano
+      merchants: [
+        {
+          key: 'ZIA PINA',
+          categoryId: null,
+          name: 'ZIA PINA',
+          amount: 120,
+          movements: 1,
+          usual: null,
+        },
+      ],
+    });
+    answer = () => of(requested.at(-1)?.[1] === '2026-09' ? september : october);
+    const fixture = TestBed.createComponent(CategoryPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const text = () => page.textContent?.replace(/\s+/g, ' ') ?? '';
+    const bars = () => Array.from(page.querySelectorAll('app-bar-chart path.bar'));
+
+    expect(page.querySelector('.bar-pick')?.textContent).toMatch(/ottobre 2026: 360,00\s€/);
+    expect(bars()[11].classList.contains('on')).toBe(true);
+
+    (page.querySelectorAll('app-bar-chart rect.hit')[10] as SVGElement).dispatchEvent(
+      new MouseEvent('click'),
+    );
+    await fixture.whenStable();
+
+    expect(requested.at(-1)).toEqual([1, '2026-09']);
+    expect(page.querySelector('.bar-pick')?.textContent).toMatch(/settembre 2026: 120,00\s€/);
+    expect(page.querySelector('.big-figure')?.textContent).toMatch(/120\s€/);
+    expect(text()).toContain('Dove, a settembre');
+    expect(text()).toContain('ZIA PINA');
+    // Il grafico è lo stesso: 12 barre fino a ottobre, accesa quella di settembre.
+    expect(bars().length).toBe(12);
+    expect(bars()[10].classList.contains('on')).toBe(true);
+    expect(bars()[11].classList.contains('on')).toBe(false);
   });
 
   it('says when the category does not exist', async () => {
