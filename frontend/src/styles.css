@@ -618,6 +618,16 @@ table {
   overflow: hidden;
 }
 
+/*
+ * L'attesa dei dati nuovi (docs/grafici-tocco.md): ogni pagina si oscura un poco con la classe .loading, ma solo se
+ * l'attesa dura più di 0,3 secondi. Una risposta veloce (il tocco su una barra) non fa più lampeggiare la pagina: di
+ * notte il testo chiaro che si spegne e si riaccende si vedeva come un lampo. Togliendo la classe, l'opacità torna
+ * subito piena: se non era ancora calata, non succede niente.
+ */
+.loading {
+  transition: opacity 0.2s ease 0.3s;
+}
+
 table.loading {
   opacity: 0.5;
 }
@@ -2794,7 +2804,11 @@ button.chip-button {
 }
 
 /* ---- Il grafico a barre (app-bar-chart, docs/41 parte H) ---- */
+
+/* Sul telefono, toccando una barra il browser illuminava il rettangolo toccabile (alto quanto il grafico, più largo
+   della barra) per tutto il tocco: la barra scelta si vede già, quel rettangolo no (docs/grafici-tocco.md). */
 .bar-chart-wrap {
+  -webkit-tap-highlight-color: transparent;
   position: relative;
   margin: 8px 0 4px;
 }
