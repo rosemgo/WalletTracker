@@ -37,6 +37,7 @@ describe('SettingsPage', () => {
           evaluation: null,
           gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
         }),
+      version: () => of({ version: '1.0.0' }),
       // La sezione Backup (backup-section.spec.ts): qui come in sviluppo, senza Docker.
       backupStatus: () =>
         of({
@@ -85,6 +86,15 @@ describe('SettingsPage', () => {
     input.dispatchEvent(new Event('change'));
     await new Promise((resolve) => setTimeout(resolve, 10)); // il tempo di leggere il file
   }
+
+  it('shows the installed version at the bottom', async () => {
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="version"]')?.textContent,
+    ).toContain('versione 1.0.0');
+  });
 
   it('shows the redirect URL to register on Enable Banking', async () => {
     const fixture = TestBed.createComponent(SettingsPage);

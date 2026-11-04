@@ -5,6 +5,11 @@
 # l'immagine contiene qui non si avvia mai: ci servono solo i suoi programmi.
 FROM postgres:18-alpine
 
+ARG WALLETTRACKER_VERSION=sviluppo
+LABEL org.opencontainers.image.title="WalletTracker backup" \
+      org.opencontainers.image.version="$WALLETTRACKER_VERSION" \
+      org.opencontainers.image.source="https://github.com/rosemgo/WalletTracker"
+
 # OpenSSL, per cifrare il backup con la password (AES-256). È l'unica cosa che manca all'immagine di PostgreSQL.
 RUN apk add --no-cache openssl
 

@@ -99,6 +99,9 @@ enable-banking:
 
 # Sincronizzazione automatica (Fase 1, passo 5): vedi SyncProperties e docs/08.
 wallettracker:
+  # La versione dell'app (docs/50, parte B): nelle immagini pubblicate la scrive il Dockerfile (es. 1.0.0); costruendo
+  # dal codice, o con ./mvnw, è "sviluppo". La mostra la pagina Impostazioni (GET /api/version).
+  version: ${WALLETTRACKER_VERSION:sviluppo}
   # I nomi con cui si può raggiungere il backend (header Host, e Origin per le richieste che modificano dati).
   # Protezione contro DNS rebinding e richieste da altri siti: vedi LocalOnlyRequestFilter e docs/17.
   # Con Tailscale (Fase 4) si aggiunge il nome del PC nella rete privata (es. pc-casa.esempio.ts.net).

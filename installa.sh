@@ -111,6 +111,24 @@ aspetta_salute() {
   errore "$servizio non è pronto dopo $massimo secondi (stato: ${stato:-sconosciuto}). Guarda i log con:  docker compose logs $servizio"
 }
 
+# --- 0. Da dove arrivano le immagini (docs/50, parte C) ----------------------------------------------------
+# Due casi, e lo script li riconosce da solo:
+#   - una VERSIONE SCARICATA (lo ZIP di una release di GitHub): c'è il file VERSION (es. 1.0.0) e non c'è il codice.
+#     Le immagini sono già pronte su GitHub Container Registry: si scaricano;
+#   - il CODICE SORGENTE (il progetto clonato con Git, per chi sviluppa): c'è backend/pom.xml. Le immagini si
+#     costruiscono dal codice (docker-compose.build.yml), con la versione "sviluppo".
+# WALLETTRACKER_VERSION va esportata: docker-compose.yml la usa nel nome delle immagini (…:1.0.0, …:sviluppo).
+if [ -f backend/pom.xml ]; then
+  DAL_CODICE=true
+  WALLETTRACKER_VERSION=sviluppo
+else
+  DAL_CODICE=false
+  WALLETTRACKER_VERSION=$(tr -d ' \r\n' <VERSION 2>/dev/null || true)
+  [ -n "$WALLETTRACKER_VERSION" ] ||
+    errore "Manca il file VERSION: scarica WalletTracker dalla pagina delle versioni su GitHub (docs/50) e lancia lo script dalla sua cartella."
+fi
+export WALLETTRACKER_VERSION
+
 # --- 1. Docker ---------------------------------------------------------------------------------------------
 passo "Controllo Docker"
 command -v docker >/dev/null 2>&1 || errore "Docker non è installato: installa Docker Desktop (docs/45, parte B)."
@@ -324,13 +342,30 @@ if [ "$FARE_BACKUP" = true ] && [ -z "$password_backup" ]; then
 fi
 
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
-passo "Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)"
 profilo=""
 [ "$CON_IA" = true ] && profilo="--profile ia"
 # $profilo senza virgolette, di proposito: vuoto non aggiunge niente, altrimenti diventa le due parole "--profile ia".
-# shellcheck disable=SC2086
-docker compose $profilo up -d --build ||
-  errore "docker compose non è riuscito ad avviare l'app: leggi il messaggio qui sopra."
+if [ "$DAL_CODICE" = true ]; then
+  passo "Avvio di WalletTracker dal codice (la prima volta ci vuole qualche minuto: si compilano le immagini)"
+  # shellcheck disable=SC2086
+  docker compose -f docker-compose.yml -f docker-compose.build.yml $profilo up -d --build ||
+    errore "docker compose non è riuscito ad avviare l'app: leggi il messaggio qui sopra."
+else
+  passo "Avvio di WalletTracker $WALLETTRACKER_VERSION (la prima volta si scaricano le immagini, qualche centinaio di MB)"
+  # pull: scarica le immagini della versione. Senza rete, se ci sono già tutte (le ha scaricate un avvio precedente),
+  # si va avanti con quelle: l'app non ha bisogno di Internet per partire.
+  # shellcheck disable=SC2086
+  if ! docker compose $profilo pull; then
+    for immagine in backend web backup; do
+      docker image inspect "ghcr.io/rosemgo/wallettracker-$immagine:$WALLETTRACKER_VERSION" >/dev/null 2>&1 ||
+        errore "Non riesco a scaricare le immagini della versione $WALLETTRACKER_VERSION (controlla la connessione a Internet) e sul computer non ci sono ancora."
+    done
+    echo "ATTENZIONE: non ho potuto controllare le immagini su Internet; uso quelle già scaricate."
+  fi
+  # shellcheck disable=SC2086
+  docker compose $profilo up -d ||
+    errore "docker compose non è riuscito ad avviare l'app: leggi il messaggio qui sopra."
+fi
 
 # Dopo aver azzerato il PIN, il backend si riavvia: le sessioni aperte (anche su dispositivi persi) si chiudono.
 if [ "$REIMPOSTA_PIN" = true ]; then
@@ -426,7 +461,7 @@ fi
 # --- 7. Fatto ----------------------------------------------------------------------------------------------
 porta=$(valore_env WEB_PORT)
 indirizzo="http://localhost:${porta:-8000}"
-passo "WalletTracker è avviato: $indirizzo"
+passo "WalletTracker $WALLETTRACKER_VERSION è avviato: $indirizzo"
 if [ "$CON_TAILSCALE" = true ]; then
   echo "Dai dispositivi remoti, con Tailscale:  https://$nome_ts   (lì serve il PIN: crealo prima da qui, dal server)"
   echo "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$nome_ts/callback"

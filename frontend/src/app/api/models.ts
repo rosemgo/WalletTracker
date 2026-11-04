@@ -318,6 +318,11 @@ export interface SetupStatus {
   redirectUrls: string[];
 }
 
+/** GET /api/version: la versione dell'app (docs/50, parte B). "sviluppo" se è costruita dal codice. */
+export interface AppVersion {
+  version: string;
+}
+
 /** Un file di backup (Fase 4, passo 5: docs/48 parte Q). */
 export interface BackupFile {
   name: string;

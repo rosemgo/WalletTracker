@@ -6,11 +6,14 @@
 # Maven, il codice sorgente e le dipendenze scaricate restano nella prima, che si butta: l'immagine che gira è
 # più piccola e contiene meno programmi che un attaccante potrebbe usare.
 #
-# Si costruisce con docker compose (docker compose build backend), non a mano.
+# Si costruisce con docker compose (docker compose build backend), non a mano; le versioni pubblicate le costruisce la
+# CI di GitHub (.github/workflows/rilascio.yml, docs/50) per i PC (amd64) e per i Mac con chip Apple (arm64).
 
 # --- 1. Compilazione ---------------------------------------------------------------------------------------
 # La stessa versione di Maven del wrapper (.mvn/wrapper/maven-wrapper.properties) e lo stesso Java 21.
-FROM maven:3.10-eclipse-temurin-21-alpine AS build
+# --platform=$BUILDPLATFORM: la compilazione gira sempre sul processore di chi costruisce, anche quando l'immagine è
+# per un altro (arm64). Il jar è uguale per tutti i processori, quindi si compila una volta sola e senza emulazione.
+FROM --platform=$BUILDPLATFORM maven:3.10-eclipse-temurin-21-alpine AS build
 WORKDIR /src
 
 COPY pom.xml .
@@ -24,6 +27,16 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests package \
 
 # --- 2. L'immagine che gira ---------------------------------------------------------------------------------
 FROM eclipse-temurin:21-jre-alpine
+
+# La versione (docs/50, parte B): la passa la CI quando pubblica una versione (--build-arg, es. 1.0.0); costruendo dal
+# codice resta "sviluppo". Il backend la legge (WALLETTRACKER_VERSION) e la mostra in Impostazioni.
+ARG WALLETTRACKER_VERSION=sviluppo
+ENV WALLETTRACKER_VERSION=$WALLETTRACKER_VERSION
+# Etichette standard delle immagini (OCI): che cosa è, che versione, da dove viene il codice. GitHub usa "source" per
+# collegare l'immagine al repository.
+LABEL org.opencontainers.image.title="WalletTracker backend" \
+      org.opencontainers.image.version="$WALLETTRACKER_VERSION" \
+      org.opencontainers.image.source="https://github.com/rosemgo/WalletTracker"
 
 # Un utente senza privilegi: se qualcuno riuscisse a far eseguire codice al backend, non sarebbe root nel
 # container. L'id 1000 è quello del primo utente su quasi tutti i Linux: così i file creati nella cartella .data

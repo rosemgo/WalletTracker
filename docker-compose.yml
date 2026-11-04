@@ -15,7 +15,9 @@
 #   macOS/Linux:  ./installa.sh
 #
 # Comandi principali (dalla cartella del progetto):
-#   docker compose up -d --build        costruisce le immagini e avvia tutto in background
+#   docker compose up -d                scarica le immagini della versione (se mancano) e avvia tutto in background
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#                                       come sopra, ma costruisce le immagini dal codice (sviluppo, docs/50)
 #   docker compose --profile ia up -d   come sopra, con anche Ollama
 #   docker compose ps                   mostra lo stato (e se i controlli di salute sono "healthy")
 #   docker compose logs -f backend      segue i log di un servizio
@@ -61,7 +63,11 @@ services:
       - no-new-privileges:true
 
   backend:
-    build: ./backend # Costruisce l'immagine con il Dockerfile che trova in backend/
+    # L'immagine già pronta, pubblicata dalla CI su GitHub Container Registry per ogni versione (docs/50, parte C).
+    # WALLETTRACKER_VERSION la imposta lo script di installazione (il file VERSION della versione scaricata); sul tuo
+    # PC, con il codice sorgente, lo script la costruisce invece dal codice (docker-compose.build.yml), con il nome
+    # "sviluppo".
+    image: ghcr.io/rosemgo/wallettracker-backend:${WALLETTRACKER_VERSION:-sviluppo}
     container_name: wallettracker-backend
     restart: unless-stopped
     depends_on:
@@ -133,7 +139,7 @@ services:
       start_period: 90s
 
   web:
-    build: ./frontend
+    image: ghcr.io/rosemgo/wallettracker-web:${WALLETTRACKER_VERSION:-sviluppo}
     container_name: wallettracker-web
     restart: unless-stopped
     depends_on:
@@ -167,7 +173,7 @@ services:
     # niente (lo scrive nei log). Lo script di installazione lo usa anche per i comandi:
     #   docker compose run --rm backup crea manuale
     #   docker compose run --rm backup ripristina <file>    (con il backend fermo: lo fa lo script, --ripristina)
-    build: ./docker/backup
+    image: ghcr.io/rosemgo/wallettracker-backup:${WALLETTRACKER_VERSION:-sviluppo}
     container_name: wallettracker-backup
     restart: unless-stopped
     depends_on:

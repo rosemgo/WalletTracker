@@ -124,6 +124,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 47. [Fase 4, passo 4: Tailscale, l'app dal telefono con https vero (reti, VPN e certificati dalle basi; `tailscale serve`; più indirizzi di ritorno per Enable Banking)](docs/47-fase-4-passo-4-tailscale.md)
 48. [Fase 4, passo 5: backup e ripristino (pg_dump, cifratura con password, backup automatico ogni notte, ripristino provato davvero, spostare l'app su un altro computer)](docs/48-fase-4-passo-5-backup.md)
 49. [Il server in cloud: WalletTracker sempre acceso su Oracle Cloud "Always Free" (VM ARM gratuita, Docker, Tailscale senza porte aperte, i limiti dimezzati nel 2026, il recupero delle VM inattive, i backup fuori da Oracle)](docs/49-server-in-cloud-oracle.md)
+50. [Fase 4, passo 6a: le versioni e le immagini già pronte (GitHub Container Registry, immagini per PC e Mac, versione semantica, tag e release con lo ZIP, `docker-compose.build.yml` per lo sviluppo)](docs/50-fase-4-passo-6-versioni-e-aggiornamenti.md)
 
 ## Piano di lavoro
 
@@ -159,7 +160,11 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
   - [x] passo 3: il PIN per aprire l'app (Spring Security), facoltativo dal PC: due porte per distinguere il PC dagli altri dispositivi, codice di recupero, sessione di 12 ore, blocco dopo 5 errori, CSRF, copia dei dati sul telefono solo a sessione aperta (`docs/46`)
   - [x] passo 4: Tailscale, l'app dal telefono con https vero: `installa --tailscale` configura `tailscale serve` verso la porta "remota", nome del PC e indirizzo di ritorno di Enable Banking nel `.env`; cookie `Secure` dal telefono, Funnel rifiutato, `X-Forwarded-Host` non più inoltrato (`docs/47`)
   - [x] passo 5: backup e ripristino (provato davvero): `installa --backup` e `--ripristina <file>`, file cifrato con una password tua (AES-256, PBKDF2), backup automatico ogni notte in un container dedicato (tiene gli ultimi 14), ripristino con conferma e copia di sicurezza, provato nella CI cancellando tutto; nella dashboard lo stato, "Fai un backup adesso", lo scaricamento solo dal server e un avviso se qualcosa non va (`docs/48`)
-  - [ ] passo 6: aggiornamenti e la guida per chi non è informatico
+  - [ ] passo 6: aggiornamenti e la guida per chi non è informatico (`docs/50`)
+    - [x] 6a: il numero di versione (in Impostazioni → Informazioni) e le immagini già pronte: con un tag `v1.0.0` la CI esegue tutti i test, pubblica le tre immagini su GitHub Container Registry (per PC e Mac con chip Apple) e crea la release con lo ZIP; lo script riconosce da solo se costruire dal codice o scaricare le immagini
+    - [ ] 6b: "Aggiorna": passare all'ultima versione con un comando, con un backup prima
+    - [ ] 6c: il doppio clic (Windows e Mac) e l'avvio automatico
+    - [ ] 6d: la guida per chi non è informatico (`GUIDA.md`, con le schermate)
   - da valutare (decisione rimandata): accesso dai dispositivi remoti anche con una VPN già esistente, al posto di Tailscale. Servirebbero: la porta remota pubblicata solo sull'indirizzo della VPN (mai `0.0.0.0` né l'indirizzo della rete di casa), un certificato https per il nome scelto, quel nome in `WALLETTRACKER_ALLOWED_HOSTS` e negli indirizzi di ritorno di Enable Banking
 
 ## Comandi utili
@@ -169,9 +174,14 @@ Dalla radice del progetto:
 ```bash
 ./installa.sh                                 # primo avvio e avvii successivi: crea il .env se manca e avvia (docs/45)
                                               # su Windows: powershell -ExecutionPolicy Bypass -File installa.ps1
-docker compose up -d --build                  # l'app completa su http://localhost:8000 (docs/44)
-docker compose --profile ia up -d --build     # la stessa, con anche Ollama (l'IA locale)
 docker compose down                           # ferma tutto (i dati restano)
+
+# A mano, senza lo script. Dal codice (sviluppo) serve anche docker-compose.build.yml (docs/50, parte C):
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build                 # l'app completa su http://localhost:8000
+docker compose -f docker-compose.yml -f docker-compose.build.yml --profile ia up -d --build    # la stessa, con anche Ollama (l'IA locale)
+
+# Pubblicare una versione (docs/50, parte E): prima la sezione "## 1.0.0" in NOVITA.md, poi
+git tag -a v1.0.0 -m "WalletTracker 1.0.0" && git push origin v1.0.0
 
 # Per lo sviluppo: solo il database, raggiungibile dal PC (poi backend con ./mvnw e dashboard con npm start).
 # Non insieme all'app completa: due backend leggerebbero due volte le banche.

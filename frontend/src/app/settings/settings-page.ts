@@ -35,6 +35,14 @@ export class SettingsPage {
   protected readonly copied = signal<string | null>(null); // l'ultimo indirizzo copiato
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
+  /** La versione dell'app (docs/50, parte B); null finché il backend non risponde. */
+  protected readonly version = signal<string | null>(null);
+
+  constructor() {
+    this.api
+      .version()
+      .subscribe({ next: (answer) => this.version.set(answer.version), error: () => {} });
+  }
 
   /**
    * Chi ha scritto l'Application ID che c'è ora nel campo? true = l'abbiamo preso noi dal nome del file,

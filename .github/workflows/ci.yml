@@ -8,8 +8,12 @@ name: CI
 
 # Il "trigger": quando far partire la pipeline.
 on:
+  # Su ogni branch (i tag no: per quelli c'è rilascio.yml, che chiama questo stesso file prima di pubblicare).
   push:
+    branches: ['**']
   pull_request:
+  # Chiamato da rilascio.yml (docs/50): prima di pubblicare una versione, tutti i test.
+  workflow_call:
 
 # Permessi minimi: la pipeline deve solo leggere il codice, non modificare il repository.
 permissions:

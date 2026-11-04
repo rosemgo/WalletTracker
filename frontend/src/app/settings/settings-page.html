@@ -124,3 +124,23 @@
 <div class="card">
   <app-theme-section />
 </div>
+
+<!-- Quale versione è installata (docs/50, parte B): serve per sapere se ce n'è una nuova, e per chiedere aiuto. -->
+<h2>Informazioni</h2>
+<div class="card">
+  @if (version(); as current) {
+    @if (current === 'sviluppo') {
+      <p data-testid="version">
+        WalletTracker, <strong>versione di sviluppo</strong>: costruita dal codice, non da una
+        versione pubblicata.
+      </p>
+    } @else {
+      <p data-testid="version">
+        WalletTracker, versione <strong>{{ current }}</strong
+        >.
+      </p>
+    }
+  } @else {
+    <p class="hint">Versione: il server non risponde.</p>
+  }
+</div>

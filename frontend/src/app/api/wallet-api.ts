@@ -11,6 +11,7 @@ import {
   AiProvider,
   AiSettingsChange,
   AiStatus,
+  AppVersion,
   AiSuggestionsStatus,
   AccountRole,
   Alert,
@@ -314,6 +315,11 @@ export class WalletApi {
   /** POST /api/auth/logout: chiude la sessione. */
   logout(): Observable<void> {
     return this.http.post<void>('/api/auth/logout', {});
+  }
+
+  /** GET /api/version: la versione dell'app (docs/50, parte B). */
+  version(): Observable<AppVersion> {
+    return this.http.get<AppVersion>('/api/version');
   }
 
   /** GET /api/backups: lo stato dei backup e l'elenco (docs/48, parte Q). */

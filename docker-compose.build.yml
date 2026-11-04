@@ -1,0 +1,15 @@
+# Costruire le immagini DAL CODICE invece di scaricarle (Fase 4, passo 6: docs/50, parte C).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# docker-compose.yml dice quali immagini usare (ghcr.io/rosemgo/wallettracker-...): sono quelle che la CI pubblica per
+# ogni versione, e che si scaricano già pronte. Chi ha il codice sorgente (tu, mentre sviluppi) le costruisce invece da
+# qui: Docker Compose unisce i due file, e con "build" accanto a "image" costruisce l'immagine e le dà quel nome, con
+# la versione "sviluppo". Lo script di installazione usa questo file da solo quando trova il codice (backend/pom.xml).
+services:
+  backend:
+    build: ./backend
+  web:
+    build: ./frontend
+  backup:
+    build: ./docker/backup

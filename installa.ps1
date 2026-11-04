@@ -104,6 +104,19 @@ function Aspetta-Salute([string]$servizio, [int]$massimo) {
     Errore "$servizio non è pronto dopo $massimo secondi (stato: $stato). Guarda i log con:  docker compose logs $servizio"
 }
 
+# --- 0. Da dove arrivano le immagini (docs/50, parte C) ----------------------------------------------------
+# Come in installa.sh: con il codice sorgente (backend/pom.xml) le immagini si costruiscono dal codice, versione
+# "sviluppo"; in una versione scaricata (il file VERSION) si scaricano già pronte. $env:WALLETTRACKER_VERSION la legge
+# docker-compose.yml, nel nome delle immagini.
+$DalCodice = Test-Path 'backend/pom.xml'
+if ($DalCodice) { $env:WALLETTRACKER_VERSION = 'sviluppo' }
+else {
+    if (-not (Test-Path 'VERSION')) {
+        Errore 'Manca il file VERSION: scarica WalletTracker dalla pagina delle versioni su GitHub (docs/50) e lancia lo script dalla sua cartella.'
+    }
+    $env:WALLETTRACKER_VERSION = ([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION'))).Trim()
+}
+
 # --- 1. Docker ---------------------------------------------------------------------------------------------
 Passo 'Controllo Docker'
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -279,9 +292,27 @@ if ($Backup -and $PasswordBackup -eq '') {
 }
 
 # --- 5. Avvio ----------------------------------------------------------------------------------------------
-Passo 'Avvio di WalletTracker (la prima volta ci vuole qualche minuto: si scaricano e si compilano le immagini)'
-if ($Ia) { & docker compose --profile ia up -d --build }
-else { & docker compose up -d --build }
+$Profilo = @()
+if ($Ia) { $Profilo = @('--profile', 'ia') }
+if ($DalCodice) {
+    Passo 'Avvio di WalletTracker dal codice (la prima volta ci vuole qualche minuto: si compilano le immagini)'
+    & docker compose -f docker-compose.yml -f docker-compose.build.yml @Profilo up -d --build
+}
+else {
+    Passo "Avvio di WalletTracker $($env:WALLETTRACKER_VERSION) (la prima volta si scaricano le immagini, qualche centinaio di MB)"
+    # Senza rete, se le immagini ci sono già tutte, si va avanti con quelle (vedi installa.sh).
+    & docker compose @Profilo pull
+    if ($LASTEXITCODE -ne 0) {
+        foreach ($immagine in 'backend', 'web', 'backup') {
+            & docker image inspect "ghcr.io/rosemgo/wallettracker-$immagine`:$($env:WALLETTRACKER_VERSION)" *> $null
+            if ($LASTEXITCODE -ne 0) {
+                Errore "Non riesco a scaricare le immagini della versione $($env:WALLETTRACKER_VERSION) (controlla la connessione a Internet) e sul computer non ci sono ancora."
+            }
+        }
+        Write-Host 'ATTENZIONE: non ho potuto controllare le immagini su Internet; uso quelle già scaricate.' -ForegroundColor Yellow
+    }
+    & docker compose @Profilo up -d
+}
 if ($LASTEXITCODE -ne 0) { Errore 'docker compose non è riuscito ad avviare l''app: leggi il messaggio qui sopra.' }
 
 # Dopo aver azzerato il PIN, il backend si riavvia: le sessioni aperte (anche su dispositivi persi) si chiudono.
@@ -372,7 +403,7 @@ if ($Ripristina -ne '') {
 $porta = Valore-Env 'WEB_PORT'
 if ($porta -eq '') { $porta = '8000' }
 $indirizzo = "http://localhost:$porta"
-Passo "WalletTracker è avviato: $indirizzo"
+Passo "WalletTracker $($env:WALLETTRACKER_VERSION) è avviato: $indirizzo"
 if ($Tailscale) {
     Write-Host "Dai dispositivi remoti, con Tailscale:  https://$NomeTs   (lì serve il PIN: crealo prima da qui, dal server)"
     Write-Host "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$NomeTs/callback"

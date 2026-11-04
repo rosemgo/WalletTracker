@@ -3,10 +3,13 @@
 #   1. "build": Node 24 e npm compilano Angular (ng build) in una cartella di file statici;
 #   2. quella finale: solo nginx e quei file. Node, node_modules e il codice sorgente restano nella prima.
 #
-# Si costruisce con docker compose (docker compose build web), non a mano.
+# Si costruisce con docker compose (docker compose build web), non a mano; le versioni pubblicate le costruisce la CI
+# di GitHub (.github/workflows/rilascio.yml, docs/50).
 
 # --- 1. Compilazione ---------------------------------------------------------------------------------------
-FROM node:24-alpine AS build
+# --platform=$BUILDPLATFORM: come per il backend, i file di Angular sono uguali per tutti i processori: si compilano
+# una volta sola, sul processore di chi costruisce.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /src
 
 # Prima solo package.json e package-lock.json, poi npm ci, poi il resto. Docker tiene in memoria ("cache") ogni
@@ -24,6 +27,11 @@ RUN NG_CLI_ANALYTICS=false npx ng build
 # la 1024 le può aprire solo root) e scrive i suoi file temporanei in /tmp. Le porte sono due: 8080 per il PC, 8081
 # per Tailscale (nginx/default.conf).
 FROM nginxinc/nginx-unprivileged:1.29-alpine
+
+ARG WALLETTRACKER_VERSION=sviluppo
+LABEL org.opencontainers.image.title="WalletTracker web" \
+      org.opencontainers.image.version="$WALLETTRACKER_VERSION" \
+      org.opencontainers.image.source="https://github.com/rosemgo/WalletTracker"
 
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY nginx/wallettracker.conf /etc/nginx/snippets/wallettracker.conf
