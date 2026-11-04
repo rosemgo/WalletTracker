@@ -66,8 +66,11 @@ Se vedi "Hello from Docker!" è tutto a posto. Lo useremo dalla Fase 1.
 ```bash
 git clone https://github.com/rosemgo/WalletTracker.git
 cd WalletTracker
-git checkout claude/quirky-brahmagupta-c4kk7j
 ```
+
+Il clone si mette già sul ramo principale, `main`: è quello con l'app provata. Le modifiche nuove si preparano su altri
+rami ed entrano in `main` solo con una pull request, unita dal proprietario del repository con la CI verde.
+Per avere le novità, più avanti: `git switch main` e poi `git pull`.
 
 > Se il repository è privato, Git ti chiederà di autenticarti: al posto della password GitHub
 > vuole un *Personal Access Token*. Più semplice: installa [GitHub CLI](https://cli.github.com)
