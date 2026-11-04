@@ -4,7 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 
 import { ROLES, ROLE_LABELS } from '../api/labels';
-import { Account, AccountRole } from '../api/models';
+import { Account, AccountOutcome, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isTradeRepublic } from '../import/completion-page';
 import { MoneyPipe } from '../privacy/money.pipe';
@@ -49,6 +49,10 @@ export class AccountsPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly syncing = signal(false);
+  /** Dopo "Aggiorna ora": una riga per conto, con quello che è arrivato (docs/aggiorna-ora.md). */
+  protected readonly syncOutcomes = signal<string[]>([]);
+  /** Dopo "Aggiorna ora": true se nessun conto letto ha portato niente, né nuovo né in attesa. */
+  protected readonly nothingArrived = signal(false);
   protected readonly confirmingDelete = signal<number | null>(null);
   protected readonly renaming = signal<number | null>(null); // il conto di cui si sta cambiando il nome // il conto da eliminare, in attesa di conferma
   protected readonly editingBalance = signal<number | null>(null); // il conto di cui si scrive il saldo
@@ -78,9 +82,19 @@ export class AccountsPage implements OnInit {
     this.syncing.set(true);
     this.message.set(null);
     this.error.set(null);
+    this.syncOutcomes.set([]);
+    this.nothingArrived.set(false);
     this.api.syncNow().subscribe({
       next: (round) => {
         this.syncing.set(false);
+        const names = new Map(this.accounts().map((a) => [a.id, this.nameOf(a)]));
+        this.syncOutcomes.set(
+          round.accounts.map((o) =>
+            outcomeLine(o, names.get(o.accountId) ?? `Conto ${o.accountId}`),
+          ),
+        );
+        const read = round.accounts.filter((o) => o.error === null);
+        this.nothingArrived.set(read.length > 0 && read.every((o) => o.inserted + o.pending === 0));
         const failed = round.failed > 0 ? `, ${round.failed} con errori (vedi sotto)` : '';
         const updated =
           round.updated === 1 ? 'Aggiornato 1 conto' : `Aggiornati ${round.updated} conti`;
@@ -252,3 +266,23 @@ export class AccountsPage implements OnInit {
 
 /** Il limite del backend (LogoImage.MAX_BYTES): oltre, si dice subito senza mandare il file. */
 const MAX_LOGO_BYTES = 256 * 1024;
+
+/**
+ * La riga di un conto dopo "Aggiorna ora": "Conto corrente: 2 movimenti nuovi, 1 in attesa", "nessun movimento
+ * nuovo", o l'errore.
+ */
+export function outcomeLine(outcome: AccountOutcome, name: string): string {
+  if (outcome.error !== null) {
+    return `${name}: non aggiornato (${outcome.error.replace(/\.$/, '')})`;
+  }
+  const parts = [];
+  if (outcome.inserted > 0) {
+    parts.push(
+      outcome.inserted === 1 ? '1 movimento nuovo' : `${outcome.inserted} movimenti nuovi`,
+    );
+  }
+  if (outcome.pending > 0) {
+    parts.push(`${outcome.pending} in attesa`);
+  }
+  return `${name}: ${parts.length > 0 ? parts.join(', ') : 'nessun movimento nuovo'}`;
+}

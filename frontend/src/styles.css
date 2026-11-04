@@ -696,6 +696,17 @@ td.amount.negative {
   color: var(--ok);
 }
 
+/* Dopo "Aggiorna ora": una riga per conto (docs/aggiorna-ora.md). */
+.sync-outcomes {
+  margin: 0 0 12px;
+  padding-left: 1.2em;
+  color: var(--ink);
+}
+
+.sync-outcomes li + li {
+  margin-top: 4px;
+}
+
 .error {
   color: var(--bad);
 }

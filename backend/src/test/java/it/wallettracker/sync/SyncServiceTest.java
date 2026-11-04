@@ -30,6 +30,7 @@ import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
+import it.wallettracker.sync.SyncService.AccountOutcome;
 import it.wallettracker.sync.SyncService.Round;
 import it.wallettracker.transaction.BankTransactionRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -90,7 +91,7 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(1, 0, 0));
+        assertThat(counts(round)).containsExactly(1, 0, 0);
         // In background gli header PSU NON vengono mandati (null): l'utente non è presente.
         verify(client).getTransactions(eq("uid-a"), any(), any(), isNull());
         Account reloaded = reload(account);
@@ -110,10 +111,37 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(1, 1, 0));
+        assertThat(counts(round)).containsExactly(1, 1, 0);
         assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
         assertThat(reload(working).getLastSyncError()).isNull();
         assertThat(reload(working).getLastSyncAt()).isNotNull();
+    }
+
+    @Test
+    void aRoundSaysHowManyMovementsEveryAccountGotOrWhyItFailed() {
+        BankConnection connection = validConnection();
+        Account failing = account(connection, "uid-a");
+        Account working = account(connection, "uid-b");
+        when(client.getTransactions(eq("uid-a"), any(), any(), any())).thenThrow(tooManyRequests());
+        when(client.getTransactions(eq("uid-b"), any(), any(), any())).thenReturn(List.of(
+                raw("{\"transaction_amount\":{\"amount\":\"12.50\",\"currency\":\"EUR\"},"
+                        + "\"credit_debit_indicator\":\"DBIT\",\"status\":\"BOOK\",\"booking_date\":\"2026-10-01\","
+                        + "\"remittance_information\":[\"SUPERMERCATO\"]}"),
+                raw("{\"transaction_amount\":{\"amount\":\"4.20\",\"currency\":\"EUR\"},"
+                        + "\"credit_debit_indicator\":\"DBIT\",\"status\":\"PDNG\",\"transaction_date\":\"2026-10-02\","
+                        + "\"remittance_information\":[\"BAR CENTRALE\"]}")));
+
+        Round round = syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+
+        assertThat(round.accounts()).containsExactlyInAnyOrder(
+                new AccountOutcome(failing.getId(), 0, 0, reload(failing).getLastSyncError()),
+                new AccountOutcome(working.getId(), 1, 1, null));
+        assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
+
+        // Un secondo giro subito dopo: niente di nuovo, e lo stesso movimento ancora in attesa.
+        when(client.getTransactions(eq("uid-a"), any(), any(), any())).thenReturn(List.of());
+        Round second = syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(second.accounts()).contains(new AccountOutcome(working.getId(), 0, 1, null));
     }
 
     @Test
@@ -125,7 +153,7 @@ class SyncServiceTest {
         Round second = syncService.syncAllInBackground();
 
         // Riprovare subito dopo un 429 servirebbe solo a prenderne un altro: il secondo giro non chiama la banca.
-        assertThat(second).isEqualTo(new Round(0, 0, 1));
+        assertThat(counts(second)).containsExactly(0, 0, 1);
         verify(client, times(1)).getTransactions(eq("uid-a"), any(), any(), any());
     }
 
@@ -140,7 +168,7 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(1, 0, 1));
+        assertThat(counts(round)).containsExactly(1, 0, 1);
         verify(client, never()).getTransactions(eq("uid-a"), any(), any(), any());
         verify(client).getTransactions(eq("uid-b"), any(), any(), any());
     }
@@ -156,7 +184,7 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(0, 1, 0));
+        assertThat(counts(round)).containsExactly(0, 1, 0);
         verify(client, never()).getTransactions(any(), any(), any(), any());
         assertThat(reload(excluded).getLastSyncAt()).isNull();
         assertThat(reload(withExpiredConsent).getLastSyncError())
@@ -201,7 +229,7 @@ class SyncServiceTest {
         Round round = syncService.syncAllInBackground();
 
         // I movimenti sono andati: la sincronizzazione è riuscita, e il saldo di prima resta.
-        assertThat(round).isEqualTo(new Round(1, 0, 0));
+        assertThat(counts(round)).containsExactly(1, 0, 0);
         assertThat(reload(account).getLastSyncError()).isNull();
         assertThat(reload(account).getBalance()).isEqualByComparingTo("99.00");
     }
@@ -298,5 +326,10 @@ class SyncServiceTest {
     private static HttpClientErrorException tooManyRequests() {
         return HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", HttpHeaders.EMPTY,
                 "{\"error\":\"ASPSP_RATE_LIMIT_EXCEEDED\"}".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    /** I tre conteggi di un giro: aggiornati, con errori, non ancora da leggere. */
+    private static List<Integer> counts(Round round) {
+        return List.of(round.updated(), round.failed(), round.notDue());
     }
 }

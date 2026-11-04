@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,8 +90,22 @@ public class SyncService {
         }
     }
 
-    /** Il riepilogo di un giro di sincronizzazione automatica: quanti conti per ogni esito. */
-    public record Round(int updated, int failed, int notDue) {
+    /**
+     * Il riepilogo di un giro di sincronizzazione: quanti conti per ogni esito, e l'esito di ogni conto letto
+     * (docs/aggiorna-ora.md), che "Aggiorna ora" mostra conto per conto.
+     */
+    public record Round(int updated, int failed, int notDue, List<AccountOutcome> accounts) {
+    }
+
+    /**
+     * Com'è andata la lettura di un conto.
+     *
+     * @param accountId il conto
+     * @param inserted  i movimenti contabilizzati nuovi
+     * @param pending   i movimenti in attesa che la banca dà adesso (si sostituiscono a ogni lettura)
+     * @param error     la frase dell'errore, o null se la lettura è riuscita
+     */
+    public record AccountOutcome(Long accountId, int inserted, int pending, String error) {
     }
 
     /**
@@ -169,6 +184,7 @@ public class SyncService {
         int updated = 0;
         int failed = 0;
         int notDue = 0;
+        List<AccountOutcome> outcomes = new ArrayList<>();
 
         for (BankConnection connection : connectionService.allConnections()) {
             for (Account account : connectionService.accountsOf(connection)) {
@@ -186,14 +202,19 @@ public class SyncService {
                             + ": ricollega " + connection.getAspspName();
                     accountRepository.recordSync(account.getId(), now, error);
                     log.warn("{}: {}", account.getName(), error);
+                    outcomes.add(new AccountOutcome(account.getId(), 0, 0, error));
                     failed++;
                     continue;
                 }
 
-                if (syncAccount(account, psu).ok()) {
+                AccountSync sync = syncAccount(account, psu);
+                if (sync.ok()) {
                     updated++;
+                    outcomes.add(new AccountOutcome(account.getId(), sync.result().inserted(),
+                            sync.result().pending(), null));
                 } else {
                     failed++;
+                    outcomes.add(new AccountOutcome(account.getId(), 0, 0, sync.error()));
                 }
             }
         }
@@ -203,7 +224,7 @@ public class SyncService {
         }
         // I loghi delle banche che mancano (docs/loghi.md): di solito niente da fare; un errore non ferma niente.
         logoService.refreshBankLogos(now);
-        return new Round(updated, failed, notDue);
+        return new Round(updated, failed, notDue, List.copyOf(outcomes));
     }
 
     /**

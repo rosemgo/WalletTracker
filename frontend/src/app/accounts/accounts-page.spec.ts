@@ -7,7 +7,7 @@ import { of } from 'rxjs';
 
 import { Account, AccountRole, ManualAccountRequest, SyncRound, Transaction } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { AccountsPage } from './accounts-page';
+import { AccountsPage, outcomeLine } from './accounts-page';
 import { parseBalance } from './balance-form';
 
 const CARD: Account = {
@@ -60,6 +60,7 @@ describe('AccountsPage', () => {
   const balances: [number, number | null][] = [];
   const logos: [number, string][] = [];
   let syncCalls = 0;
+  let round: SyncRound;
   let accounts: Account[];
 
   beforeEach(() => {
@@ -70,6 +71,7 @@ describe('AccountsPage', () => {
     balances.length = 0;
     logos.length = 0;
     syncCalls = 0;
+    round = { updated: 0, failed: 0, notDue: 0, accounts: [] };
     accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of(accounts),
@@ -133,7 +135,7 @@ describe('AccountsPage', () => {
         }),
       syncNow: () => {
         syncCalls++;
-        return of<SyncRound>({ updated: 2, failed: 1, notDue: 0 });
+        return of<SyncRound>(round);
       },
     };
     TestBed.configureTestingModule({
@@ -296,6 +298,16 @@ describe('AccountsPage', () => {
   });
 
   it('"Aggiorna ora" updates the accounts and shows the summary', async () => {
+    accounts = [CARD, BROKER];
+    round = {
+      updated: 1,
+      failed: 1,
+      notDue: 0,
+      accounts: [
+        { accountId: 3, inserted: 2, pending: 1, error: null },
+        { accountId: 8, inserted: 0, pending: 0, error: 'troppe richieste alla banca' },
+      ],
+    };
     const fixture = TestBed.createComponent(AccountsPage);
     await fixture.whenStable();
     const button = (fixture.nativeElement as HTMLElement).querySelector(
@@ -306,8 +318,47 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
 
     expect(syncCalls).toBe(1);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Aggiornati 2 conti, 1 con errori',
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('Aggiornato 1 conto, 1 con errori');
+    const lines = Array.from(page.querySelectorAll('.sync-outcomes li')).map((li) =>
+      li.textContent?.trim(),
+    );
+    expect(lines).toEqual([
+      'ING · Carta di credito: 2 movimenti nuovi, 1 in attesa',
+      'Trade Republic · Conto titoli: non aggiornato (troppe richieste alla banca)',
+    ]);
+    expect(page.textContent).not.toContain('La banca non ha mandato niente di nuovo');
+  });
+
+  it('"Aggiorna ora" says when the bank sent nothing new, and why today\'s card payments may be missing', async () => {
+    accounts = [CARD];
+    round = {
+      updated: 1,
+      failed: 0,
+      notDue: 0,
+      accounts: [{ accountId: 3, inserted: 0, pending: 0, error: null }],
+    };
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    (page.querySelector('.toolbar button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.sync-outcomes')?.textContent).toContain(
+      'ING · Carta di credito: nessun movimento nuovo',
+    );
+    expect(page.textContent).toContain('La banca non ha mandato niente di nuovo');
+    expect(page.textContent).toContain('1–2 giorni lavorativi');
+  });
+
+  it('puts the outcome of an account into words', () => {
+    const ok = { accountId: 1, error: null };
+    expect(outcomeLine({ ...ok, inserted: 1, pending: 0 }, 'Conto')).toBe(
+      'Conto: 1 movimento nuovo',
+    );
+    expect(outcomeLine({ ...ok, inserted: 0, pending: 3 }, 'Conto')).toBe('Conto: 3 in attesa');
+    expect(outcomeLine({ ...ok, inserted: 0, pending: 0 }, 'Conto')).toBe(
+      'Conto: nessun movimento nuovo',
     );
   });
 

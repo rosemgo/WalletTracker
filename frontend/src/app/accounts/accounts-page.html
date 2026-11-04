@@ -8,18 +8,33 @@
   <a routerLink="/importa">Importa CSV</a>
 </div>
 
+@if (message()) {
+  <p class="message">{{ message() }}</p>
+}
+@if (syncOutcomes().length > 0) {
+  <!-- Quello che ogni conto ha portato con "Aggiorna ora" (docs/aggiorna-ora.md). -->
+  <ul class="sync-outcomes">
+    @for (line of syncOutcomes(); track $index) {
+      <li>{{ line }}</li>
+    }
+  </ul>
+  @if (nothingArrived()) {
+    <p class="hint">
+      La banca non ha mandato niente di nuovo. Se mancano le spese di oggi: molte banche passano i
+      pagamenti con carta alle app solo quando sono contabilizzati, di solito dopo 1–2 giorni
+      lavorativi. Compariranno da soli a uno dei prossimi aggiornamenti.
+    </p>
+  }
+}
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
 <p class="hint">
   Il ruolo dice al programma come trattare i movimenti di un conto: ad esempio, i trasferimenti
   verso un conto "Investimenti" sono versamenti, quelli verso una "Carta di credito" sono saldi
   della carta. Cambiando un ruolo, tutti i movimenti vengono riclassificati.
 </p>
-
-@if (message()) {
-  <p class="message">{{ message() }}</p>
-}
-@if (error()) {
-  <p class="error">{{ error() }}</p>
-}
 
 @if (loading()) {
   <p>Caricamento...</p>

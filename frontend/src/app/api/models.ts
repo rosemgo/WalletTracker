@@ -250,6 +250,15 @@ export interface SyncRound {
   updated: number;
   failed: number;
   notDue: number;
+  accounts: AccountOutcome[]; // l'esito di ogni conto letto (docs/aggiorna-ora.md)
+}
+
+/** Com'è andata la lettura di un conto con "Aggiorna ora". */
+export interface AccountOutcome {
+  accountId: number;
+  inserted: number; // i movimenti contabilizzati nuovi
+  pending: number; // i movimenti in attesa che la banca dà adesso
+  error: string | null; // la frase dell'errore, o null se la lettura è riuscita
 }
 
 /** Come una regola confronta il testo (enum MatchMode nel backend). */
