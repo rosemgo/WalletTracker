@@ -24,4 +24,14 @@ class VersionControllerTest {
         assertThat(mvc.get().uri("/api/version")).hasStatusOk()
                 .bodyJson().extractingPath("$.version").isEqualTo("sviluppo");
     }
+
+    @Test
+    void fromTheSourceCodeThereIsNeverAnUpdateToOffer() {
+        assertThat(mvc.get().uri("/api/version/update")).hasStatusOk()
+                .bodyJson().satisfies(json -> {
+                    assertThat(json).extractingPath("$.currentVersion").isEqualTo("sviluppo");
+                    assertThat(json).extractingPath("$.checkEnabled").isEqualTo(false);
+                    assertThat(json).extractingPath("$.available").isEqualTo(false);
+                });
+    }
 }

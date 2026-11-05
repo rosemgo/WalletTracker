@@ -5,6 +5,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map } from 'rxjs';
 
 import { BackupStore } from './api/backup-store';
+import { UpdateStore } from './api/update-store';
 import { SetupStore } from './api/setup-store';
 import { AuthStore } from './auth/auth-store';
 import { PinPage } from './auth/pin-page';
@@ -59,6 +60,8 @@ export class App implements OnInit {
   protected readonly auth = inject(AuthStore);
   protected readonly setup = inject(SetupStore);
   private readonly backups = inject(BackupStore);
+  /** C'è una versione nuova? (docs/50, parte J) */
+  protected readonly updates = inject(UpdateStore);
 
   /** Il testo dell'avviso sui backup, o null se va tutto bene (o se l'app non è in Docker: docs/48, parte Q). */
   protected readonly backupWarning = computed(() => {
@@ -118,6 +121,7 @@ export class App implements OnInit {
         untracked(() => {
           this.setup.refresh();
           this.backups.refresh();
+          this.updates.refresh();
         });
       }
     });

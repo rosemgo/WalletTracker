@@ -90,6 +90,8 @@ services:
       # I nomi con cui si apre l'app nel browser (vedi LocalOnlyRequestFilter). Con Tailscale si aggiunge il nome del
       # PC nella rete privata: lo fa ./installa.sh --tailscale (docs/47).
       WALLETTRACKER_ALLOWED_HOSTS: ${WALLETTRACKER_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      # C'è una versione nuova? Una volta al giorno il backend lo chiede a GitHub (docs/50, parte J); false lo spegne.
+      WALLETTRACKER_UPDATE_CHECK: ${WALLETTRACKER_UPDATE_CHECK:-true}
       # La chiave di cifratura e la chiave di Enable Banking: nelle cartelle montate qui sotto (volumes).
       WALLETTRACKER_KEY_FILE: /app/.data/encryption.key
       # I backup nella dashboard (Impostazioni → Backup, docs/48 parte Q): dove sono i file (in sola lettura, qui

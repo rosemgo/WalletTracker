@@ -130,7 +130,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 47. [Fase 4, passo 4: Tailscale, l'app dal telefono con https vero (reti, VPN e certificati dalle basi; `tailscale serve`; più indirizzi di ritorno per Enable Banking)](docs/47-fase-4-passo-4-tailscale.md)
 48. [Fase 4, passo 5: backup e ripristino (pg_dump, cifratura con password, backup automatico ogni notte, ripristino provato davvero, spostare l'app su un altro computer)](docs/48-fase-4-passo-5-backup.md)
 49. [Il server in cloud: WalletTracker sempre acceso su Oracle Cloud "Always Free" (VM ARM gratuita, Docker, Tailscale senza porte aperte, i limiti dimezzati nel 2026, il recupero delle VM inattive, i backup fuori da Oracle)](docs/49-server-in-cloud-oracle.md)
-50. [Fase 4, passo 6a: le versioni e le immagini già pronte (GitHub Container Registry, immagini per PC e Mac, versione semantica, tag e release con lo ZIP, `docker-compose.build.yml` per lo sviluppo)](docs/50-fase-4-passo-6-versioni-e-aggiornamenti.md)
+50. [Fase 4, passo 6: le versioni e le immagini già pronte (6a: GitHub Container Registry, immagini per PC e Mac, versione semantica, tag e release con lo ZIP); "Aggiorna" con backup e ritorno da solo, e l'avviso della versione nuova nell'app (6b)](docs/50-fase-4-passo-6-versioni-e-aggiornamenti.md)
 
 ## Piano di lavoro
 
@@ -168,9 +168,10 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
   - [x] passo 5: backup e ripristino (provato davvero): `installa --backup` e `--ripristina <file>`, file cifrato con una password tua (AES-256, PBKDF2), backup automatico ogni notte in un container dedicato (tiene gli ultimi 14), ripristino con conferma e copia di sicurezza, provato nella CI cancellando tutto; nella dashboard lo stato, "Fai un backup adesso", lo scaricamento solo dal server e un avviso se qualcosa non va (`docs/48`)
   - [ ] passo 6: aggiornamenti e la guida per chi non è informatico (`docs/50`)
     - [x] 6a: il numero di versione (in Impostazioni → Informazioni) e le immagini già pronte: con un tag `v1.0.0` la CI esegue tutti i test, pubblica le tre immagini su GitHub Container Registry (per PC e Mac con chip Apple) e crea la release con lo ZIP; lo script riconosce da solo se costruire dal codice o scaricare le immagini
-    - [ ] 6b: "Aggiorna": passare all'ultima versione con un comando, con un backup prima
+    - [x] 6b: "Aggiorna" (`installa.ps1 -Aggiorna`, `./installa.sh --aggiorna`): ultima versione da GitHub, ZIP controllato con l'impronta SHA-256, novità e conferma, backup prima, file nuovi al posto dei vecchi (mai `.env`, `.data`, backup, `secrets`), ritorno da solo alla versione di prima (file e dati) se la nuova non parte; nell'app una striscia che si chiude e le novità in Impostazioni → Informazioni (il backend chiede a GitHub una volta al giorno, spegnibile); provato nella CI con un finto GitHub (`docs/50`, parti I-M)
     - [ ] 6c: il doppio clic (Windows e Mac) e l'avvio automatico
     - [ ] 6d: la guida per chi non è informatico (`GUIDA.md`, con le schermate)
+  - da valutare: la firma delle release (con una chiave che resta fuori da GitHub), così "Aggiorna" riconoscerebbe uno ZIP falso anche se qualcuno entrasse nell'account GitHub (`docs/50`, parte K)
   - da valutare (decisione rimandata): accesso dai dispositivi remoti anche con una VPN già esistente, al posto di Tailscale. Servirebbero: la porta remota pubblicata solo sull'indirizzo della VPN (mai `0.0.0.0` né l'indirizzo della rete di casa), un certificato https per il nome scelto, quel nome in `WALLETTRACKER_ALLOWED_HOSTS` e negli indirizzi di ritorno di Enable Banking
 
 ## Comandi utili
@@ -179,6 +180,7 @@ Dalla radice del progetto:
 
 ```bash
 ./installa.sh                                 # primo avvio e avvii successivi: crea il .env se manca e avvia (docs/45)
+./installa.sh --aggiorna                      # dalla cartella di una versione scaricata: passa all'ultima (docs/50, parte I)
                                               # su Windows: powershell -ExecutionPolicy Bypass -File installa.ps1
 docker compose down                           # ferma tutto (i dati restano)
 

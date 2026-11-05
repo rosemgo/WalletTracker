@@ -102,6 +102,14 @@ wallettracker:
   # La versione dell'app (docs/50, parte B): nelle immagini pubblicate la scrive il Dockerfile (es. 1.0.0); costruendo
   # dal codice, o con ./mvnw, è "sviluppo". La mostra la pagina Impostazioni (GET /api/version).
   version: ${WALLETTRACKER_VERSION:sviluppo}
+  # C'è una versione nuova? (docs/50, parte J). Una volta al giorno il backend chiede a GitHub l'ultima versione
+  # pubblicata (GitHub vede solo l'indirizzo IP) e la dashboard lo dice. WALLETTRACKER_UPDATE_CHECK=false nel .env lo
+  # spegne. Dal codice ("sviluppo") non si chiede mai niente. L'indirizzo si cambia solo per le prove.
+  update:
+    enabled: ${WALLETTRACKER_UPDATE_CHECK:true}
+    url: ${WALLETTRACKER_RELEASES_URL:https://api.github.com/repos/rosemgo/WalletTracker/releases/latest}
+    check-every: 24h
+    initial-delay: 2m
   # I nomi con cui si può raggiungere il backend (header Host, e Origin per le richieste che modificano dati).
   # Protezione contro DNS rebinding e richieste da altri siti: vedi LocalOnlyRequestFilter e docs/17.
   # Con Tailscale (Fase 4) si aggiunge il nome del PC nella rete privata (es. pc-casa.esempio.ts.net).

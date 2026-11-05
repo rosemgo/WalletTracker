@@ -291,3 +291,23 @@ jobs:
       - name: Log dei container
         if: failure()
         run: docker compose logs --tail 200
+
+  # "Aggiorna" (Fase 4, passo 6b: docs/50, parte I), da una versione all'altra, con un finto GitHub sulla macchina
+  # stessa: l'ultima già installata, uno ZIP manomesso (rifiutato), un aggiornamento riuscito e uno che fallisce (lo
+  # script torna da solo alla versione di prima, con i dati di prima). Tutto in .github/ci/prova-aggiornamento.sh.
+  aggiornamento:
+    name: Aggiornamento (installa.sh --aggiorna)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      - name: Prova l'aggiornamento
+        run: .github/ci/prova-aggiornamento.sh "$RUNNER_TEMP/aggiornamento"
+
+      - name: Log dei container
+        if: failure()
+        working-directory: ${{ runner.temp }}/aggiornamento/WalletTracker
+        run: docker compose logs --tail 200

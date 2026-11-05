@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { SetupStatus } from '../api/models';
+import { SetupStatus, UpdateStatus } from '../api/models';
 import { SetupStore } from '../api/setup-store';
 import { WalletApi } from '../api/wallet-api';
 import { SettingsPage } from './settings-page';
@@ -20,6 +20,7 @@ const PEM = '-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n';
 describe('SettingsPage', () => {
   const saved: [string, string][] = [];
   let rejected = false;
+  let update: UpdateStatus | null = null;
 
   beforeEach(() => {
     saved.length = 0;
@@ -38,6 +39,19 @@ describe('SettingsPage', () => {
           gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
         }),
       version: () => of({ version: '1.0.0' }),
+      // Le versioni nuove (docs/50, parte J): di serie il controllo è spento.
+      updateStatus: () =>
+        of<UpdateStatus>(
+          update ?? {
+            currentVersion: '1.0.0',
+            checkEnabled: false,
+            available: false,
+            latestVersion: null,
+            releaseUrl: null,
+            notes: null,
+            checkedAt: null,
+          },
+        ),
       // La sezione Backup (backup-section.spec.ts): qui come in sviluppo, senza Docker.
       backupStatus: () =>
         of({
@@ -94,6 +108,63 @@ describe('SettingsPage', () => {
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('[data-testid="version"]')?.textContent,
     ).toContain('versione 1.0.0');
+  });
+
+  it('a new version: its notes, its page and the command to update on the server', async () => {
+    update = {
+      currentVersion: '1.0.0',
+      checkEnabled: true,
+      available: true,
+      latestVersion: '1.1.0',
+      releaseUrl: 'https://github.com/rosemgo/WalletTracker/releases/tag/v1.1.0',
+      notes: '- prima novità\n- seconda <b>novità</b>',
+      checkedAt: '2026-11-05T10:00:00Z',
+    };
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const box = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="update-available"]',
+    ) as HTMLElement;
+
+    expect(box.textContent).toContain('È disponibile la versione 1.1.0');
+    // Le novità sono testo: niente HTML che arrivi da fuori.
+    expect(box.querySelector('[data-testid="update-notes"]')?.textContent).toBe(
+      '- prima novità\n- seconda <b>novità</b>',
+    );
+    expect(box.querySelector('b')).toBeNull();
+    expect(box.querySelector('a')?.getAttribute('href')).toBe(
+      'https://github.com/rosemgo/WalletTracker/releases/tag/v1.1.0',
+    );
+    expect(box.querySelector('a')?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(box.textContent).toContain('installa.ps1 -Aggiorna');
+    expect(box.textContent).toContain('./installa.sh --aggiorna');
+    update = null;
+  });
+
+  it('the latest version, or the check switched off, is said in a line', async () => {
+    update = {
+      currentVersion: '1.1.0',
+      checkEnabled: true,
+      available: false,
+      latestVersion: '1.1.0',
+      releaseUrl: null,
+      notes: null,
+      checkedAt: '2026-11-05T10:00:00Z',
+    };
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[data-testid="update-latest"]')?.textContent).toContain(
+      "È l'ultima versione pubblicata",
+    );
+    expect(page.querySelector('[data-testid="update-available"]')).toBeNull();
+    update = null;
+
+    const off = TestBed.createComponent(SettingsPage);
+    await off.whenStable();
+    expect((off.nativeElement as HTMLElement).textContent).toContain(
+      'Il controllo delle versioni nuove è spento',
+    );
   });
 
   it('shows the redirect URL to register on Enable Banking', async () => {

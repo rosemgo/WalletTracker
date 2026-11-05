@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="860" fill="#ffffff"/>
+<text x="600" y="38" text-anchor="middle" font-size="25" font-weight="700" fill="#0f172a">"Aggiorna": installa.ps1 -Aggiorna  /  ./installa.sh --aggiorna</text>
+<text x="600" y="64" text-anchor="middle" font-size="14" fill="#475569">finché non si arriva al passo ⑤ non cambia niente; dopo, se qualcosa va storto, si torna indietro da soli</text>
+
+<!-- colonna dei passi -->
+<rect x="20" y="90" width="560" height="78" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="40" y="118" font-size="15" font-weight="700" fill="#1d4ed8">① Che versione ho? Qual è l'ultima?</text>
+<text x="40" y="140" font-size="12" fill="#334155">VERSION (es. 1.0.0)  ↔  api.github.com/…/releases/latest (es. v1.1.0)</text>
+<text x="40" y="158" font-size="12" fill="#334155">uguale → "Hai già l'ultima versione" e basta</text>
+
+<rect x="20" y="186" width="560" height="78" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="40" y="214" font-size="15" font-weight="700" fill="#1d4ed8">② Scarico lo ZIP e ne controllo l'impronta</text>
+<text x="40" y="236" font-size="12" fill="#334155">SHA-256 dello ZIP = quella scritta in SHA256SUMS?</text>
+<text x="40" y="254" font-size="12" fill="#334155">no → "NON corrisponde alla sua impronta": non lo uso</text>
+
+<rect x="20" y="282" width="560" height="62" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="40" y="310" font-size="15" font-weight="700" fill="#1d4ed8">③ Le novità, e la domanda: aggiorno? [s/N]</text>
+<text x="40" y="332" font-size="12" fill="#334155">da NOVITA.md della versione nuova, fino a quella che hai</text>
+
+<rect x="20" y="362" width="560" height="62" rx="12" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="40" y="390" font-size="15" font-weight="700" fill="#15803d">④ Backup: wallettracker-prima-dell-aggiornamento-….backup</text>
+<text x="40" y="412" font-size="12" fill="#334155">se non riesce, mi fermo: non è cambiato niente</text>
+
+<rect x="20" y="442" width="560" height="94" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="40" y="470" font-size="15" font-weight="700" fill="#c2410c">⑤ Metto da parte i file di adesso, e al loro posto i nuovi</text>
+<text x="40" y="492" font-size="12" fill="#334155">copia in .aggiornamento/precedente; poi i nuovi, con un nome</text>
+<text x="40" y="510" font-size="12" fill="#334155">provvisorio e RINOMINATI (istantaneo: lo script che gira non si confonde)</text>
+<text x="40" y="528" font-size="12" font-weight="700" fill="#7f1d1d">MAI toccati: .env, .data (la chiave), backup, secrets</text>
+
+<rect x="20" y="554" width="560" height="78" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="40" y="582" font-size="15" font-weight="700" fill="#c2410c">⑥ Lancio lo script NUOVO</text>
+<text x="40" y="604" font-size="12" fill="#334155">docker compose pull (immagini 1.1.0) → up -d → il backend nuovo</text>
+<text x="40" y="622" font-size="12" fill="#334155">applica le migrazioni di Flyway al database</text>
+
+<rect x="20" y="650" width="560" height="62" rx="12" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<text x="40" y="678" font-size="15" font-weight="700" fill="#0f172a">⑦ Il backend acceso è "healthy" ed è la 1.1.0?</text>
+<text x="40" y="700" font-size="12" fill="#334155">l'etichetta della sua immagine: org.opencontainers.image.version</text>
+
+<line x1="300" y1="168" x2="300" y2="182" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="264" x2="300" y2="278" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="344" x2="300" y2="358" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="424" x2="300" y2="438" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="536" x2="300" y2="550" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+<line x1="300" y1="632" x2="300" y2="646" stroke="#334155" stroke-width="2" marker-end="url(#ak)"/>
+
+<!-- sì -->
+<rect x="20" y="750" width="560" height="90" rx="12" fill="#dcfce7" stroke="#15803d" stroke-width="2.5"/>
+<text x="40" y="780" font-size="16" font-weight="700" fill="#15803d">sì → "Aggiornamento completato: WalletTracker 1.1.0"</text>
+<text x="40" y="804" font-size="12" fill="#334155">la 1.0.0 resta in .aggiornamento/precedente fino al prossimo aggiornamento,</text>
+<text x="40" y="822" font-size="12" fill="#334155">il backup di prima resta nella cartella dei backup</text>
+<line x1="300" y1="712" x2="300" y2="746" stroke="#15803d" stroke-width="2.5" marker-end="url(#ak)"/>
+<text x="312" y="735" font-size="13" font-weight="700" fill="#15803d">sì</text>
+
+<!-- no: ritorno -->
+<rect x="640" y="430" width="540" height="282" rx="14" fill="#fef2f2" stroke="#b91c1c" stroke-width="2.5"/>
+<text x="910" y="460" text-anchor="middle" font-size="16" font-weight="700" fill="#b91c1c">no → torno da solo alla 1.0.0</text>
+<text x="660" y="492" font-size="13" fill="#334155">1. i file di prima, da .aggiornamento/precedente</text>
+<text x="680" y="512" font-size="12" fill="#475569">(e via quelli che la 1.0.0 non aveva)</text>
+<text x="660" y="540" font-size="13" fill="#334155">2. i dati di prima: ripristino il backup del passo ④</text>
+<text x="680" y="560" font-size="12" fill="#475569">perché il backend nuovo può aver già cambiato il database</text>
+<text x="680" y="578" font-size="12" fill="#475569">(migrazioni), e quello vecchio non lo riconoscerebbe</text>
+<text x="660" y="606" font-size="13" fill="#334155">3. riavvio la 1.0.0 e aspetto che sia "healthy"</text>
+<text x="660" y="640" font-size="13" font-weight="700" fill="#7f1d1d">"Sono tornato a WalletTracker 1.0.0, con i dati di prima</text>
+<text x="660" y="660" font-size="13" font-weight="700" fill="#7f1d1d">dell'aggiornamento: è tutto com'era."</text>
+<text x="660" y="690" font-size="12" fill="#475569">si perde al massimo quello arrivato nei minuti dell'aggiornamento</text>
+<line x1="580" y1="681" x2="635" y2="640" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="594" y="650" font-size="13" font-weight="700" fill="#b91c1c">no</text>
+
+<!-- prima di ⑤ -->
+<rect x="640" y="90" width="540" height="190" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="910" y="120" text-anchor="middle" font-size="16" font-weight="700" fill="#334155">un errore nei passi ① - ④</text>
+<text x="660" y="150" font-size="13" fill="#334155">niente Internet, GitHub non risponde, ZIP rovinato o</text>
+<text x="660" y="170" font-size="13" fill="#334155">diverso, "N" alla domanda, backup non riuscito…</text>
+<text x="660" y="204" font-size="13" font-weight="700" fill="#0f172a">→ mi fermo: "Non è cambiato niente."</text>
+<text x="660" y="234" font-size="12" fill="#475569">i file dell'app, il database e i container sono quelli di prima:</text>
+<text x="660" y="254" font-size="12" fill="#475569">fino al passo ⑤ si è solo letto e scaricato in .aggiornamento/nuova</text>
+<line x1="580" y1="225" x2="635" y2="200" stroke="#334155" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ak)"/>
+
+<rect x="640" y="300" width="540" height="110" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="910" y="328" text-anchor="middle" font-size="15" font-weight="700" fill="#7e22ce">sul tuo PC (c'è il codice: backend/pom.xml)</text>
+<text x="660" y="356" font-size="13" fill="#334155">-Aggiorna spiega e si ferma: dal codice si aggiorna con</text>
+<text x="660" y="378" font-size="12" font-family="Consolas, monospace" fill="#0f172a">git switch main  →  git pull  →  installa.ps1</text>
+<text x="660" y="398" font-size="12" fill="#475569">così il tuo lavoro non lo tocca nessuno</text>
+
+<rect x="640" y="750" width="540" height="90" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="660" y="778" font-size="14" font-weight="700" fill="#1d4ed8">E nell'app?</text>
+<text x="660" y="800" font-size="12" fill="#334155">il backend chiede a GitHub una volta al giorno: una striscia in alto</text>
+<text x="660" y="818" font-size="12" fill="#334155">(si chiude, ricompare al prossimo ingresso) e in Impostazioni →</text>
+<text x="660" y="836" font-size="12" fill="#334155">Informazioni le novità e il comando. Aggiornare resta allo script.</text>
+</svg>

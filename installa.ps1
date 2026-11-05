@@ -10,6 +10,7 @@
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           l'app sui tuoi dispositivi (docs/47)
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Backup              un backup adesso (docs/48)
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ripristina FILE     SOSTITUISCE i dati con quelli del backup
+#   powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna            l'ultima versione, con un backup prima (docs/50)
 #
 # "-ExecutionPolicy Bypass": Windows, di serie, non esegue gli script scaricati. Così il permesso vale solo per
 # questo comando, senza cambiare le impostazioni del PC.
@@ -24,6 +25,7 @@ param(
     [switch]$Tailscale,
     [switch]$Backup,
     [string]$Ripristina = '',
+    [switch]$Aggiorna,
     [switch]$SenzaBrowser
 )
 
@@ -115,6 +117,18 @@ else {
         Errore 'Manca il file VERSION: scarica WalletTracker dalla pagina delle versioni su GitHub (docs/50) e lancia lo script dalla sua cartella.'
     }
     $env:WALLETTRACKER_VERSION = ([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'VERSION'))).Trim()
+}
+
+if ($Aggiorna) {
+    # Dal codice si aggiorna con Git, non con le versioni pubblicate: lo script non tocca il tuo lavoro.
+    if ($DalCodice) {
+        Write-Host 'Questa è la cartella del CODICE SORGENTE (c''è backend/pom.xml): -Aggiorna serve alle versioni scaricate.'
+        Write-Host 'Per avere le novità dal codice:  git switch main   poi   git pull   e rilancia lo script.'
+        exit 0
+    }
+    if ($Backup -or $Ripristina -ne '' -or $CambiaPasswordDb -or $ReimpostaPin -or $Tailscale) {
+        Errore '-Aggiorna va lanciato da solo (al massimo con -Ia): le altre operazioni falle prima o dopo.'
+    }
 }
 
 # --- 1. Docker ---------------------------------------------------------------------------------------------
@@ -271,7 +285,8 @@ function Leggi-Segreto([string]$domanda) {
 }
 
 $PasswordBackup = Valore-Env 'WALLETTRACKER_BACKUP_PASSWORD'
-if ($Backup -and $PasswordBackup -eq '') {
+# Anche per -Aggiorna: il backup di prima dell'aggiornamento è quello che permette di tornare indietro.
+if (($Backup -or $Aggiorna) -and $PasswordBackup -eq '') {
     Passo 'La password dei backup'
     if ([Console]::IsInputRedirected) {
         Errore 'Manca la password dei backup: lancia lo script con -Backup da PowerShell (la chiede), o scrivila nel .env come WALLETTRACKER_BACKUP_PASSWORD (docs/48).'
@@ -318,9 +333,168 @@ if ($LASTEXITCODE -ne 0) { Errore 'docker compose non è riuscito ad avviare l''
 # Dopo aver azzerato il PIN, il backend si riavvia: le sessioni aperte (anche su dispositivi persi) si chiudono.
 if ($ReimpostaPin) { & docker compose restart backend | Out-Null }
 
+$Attesa = 240
+if ($env:WALLETTRACKER_ATTESA_BACKEND) { $Attesa = [int]$env:WALLETTRACKER_ATTESA_BACKEND }
 Passo 'Aspetto che il backend sia pronto'
-Aspetta-Salute 'backend' 240
+Aspetta-Salute 'backend' $Attesa
 Write-Host 'Il backend è pronto.'
+
+# --- 5b. Aggiornare all'ultima versione (solo con -Aggiorna: docs/50, parte I) ----------------------------
+# Gli stessi passi di installa.sh (vedi i commenti lì). PowerShell legge tutto lo script prima di cominciare: si può
+# sostituire il file mentre gira.
+if ($Aggiorna) {
+    $indirizzoVersioni = 'https://api.github.com/repos/rosemgo/WalletTracker/releases/latest'
+    if ($env:WALLETTRACKER_RELEASES_URL) { $indirizzoVersioni = $env:WALLETTRACKER_RELEASES_URL }
+    $agg = Join-Path $PSScriptRoot '.aggiornamento'
+    $cartellaNuova = Join-Path $agg 'nuova'
+    $precedente = Join-Path $agg 'precedente'
+    # Windows PowerShell 5.1: https moderno (TLS 1.2) e niente barra di avanzamento, che rallenta moltissimo gli scaricamenti.
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    $ProgressPreference = 'SilentlyContinue'
+    # I file da non toccare mai, anche se uno ZIP li contenesse.
+    function Da-Non-Toccare([string]$f) { return $f -eq '.env' -or $f -match '^(\.data|backup|secrets|\.aggiornamento)/' }
+    function Metti-Al-Posto([string]$da, [string]$dove) {
+        $cartella = Split-Path -Parent $dove
+        if ($cartella -and -not (Test-Path $cartella)) { New-Item -ItemType Directory -Force -Path $cartella | Out-Null }
+        Copy-Item -Force -Path $da -Destination "$dove.nuovo"
+        Move-Item -Force -Path "$dove.nuovo" -Destination $dove
+    }
+    # I file di una cartella, con il percorso relativo e le barre "/" (come nello ZIP).
+    function File-Di([string]$cartella) {
+        $base = (Resolve-Path $cartella).Path.TrimEnd('\', '/')
+        return Get-ChildItem -Path $cartella -Recurse -File -Force |
+            ForEach-Object { $_.FullName.Substring($base.Length + 1).Replace('\', '/') }
+    }
+
+    Passo 'Cerco una versione nuova'
+    if (Test-Path $cartellaNuova) { Remove-Item -Recurse -Force $cartellaNuova }
+    New-Item -ItemType Directory -Force -Path $cartellaNuova | Out-Null
+    try { $ultima = Invoke-RestMethod -UseBasicParsing -TimeoutSec 30 -Uri $indirizzoVersioni -Headers @{ Accept = 'application/vnd.github+json' } }
+    catch { Errore 'Non riesco a chiedere a GitHub l''ultima versione (controlla la connessione a Internet). Non è cambiato niente.' }
+    $tag = [string]$ultima.tag_name
+    if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { Errore "GitHub ha risposto qualcosa che non capisco (versione: `"$tag`"). Non è cambiato niente." }
+    $nuova = $tag.Substring(1)
+    $adesso = $env:WALLETTRACKER_VERSION
+    if ($adesso -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { Errore "Il file VERSION non contiene una versione valida (`"$adesso`"). Non è cambiato niente." }
+    # [version] confronta i numeri uno per uno: 1.10.0 è più nuova di 1.9.0.
+    if (-not ([version]$nuova -gt [version]$adesso)) {
+        Remove-Item -Recurse -Force $cartellaNuova
+        Passo "Hai già l'ultima versione: WalletTracker $adesso"
+        exit 0
+    }
+    Write-Host "C'è una versione nuova: $nuova (adesso hai la $adesso)."
+
+    $urlZip = [string]($ultima.assets | Where-Object { $_.name -eq "WalletTracker-$nuova.zip" } | Select-Object -First 1).browser_download_url
+    $urlImpronte = [string]($ultima.assets | Where-Object { $_.name -eq 'SHA256SUMS' } | Select-Object -First 1).browser_download_url
+    if ($urlZip -eq '' -or $urlImpronte -eq '') { Errore "La versione $nuova non ha lo ZIP o SHA256SUMS. Non è cambiato niente." }
+    if (-not $env:WALLETTRACKER_RELEASES_URL) {
+        $origine = "https://github.com/rosemgo/WalletTracker/releases/download/$tag/"
+        if (-not $urlZip.StartsWith($origine) -or -not $urlImpronte.StartsWith($origine)) {
+            Errore 'Gli indirizzi dei file non sono quelli della pagina delle versioni di WalletTracker. Non è cambiato niente.'
+        }
+    }
+
+    Passo "Scarico WalletTracker $nuova e controllo che sia integro"
+    $zip = Join-Path $cartellaNuova "WalletTracker-$nuova.zip"
+    $impronte = Join-Path $cartellaNuova 'SHA256SUMS'
+    try {
+        Invoke-WebRequest -UseBasicParsing -TimeoutSec 600 -Uri $urlZip -OutFile $zip
+        Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $urlImpronte -OutFile $impronte
+    }
+    catch { Errore 'Lo scaricamento non è riuscito (controlla la connessione a Internet). Non è cambiato niente.' }
+    $attesa = ''
+    foreach ($riga in [System.IO.File]::ReadAllLines($impronte)) {
+        $parti = $riga -split '\s+', 2
+        if ($parti.Count -eq 2 -and $parti[1].TrimStart('*') -eq "WalletTracker-$nuova.zip") { $attesa = $parti[0] }
+    }
+    if ($attesa -eq '' -or (Get-FileHash -Algorithm SHA256 -Path $zip).Hash -ine $attesa) {
+        Errore 'Lo ZIP scaricato NON corrisponde alla sua impronta (SHA256SUMS): è rovinato o non è quello pubblicato. Non l''ho usato; non è cambiato niente.'
+    }
+    Expand-Archive -Path $zip -DestinationPath $cartellaNuova -Force
+    $sorgente = Join-Path $cartellaNuova "WalletTracker-$nuova"
+    $versioneZip = ''
+    if (Test-Path (Join-Path $sorgente 'VERSION')) { $versioneZip = ([System.IO.File]::ReadAllText((Join-Path $sorgente 'VERSION'))).Trim() }
+    if (-not (Test-Path (Join-Path $sorgente 'installa.ps1')) -or -not (Test-Path (Join-Path $sorgente 'docker-compose.yml')) -or $versioneZip -ne $nuova) {
+        Errore "Lo ZIP non contiene la versione $nuova come me l'aspetto. Non è cambiato niente."
+    }
+    Write-Host 'Lo ZIP è integro.'
+
+    Passo "Le novità dalla $adesso alla $nuova"
+    $dentro = $false
+    foreach ($riga in [System.IO.File]::ReadAllLines((Join-Path $sorgente 'NOVITA.md'), $Utf8)) {
+        if ($riga -eq "## $adesso") { break }
+        if ($riga.StartsWith('## ')) { $dentro = $true }
+        if ($dentro) { Write-Host $riga }
+    }
+    Write-Host ''
+    $risposta = Read-Host "Aggiorno WalletTracker alla $nuova? Prima faccio un backup dei dati. [s/N]"
+    if ($risposta -notmatch '^(s|si|sì)$') {
+        Write-Host 'Aggiornamento annullato: non è cambiato niente.'
+        exit 0
+    }
+
+    Passo 'Backup prima dell''aggiornamento'
+    $uscita = & docker compose run --rm -T backup crea prima-dell-aggiornamento 2>&1 | ForEach-Object { "$_" }
+    $codiceBackup = $LASTEXITCODE
+    $uscita | ForEach-Object { Write-Host $_ }
+    if ($codiceBackup -ne 0) { Errore 'Il backup non è riuscito: aggiornamento annullato, non è cambiato niente.' }
+    $nomeBackup = ''
+    foreach ($riga in $uscita) {
+        if ($riga -match 'Backup creato: (wallettracker-prima-dell-aggiornamento-[0-9-]+\.backup)') { $nomeBackup = $Matches[1] }
+    }
+    if ($nomeBackup -eq '') { Errore 'Non trovo il nome del backup appena fatto: aggiornamento annullato, non è cambiato niente.' }
+
+    Passo "Sostituisco i file dell'app (la $adesso la metto da parte in .aggiornamento\precedente)"
+    if (Test-Path $precedente) { Remove-Item -Recurse -Force $precedente }
+    New-Item -ItemType Directory -Force -Path $precedente | Out-Null
+    $fileNuovi = @(File-Di $sorgente | Where-Object { -not (Da-Non-Toccare $_) })
+    $aggiunti = New-Object System.Collections.Generic.List[string]
+    foreach ($f in $fileNuovi) {
+        if (Test-Path $f) { Metti-Al-Posto $f (Join-Path $precedente $f) }
+        else { $aggiunti.Add($f) }
+    }
+    [System.IO.File]::WriteAllText((Join-Path $precedente '.aggiunti'), ($aggiunti -join "`n"), $Utf8)
+    foreach ($f in $fileNuovi) { Metti-Al-Posto (Join-Path $sorgente $f) $f }
+
+    Passo "Avvio di WalletTracker $nuova (con lo script nuovo)"
+    $powershell = (Get-Process -Id $PID).Path
+    $opzioni = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $PSScriptRoot 'installa.ps1'), '-SenzaBrowser')
+    if ($Ia) { $opzioni += '-Ia' }
+    & $powershell @opzioni
+    $codice = $LASTEXITCODE
+    # Il controllo finale: il backend acceso deve essere proprio quello della versione nuova. (Le etichette in JSON:
+    # Windows PowerShell rovina le virgolette dentro gli argomenti dei programmi esterni.)
+    $avviata = ''
+    try { $avviata = [string]((& docker inspect --format '{{json .Config.Labels}}' wallettracker-backend 2>$null | ConvertFrom-Json).'org.opencontainers.image.version') } catch { }
+    if ($codice -eq 0 -and $avviata -eq $nuova) {
+        Remove-Item -Recurse -Force $cartellaNuova
+        Passo "Aggiornamento completato: WalletTracker $nuova è avviato"
+        Write-Host "Il backup di prima dell'aggiornamento è $nomeBackup (nella cartella dei backup)."
+        Write-Host "I file della $adesso restano in .aggiornamento\precedente fino al prossimo aggiornamento."
+        $porta = Valore-Env 'WEB_PORT'
+        if ($porta -eq '') { $porta = '8000' }
+        if (-not $SenzaBrowser) { Start-Process "http://localhost:$porta" }
+        exit 0
+    }
+
+    # --- Non è andata: si torna alla versione di prima, da soli ---
+    Passo "L'aggiornamento non è riuscito: torno alla versione $adesso"
+    foreach ($f in [System.IO.File]::ReadAllText((Join-Path $precedente '.aggiunti'), $Utf8) -split "`n") {
+        if ($f -ne '' -and (Test-Path $f)) { Remove-Item -Force $f }
+    }
+    foreach ($f in (File-Di $precedente | Where-Object { $_ -ne '.aggiunti' })) { Metti-Al-Posto (Join-Path $precedente $f) $f }
+    $env:WALLETTRACKER_VERSION = $adesso
+    & docker compose @Profilo up -d db *> $null
+    & docker compose stop backend backup *> $null
+    & docker compose run --rm -T backup ripristina $nomeBackup
+    if ($LASTEXITCODE -ne 0) {
+        Errore "Non sono riuscito a rimettere i dati di prima. I file della $adesso sono di nuovo al loro posto; per i dati: rilancia lo script con  -Ripristina backup\$nomeBackup   (docs/50, parte I)."
+    }
+    & docker compose @Profilo up -d
+    if ($LASTEXITCODE -ne 0) { Errore "Non riesco a riavviare la versione $adesso`: leggi il messaggio qui sopra (docs/50, parte I)." }
+    Aspetta-Salute 'backend' $Attesa
+    Errore "Sono tornato a WalletTracker $adesso, con i dati di prima dell'aggiornamento: è tutto com'era. Il motivo è nei messaggi qui sopra; lo ZIP della $nuova è rimasto in .aggiornamento\nuova (docs/50, parte I)."
+}
 
 # --- 6. Backup e ripristino (solo con -Backup o -Ripristina) ----------------------------------------------
 # Il lavoro lo fa il container "backup" (docker/backup/wallettracker-backup.sh): vedi i commenti in installa.sh.

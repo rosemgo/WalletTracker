@@ -53,6 +53,7 @@ import {
   TransactionPage,
   TransactionType,
   UsedCategories,
+  UpdateStatus,
 } from './models';
 
 /**
@@ -320,6 +321,11 @@ export class WalletApi {
   /** GET /api/version: la versione dell'app (docs/50, parte B). */
   version(): Observable<AppVersion> {
     return this.http.get<AppVersion>('/api/version');
+  }
+
+  /** GET /api/version/update: c'è una versione nuova? (docs/50, parte J). L'ultima risposta di GitHub. */
+  updateStatus(): Observable<UpdateStatus> {
+    return this.http.get<UpdateStatus>('/api/version/update');
   }
 
   /** GET /api/backups: lo stato dei backup e l'elenco (docs/48, parte Q). */
