@@ -65,6 +65,8 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 ## Guide
 
+> **Promemoria per lo sviluppo: [quali comandi lanciare, e mai due backend insieme](docs/sviluppo-comandi.md).**
+
 > Fuori dalla numerazione (scritta in parallelo alla Fase 4): [Investimenti: quanto hai versato, cedole, dividendi e interessi](docs/investimenti.md).
 
 > Sempre fuori dalla numerazione: [Tinaba: un CSV senza segno](docs/tinaba.md).
