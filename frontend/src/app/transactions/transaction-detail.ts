@@ -32,6 +32,7 @@ export { MAX_SEARCH_WORDS, merchantSearch } from './merchant-search';
 import { TransactionsChanged } from './transactions-changed';
 import { shortAccountName } from '../accounts/accounts-store';
 import { Avatar } from './avatar';
+import { UpperFirstPipe } from '../text/upper-first.pipe';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
 export const TYPE_HINTS: Record<TransactionType, string> = {
@@ -76,7 +77,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [Avatar, DatePipe, MoneyPipe, RouterLink],
+  imports: [Avatar, DatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {

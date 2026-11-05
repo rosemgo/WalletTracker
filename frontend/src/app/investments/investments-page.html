@@ -132,7 +132,7 @@
             <span class="mid-figure">{{
               netIncome() | money: d.currency : 'symbol' : '1.0-0'
             }}</span>
-            <span class="secondary">netti: quello che è arrivato sul conto</span>
+            <span class="secondary">Netti: quello che è arrivato sul conto</span>
             <p class="bar-pick">{{ incomeBarText() }}</p>
             <app-bar-chart
               [values]="income()"
@@ -229,12 +229,12 @@
                       {{ c.account }}
                       <span class="secondary">
                         @if (c.balance; as b) {
-                          al {{ b.date | date: 'd MMM y' }} ·
+                          Al {{ b.date | date: 'd MMM y' }} ·
                           {{ b.source === 'BANK' ? 'dalla banca' : 'dal saldo che hai scritto' }}
                         } @else if (c.manual) {
-                          saldo non scritto: <a routerLink="/conti">scrivilo in Conti</a>
+                          Saldo non scritto: <a routerLink="/conti">scrivilo in Conti</a>
                         } @else {
-                          la banca non dà il saldo: <a routerLink="/conti">scrivilo in Conti</a>
+                          La banca non dà il saldo: <a routerLink="/conti">scrivilo in Conti</a>
                         }
                       </span>
                     </span>

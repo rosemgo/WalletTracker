@@ -25,7 +25,7 @@
         t.amount | money: t.currency
       }}</span>
       <span class="secondary"
-        >{{ t.bookingDate | date: 'EEEE d MMMM y' }} · {{ accountName() }}</span
+        >{{ t.bookingDate | date: 'EEEE d MMMM y' | upperFirst }} · {{ accountName() }}</span
       >
       <span class="chip">{{ t.status === 'PENDING' ? 'In attesa' : 'Contabilizzato' }}</span>
     </section>
@@ -144,8 +144,8 @@
               <li>
                 <a [routerLink]="['/movimenti', r.id]" queryParamsHandling="preserve">
                   <span>
-                    {{ r.bookingDate | date: 'EEEE d MMMM' }}
-                    <span class="secondary">{{ r.category ?? 'senza categoria' }}</span>
+                    {{ r.bookingDate | date: 'EEEE d MMMM' | upperFirst }}
+                    <span class="secondary">{{ r.category ?? 'Senza categoria' }}</span>
                   </span>
                   <strong>{{ r.amount | money: r.currency }}</strong>
                 </a>
@@ -200,10 +200,10 @@
           <dd>{{ t.description }}</dd>
         }
         <dt>Data contabile</dt>
-        <dd>{{ t.bookingDate | date: 'EEEE d MMMM y' }}</dd>
+        <dd>{{ t.bookingDate | date: 'EEEE d MMMM y' | upperFirst }}</dd>
         @if (t.valueDate && t.valueDate !== t.bookingDate) {
           <dt>Data valuta</dt>
-          <dd>{{ t.valueDate | date: 'EEEE d MMMM y' }}</dd>
+          <dd>{{ t.valueDate | date: 'EEEE d MMMM y' | upperFirst }}</dd>
         }
         <dt>Arrivato</dt>
         <dd>{{ origins[d.origin] }}, il {{ d.importedAt | date: 'd MMMM y' }}</dd>

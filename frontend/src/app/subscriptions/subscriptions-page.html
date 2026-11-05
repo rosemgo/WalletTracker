@@ -69,7 +69,7 @@
                   class="link"
                   (click)="remove(s.id, s.name + ' tolto dagli abbonamenti')"
                 >
-                  togli
+                  Togli
                 </button>
               </td>
             </tr>
@@ -111,7 +111,7 @@
         <button type="button" class="primary" (click)="confirm(suggestion, nameInput.value)">
           È un abbonamento
         </button>
-        <button type="button" (click)="dismiss(suggestion)">no, non suggerirlo più</button>
+        <button type="button" (click)="dismiss(suggestion)">No, non suggerirlo più</button>
       </div>
     </div>
   } @empty {
@@ -136,7 +136,7 @@
               class="link"
               (click)="remove(d.id, d.merchantKey + ' potrà essere suggerito di nuovo')"
             >
-              suggeriscilo di nuovo
+              Suggeriscilo di nuovo
             </button>
           </li>
         }

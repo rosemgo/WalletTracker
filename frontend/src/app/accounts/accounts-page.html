@@ -69,7 +69,7 @@
                     (keydown.escape)="renaming.set(null)"
                   />
                   <button type="button" (click)="rename(account, nameInput.value)">Salva</button>
-                  <button type="button" class="link" (click)="renaming.set(null)">annulla</button>
+                  <button type="button" class="link" (click)="renaming.set(null)">Annulla</button>
                 </div>
               } @else {
                 @if (account.logoVersion) {
@@ -78,16 +78,16 @@
                 }
                 {{ account.label }}
                 <button type="button" class="link" (click)="renaming.set(account.id)">
-                  rinomina
+                  Rinomina
                 </button>
               }
               <div>
-                <a routerLink="/movimenti" [queryParams]="{ accountId: account.id }"
-                  >vedi i movimenti</a
+                <a class="action" routerLink="/movimenti" [queryParams]="{ accountId: account.id }"
+                  >Vedi i movimenti</a
                 >
               </div>
               <div class="secondary">
-                {{ account.iban ?? 'senza IBAN' }} · {{ account.currency }}
+                {{ account.iban ?? 'Senza IBAN' }} · {{ account.currency }}
                 @if (account.name && account.source !== 'MANUAL') {
                   · per la banca: {{ account.name }}
                 }
@@ -120,7 +120,7 @@
                   </div>
                 } @else {
                   <!-- Non ancora letto (dopo un aggiornamento dell'app), o la banca non lo dà: si legge con "Aggiorna ora". -->
-                  <span class="secondary">plafond non ancora letto: premi «Aggiorna ora»</span>
+                  <span class="secondary">Plafond non ancora letto: premi «Aggiorna ora»</span>
                 }
               } @else if (editingBalance() === account.id) {
                 <app-balance-form
@@ -142,17 +142,17 @@
                     }
                   </div>
                 } @else if (account.source === 'MANUAL') {
-                  <span class="secondary">non ancora scritto</span>
+                  <span class="secondary">Non ancora scritto</span>
                 } @else if (account.lastSyncAt) {
-                  <span class="secondary">la banca non lo dà</span>
+                  <span class="secondary">La banca non lo dà</span>
                 } @else {
-                  <span class="secondary">al prossimo aggiornamento</span>
+                  <span class="secondary">Al prossimo aggiornamento</span>
                 }
                 @if (account.balance?.source !== 'BANK') {
                   <!-- Anche un conto collegato, se la banca non dà il saldo (docs/saldi.md, parte E). -->
                   <div>
                     <button type="button" class="link" (click)="editingBalance.set(account.id)">
-                      {{ account.balance ? 'correggi il saldo' : 'scrivi il saldo' }}
+                      {{ account.balance ? 'Correggi il saldo' : 'Scrivi il saldo' }}
                     </button>
                   </div>
                 }
@@ -160,7 +160,7 @@
             </td>
             @if (account.source === 'MANUAL') {
               <!-- Conto manuale: niente consenso PSD2, i movimenti arrivano da file. -->
-              <td data-label="Consenso" class="secondary">conto manuale</td>
+              <td data-label="Consenso" class="secondary">Conto manuale</td>
               <td data-label="">
                 @if (confirmingDelete() === account.id) {
                   <!-- Eliminare chiede conferma: non si può annullare. -->
@@ -169,14 +169,16 @@
                   >
                   <button type="button" (click)="remove(account)">Elimina</button>
                   <button type="button" class="link" (click)="confirmingDelete.set(null)">
-                    annulla
+                    Annulla
                   </button>
                 } @else {
-                  <a routerLink="/importa" [queryParams]="{ conto: account.id }">importa un file</a>
+                  <a class="action" routerLink="/importa" [queryParams]="{ conto: account.id }"
+                    >Importa un file</a
+                  >
                   ·
                   <!-- Il logo di un conto manuale: un'immagine scelta dall'utente (docs/loghi.md, parte C). -->
                   <label class="link logo-upload">
-                    {{ account.logoVersion ? 'cambia il logo' : 'carica il logo' }}
+                    {{ account.logoVersion ? 'Cambia il logo' : 'Carica il logo' }}
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -186,12 +188,12 @@
                   @if (account.logoVersion) {
                     ·
                     <button type="button" class="link" (click)="removeLogo(account)">
-                      togli il logo
+                      Togli il logo
                     </button>
                   }
                   ·
                   <button type="button" class="link" (click)="confirmingDelete.set(account.id)">
-                    elimina
+                    Elimina
                   </button>
                 }
               </td>
@@ -211,8 +213,11 @@
                 @if (isTradeRepublic(account)) {
                   <!-- Trade Republic manda i movimenti senza causale: si completano con il suo file. -->
                   <div>
-                    <a routerLink="/importa/completa" [queryParams]="{ conto: account.id }"
-                      >completa con il file</a
+                    <a
+                      class="action"
+                      routerLink="/importa/completa"
+                      [queryParams]="{ conto: account.id }"
+                      >Completa con il file</a
                     >
                   </div>
                 }

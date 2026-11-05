@@ -119,7 +119,7 @@ describe('RulesPage', () => {
     expect(text).toContain('inizia con «Div.su»');
     expect(text).toContain('solo entrate');
     expect(text).toContain('Cedole, dividendi e interessi');
-    expect(text).toContain('regola di partenza');
+    expect(text).toContain('Regola di partenza');
   });
 
   it('saves a new rule with the values typed in the form', async () => {

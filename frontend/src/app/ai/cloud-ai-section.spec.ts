@@ -107,7 +107,7 @@ describe('CloudAiSection', () => {
 
     expect(page.textContent).toContain('✓ Chiave salvata (…XYZ9)');
     expect(page.querySelector('input[type="password"]')).toBeNull();
-    button(page, 'togli').click();
+    button(page, 'Togli').click();
     await fixture.whenStable();
     expect(deleted).toEqual(['GEMINI']);
   });

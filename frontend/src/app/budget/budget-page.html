@@ -98,9 +98,9 @@
           {{ b.monthlyAmount | money: b.currency }}
         </span>
         @if (b.remaining >= 0) {
-          <span>restano {{ b.remaining | money: b.currency }}</span>
+          <span>Restano {{ b.remaining | money: b.currency }}</span>
         } @else {
-          <span class="negative">superato di {{ -b.remaining | money: b.currency }}</span>
+          <span class="negative">Superato di {{ -b.remaining | money: b.currency }}</span>
         }
       </div>
       <p class="secondary pace">{{ budgetNote(b) }}</p>

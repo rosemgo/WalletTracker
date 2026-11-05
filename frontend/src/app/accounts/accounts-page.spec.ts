@@ -162,7 +162,7 @@ describe('AccountsPage', () => {
 
     expect(text(cells[0])).toMatch(/1\.234,56\s€ al 31 ott 2026 · dalla banca/);
     expect(cells[0].querySelector('button')).toBeNull(); // il saldo della banca non si scrive a mano
-    expect(text(cells[1])).toContain('non ancora scritto');
+    expect(text(cells[1])).toContain('Non ancora scritto');
 
     (cells[1].querySelector('button') as HTMLButtonElement).click();
     await fixture.whenStable();
@@ -209,7 +209,7 @@ describe('AccountsPage', () => {
     );
     expect(text(cells[0])).not.toContain('saldo');
     expect(cells[0].querySelector('button')).toBeNull();
-    expect(text(cells[1])).toContain('plafond non ancora letto: premi «Aggiorna ora»');
+    expect(text(cells[1])).toContain('Plafond non ancora letto: premi «Aggiorna ora»');
     expect(cells[1].querySelector('button')).toBeNull();
   });
 
@@ -219,7 +219,7 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
     const input = page.querySelector('.logo-upload input') as HTMLInputElement;
-    expect(page.querySelector('.logo-upload')?.textContent).toContain('carica il logo');
+    expect(page.querySelector('.logo-upload')?.textContent).toContain('Carica il logo');
 
     const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'tr.png', {
       type: 'image/png',
@@ -232,7 +232,7 @@ describe('AccountsPage', () => {
     expect(page.querySelector('img.account-logo')?.getAttribute('src')).toBe(
       '/api/accounts/8/logo?v=2',
     );
-    expect(page.querySelector('.logo-upload')?.textContent).toContain('cambia il logo');
+    expect(page.querySelector('.logo-upload')?.textContent).toContain('Cambia il logo');
   });
 
   it('a logo too big is refused before sending it', async () => {
@@ -272,7 +272,7 @@ describe('AccountsPage', () => {
     expect(page.textContent).toContain('HTTP 429 troppe letture');
     // Ogni conto porta ai suoi movimenti.
     const link = Array.from(page.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('vedi i movimenti'),
+      a.textContent?.includes('Vedi i movimenti'),
     );
     expect(link?.getAttribute('href')).toBe('/movimenti?accountId=3');
     const select = page.querySelector('select') as HTMLSelectElement;
@@ -369,16 +369,16 @@ describe('AccountsPage', () => {
     const page = fixture.nativeElement as HTMLElement;
     const row = page.querySelectorAll('tbody tr')[1] as HTMLElement;
 
-    expect(row.textContent).toContain('conto manuale');
+    expect(row.textContent).toContain('Conto manuale');
     const link = Array.from(row.querySelectorAll('a')).find((a) =>
-      a.textContent?.includes('importa un file'),
+      a.textContent?.includes('Importa un file'),
     ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/importa?conto=8');
 
     // "elimina" chiede conferma; solo "Elimina" cancella davvero.
     (
       Array.from(row.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'elimina',
+        (b) => b.textContent?.trim() === 'Elimina',
       ) as HTMLButtonElement
     ).click();
     await fixture.whenStable();
@@ -403,9 +403,9 @@ describe('AccountsPage', () => {
     const row = (fixture.nativeElement as HTMLElement).querySelector('tbody tr') as HTMLElement;
 
     const buttons = Array.from(row.querySelectorAll('button')).map((b) => b.textContent?.trim());
-    expect(buttons).not.toContain('elimina');
+    expect(buttons).not.toContain('Elimina');
     // il nome si può scegliere per ogni conto; il saldo si scrive se la banca non lo dà (docs/saldi.md, parte E)
-    expect(buttons).toEqual(['rinomina', 'scrivi il saldo']);
+    expect(buttons).toEqual(['Rinomina', 'Scrivi il saldo']);
   });
 
   it('creates a manual account from the form', async () => {
@@ -465,7 +465,7 @@ describe('AccountsPage', () => {
         (b) => b.textContent?.trim() === text,
       ) as HTMLButtonElement;
 
-    button('rinomina').click();
+    button('Rinomina').click();
     await fixture.whenStable();
     const input = row().querySelector('input') as HTMLInputElement;
     input.value = '  Carta Visa ';
@@ -476,7 +476,7 @@ describe('AccountsPage', () => {
     expect(row().textContent).toContain('Carta Visa');
     expect(page.textContent).toContain('Conto rinominato in "Carta Visa"');
 
-    button('rinomina').click();
+    button('Rinomina').click();
     await fixture.whenStable();
     const again = row().querySelector('input') as HTMLInputElement;
     again.value = '';

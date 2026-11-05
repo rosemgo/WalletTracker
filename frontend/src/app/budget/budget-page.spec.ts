@@ -118,12 +118,12 @@ describe('BudgetPage', () => {
     expect(requestedMonths).toEqual([monthOf(new Date())]);
     // Prima il superato (Viaggi), poi il quasi esaurito (Spesa alimentare).
     expect(cards[0].textContent).toContain('Superato');
-    expect(cards[0].textContent).toMatch(/superato di 30,00\s€/);
+    expect(cards[0].textContent).toMatch(/Superato di 30,00\s€/);
     // La barra non va oltre il 100%, anche se la spesa sì.
     expect((cards[0].querySelector('.meter-fill') as HTMLElement).style.width).toBe('100%');
 
     expect(cards[1].textContent).toContain('Quasi esaurito');
-    expect(cards[1].textContent).toMatch(/restano 80,00\s€/);
+    expect(cards[1].textContent).toMatch(/Restano 80,00\s€/);
     expect((cards[1].querySelector('.meter-fill') as HTMLElement).style.width).toBe('80%');
     // Il segno del ritmo: 200 di 400 = a metà della barra; e la frase.
     expect((cards[1].querySelector('.meter-today') as HTMLElement).style.left).toBe('50%');

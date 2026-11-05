@@ -138,7 +138,7 @@ describe('SuggestionsPanel', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    button(page, 'no').click();
+    button(page, 'No').click();
     await fixture.whenStable();
 
     expect(dismissed).toEqual([['PIZZERIA DA GINO', 5]]);
