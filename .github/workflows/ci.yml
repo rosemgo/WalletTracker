@@ -14,6 +14,8 @@ on:
   pull_request:
   # Chiamato da rilascio.yml (docs/50): prima di pubblicare una versione, tutti i test.
   workflow_call:
+  # Abilita il pulsante per l'avvio manuale
+  workflow_dispatch:
 
 # Permessi minimi: la pipeline deve solo leggere il codice, non modificare il repository.
 permissions:
