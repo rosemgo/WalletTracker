@@ -43,7 +43,7 @@ public class BackupService {
      * non i file provvisori o altro) e per lo scaricamento, dove un nome che non torna non apre niente (niente
      * "../" verso altre cartelle).
      */
-    static final Pattern NAME = Pattern.compile("wallettracker-(manuale|automatico|prima-del-ripristino)-\\d{8}-\\d{6}\\.backup");
+    static final Pattern NAME = Pattern.compile("wallettracker-(manuale|automatico|prima-del-ripristino|prima-dell-aggiornamento)-\\d{8}-\\d{6}\\.backup");
 
     /** Il container rinnova lo stato almeno ogni minuto: tre minuti senza vuol dire che è spento. */
     static final Duration ALIVE = Duration.ofMinutes(3);
@@ -68,7 +68,7 @@ public class BackupService {
     /**
      * Un file di backup.
      *
-     * @param type      manuale, automatico o prima-del-ripristino
+     * @param type      manuale, automatico, prima-del-ripristino o prima-dell-aggiornamento
      * @param createdAt quando è stato scritto (la data del file)
      */
     public record BackupFile(String name, String type, Instant createdAt, long sizeBytes) {

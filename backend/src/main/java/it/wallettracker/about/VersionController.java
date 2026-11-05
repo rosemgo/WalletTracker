@@ -18,13 +18,21 @@ public class VersionController {
     }
 
     private final Version version;
+    private final UpdateCheckService updates;
 
-    public VersionController(@Value("${wallettracker.version}") String version) {
+    public VersionController(@Value("${wallettracker.version}") String version, UpdateCheckService updates) {
         this.version = new Version(version);
+        this.updates = updates;
     }
 
     @GetMapping("/api/version")
     public Version version() {
         return version;
+    }
+
+    /** C'è una versione nuova? (docs/50, parte J): l'ultima risposta di GitHub, senza chiedere niente adesso. */
+    @GetMapping("/api/version/update")
+    public UpdateCheckService.UpdateStatus update() {
+        return updates.status();
     }
 }

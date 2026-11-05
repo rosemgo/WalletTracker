@@ -3,7 +3,8 @@
 #
 #   wallettracker-backup automatico          resta acceso: un backup al giorno, dall'ora BACKUP_TIME (di serie 03:15),
 #                                            e i backup chiesti dalla dashboard (Impostazioni → Backup)
-#   wallettracker-backup crea [tipo]         un backup adesso; tipo: manuale (di serie), automatico, prima-del-ripristino
+#   wallettracker-backup crea [tipo]         un backup adesso; tipo: manuale (di serie), automatico, prima-del-ripristino,
+#                                            prima-dell-aggiornamento (docs/50)
 #   wallettracker-backup verifica <file>     apre il backup e controlla che sia integro, senza toccare niente
 #   wallettracker-backup ripristina <file>   SOSTITUISCE il database e la chiave di cifratura con quelli del backup
 #
@@ -68,7 +69,7 @@ percorso() {
 crea() {
   local tipo=${1:-manuale}
   case "$tipo" in
-    manuale | automatico | prima-del-ripristino) ;;
+    manuale | automatico | prima-del-ripristino | prima-dell-aggiornamento) ;;
     *) errore 2 "Tipo di backup sconosciuto: $tipo" ;;
   esac
   controlla_password

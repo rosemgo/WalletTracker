@@ -14,3 +14,5 @@ La prima versione pubblicata.
 - **Un PIN** per aprire l'app (facoltativo dal computer su cui è installata), con il codice di recupero.
 - **Dal telefono**, ovunque, con Tailscale e un https vero; l'app si installa come un'app vera.
 - **Backup** cifrati con una password tua, ogni notte da soli, e "Fai un backup adesso" dalle Impostazioni.
+- **Aggiornamenti con un comando** (`installa.ps1 -Aggiorna`, `./installa.sh --aggiorna`): prima un backup, e se la
+  versione nuova non parte si torna da soli a quella di prima. L'app avvisa quando ne esce una.

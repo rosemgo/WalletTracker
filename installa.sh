@@ -9,6 +9,7 @@
 #   ./installa.sh --tailscale            apre l'app ai tuoi dispositivi con Tailscale, con https (docs/47)
 #   ./installa.sh --backup               un backup adesso (la prima volta chiede la password dei backup: docs/48)
 #   ./installa.sh --ripristina FILE      SOSTITUISCE i dati di adesso con quelli del backup FILE (chiede conferma)
+#   ./installa.sh --aggiorna             passa all'ultima versione pubblicata, con un backup prima (docs/50, parte I)
 #   ./installa.sh --senza-browser        non apre il browser alla fine (per la CI)
 #
 # Si può rilanciare quante volte si vuole: quello che c'è già (il .env, la chiave, i dati) non viene toccato.
@@ -19,7 +20,7 @@
 #   3. crea la cartella .data (la chiave di cifratura) come tuo utente;
 #   4. se richiesto, cambia la password del database, azzera il PIN, prepara Tailscale o la password dei backup;
 #   5. docker compose up -d --build, e aspetta che il backend sia pronto;
-#   6. se richiesto, fa un backup o un ripristino;
+#   6. se richiesto, aggiorna all'ultima versione, fa un backup o un ripristino;
 #   7. apre l'app nel browser.
 
 # -e: se un comando fallisce, lo script si ferma (invece di andare avanti facendo danni).
@@ -35,6 +36,7 @@ REIMPOSTA_PIN=false
 CON_TAILSCALE=false
 FARE_BACKUP=false
 FILE_RIPRISTINO=""
+AGGIORNA=false
 APRI_BROWSER=true
 # Un'opzione alla volta: "shift" toglie quella appena letta. --ripristina è l'unica con un valore (il file), che
 # si prende con un "shift" in più.
@@ -53,9 +55,10 @@ while [ $# -gt 0 ]; do
       FILE_RIPRISTINO=$2
       shift
       ;;
+    --aggiorna) AGGIORNA=true ;;
     --senza-browser) APRI_BROWSER=false ;;
     -h | --aiuto | --help)
-      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -128,6 +131,19 @@ else
     errore "Manca il file VERSION: scarica WalletTracker dalla pagina delle versioni su GitHub (docs/50) e lancia lo script dalla sua cartella."
 fi
 export WALLETTRACKER_VERSION
+
+if [ "$AGGIORNA" = true ]; then
+  # Dal codice si aggiorna con Git, non con le versioni pubblicate: lo script non tocca il tuo lavoro.
+  if [ "$DAL_CODICE" = true ]; then
+    echo "Questa è la cartella del CODICE SORGENTE (c'è backend/pom.xml): --aggiorna serve alle versioni scaricate."
+    echo "Per avere le novità dal codice:  git switch main   poi   git pull   e rilancia  ./installa.sh"
+    exit 0
+  fi
+  if [ "$FARE_BACKUP" = true ] || [ -n "$FILE_RIPRISTINO" ] || [ "$CAMBIA_PASSWORD" = true ] ||
+    [ "$REIMPOSTA_PIN" = true ] || [ "$CON_TAILSCALE" = true ]; then
+    errore "--aggiorna va lanciato da solo (al massimo con --ia): le altre operazioni falle prima o dopo."
+  fi
+fi
 
 # --- 1. Docker ---------------------------------------------------------------------------------------------
 passo "Controllo Docker"
@@ -373,8 +389,182 @@ if [ "$REIMPOSTA_PIN" = true ]; then
 fi
 
 passo "Aspetto che il backend sia pronto"
-aspetta_salute backend 240
+aspetta_salute backend "${WALLETTRACKER_ATTESA_BACKEND:-240}"
 echo "Il backend è pronto."
+
+# --- 5b. Aggiornare all'ultima versione (solo con --aggiorna: docs/50, parte I) ---------------------------
+# In ordine: chiedo a GitHub l'ultima versione; se è più nuova, scarico lo ZIP e ne controllo l'impronta; mostro le
+# novità e chiedo conferma; faccio un backup; metto da parte i file di adesso e metto al loro posto quelli nuovi
+# (MAI .env, .data, i backup, secrets); lancio lo script NUOVO, che scarica le immagini e riavvia l'app. Se l'app
+# nuova non parte, torno da solo alla versione di prima: i file di prima e i dati del backup appena fatto.
+if [ "$AGGIORNA" = true ]; then
+  # L'indirizzo si può cambiare solo per le prove (la CI usa un finto GitHub sul computer stesso).
+  indirizzo_versioni=${WALLETTRACKER_RELEASES_URL:-https://api.github.com/repos/rosemgo/WalletTracker/releases/latest}
+  agg=.aggiornamento
+  # -f: un errore HTTP (404, 500) è un errore anche per lo script; -sS: niente barra di avanzamento, ma gli errori sì.
+  scarica() { curl -fsSL --max-time "$1" -o "$2" "$3"; }
+  impronta() {
+    if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
+  }
+  # 0 se la versione $1 è più nuova della $2 (MAGGIORE.MINORE.CORREZIONE, confrontati come numeri: 1.10.0 > 1.9.0).
+  piu_nuova() {
+    local a1 a2 a3 b1 b2 b3
+    IFS=. read -r a1 a2 a3 <<<"$1"
+    IFS=. read -r b1 b2 b3 <<<"$2"
+    if [ "$a1" -ne "$b1" ]; then [ "$a1" -gt "$b1" ]; return; fi
+    if [ "$a2" -ne "$b2" ]; then [ "$a2" -gt "$b2" ]; return; fi
+    [ "$a3" -gt "$b3" ]
+  }
+
+  passo "Cerco una versione nuova"
+  command -v curl >/dev/null 2>&1 || errore "Manca il programma curl: installalo (per esempio  sudo apt install curl) e riprova."
+  command -v unzip >/dev/null 2>&1 || errore "Manca il programma unzip: installalo (per esempio  sudo apt install unzip) e riprova."
+  rm -rf "$agg/nuova"
+  mkdir -p "$agg/nuova"
+  scarica 30 "$agg/nuova/ultima.json" "$indirizzo_versioni" ||
+    errore "Non riesco a chiedere a GitHub l'ultima versione (controlla la connessione a Internet). Non è cambiato niente."
+  # Dal JSON di GitHub servono il nome del tag e gli indirizzi dei file: li leggo con sed, senza programmi in più.
+  campo() { tr ',' '\n' <"$agg/nuova/ultima.json" | sed -n "s/^[[:space:]{]*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"; }
+  tag=$(campo tag_name | head -n 1)
+  [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || errore "GitHub ha risposto qualcosa che non capisco (versione: \"$tag\"). Non è cambiato niente."
+  nuova=${tag#v}
+  [[ "$WALLETTRACKER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+    errore "Il file VERSION non contiene una versione valida (\"$WALLETTRACKER_VERSION\"). Non è cambiato niente."
+  if ! piu_nuova "$nuova" "$WALLETTRACKER_VERSION"; then
+    rm -rf "$agg/nuova"
+    passo "Hai già l'ultima versione: WalletTracker $WALLETTRACKER_VERSION"
+    exit 0
+  fi
+  echo "C'è una versione nuova: $nuova (adesso hai la $WALLETTRACKER_VERSION)."
+
+  # Gli indirizzi dei due file. Da GitHub vero, solo dalla pagina delle versioni di WalletTracker.
+  url_zip=$(campo browser_download_url | grep -F "/WalletTracker-$nuova.zip" | head -n 1 || true)
+  url_impronte=$(campo browser_download_url | grep -E '/SHA256SUMS$' | head -n 1 || true)
+  [ -n "$url_zip" ] && [ -n "$url_impronte" ] || errore "La versione $nuova non ha lo ZIP o SHA256SUMS. Non è cambiato niente."
+  if [ -z "${WALLETTRACKER_RELEASES_URL:-}" ]; then
+    origine="https://github.com/rosemgo/WalletTracker/releases/download/$tag/"
+    case "$url_zip$url_impronte" in
+      "$origine"*"$origine"*) ;;
+      *) errore "Gli indirizzi dei file non sono quelli della pagina delle versioni di WalletTracker. Non è cambiato niente." ;;
+    esac
+  fi
+
+  passo "Scarico WalletTracker $nuova e controllo che sia integro"
+  zip="$agg/nuova/WalletTracker-$nuova.zip"
+  scarica 600 "$zip" "$url_zip" && scarica 60 "$agg/nuova/SHA256SUMS" "$url_impronte" ||
+    errore "Lo scaricamento non è riuscito (controlla la connessione a Internet). Non è cambiato niente."
+  # L'impronta SHA-256 dello ZIP deve essere quella scritta in SHA256SUMS: uno ZIP rovinato o diverso non si usa.
+  attesa=$(awk -v f="WalletTracker-$nuova.zip" '$2 == f || $2 == "*" f { print $1 }' "$agg/nuova/SHA256SUMS")
+  [ -n "$attesa" ] && [ "$(impronta "$zip")" = "$attesa" ] ||
+    errore "Lo ZIP scaricato NON corrisponde alla sua impronta (SHA256SUMS): è rovinato o non è quello pubblicato. Non l'ho usato; non è cambiato niente."
+  unzip -q "$zip" -d "$agg/nuova"
+  sorgente="$agg/nuova/WalletTracker-$nuova"
+  [ -f "$sorgente/installa.sh" ] && [ -f "$sorgente/docker-compose.yml" ] &&
+    [ "$(tr -d ' \r\n' <"$sorgente/VERSION" 2>/dev/null || true)" = "$nuova" ] ||
+    errore "Lo ZIP non contiene la versione $nuova come me l'aspetto. Non è cambiato niente."
+  echo "Lo ZIP è integro."
+
+  passo "Le novità dalla $WALLETTRACKER_VERSION alla $nuova"
+  # NOVITA.md ha una sezione "## X.Y.Z" per versione, dalla più nuova: stampo fino a quella che hai adesso.
+  awk -v adesso="## $WALLETTRACKER_VERSION" '$0 == adesso { exit } /^## / { dentro = 1 } dentro' "$sorgente/NOVITA.md" || true
+  echo
+  read -r -p "Aggiorno WalletTracker alla $nuova? Prima faccio un backup dei dati. [s/N] " risposta || risposta=""
+  case "$risposta" in
+    s | S | si | Si | SI | sì | Sì) ;;
+    *)
+      echo "Aggiornamento annullato: non è cambiato niente."
+      exit 0
+      ;;
+  esac
+
+  passo "Backup prima dell'aggiornamento"
+  # Senza password dei backup non si aggiorna: il backup è quello che permette di tornare indietro.
+  if ! password_backup_valida "$password_backup"; then
+    chiedi_password_backup
+    password_backup=$(valore_env WALLETTRACKER_BACKUP_PASSWORD)
+  fi
+  docker compose run --rm -T backup crea prima-dell-aggiornamento </dev/null >"$agg/backup.log" 2>&1 || {
+    cat "$agg/backup.log"
+    errore "Il backup non è riuscito: aggiornamento annullato, non è cambiato niente."
+  }
+  cat "$agg/backup.log"
+  nome_backup=$(sed -n 's/.*Backup creato: \(wallettracker-prima-dell-aggiornamento-[0-9-]*\.backup\).*/\1/p' "$agg/backup.log" | tail -n 1)
+  [ -n "$nome_backup" ] || errore "Non trovo il nome del backup appena fatto: aggiornamento annullato, non è cambiato niente."
+
+  passo "Sostituisco i file dell'app (la $WALLETTRACKER_VERSION la metto da parte in $agg/precedente)"
+  precedente="$agg/precedente"
+  rm -rf "$precedente"
+  mkdir -p "$precedente"
+  (cd "$sorgente" && find . -type f | sed 's|^\./||') >"$agg/file-nuovi.txt"
+  # 1. La copia di quelli di adesso (e l'elenco di quelli che prima non c'erano, da togliere se si torna indietro).
+  while IFS= read -r f; do
+    case "$f" in .env | .data/* | backup/* | secrets/* | .aggiornamento/*) continue ;; esac
+    if [ -e "$f" ]; then
+      mkdir -p "$precedente/$(dirname "$f")"
+      cp -p "$f" "$precedente/$f"
+    else
+      echo "$f" >>"$precedente/.aggiunti"
+    fi
+  done <"$agg/file-nuovi.txt"
+  # 2. Quelli nuovi al loro posto: prima con un nome provvisorio, poi RINOMINATI. Rinominare è istantaneo, e lo
+  #    script che sta girando (questo) continua a leggere la sua copia vecchia, senza confondersi.
+  metti_al_posto() { # $1 = da dove, $2 = dove
+    mkdir -p "$(dirname "$2")"
+    cp -p "$1" "$2.nuovo"
+    mv -f "$2.nuovo" "$2"
+  }
+  while IFS= read -r f; do
+    case "$f" in .env | .data/* | backup/* | secrets/* | .aggiornamento/*) continue ;; esac
+    metti_al_posto "$sorgente/$f" "$f"
+  done <"$agg/file-nuovi.txt"
+  chmod +x installa.sh
+
+  passo "Avvio di WalletTracker $nuova (con lo script nuovo)"
+  opzioni=(--senza-browser)
+  [ "$CON_IA" = true ] && opzioni+=(--ia)
+  codice=0
+  ./installa.sh "${opzioni[@]}" || codice=$?
+  # Il controllo finale: il backend acceso deve essere proprio quello della versione nuova.
+  avviata=$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' wallettracker-backend 2>/dev/null || true)
+  if [ "$codice" = 0 ] && [ "$avviata" = "$nuova" ]; then
+    rm -rf "$agg/nuova"
+    passo "Aggiornamento completato: WalletTracker $nuova è avviato"
+    echo "Il backup di prima dell'aggiornamento è $nome_backup (nella cartella dei backup)."
+    echo "I file della $WALLETTRACKER_VERSION restano in $agg/precedente fino al prossimo aggiornamento."
+    if [ "$APRI_BROWSER" = true ]; then
+      porta=$(valore_env WEB_PORT)
+      if command -v open >/dev/null 2>&1; then
+        open "http://localhost:${porta:-8000}"
+      elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "http://localhost:${porta:-8000}" >/dev/null 2>&1 || true
+      fi
+    fi
+    exit 0
+  fi
+
+  # --- Non è andata: si torna alla versione di prima, da soli ---
+  passo "L'aggiornamento non è riuscito: torno alla versione $WALLETTRACKER_VERSION"
+  # 1. I file di prima (e via quelli che prima non c'erano).
+  if [ -f "$precedente/.aggiunti" ]; then
+    while IFS= read -r f; do rm -f "$f"; done <"$precedente/.aggiunti"
+  fi
+  (cd "$precedente" && find . -type f ! -name .aggiunti | sed 's|^\./||') | while IFS= read -r f; do
+    metti_al_posto "$precedente/$f" "$f"
+  done
+  chmod +x installa.sh
+  # 2. I dati di prima: il backend nuovo potrebbe aver già cambiato il database (le migrazioni di Flyway), e quello
+  #    vecchio non lo riconoscerebbe. Si ripristina il backup appena fatto, con i container della versione di prima.
+  # shellcheck disable=SC2086
+  docker compose $profilo up -d db >/dev/null 2>&1 || true
+  docker compose stop backend backup >/dev/null 2>&1 || true
+  docker compose run --rm -T backup ripristina "$nome_backup" </dev/null ||
+    errore "Non sono riuscito a rimettere i dati di prima. I file della $WALLETTRACKER_VERSION sono di nuovo al loro posto; per i dati:  ./installa.sh --ripristina $cartella_backup/$nome_backup   (docs/50, parte I)."
+  # shellcheck disable=SC2086
+  docker compose $profilo up -d ||
+    errore "Non riesco a riavviare la versione $WALLETTRACKER_VERSION: leggi il messaggio qui sopra (docs/50, parte I)."
+  aspetta_salute backend "${WALLETTRACKER_ATTESA_BACKEND:-240}"
+  errore "Sono tornato a WalletTracker $WALLETTRACKER_VERSION, con i dati di prima dell'aggiornamento: è tutto com'era. Il motivo è nei messaggi qui sopra; lo ZIP della $nuova è rimasto in $agg/nuova (docs/50, parte I)."
+fi
 
 # --- 6. Backup e ripristino (solo con --backup o --ripristina) ---------------------------------------------
 # Il lavoro vero lo fa il container "backup" (docker/backup/wallettracker-backup.sh), uguale su Windows, macOS e

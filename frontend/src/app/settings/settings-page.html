@@ -126,7 +126,7 @@
 </div>
 
 <!-- Quale versione è installata (docs/50, parte B): serve per sapere se ce n'è una nuova, e per chiedere aiuto. -->
-<h2>Informazioni</h2>
+<h2 id="informazioni">Informazioni</h2>
 <div class="card">
   @if (version(); as current) {
     @if (current === 'sviluppo') {
@@ -142,5 +142,49 @@
     }
   } @else {
     <p class="hint">Versione: il server non risponde.</p>
+  }
+
+  <!-- Le versioni nuove (docs/50, parte J): il backend chiede a GitHub una volta al giorno. -->
+  @if (updates.status(); as update) {
+    @if (update.available) {
+      <div class="release-news" data-testid="update-available">
+        <p>
+          È disponibile la versione <strong>{{ update.latestVersion }}</strong
+          >.
+          @if (update.releaseUrl) {
+            <a [href]="update.releaseUrl" target="_blank" rel="noopener noreferrer"
+              >La pagina della versione su GitHub</a
+            >.
+          }
+        </p>
+        @if (update.notes) {
+          <p class="notes" data-testid="update-notes">{{ update.notes }}</p>
+        }
+        <p>
+          Per aggiornare, sul <strong>server</strong> (il computer con Docker), nella cartella di
+          WalletTracker:
+        </p>
+        <ul class="commands">
+          <li>
+            Windows: <code>powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna</code>
+          </li>
+          <li>Mac e Linux: <code>./installa.sh --aggiorna</code></li>
+        </ul>
+        <p class="hint">
+          Prima di cambiare qualcosa fa un backup; se la versione nuova non parte, torna da solo a
+          quella di adesso, con i dati di prima.
+        </p>
+      </div>
+    } @else if (update.checkEnabled && update.latestVersion) {
+      <p class="hint" data-testid="update-latest">
+        È l'ultima versione pubblicata (controllato il
+        {{ update.checkedAt | date: 'd MMMM y, HH:mm' }}).
+      </p>
+    } @else if (!update.checkEnabled && update.currentVersion !== 'sviluppo') {
+      <p class="hint">
+        Il controllo delle versioni nuove è spento (<code>WALLETTRACKER_UPDATE_CHECK=false</code>
+        nel .env).
+      </p>
+    }
   }
 </div>
