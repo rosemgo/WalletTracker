@@ -1,0 +1,25 @@
+WalletTracker - come cominciare
+================================
+
+1. Installa Docker Desktop (gratuito): https://www.docker.com/products/docker-desktop
+   Aprilo e aspetta che dica "Engine running".
+   In Settings -> General spunta "Start Docker Desktop when you sign in to your computer":
+   cosi' WalletTracker riparte da solo quando accendi il computer.
+
+2. Estrai questo ZIP in una cartella che non sposterai piu' (per esempio Documenti).
+   Su Windows, PRIMA di estrarlo: tasto destro sullo ZIP -> Proprieta' -> spunta "Sblocca" -> OK.
+
+3. Doppio clic su "Avvia WalletTracker" (.cmd su Windows, .command sul Mac).
+   La prima volta:
+   - Windows: "Windows ha protetto il PC" -> Ulteriori informazioni -> Esegui comunque;
+   - Mac: tasto destro sul file -> Apri -> Apri.
+   Alla fine il browser si apre su http://localhost:8000
+
+Gli altri due file:
+   "Backup WalletTracker"    fa un backup adesso (la prima volta chiede la password dei backup:
+                             scrivila anche FUORI da questo computer, senza non si aprono);
+   "Aggiorna WalletTracker"  passa all'ultima versione, con un backup prima.
+
+La guida completa, con le schermate (il PIN, le banche, il telefono, i problemi comuni):
+   https://github.com/rosemgo/WalletTracker/blob/main/GUIDA.md
+Le novita' di ogni versione sono in NOVITA.md.

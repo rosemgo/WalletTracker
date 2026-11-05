@@ -65,6 +65,8 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 ## Guide
 
+> **Per installare e usare WalletTracker senza essere informatici: [GUIDA.md](GUIDA.md).**
+
 > **Promemoria per lo sviluppo: [quali comandi lanciare, mai due backend insieme, e come portare le modifiche in `main` con una pull request](docs/sviluppo-comandi.md).**
 
 > Sempre fuori dalla numerazione: [La CI su GitHub: ci.yml, rilascio.yml e il ramo main protetto](docs/ci-github.md).
@@ -172,7 +174,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
     - [x] 6a: il numero di versione (in Impostazioni → Informazioni) e le immagini già pronte: con un tag `v1.0.0` la CI esegue tutti i test, pubblica le tre immagini su GitHub Container Registry (per PC e Mac con chip Apple) e crea la release con lo ZIP; lo script riconosce da solo se costruire dal codice o scaricare le immagini
     - [x] 6b: "Aggiorna" (`installa.ps1 -Aggiorna`, `./installa.sh --aggiorna`): ultima versione da GitHub, ZIP controllato con l'impronta SHA-256, novità e conferma, backup prima, file nuovi al posto dei vecchi (mai `.env`, `.data`, backup, `secrets`), ritorno da solo alla versione di prima (file e dati) se la nuova non parte; nell'app una striscia che si chiude e le novità in Impostazioni → Informazioni (il backend chiede a GitHub una volta al giorno, spegnibile); provato nella CI con un finto GitHub (`docs/50`, parti I-M)
     - [x] 6c: il doppio clic: `Avvia`, `Aggiorna` e `Backup WalletTracker` (`.cmd` per Windows, `.command` per il Mac), anche nello ZIP di ogni versione; Docker Desktop acceso dallo script se è spento; alla fine lo script dice se all'accensione del computer WalletTracker ripartirà da solo (`docs/50`, parti N-R)
-    - [ ] 6d: la guida per chi non è informatico (`GUIDA.md`, con le schermate)
+    - [ ] 6d: la guida per chi non è informatico (`GUIDA.md`, con le schermate dell'app; `LEGGIMI.txt` nello ZIP), la prova vera su Windows (`docs/50`, parti T-U) e la versione 1.1.0 — in corso
   - da valutare: la firma delle release (con una chiave che resta fuori da GitHub), così "Aggiorna" riconoscerebbe uno ZIP falso anche se qualcuno entrasse nell'account GitHub (`docs/50`, parte K)
   - da valutare (decisione rimandata): accesso dai dispositivi remoti anche con una VPN già esistente, al posto di Tailscale. Servirebbero: la porta remota pubblicata solo sull'indirizzo della VPN (mai `0.0.0.0` né l'indirizzo della rete di casa), un certificato https per il nome scelto, quel nome in `WALLETTRACKER_ALLOWED_HOSTS` e negli indirizzi di ritorno di Enable Banking
 

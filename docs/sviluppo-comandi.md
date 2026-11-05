@@ -129,6 +129,13 @@ git push -u origin nome-modifica
 
 Dopo il merge, `git switch main` e `git pull` rimettono il tuo `main` uguale a quello di GitHub.
 
+### Perché a volte un `git push` su `main` passa lo stesso
+
+La regola dice "in `main` solo commit passati da una pull request con la CI verde". Se i commit che spingi su `main` sono
+**esattamente** quelli di una pull request aperta, con i controlli verdi, GitHub accetta il push: per lui è come aver
+cliccato **Merge**, e segna la pull request come unita. Un commit nuovo, mai passato da una pull request, invece viene
+rifiutato (`GH013`). Il modo pulito resta il pulsante **Merge** su GitHub, e poi `git pull`.
+
 ### Se un controllo della CI è rosso
 
 La pull request non si può unire. Apri il controllo rosso (scheda **Checks** della pull request, o **Actions**), leggi

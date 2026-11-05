@@ -8,7 +8,7 @@ compilare niente e senza aprire un terminale. Il passo è diviso in quattro part
 | **6a** | **il numero di versione e le immagini già pronte** (GitHub Container Registry, release con lo ZIP) | **fatto: parti A-H** |
 | **6b** | **"Aggiorna": passare alla versione nuova con un comando, backup prima, ritorno da solo se va male; l'avviso nell'app** | **fatto: parti I-M** |
 | **6c** | **il doppio clic (Windows e Mac), Docker acceso dallo script, l'avvio automatico controllato** | **fatto: parti N-R** |
-| 6d | la guida per chi non è informatico (`GUIDA.md`), e la prova di `installa.ps1` su Windows | da fare |
+| **6d** | **la guida per chi non è informatico (`GUIDA.md`, `LEGGIMI.txt` nello ZIP) e la prova vera su Windows** | **in corso: parti S-U** |
 
 Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira Docker con WalletTracker.
 
@@ -54,6 +54,9 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte P: l'avvio automatico all'accensione
 - Parte Q: la prima volta, Windows e il Mac diffidano
 - Parte R: verifiche, difetti trovati, problemi comuni ed esercizi (6c)
+- Parte S: pubblicare una versione nuova, e vedere quelle già pubblicate
+- Parte T: la guida per chi non è informatico (6d)
+- Parte U: la prova vera su Windows, passo per passo
 
 ---
 
@@ -919,3 +922,171 @@ Docker Desktop e la lettura delle sue impostazioni. È la prova del 6d, sul tuo 
 4. In Docker Desktop spegni "Start Docker Desktop when you sign in", fai il doppio clic su "Avvia WalletTracker" e leggi
    l'ultima riga. Poi riaccendilo e rifallo.
 5. Ferma l'app con ■ in Docker Desktop, riavvia il computer: l'app risponde? Perché? (Parte P3.)
+
+---
+
+## Parte S: pubblicare una versione nuova, e vedere quelle già pubblicate
+
+### S1. Le versioni pubblicate finora
+
+| Versione | Pubblicata | Dal commit | Che cosa contiene |
+|---|---|---|---|
+| **1.0.0** | 5 novembre 2026 | `2bee13c` (la pull request n. 14) | l'app fino al passo **6a**: niente "Aggiorna", niente doppio clic, niente avviso delle versioni nuove |
+
+Le tre immagini della 1.0.0 su GitHub Container Registry sono **pubbliche** (controllato: si scaricano senza account).
+
+**Attenzione, la 1.0.0 non sa aggiornarsi.** "Aggiorna" è arrivato dopo (6b), quindi chi ha la 1.0.0 passa alla
+versione dopo **a mano, una volta sola** (S4). Da lì in poi basta il doppio clic.
+
+### S2. Pubblicare una versione nuova, passo per passo
+
+1. **Tutto in `main`**: le pull request unite, la CI verde sull'ultimo commit di `main` (scheda Actions, o la ✓ accanto
+   al commit).
+2. **Il numero** (parte A3): `1.0.0` → `1.0.1` se corregge e basta, `1.1.0` se aggiunge qualcosa, `2.0.0` se chi
+   aggiorna deve fare qualcosa a mano.
+3. **Le novità**: in `NOVITA.md`, in cima, una sezione `## 1.1.0` scritta per chi usa l'app (che cosa cambia per lui,
+   non i nomi dei file). Anche questa entra in `main` con una pull request. Senza la sezione, il rilascio si ferma (D5).
+4. **Il tag**, dal tuo PC, su `main` aggiornato:
+
+   ```
+   git switch main
+   git pull
+   git tag -a v1.1.0 -m "WalletTracker 1.1.0"
+   git push origin v1.1.0
+   ```
+
+   Il tag si può mettere anche dal sito: **Releases** → **Draft a new release** → **Choose a tag** → scrivi `v1.1.0` →
+   "Create new tag on publish", target `main`. Ma allora GitHub crea **lui** la release, e `rilascio.yml` troverebbe la
+   release già esistente: meglio il tag da Git, e la release la crea la CI.
+5. **Aspetta "Rilascio"** nella scheda Actions (15-25 minuti): CI completa, poi le tre immagini, poi la release. Tutto
+   verde = pubblicata.
+6. **Controlla** (S3): la release c'è, con lo ZIP e `SHA256SUMS`.
+7. **Da quel momento**: gli utenti la vedono arrivare da soli (la striscia nell'app compare entro un giorno, J1), e
+   l'aggiornamento è "Aggiorna WalletTracker".
+
+**Se "Rilascio" diventa rosso**: non è stato pubblicato niente, oppure solo una parte (per esempio le immagini, ma non
+la release). Si corregge in `main` e si pubblica un **numero nuovo** (`v1.1.1`): un tag già usato non si riusa, perché
+qualcuno potrebbe aver già scaricato quella versione.
+
+### S3. Dove si vedono le versioni
+
+| Dove | Che cosa vedi |
+|---|---|
+| **la pagina delle versioni**: nel repository, a destra, **Releases** (oppure `github.com/rosemgo/WalletTracker/releases`) | ogni versione, dalla più nuova: il titolo, le novità, e sotto **Assets** lo ZIP, `SHA256SUMS` e il codice sorgente (quei due li aggiunge GitHub da solo). "Latest" segna l'ultima |
+| **i tag**: nella stessa pagina, la scheda **Tags** | il tag e il commit su cui è stato messo |
+| **le immagini**: sul tuo profilo GitHub, **Packages** (o, nel repository, a destra, **Packages**) | `wallettracker-backend`, `-web`, `-backup`: per ognuna le versioni pubblicate (`1.0.0`, `latest`…), quante volte sono state scaricate, e se sono pubbliche |
+| **il rilascio**: la scheda **Actions** → "Rilascio" | com'è andata la pubblicazione di ogni tag, job per job |
+| **dal tuo PC**: `git tag` (o `git tag -n` con il messaggio) | i tag che conosce la tua copia del progetto (dopo `git fetch --tags`) |
+| **nell'app**: Impostazioni → Informazioni | la versione installata sul server, e se ce n'è una nuova |
+| **per un programma**: `https://api.github.com/repos/rosemgo/WalletTracker/releases/latest` | l'ultima, in JSON: è quello che leggono "Aggiorna" e il backend |
+
+### S4. Dalla 1.0.0 alla versione dopo, a mano (una volta sola)
+
+1. **Prima il backup**, con la versione di adesso: nell'app, **Impostazioni → Backup → Fai un backup adesso** (c'è già
+   nella 1.0.0), e aspetta "Backup creato".
+2. Dalla pagina delle versioni scarica lo ZIP della versione nuova (per esempio `WalletTracker-1.1.0.zip`) e aprilo.
+3. Copia **tutti i file** che ci sono dentro nella cartella di WalletTracker di adesso, sostituendo quelli che ci sono
+   già. Nello ZIP non ci sono `.env`, `.data`, i backup né `secrets`: i tuoi dati e la tua configurazione non si
+   toccano.
+4. Doppio clic su **"Avvia WalletTracker"** (arriva proprio con questi file): scarica le immagini nuove e riavvia
+   l'app.
+5. In Impostazioni → Informazioni ora c'è la versione nuova. Le prossime volte: "Aggiorna WalletTracker", che il backup
+   lo fa da solo, e **prima** di cambiare qualcosa.
+
+Perché il backup al punto 1 e non con "Backup WalletTracker" dopo aver copiato i file? Perché lo script, prima di fare
+il backup, avvia l'app: con i file nuovi avvierebbe già la versione nuova, e il backup sarebbe dei dati **dopo**
+l'aggiornamento.
+
+---
+
+# 6d. La guida per chi non è informatico, e la prova vera
+
+**Le scelte fatte insieme:**
+
+| Domanda | Scelta |
+|---|---|
+| quando pubblicare la versione nuova? | **alla fine del 6d**: un solo rilascio, la **1.1.0**, con dentro anche la guida |
+| dove fare la prova vera? | **sul tuo PC, con i tuoi dati** |
+| dove va la guida? | **`GUIDA.md` nel repository**, e nello ZIP un **`LEGGIMI.txt`** corto con il collegamento |
+
+## Parte T: la guida per chi non è informatico
+
+### T1. Che cosa c'è
+
+- **`GUIDA.md`**, nella radice del progetto. GitHub la mostra già impaginata, con le immagini. Undici capitoli, nell'ordine
+  in cui servono: che cosa serve, Docker Desktop, scaricare, il primo avvio, il PIN, le banche, i backup, il telefono,
+  aggiornare, tenerlo acceso, i problemi comuni. Niente comandi da scrivere, tranne due operazioni rare (preparare
+  Tailscale, una volta; il ripristino di un backup), che rimandano alle guide tecniche.
+- **`LEGGIMI.txt`**, nello ZIP di ogni versione (`prepara-zip.sh` lo aggiunge): i tre passi per cominciare e
+  l'indirizzo della guida. È un file di testo semplice, perché chi apre lo ZIP non ha ancora niente di installato:
+  lo legge con il Blocco note. Per questo ha le fini riga di Windows e solo caratteri senza accenti ("cosi'"): un
+  Blocco note vecchio leggerebbe male le lettere accentate.
+- **Le schermate dell'app** (`docs/img/guida/`), fatte con dati inventati ("Banca Alfa", "ACME SRL", esercenti
+  inventati), alla larghezza di un telefono.
+
+### T2. Le schermate che mancano
+
+Quelle di **Windows** e di **Docker Desktop** si possono fare solo su un PC Windows: nella guida al loro posto c'è
+un segnaposto "📷 *Schermata da aggiungere*". Durante la prova (parte U) servono queste:
+
+| N. | Che cosa | Capitolo della guida |
+|---|---|---|
+| 1 | l'installazione di Docker Desktop (una finestra qualsiasi dell'installazione) | 2 |
+| 2 | Docker Desktop con "Engine running" | 2 |
+| 3 | Docker Desktop → Settings → General, con "Start Docker Desktop when you sign in" spuntato | 2 |
+| 4 | le Proprietà dello ZIP, con "Sblocca" | 3 |
+| 5 | l'avviso "Windows ha protetto il PC" (se compare) | 4 |
+| 6 | la finestra alla fine di "Avvia WalletTracker" | 4 |
+
+Prima di metterle nel repository, guarda che non ci siano dati tuoi: nomi, indirizzi, il nome del computer nella rete
+Tailscale, importi veri.
+
+## Parte U: la prova vera su Windows, passo per passo
+
+Finora `installa.ps1` e i `.cmd` non sono mai stati eseguiti su Windows (qui nel cloud non si può). La prova ha due
+tempi.
+
+### U1. Adesso, dalla cartella del progetto (il codice)
+
+Con Git aggiornato (`git switch main`, `git pull`):
+
+1. **Avvia**: doppio clic su `Avvia WalletTracker.cmd`. Deve: costruire l'app dal codice come `installa.ps1`, aprire il
+   browser, scrivere la riga sull'avvio automatico, e aspettare un tasto. Controlla le lettere accentate nei messaggi
+   ("è avviato").
+2. **Docker spento**: chiudi Docker Desktop (l'icona della balena vicino all'orologio → **Quit Docker Desktop**), poi
+   doppio clic su `Avvia WalletTracker.cmd`. Deve dire "Docker Desktop era spento: lo sto accendendo" e andare avanti
+   da solo.
+3. **L'avvio automatico**: in Docker Desktop togli la spunta a "Start Docker Desktop when you sign in", rifai il doppio
+   clic su Avvia e leggi l'ultima riga ("AVVIO AUTOMATICO SPENTO"); rimetti la spunta e rifallo ("riparte da solo").
+4. **Backup**: doppio clic su `Backup WalletTracker.cmd`: "Backup creato", e in Impostazioni → Backup c'è.
+5. **Aggiorna**: doppio clic su `Aggiorna WalletTracker.cmd`: dice che questa è la cartella del codice e di usare Git.
+6. Mandami le schermate della parte T2 (2, 3 e 6 si fanno già qui) e quello che non va.
+
+### U2. Alla fine, con lo ZIP della 1.1.0 e i tuoi dati
+
+Dopo la pubblicazione della 1.1.0 (parte S2):
+
+1. **Backup**, dalla dashboard: Impostazioni → Backup → **Fai un backup adesso**.
+2. Scarica `WalletTracker-1.1.0.zip` dalla pagina delle versioni: **Sblocca** (tasto destro → Proprietà), **Estrai tutto**
+   in una cartella nuova, per esempio `Documenti\WalletTracker`.
+3. **Copia** dalla cartella del progetto in quella nuova: il file **`.env`** e le cartelle **`.data`**, **`secrets`** e
+   **`backup`**. Sono la configurazione, la chiave di cifratura, la chiave di Enable Banking e i backup: con loro, la
+   versione scaricata usa gli stessi dati.
+4. Doppio clic su **Avvia WalletTracker** nella cartella nuova. La prima volta: l'avviso di Windows (parte Q). Deve
+   dire "Avvio di WalletTracker 1.1.0", **scaricare** le immagini (non costruirle), e aprire l'app con i tuoi conti.
+   In Impostazioni → Informazioni: "versione 1.1.0".
+5. Dal telefono (se usi Tailscale): l'app si apre come prima. `tailscale serve` punta alla porta 8001 del server, che
+   è la stessa.
+
+**Perché non serve fermare niente?** Le due cartelle usano lo stesso nome di progetto per Docker (`name:
+wallettracker`, in `docker-compose.yml`): gli stessi container e lo stesso volume del database. La versione scaricata
+**sostituisce** i container costruiti dal codice, e trova il database di sempre. Per tornare a sviluppare, lancia
+`installa.ps1` (o `Avvia WalletTracker.cmd`) nella cartella del progetto: ricostruisce dal codice, sugli stessi dati.
+
+**Attenzione al `.env`**: da qui in poi ce ne sono due, uno per cartella. Se ne cambi uno (per esempio con
+`-Tailscale`), copia la modifica anche nell'altro.
+
+### U3. La prova di "Aggiorna" da GitHub vero
+
+Arriverà con la versione dopo la 1.1.0 (per esempio una 1.1.1): doppio clic su **Aggiorna WalletTracker** nella
+cartella della 1.1.0, e deve passare alla nuova da solo (parte I), con il backup prima.
