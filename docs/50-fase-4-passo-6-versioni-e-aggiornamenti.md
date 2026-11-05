@@ -8,7 +8,7 @@ compilare niente e senza aprire un terminale. Il passo è diviso in quattro part
 | **6a** | **il numero di versione e le immagini già pronte** (GitHub Container Registry, release con lo ZIP) | **fatto: parti A-H** |
 | **6b** | **"Aggiorna": passare alla versione nuova con un comando, backup prima, ritorno da solo se va male; l'avviso nell'app** | **fatto: parti I-M** |
 | **6c** | **il doppio clic (Windows e Mac), Docker acceso dallo script, l'avvio automatico controllato** | **fatto: parti N-R** |
-| 6d | la guida per chi non è informatico (`GUIDA.md`), e la prova di `installa.ps1` su Windows | da fare |
+| **6d** | **la guida per chi non è informatico (`GUIDA.md`, `LEGGIMI.txt` nello ZIP) e la prova vera su Windows** | **in corso: parti S-U** |
 
 Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira Docker con WalletTracker.
 
@@ -55,6 +55,8 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte Q: la prima volta, Windows e il Mac diffidano
 - Parte R: verifiche, difetti trovati, problemi comuni ed esercizi (6c)
 - Parte S: pubblicare una versione nuova, e vedere quelle già pubblicate
+- Parte T: la guida per chi non è informatico (6d)
+- Parte U: la prova vera su Windows, passo per passo
 
 ---
 
@@ -994,3 +996,97 @@ qualcuno potrebbe aver già scaricato quella versione.
 Perché il backup al punto 1 e non con "Backup WalletTracker" dopo aver copiato i file? Perché lo script, prima di fare
 il backup, avvia l'app: con i file nuovi avvierebbe già la versione nuova, e il backup sarebbe dei dati **dopo**
 l'aggiornamento.
+
+---
+
+# 6d. La guida per chi non è informatico, e la prova vera
+
+**Le scelte fatte insieme:**
+
+| Domanda | Scelta |
+|---|---|
+| quando pubblicare la versione nuova? | **alla fine del 6d**: un solo rilascio, la **1.1.0**, con dentro anche la guida |
+| dove fare la prova vera? | **sul tuo PC, con i tuoi dati** |
+| dove va la guida? | **`GUIDA.md` nel repository**, e nello ZIP un **`LEGGIMI.txt`** corto con il collegamento |
+
+## Parte T: la guida per chi non è informatico
+
+### T1. Che cosa c'è
+
+- **`GUIDA.md`**, nella radice del progetto. GitHub la mostra già impaginata, con le immagini. Undici capitoli, nell'ordine
+  in cui servono: che cosa serve, Docker Desktop, scaricare, il primo avvio, il PIN, le banche, i backup, il telefono,
+  aggiornare, tenerlo acceso, i problemi comuni. Niente comandi da scrivere, tranne due operazioni rare (preparare
+  Tailscale, una volta; il ripristino di un backup), che rimandano alle guide tecniche.
+- **`LEGGIMI.txt`**, nello ZIP di ogni versione (`prepara-zip.sh` lo aggiunge): i tre passi per cominciare e
+  l'indirizzo della guida. È un file di testo semplice, perché chi apre lo ZIP non ha ancora niente di installato:
+  lo legge con il Blocco note. Per questo ha le fini riga di Windows e solo caratteri senza accenti ("cosi'"): un
+  Blocco note vecchio leggerebbe male le lettere accentate.
+- **Le schermate dell'app** (`docs/img/guida/`), fatte con dati inventati ("Banca Alfa", "ACME SRL", esercenti
+  inventati), alla larghezza di un telefono.
+
+### T2. Le schermate che mancano
+
+Quelle di **Windows** e di **Docker Desktop** si possono fare solo su un PC Windows: nella guida al loro posto c'è
+un segnaposto "📷 *Schermata da aggiungere*". Durante la prova (parte U) servono queste:
+
+| N. | Che cosa | Capitolo della guida |
+|---|---|---|
+| 1 | l'installazione di Docker Desktop (una finestra qualsiasi dell'installazione) | 2 |
+| 2 | Docker Desktop con "Engine running" | 2 |
+| 3 | Docker Desktop → Settings → General, con "Start Docker Desktop when you sign in" spuntato | 2 |
+| 4 | le Proprietà dello ZIP, con "Sblocca" | 3 |
+| 5 | l'avviso "Windows ha protetto il PC" (se compare) | 4 |
+| 6 | la finestra alla fine di "Avvia WalletTracker" | 4 |
+
+Prima di metterle nel repository, guarda che non ci siano dati tuoi: nomi, indirizzi, il nome del computer nella rete
+Tailscale, importi veri.
+
+## Parte U: la prova vera su Windows, passo per passo
+
+Finora `installa.ps1` e i `.cmd` non sono mai stati eseguiti su Windows (qui nel cloud non si può). La prova ha due
+tempi.
+
+### U1. Adesso, dalla cartella del progetto (il codice)
+
+Con Git aggiornato (`git switch main`, `git pull`):
+
+1. **Avvia**: doppio clic su `Avvia WalletTracker.cmd`. Deve: costruire l'app dal codice come `installa.ps1`, aprire il
+   browser, scrivere la riga sull'avvio automatico, e aspettare un tasto. Controlla le lettere accentate nei messaggi
+   ("è avviato").
+2. **Docker spento**: chiudi Docker Desktop (l'icona della balena vicino all'orologio → **Quit Docker Desktop**), poi
+   doppio clic su `Avvia WalletTracker.cmd`. Deve dire "Docker Desktop era spento: lo sto accendendo" e andare avanti
+   da solo.
+3. **L'avvio automatico**: in Docker Desktop togli la spunta a "Start Docker Desktop when you sign in", rifai il doppio
+   clic su Avvia e leggi l'ultima riga ("AVVIO AUTOMATICO SPENTO"); rimetti la spunta e rifallo ("riparte da solo").
+4. **Backup**: doppio clic su `Backup WalletTracker.cmd`: "Backup creato", e in Impostazioni → Backup c'è.
+5. **Aggiorna**: doppio clic su `Aggiorna WalletTracker.cmd`: dice che questa è la cartella del codice e di usare Git.
+6. Mandami le schermate della parte T2 (2, 3 e 6 si fanno già qui) e quello che non va.
+
+### U2. Alla fine, con lo ZIP della 1.1.0 e i tuoi dati
+
+Dopo la pubblicazione della 1.1.0 (parte S2):
+
+1. **Backup**, dalla dashboard: Impostazioni → Backup → **Fai un backup adesso**.
+2. Scarica `WalletTracker-1.1.0.zip` dalla pagina delle versioni: **Sblocca** (tasto destro → Proprietà), **Estrai tutto**
+   in una cartella nuova, per esempio `Documenti\WalletTracker`.
+3. **Copia** dalla cartella del progetto in quella nuova: il file **`.env`** e le cartelle **`.data`**, **`secrets`** e
+   **`backup`**. Sono la configurazione, la chiave di cifratura, la chiave di Enable Banking e i backup: con loro, la
+   versione scaricata usa gli stessi dati.
+4. Doppio clic su **Avvia WalletTracker** nella cartella nuova. La prima volta: l'avviso di Windows (parte Q). Deve
+   dire "Avvio di WalletTracker 1.1.0", **scaricare** le immagini (non costruirle), e aprire l'app con i tuoi conti.
+   In Impostazioni → Informazioni: "versione 1.1.0".
+5. Dal telefono (se usi Tailscale): l'app si apre come prima. `tailscale serve` punta alla porta 8001 del server, che
+   è la stessa.
+
+**Perché non serve fermare niente?** Le due cartelle usano lo stesso nome di progetto per Docker (`name:
+wallettracker`, in `docker-compose.yml`): gli stessi container e lo stesso volume del database. La versione scaricata
+**sostituisce** i container costruiti dal codice, e trova il database di sempre. Per tornare a sviluppare, lancia
+`installa.ps1` (o `Avvia WalletTracker.cmd`) nella cartella del progetto: ricostruisce dal codice, sugli stessi dati.
+
+**Attenzione al `.env`**: da qui in poi ce ne sono due, uno per cartella. Se ne cambi uno (per esempio con
+`-Tailscale`), copia la modifica anche nell'altro.
+
+### U3. La prova di "Aggiorna" da GitHub vero
+
+Arriverà con la versione dopo la 1.1.0 (per esempio una 1.1.1): doppio clic su **Aggiorna WalletTracker** nella
+cartella della 1.1.0, e deve passare alla nuova da solo (parte I), con il backup prima.

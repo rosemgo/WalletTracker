@@ -5,3 +5,5 @@
 # quelle di Unix può saltare dei pezzi; quelli del Mac (.command) con le fini riga di Unix, come gli script.
 *.cmd text eol=crlf
 *.command text eol=lf
+# LEGGIMI.txt (nello ZIP di ogni versione) si apre con il Blocco note: fini riga di Windows, solo caratteri ASCII.
+LEGGIMI.txt text eol=crlf

@@ -2,7 +2,7 @@
 # Prepara lo ZIP di una versione (Fase 4, passo 6: docs/50, parte D). Lo usa .github/workflows/rilascio.yml; si può
 # provare anche a mano:   .github/ci/prepara-zip.sh 1.0.0 /cartella/di/uscita
 #
-# Lo ZIP contiene solo quello che serve a chi installa: gli script (anche quelli da doppio clic), docker-compose.yml (con le immagini di QUESTA
+# Lo ZIP contiene solo quello che serve a chi installa: LEGGIMI.txt, gli script (anche quelli da doppio clic), docker-compose.yml (con le immagini di QUESTA
 # versione), .env.example, le novità e il file VERSION. Niente codice: le immagini sono già pronte su GitHub Container
 # Registry. Accanto allo ZIP, SHA256SUMS con la sua impronta, che "Aggiorna" controlla prima di usarlo.
 set -euo pipefail
@@ -24,7 +24,7 @@ grep -q '[^[:space:]]' "$uscita/novita-$versione.md" ||
 cartella="$uscita/WalletTracker-$versione"
 rm -rf "$cartella" "$cartella.zip"
 mkdir -p "$cartella"
-cp installa.sh installa.ps1 .env.example NOVITA.md "$cartella/"
+cp installa.sh installa.ps1 .env.example NOVITA.md LEGGIMI.txt "$cartella/"
 # I file da doppio clic (docs/50, parte N): .cmd per Windows, .command per il Mac. cp -p tiene il permesso di
 # esecuzione dei .command, e zip lo scrive nello ZIP: senza, il Mac non li aprirebbe con un doppio clic.
 cp -p ./*.cmd ./*.command "$cartella/"
