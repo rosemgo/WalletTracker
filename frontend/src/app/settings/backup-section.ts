@@ -10,6 +10,7 @@ const TYPES: Record<BackupFile['type'], string> = {
   manuale: 'Fatto a mano',
   automatico: 'Automatico',
   'prima-del-ripristino': 'Prima di un ripristino',
+  'prima-dell-aggiornamento': 'Prima di un aggiornamento',
 };
 
 /**

@@ -328,6 +328,17 @@ export interface SetupStatus {
 }
 
 /** GET /api/version: la versione dell'app (docs/50, parte B). "sviluppo" se è costruita dal codice. */
+/** GET /api/version/update: c'è una versione nuova? (docs/50, parte J) */
+export interface UpdateStatus {
+  currentVersion: string; // "sviluppo" se costruita dal codice
+  checkEnabled: boolean; // false: controllo spento nel .env, o app costruita dal codice
+  available: boolean; // true se l'ultima pubblicata è più nuova
+  latestVersion: string | null;
+  releaseUrl: string | null; // la pagina della versione su GitHub (solo quella di WalletTracker)
+  notes: string | null; // le novità, come testo
+  checkedAt: string | null;
+}
+
 export interface AppVersion {
   version: string;
 }
@@ -335,7 +346,7 @@ export interface AppVersion {
 /** Un file di backup (Fase 4, passo 5: docs/48 parte Q). */
 export interface BackupFile {
   name: string;
-  type: 'manuale' | 'automatico' | 'prima-del-ripristino';
+  type: 'manuale' | 'automatico' | 'prima-del-ripristino' | 'prima-dell-aggiornamento';
   createdAt: string; // ISO, quando è stato scritto
   sizeBytes: number;
 }

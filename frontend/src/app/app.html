@@ -95,6 +95,26 @@
           <button type="button" class="link" (click)="status.reload()">Aggiorna</button>
         </div>
       }
+      <!-- Una versione nuova pubblicata (docs/50, parte J): si chiude, e ricompare al prossimo ingresso nell'app. -->
+      @if (updates.bannerVersion(); as latest) {
+        <div class="banner release" role="status" data-testid="release-banner">
+          <span>
+            È disponibile WalletTracker <strong>{{ latest }}</strong
+            >.
+            <a routerLink="/impostazioni" fragment="informazioni"
+              >Che cosa cambia e come aggiornare</a
+            >.
+          </span>
+          <button
+            type="button"
+            class="close"
+            aria-label="Chiudi l'avviso della versione nuova"
+            (click)="updates.dismiss()"
+          >
+            ×
+          </button>
+        </div>
+      }
       <!-- I backup (docs/48, parte Q): un avviso se c'è qualcosa da sistemare. Il testo dice che cosa. -->
       @if (backupWarning(); as warning) {
         <div class="banner" role="status">

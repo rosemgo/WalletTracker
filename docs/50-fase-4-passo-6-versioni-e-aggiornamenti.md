@@ -5,8 +5,8 @@ compilare niente e senza aprire un terminale. Il passo è diviso in quattro part
 
 | Parte | Che cosa | Stato |
 |---|---|---|
-| **6a** | **il numero di versione e le immagini già pronte** (GitHub Container Registry, release con lo ZIP) | **questa guida, parti A-H** |
-| 6b | "Aggiorna": passare alla versione nuova con un comando, backup prima | da fare |
+| **6a** | **il numero di versione e le immagini già pronte** (GitHub Container Registry, release con lo ZIP) | **fatto: parti A-H** |
+| **6b** | **"Aggiorna": passare alla versione nuova con un comando, backup prima, ritorno da solo se va male; l'avviso nell'app** | **fatto: parti I-M** |
 | 6c | il doppio clic (Windows e Mac) e l'avvio automatico | da fare |
 | 6d | la guida per chi non è informatico (`GUIDA.md`), e la prova di `installa.ps1` su Windows | da fare |
 
@@ -43,7 +43,12 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte F: la sicurezza di questo passo
 - Parte G: verifiche fatte e difetti trovati
 - Parte H: problemi comuni
-- Esercizi guidati
+- Esercizi guidati (6a)
+- Parte I: "Aggiorna", passo per passo (6b)
+- Parte J: l'avviso della versione nuova nell'app
+- Parte K: la sicurezza di "Aggiorna"
+- Parte L: verifiche fatte e difetti trovati (6b)
+- Parte M: problemi comuni ed esercizi (6b)
 
 ---
 
@@ -399,7 +404,7 @@ versione al posto tuo.
 
 ---
 
-## Esercizi guidati
+## Esercizi guidati (6a)
 
 1. **Leggere un'immagine.** Dopo aver lanciato lo script dal codice: `docker inspect ghcr.io/rosemgo/wallettracker-backend:sviluppo`.
    Trova le etichette (`Labels`) e la variabile `WALLETTRACKER_VERSION` (`Env`). Che valore ha, e perché?
@@ -412,3 +417,283 @@ versione al posto tuo.
    dice `arm64`; su un PC Windows `amd64`. Perché lo stesso nome dà due immagini diverse?
 5. **Versione semantica.** Per ognuna, scegli il numero dopo la `1.4.2`: una correzione a un grafico; una pagina nuova;
    un cambiamento che obbliga a rifare la configurazione di Tailscale.
+
+---
+
+# 6b. "Aggiorna"
+
+**Le scelte fatte insieme:**
+
+| Domanda | Scelta |
+|---|---|
+| se dopo l'aggiornamento l'app nuova non parte? | lo script **torna indietro da solo**: i file di prima e i dati del backup appena fatto |
+| un avviso nell'app quando esce una versione? | **sì**: una striscia in alto che **si chiude** e ricompare a ogni nuovo ingresso, e i dettagli in Impostazioni → Informazioni |
+| `-Aggiorna` sul tuo PC, con il codice? | **spiega e si ferma**: dal codice si aggiorna con Git |
+
+**Che cosa è cambiato nel 6b:**
+
+| Dove | Che cosa |
+|---|---|
+| `installa.sh` (parte `5b`), `installa.ps1` | `--aggiorna` / `-Aggiorna` |
+| `docker/backup/wallettracker-backup.sh`, `BackupService` | il tipo di backup nuovo `prima-dell-aggiornamento` |
+| backend: `about/UpdateCheckService`, `UpdateProperties`, `VersionController` | una volta al giorno: c'è una versione nuova? `GET /api/version/update` |
+| frontend: `api/update-store.ts`, la striscia in `app.html`, Impostazioni → Informazioni | l'avviso, le novità e il comando |
+| `docker-compose.yml`, `.env.example` | `WALLETTRACKER_UPDATE_CHECK` (per spegnere l'avviso) |
+| `.github/ci/prova-aggiornamento.sh` (nuovo), `ci.yml` (job "Aggiornamento") | la prova di tutto il percorso, con un finto GitHub |
+| `.gitignore` | `/.aggiornamento/` |
+
+## Parte I: "Aggiorna", passo per passo
+
+![Aggiorna, passo per passo](img/aggiorna.svg)
+
+Sul **server**, nella cartella di WalletTracker (quella dello ZIP):
+
+```
+powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna     # Windows
+./installa.sh --aggiorna                                           # Mac e Linux
+```
+
+Si può aggiungere `-Ia` / `--ia`, se usi Ollama; le altre opzioni no (`--aggiorna` va da solo: le altre operazioni
+falle prima o dopo).
+
+Lo script, prima di tutto, fa quello che fa sempre: controlla Docker, il `.env`, le cartelle, avvia la versione di
+**adesso** e aspetta che il backend sia pronto. Serve perché il backup del passo ④ lo fa il container dei backup,
+con il database acceso. Poi, la parte nuova (`5b` in `installa.sh`):
+
+### I1. Che versione ho? Qual è l'ultima?
+
+La versione installata è nel file `VERSION`. L'ultima pubblicata la dice GitHub, a chiunque, senza account, a un
+indirizzo fisso: `https://api.github.com/repos/rosemgo/WalletTracker/releases/latest`. La risposta è un testo in
+**JSON** (un formato di dati con nomi e valori: `"tag_name": "v1.1.0"`); servono tre cose:
+- `tag_name`, il nome del tag (`v1.1.0`): deve essere fatto proprio così, `v` e tre numeri, altrimenti lo script si ferma;
+- i due `browser_download_url`, gli indirizzi dello ZIP e di `SHA256SUMS`.
+
+`installa.sh` legge il JSON con `sed`, per non chiedere programmi in più; `installa.ps1` con `Invoke-RestMethod`, che
+lo capisce da solo. Le versioni si confrontano **come numeri, uno per uno**: `1.10.0` è più nuova di `1.9.0` (come
+testo sarebbe il contrario, perché "1" viene prima di "9"). Se l'ultima non è più nuova: "Hai già l'ultima versione",
+e finisce lì.
+
+### I2. Lo ZIP e la sua impronta
+
+Lo script scarica lo ZIP e `SHA256SUMS` in `.aggiornamento/nuova`. Poi calcola l'**impronta** SHA-256 dello ZIP
+(`sha256sum` su Linux, `shasum -a 256` sul Mac, `Get-FileHash` su Windows) e la confronta con quella scritta in
+`SHA256SUMS`.
+
+Un'impronta è un numero di 64 cifre calcolato da **tutti** i byte del file: se cambia anche un solo byte, cambia tutta.
+Se non corrispondono, lo ZIP è arrivato rovinato (uno scaricamento interrotto) o non è quello pubblicato: lo script
+non lo apre nemmeno.
+
+Poi lo apre (`unzip`, `Expand-Archive`) e controlla che dentro ci siano gli script, `docker-compose.yml` e un `VERSION`
+con il numero giusto.
+
+### I3. Le novità, e la domanda
+
+Mostra le sezioni di `NOVITA.md` (quello **nuovo**) dalla più nuova fino a quella che hai: se salti delle versioni, le
+vedi tutte. Poi chiede: `Aggiorno WalletTracker alla 1.1.0? Prima faccio un backup dei dati. [s/N]`. `[s/N]` vuol dire
+"scrivi s per sì; Invio da solo vale no".
+
+### I4. Il backup
+
+`docker compose run --rm -T backup crea prima-dell-aggiornamento`: un backup come quelli della `docs/48`, con il nome
+`wallettracker-prima-dell-aggiornamento-AAAAMMGG-HHMMSS.backup`. Senza la password dei backup nel `.env`, lo script la
+chiede (come `--backup`): **senza backup non si aggiorna**, perché è quello che permette di tornare indietro. Nella
+dashboard, nell'elenco dei backup, compare come "Prima di un aggiornamento".
+
+**Fino a qui non è cambiato niente.** Qualsiasi errore nei passi I1-I4 (niente Internet, ZIP rovinato, "N", backup
+non riuscito) ferma lo script con "Non è cambiato niente".
+
+### I5. I file nuovi al posto dei vecchi
+
+1. Una copia dei file di adesso che lo ZIP sostituisce va in `.aggiornamento/precedente`. Quelli che lo ZIP aggiunge
+   (che prima non c'erano) si annotano in `.aggiornamento/precedente/.aggiunti`, per toglierli se si torna indietro.
+2. I file nuovi vanno al loro posto: ognuno prima con un nome provvisorio (`installa.sh.nuovo`), poi **rinominato**.
+
+Perché così? Uno script che sostituisce **sé stesso** mentre gira è pericoloso: bash legge il file un pezzo alla volta,
+mentre lo esegue. Se il file cambiasse sotto i suoi piedi, continuerebbe a leggere da metà del file **nuovo**, cioè
+righe a caso. Rinominare invece non tocca il file vecchio: il nome passa a un file diverso, e lo script che gira
+continua a leggere il **suo** file, intero (il sistema lo tiene finché non ha finito). PowerShell legge tutto lo
+script prima di cominciare, quindi lì il problema non c'è, ma si fa lo stesso.
+
+**Non si toccano mai** `.env`, `.data` (la chiave di cifratura), la cartella dei backup e `secrets`: lo ZIP non li
+contiene, e lo script li salta anche se un giorno li contenesse.
+
+### I6. Lo script nuovo avvia la versione nuova
+
+Lo script vecchio lancia quello **nuovo** (`./installa.sh --senza-browser`), come un avvio normale: legge il `VERSION`
+nuovo, scarica le immagini nuove (`docker compose pull`), ricrea i container che cambiano (`up -d`) e aspetta il
+backend. Il backend nuovo, partendo, applica con Flyway le migrazioni nuove al database. Il volume del database resta
+lo stesso: i dati non si spostano.
+
+Perché lo script nuovo e non quello vecchio? Perché una versione nuova può avviare l'app in modo diverso (una
+variabile in più, un controllo nuovo): lo sa solo il suo script.
+
+### I7. È andata?
+
+Due controlli: lo script nuovo è finito senza errori, e il backend acceso è **proprio** la versione nuova. La seconda
+cosa si legge dall'etichetta dell'immagine del container (parte B2):
+
+```
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' wallettracker-backend
+```
+
+Se sì: "Aggiornamento completato". Lo ZIP scaricato si cancella; la versione di prima resta in
+`.aggiornamento/precedente` fino al prossimo aggiornamento, e il backup nella sua cartella.
+
+### I8. Se non è andata: il ritorno, da solo
+
+1. **I file di prima** tornano al loro posto (allo stesso modo: nome provvisorio e rinomina), e via quelli aggiunti.
+2. **I dati di prima**: si ripristina il backup del passo I4, con il container dei backup della versione **di prima**.
+   Perché anche i dati? Perché il backend nuovo può aver già fatto le sue migrazioni: il database sarebbe "più nuovo"
+   del backend vecchio, che si rifiuterebbe di partire (Flyway trova migrazioni che non conosce). Il backup è di
+   pochi minuti prima: si perde al massimo quello che è arrivato in quei minuti.
+3. **Si riavvia** la versione di prima e si aspetta che il backend sia pronto.
+
+Alla fine: "Sono tornato a WalletTracker 1.0.0, con i dati di prima dell'aggiornamento: è tutto com'era". Lo script
+finisce **con un errore** (codice 1) lo stesso: l'aggiornamento non c'è stato, e il motivo è nei messaggi sopra. Lo ZIP
+resta in `.aggiornamento/nuova`, per guardarci dentro.
+
+### I9. Sul tuo PC
+
+Con il codice sorgente (`backend/pom.xml`), `--aggiorna` scrive che lì si aggiorna con Git (`git switch main`, `git
+pull`, e rilanciare lo script) e si ferma, senza toccare niente: le tue modifiche non salvate restano tue.
+
+### I10. Per le prove
+
+Due variabili, solo per le prove (la CI): `WALLETTRACKER_RELEASES_URL` cambia l'indirizzo dell'ultima versione (un
+finto GitHub), `WALLETTRACKER_ATTESA_BACKEND` quanti secondi aspettare il backend (di serie 240). Con
+`WALLETTRACKER_RELEASES_URL` impostata, lo script non controlla che gli indirizzi dei file siano quelli di GitHub.
+
+## Parte J: l'avviso della versione nuova nell'app
+
+### J1. Il backend chiede a GitHub, una volta al giorno
+
+`UpdateCheckService`, due minuti dopo l'avvio e poi ogni 24 ore (`@Scheduled`, come la sincronizzazione della
+`docs/08`), chiede a GitHub lo stesso indirizzo dello script. Della risposta tiene tre cose: il numero, la pagina
+della versione e le novità (il testo della release, che viene da `NOVITA.md`). Le tiene **in memoria**: non le scrive
+nel database. Con il backend riavviato, le richiede.
+
+- **Non chiede niente** se l'app è costruita dal codice ("sviluppo": lì si aggiorna con Git) o se nel `.env` c'è
+  `WALLETTRACKER_UPDATE_CHECK=false`.
+- **Senza Internet**, o se GitHub non risponde, scrive una riga nel log e resta valida la risposta di prima: l'app
+  funziona come sempre.
+- **Che cosa sa GitHub?** Solo che dal tuo indirizzo IP qualcuno ha chiesto l'ultima versione di WalletTracker. Nessun
+  dato dell'app esce.
+
+`GET /api/version/update` restituisce quello che il backend sa, senza chiedere niente a GitHub in quel momento:
+
+```json
+{
+  "currentVersion": "1.0.0", "checkEnabled": true, "available": true, "latestVersion": "1.1.0",
+  "releaseUrl": "https://github.com/rosemgo/WalletTracker/releases/tag/v1.1.0",
+  "notes": "- ...", "checkedAt": "2026-11-05T10:02:00Z"
+}
+```
+
+### J2. La striscia in alto
+
+Se `available` è vero, sotto la barra in alto compare: **"È disponibile WalletTracker 1.1.0. Che cosa cambia e come
+aggiornare"**. Il collegamento porta a Impostazioni → Informazioni. La **×** a destra la chiude.
+
+"Chiusa" è scritto solo **in memoria** (un `signal` in `UpdateStore`), apposta: non nel browser e non nel server. Così,
+a ogni nuovo ingresso nell'app (la pagina riaperta o ricaricata, l'app del telefono rilanciata), la memoria riparte
+vuota e la striscia ricompare, finché non aggiorni.
+
+Da non confondere con l'altra striscia, "È pronta una nuova versione di WalletTracker. Aggiorna" (`docs/42`, parte E):
+quella dice che il **browser** ha scaricato i file nuovi della dashboard, dopo un aggiornamento già fatto sul server,
+e basta ricaricare la pagina.
+
+### J3. Impostazioni → Informazioni
+
+Sotto la versione installata:
+- **c'è una versione nuova**: il numero, le novità, la pagina su GitHub, e il comando da lanciare **sul server**
+  (Windows e Mac/Linux);
+- **sei all'ultima**: "È l'ultima versione pubblicata (controllato il …)";
+- **controllo spento**: lo dice, con la riga del `.env`.
+
+Il pulsante "Aggiorna" nell'app non c'è, ed è una scelta: per aggiornare bisogna sostituire file sul server e
+comandare Docker, e il backend apposta non ha il controllo di Docker (`docs/17`, riga 47). Chi lo avesse, se un giorno
+il backend avesse un difetto, avrebbe il controllo del server.
+
+## Parte K: la sicurezza di "Aggiorna"
+
+| Protezione | Contro che cosa |
+|---|---|
+| l'**impronta SHA-256** dello ZIP controllata **prima** di aprirlo | uno ZIP rovinato (scaricamento interrotto) o sostituito per strada |
+| gli indirizzi dei file accettati solo se sono della pagina delle versioni di WalletTracker (`github.com/rosemgo/WalletTracker/releases/download/<tag>/`) | una risposta che manda a scaricare da un altro sito |
+| il numero di versione accettato solo se è `vX.Y.Z` | una risposta strana che finisce nei nomi dei file e dei comandi |
+| **il backup prima**, e senza backup non si aggiorna | perdere i dati per un aggiornamento andato male |
+| il **ritorno da solo**: file e dati di prima | un'app che dopo l'aggiornamento non parte più |
+| `.env`, `.data`, backup e `secrets` **mai** toccati | perdere la configurazione, la chiave di cifratura, i backup |
+| nell'app solo un **avviso**: le novità come **testo** (mai HTML), la pagina aperta solo se è di WalletTracker su GitHub | una release con contenuti strani che diventa codice nella dashboard |
+| il backend senza il controllo di Docker | (come prima) un difetto del backend che diventa il controllo del server |
+
+**Quello che l'impronta non fa.** Lo ZIP e `SHA256SUMS` arrivano dallo stesso posto, la release su GitHub. Chi
+riuscisse a entrare nel tuo account GitHub potrebbe pubblicare uno ZIP falso **con la sua impronta**, e lo script lo
+accetterebbe. Contro questo c'è la protezione del tuo account: password robusta e verifica in due passaggi (2FA).
+Esiste anche la **firma** delle release (con una chiave che solo tu hai, fuori da GitHub): per ora non la usiamo, la
+segno tra le cose da valutare.
+
+È la riga **49** della tabella della sicurezza (`docs/17`).
+
+## Parte L: verifiche fatte e difetti trovati (6b)
+
+**Fatto, qui nel cloud:**
+- **test**: backend (`UpdateCheckServiceTest`: versione nuova, uguale, più vecchia, numeri confrontati come numeri,
+  spento e "sviluppo" senza nessuna chiamata, pagina di un altro sito non collegata, risposta strana ignorata, GitHub
+  in errore e senza Internet; `VersionControllerTest`); frontend (la striscia che si chiude e ricompare al nuovo
+  ingresso; le Impostazioni con le novità come testo, il collegamento con `noopener`, i comandi; "ultima versione" e
+  "controllo spento");
+- **la prova completa** `.github/ci/prova-aggiornamento.sh`, la stessa del job "Aggiornamento" della CI. Costruisce tre
+  versioni finte dal codice (0.9.0, 0.9.1 e una 0.9.2 **rotta apposta**: il backend riceve una porta che non è un numero
+  e non parte), prepara i loro ZIP con `prepara-zip.sh`, accende un finto GitHub e installa la 0.9.0 da uno ZIP, con
+  un dato "tuo" nel database. Poi quattro casi:
+  1. l'ultima è già quella installata → "Hai già l'ultima versione";
+  2. `SHA256SUMS` sbagliato → rifiutato, niente toccato, nessun backup;
+  3. 0.9.0 → 0.9.1 → riuscito: `VERSION`, `docker-compose.yml` e il backend nuovi, il backup c'è, il `.env` e i dati sono
+     quelli di prima;
+  4. 0.9.1 → 0.9.2 → fallito → lo script torna alla 0.9.1 da solo: file, backend acceso e dati di prima.
+
+**Non fatto, perché qui non si può:**
+- `installa.ps1 -Aggiorna`: scritto con gli stessi passi, ma qui non posso eseguire PowerShell. Lo proverai nel 6d;
+- un aggiornamento da GitHub **vero**: serve una versione pubblicata (la 1.0.0) e poi una seconda (la 1.0.1).
+
+- **nel browser** (Chromium, larghezza di un telefono), sull'app vera accesa dalla prova (la 0.9.1), con la sola risposta
+  di `/api/version/update` finta ("c'è la 1.0.0"): la striscia compare, la × la chiude, ricaricando la pagina ricompare;
+  il collegamento porta a Informazioni con le novità e i comandi; nessun errore nella console, la pagina non si
+  allarga oltre lo schermo.
+
+**Difetti trovati (e corretti):**
+- **i comandi spezzati sul telefono**: in Informazioni, `powershell -ExecutionPolicy …` andava a capo dopo il `-`, e
+  `--aggiorna` dopo `--`: copiandoli si sarebbe sbagliato. Ora ogni comando sta su una riga intera, che si fa scorrere
+  se è più larga dello schermo;
+- **un `VERSION` rovinato**, in `installa.ps1`: il confronto `[version]` avrebbe dato errore e, con
+  `$ErrorActionPreference = 'Continue'`, lo script sarebbe potuto andare avanti come se ci fosse una versione nuova.
+  Ora tutti e due gli script controllano prima che `VERSION` sia `X.Y.Z`;
+- nella prova stessa: costruire le immagini con `docker compose build` voleva il `.env` (la password del database
+  anche solo per costruire): ora la prova usa `docker build`, una immagine alla volta.
+
+## Parte M: problemi comuni ed esercizi (6b)
+
+| Che cosa vedi | Perché | Che cosa fare |
+|---|---|---|
+| "Questa è la cartella del CODICE SORGENTE" | lanciato sul tuo PC, nel progetto clonato | `git switch main`, `git pull`, rilancia lo script |
+| "Non riesco a chiedere a GitHub l'ultima versione" | niente Internet, o GitHub non risponde | riprova più tardi: non è cambiato niente |
+| "Manca il programma unzip" (Linux) | il Linux non ha `unzip` | `sudo apt install unzip` (o il comando della tua distribuzione) |
+| "NON corrisponde alla sua impronta" | lo ZIP è arrivato rovinato | riprova; se succede ancora, non usarlo e guarda la pagina della versione su GitHub |
+| "Il backup non è riuscito" | per esempio, disco pieno o cartella dei backup non scrivibile | sistema il problema (`docs/48`, parte H), poi riprova |
+| "Sono tornato a WalletTracker …" | la versione nuova non è partita | sei com'eri prima; leggi il motivo nei messaggi e segnalalo; lo ZIP è in `.aggiornamento/nuova` |
+| "Non sono riuscito a rimettere i dati di prima" | anche il ritorno ha avuto un problema (molto raro) | i file sono già quelli di prima: ripristina a mano il backup indicato, con `--ripristina` (`docs/48`) |
+| la striscia della versione nuova non compare | il backend chiede a GitHub 2 minuti dopo l'avvio, poi ogni giorno; o il controllo è spento | aspetta, o guarda Impostazioni → Informazioni |
+
+**Esercizi**
+1. **Il JSON di GitHub.** Apri nel browser `https://api.github.com/repos/rosemgo/WalletTracker/releases/latest` (dopo
+   la prima versione). Trova `tag_name`, `html_url`, `body` e i due `browser_download_url`.
+2. **L'impronta.** Scarica uno ZIP e `SHA256SUMS` dalla pagina di una versione e calcola l'impronta: su Windows
+   `Get-FileHash WalletTracker-1.0.0.zip`, su Linux `sha256sum WalletTracker-1.0.0.zip`. È uguale? Ora cambia un
+   carattere di un file dentro lo ZIP, ricomprimilo e ricalcola: che cosa succede all'impronta?
+3. **Rinominare o sovrascrivere.** Perché `cp nuovo installa.sh` mentre `installa.sh` sta girando è pericoloso, e
+   `cp nuovo installa.sh.nuovo && mv installa.sh.nuovo installa.sh` no? (Parte I5.)
+4. **Perché anche i dati.** Nel ritorno (I8), che cosa succederebbe se si rimettessero solo i file della versione di
+   prima, senza il backup, dopo che il backend nuovo ha applicato una migrazione V40?
+5. **La prova.** Leggi `.github/ci/prova-aggiornamento.sh`: come fa la 0.9.2 a essere "rotta"? E come fa la prova a
+   sapere che il backend acceso alla fine è proprio la 0.9.1?

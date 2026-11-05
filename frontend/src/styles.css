@@ -281,6 +281,53 @@ button.eye[aria-checked='true'] {
   background: light-dark(#fff4d1, #3a3012);
 }
 
+/* Le novità di una versione nuova, nelle Impostazioni (docs/50, parte J): il testo come arriva, a capo compresi. */
+.release-news .notes {
+  white-space: pre-line;
+  padding: 10px 12px;
+  background: var(--soft);
+  border-radius: 10px;
+}
+
+/* Ogni comando su una riga intera, mai spezzato (copiato a metà sarebbe sbagliato): se è troppo lungo, si scorre. */
+.release-news .commands code {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Una versione nuova pubblicata (docs/50, parte J): il testo e, a destra, la crocetta per chiudere. */
+.banner.release {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.banner.release span {
+  flex: 1;
+}
+
+.banner.release .close {
+  flex: none;
+  min-width: 32px;
+  min-height: 32px;
+  margin: -6px -8px -6px 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.banner.release .close:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
 .banner.update button.link {
   margin-left: 4px;
   font-weight: 650;

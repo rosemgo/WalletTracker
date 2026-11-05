@@ -1,9 +1,11 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AiSettingsPanel } from '../ai/ai-settings-panel';
 import { AccessSection } from '../auth/access-section';
 import { SetupStore } from '../api/setup-store';
+import { UpdateStore } from '../api/update-store';
 import { WalletApi } from '../api/wallet-api';
 import { BackupSection } from './backup-section';
 import { ThemeSection } from '../theme/theme-section';
@@ -21,7 +23,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [AccessSection, AiSettingsPanel, BackupSection, FileDrop, RouterLink, ThemeSection],
+  imports: [
+    AccessSection,
+    AiSettingsPanel,
+    BackupSection,
+    DatePipe,
+    FileDrop,
+    RouterLink,
+    ThemeSection,
+  ],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
@@ -37,8 +47,11 @@ export class SettingsPage {
   protected readonly error = signal<string | null>(null);
   /** La versione dell'app (docs/50, parte B); null finché il backend non risponde. */
   protected readonly version = signal<string | null>(null);
+  /** C'è una versione nuova? (docs/50, parte J) */
+  protected readonly updates = inject(UpdateStore);
 
   constructor() {
+    this.updates.refresh();
     this.api
       .version()
       .subscribe({ next: (answer) => this.version.set(answer.version), error: () => {} });
