@@ -158,13 +158,13 @@ describe('SubscriptionsPage', () => {
   it('dismisses a suggestion and can bring a dismissed merchant back', async () => {
     const page = await render();
 
-    button(page, 'no, non suggerirlo più').click();
+    button(page, 'No, non suggerirlo più').click();
     expect(dismissed).toEqual([['SPOTIFY AB', SPOTIFY.typicalAmount]]); // con l'importo della serie
 
     const list = page.querySelector('.dismissed')!.textContent!.replace(/\s+/g, ' ');
     expect(list).toContain('ASSICURAZIONE AUTO · tutti gli importi (EUR)');
     expect(list).toContain('FASTWEB S P A · circa 23,95 €');
-    button(page, 'suggeriscilo di nuovo').click();
+    button(page, 'Suggeriscilo di nuovo').click();
     expect(deleted).toEqual([9]);
   });
 });
