@@ -54,6 +54,7 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte P: l'avvio automatico all'accensione
 - Parte Q: la prima volta, Windows e il Mac diffidano
 - Parte R: verifiche, difetti trovati, problemi comuni ed esercizi (6c)
+- Parte S: pubblicare una versione nuova, e vedere quelle già pubblicate
 
 ---
 
@@ -919,3 +920,77 @@ Docker Desktop e la lettura delle sue impostazioni. È la prova del 6d, sul tuo 
 4. In Docker Desktop spegni "Start Docker Desktop when you sign in", fai il doppio clic su "Avvia WalletTracker" e leggi
    l'ultima riga. Poi riaccendilo e rifallo.
 5. Ferma l'app con ■ in Docker Desktop, riavvia il computer: l'app risponde? Perché? (Parte P3.)
+
+---
+
+## Parte S: pubblicare una versione nuova, e vedere quelle già pubblicate
+
+### S1. Le versioni pubblicate finora
+
+| Versione | Pubblicata | Dal commit | Che cosa contiene |
+|---|---|---|---|
+| **1.0.0** | 5 novembre 2026 | `2bee13c` (la pull request n. 14) | l'app fino al passo **6a**: niente "Aggiorna", niente doppio clic, niente avviso delle versioni nuove |
+
+Le tre immagini della 1.0.0 su GitHub Container Registry sono **pubbliche** (controllato: si scaricano senza account).
+
+**Attenzione, la 1.0.0 non sa aggiornarsi.** "Aggiorna" è arrivato dopo (6b), quindi chi ha la 1.0.0 passa alla
+versione dopo **a mano, una volta sola** (S4). Da lì in poi basta il doppio clic.
+
+### S2. Pubblicare una versione nuova, passo per passo
+
+1. **Tutto in `main`**: le pull request unite, la CI verde sull'ultimo commit di `main` (scheda Actions, o la ✓ accanto
+   al commit).
+2. **Il numero** (parte A3): `1.0.0` → `1.0.1` se corregge e basta, `1.1.0` se aggiunge qualcosa, `2.0.0` se chi
+   aggiorna deve fare qualcosa a mano.
+3. **Le novità**: in `NOVITA.md`, in cima, una sezione `## 1.1.0` scritta per chi usa l'app (che cosa cambia per lui,
+   non i nomi dei file). Anche questa entra in `main` con una pull request. Senza la sezione, il rilascio si ferma (D5).
+4. **Il tag**, dal tuo PC, su `main` aggiornato:
+
+   ```
+   git switch main
+   git pull
+   git tag -a v1.1.0 -m "WalletTracker 1.1.0"
+   git push origin v1.1.0
+   ```
+
+   Il tag si può mettere anche dal sito: **Releases** → **Draft a new release** → **Choose a tag** → scrivi `v1.1.0` →
+   "Create new tag on publish", target `main`. Ma allora GitHub crea **lui** la release, e `rilascio.yml` troverebbe la
+   release già esistente: meglio il tag da Git, e la release la crea la CI.
+5. **Aspetta "Rilascio"** nella scheda Actions (15-25 minuti): CI completa, poi le tre immagini, poi la release. Tutto
+   verde = pubblicata.
+6. **Controlla** (S3): la release c'è, con lo ZIP e `SHA256SUMS`.
+7. **Da quel momento**: gli utenti la vedono arrivare da soli (la striscia nell'app compare entro un giorno, J1), e
+   l'aggiornamento è "Aggiorna WalletTracker".
+
+**Se "Rilascio" diventa rosso**: non è stato pubblicato niente, oppure solo una parte (per esempio le immagini, ma non
+la release). Si corregge in `main` e si pubblica un **numero nuovo** (`v1.1.1`): un tag già usato non si riusa, perché
+qualcuno potrebbe aver già scaricato quella versione.
+
+### S3. Dove si vedono le versioni
+
+| Dove | Che cosa vedi |
+|---|---|
+| **la pagina delle versioni**: nel repository, a destra, **Releases** (oppure `github.com/rosemgo/WalletTracker/releases`) | ogni versione, dalla più nuova: il titolo, le novità, e sotto **Assets** lo ZIP, `SHA256SUMS` e il codice sorgente (quei due li aggiunge GitHub da solo). "Latest" segna l'ultima |
+| **i tag**: nella stessa pagina, la scheda **Tags** | il tag e il commit su cui è stato messo |
+| **le immagini**: sul tuo profilo GitHub, **Packages** (o, nel repository, a destra, **Packages**) | `wallettracker-backend`, `-web`, `-backup`: per ognuna le versioni pubblicate (`1.0.0`, `latest`…), quante volte sono state scaricate, e se sono pubbliche |
+| **il rilascio**: la scheda **Actions** → "Rilascio" | com'è andata la pubblicazione di ogni tag, job per job |
+| **dal tuo PC**: `git tag` (o `git tag -n` con il messaggio) | i tag che conosce la tua copia del progetto (dopo `git fetch --tags`) |
+| **nell'app**: Impostazioni → Informazioni | la versione installata sul server, e se ce n'è una nuova |
+| **per un programma**: `https://api.github.com/repos/rosemgo/WalletTracker/releases/latest` | l'ultima, in JSON: è quello che leggono "Aggiorna" e il backend |
+
+### S4. Dalla 1.0.0 alla versione dopo, a mano (una volta sola)
+
+1. **Prima il backup**, con la versione di adesso: nell'app, **Impostazioni → Backup → Fai un backup adesso** (c'è già
+   nella 1.0.0), e aspetta "Backup creato".
+2. Dalla pagina delle versioni scarica lo ZIP della versione nuova (per esempio `WalletTracker-1.1.0.zip`) e aprilo.
+3. Copia **tutti i file** che ci sono dentro nella cartella di WalletTracker di adesso, sostituendo quelli che ci sono
+   già. Nello ZIP non ci sono `.env`, `.data`, i backup né `secrets`: i tuoi dati e la tua configurazione non si
+   toccano.
+4. Doppio clic su **"Avvia WalletTracker"** (arriva proprio con questi file): scarica le immagini nuove e riavvia
+   l'app.
+5. In Impostazioni → Informazioni ora c'è la versione nuova. Le prossime volte: "Aggiorna WalletTracker", che il backup
+   lo fa da solo, e **prima** di cambiare qualcosa.
+
+Perché il backup al punto 1 e non con "Backup WalletTracker" dopo aver copiato i file? Perché lo script, prima di fare
+il backup, avvia l'app: con i file nuovi avvierebbe già la versione nuova, e il backup sarebbe dei dati **dopo**
+l'aggiornamento.
