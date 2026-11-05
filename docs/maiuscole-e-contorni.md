@@ -120,7 +120,11 @@ mezzo. I testi delle azioni sono tutti brevi, quindi non escono mai dallo scherm
 ## Parte D: verifiche
 
 - test della dashboard: 263, tutti passati (aggiornati quelli che cercavano i testi in minuscolo; nuovi quelli di
-  `upperFirst`);
+  `upperFirst`). **Un difetto nelle prove stesse:** qui, lanciati tutti insieme, i test passavano anche quando tre di
+  loro cercavano ancora i testi vecchi ("sabato 24 ottobre", "martedì 3 novembre", "no, non suggerirlo più"); la CI li
+  ha trovati. Lanciato **da solo**, lo stesso file falliva: il risultato dipendeva dall'ordine in cui giravano i file.
+  Corretti i tre test, ora ogni file modificato è stato provato anche da solo
+  (`npx ng test --watch=false --include <file>`), e la CI è verde;
 - nel browser (Chromium), sulla pagina Conti con un conto manuale finto ("Banca Alfa"): dopo il clic con il mouse su
   "Carica il logo" nessun contorno, con Tab il contorno c'è; le azioni non vanno più a capo a metà;
 - la ricerca di tutti i testi che cominciano in minuscolo, file per file: i casi rimasti minuscoli sono quelli della
