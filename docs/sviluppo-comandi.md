@@ -79,6 +79,63 @@ torna accesa, con le tue modifiche.
 
 ---
 
+## Portare le modifiche in `main` (Git e pull request)
+
+`main` è protetto (il ruleset "Proteggi main", `docs/ci-github.md` parte 4): ci si entra **solo con una pull request**
+e solo con i controlli della CI verdi. Vale anche per te: un `git push` diretto su `main` viene rifiutato con
+`GH013: Repository rule violations found for refs/heads/main`. Si lavora sempre su un ramo.
+
+**1. Prima di cominciare una modifica**, parti da `main` aggiornato e crea un ramo (il nome lo scegli tu):
+
+```
+git switch main
+git pull
+git switch -c nome-modifica
+```
+
+**2. Mentre lavori**: modifiche, prove (modo A o B qui sopra), commit, quante volte vuoi:
+
+```
+git add -A
+git commit -m "Che cosa ho cambiato"
+```
+
+**3. Spedisci il ramo su GitHub** (la prima volta con `-u`, poi basta `git push`):
+
+```
+git push -u origin nome-modifica
+```
+
+**4. Su GitHub, la pull request**: la striscia gialla **Compare & pull request** (oppure **Pull requests → New pull
+request**, base `main`, compare `nome-modifica`) → **Create pull request** → aspetta che i controlli diventino verdi →
+**Merge pull request** (lascia "Create a merge commit") → **Confirm merge** → **Delete branch**.
+
+**5. Sul tuo PC**, torna su `main` con le modifiche dentro, e cancella il ramo:
+
+```
+git switch main
+git pull
+git branch -d nome-modifica
+```
+
+### Se hai fatto i commit direttamente su `main` (e il push è stato rifiutato)
+
+I commit non sono persi: sono sul tuo PC. Mettili su un ramo e continua dal punto 3:
+
+```
+git switch -c nome-modifica
+git push -u origin nome-modifica
+```
+
+Dopo il merge, `git switch main` e `git pull` rimettono il tuo `main` uguale a quello di GitHub.
+
+### Se un controllo della CI è rosso
+
+La pull request non si può unire. Apri il controllo rosso (scheda **Checks** della pull request, o **Actions**), leggi
+il primo errore, correggi sul tuo ramo, `git commit` e `git push`: la CI riparte da sola sulla stessa pull request.
+
+---
+
 ## Tabella veloce
 
 | Vuoi… | Comando |
@@ -91,6 +148,9 @@ torna accesa, con le tue modifiche.
 | vedere che cosa è acceso | `docker compose ps` |
 | lanciare i test del backend (serve Docker Desktop acceso) | `.\mvnw.cmd test` (in `backend/`) |
 | lanciare i test della dashboard | `npx ng test --watch=false` (in `frontend/`) |
+| cominciare una modifica | `git switch main`, `git pull`, `git switch -c nome-modifica` |
+| spedire il ramo su GitHub | `git push -u origin nome-modifica` (poi la pull request su GitHub) |
+| dopo il merge | `git switch main`, `git pull`, `git branch -d nome-modifica` |
 
 ## Le immagini in Docker Desktop
 

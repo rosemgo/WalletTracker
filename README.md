@@ -65,7 +65,7 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 ## Guide
 
-> **Promemoria per lo sviluppo: [quali comandi lanciare, e mai due backend insieme](docs/sviluppo-comandi.md).**
+> **Promemoria per lo sviluppo: [quali comandi lanciare, mai due backend insieme, e come portare le modifiche in `main` con una pull request](docs/sviluppo-comandi.md).**
 
 > Sempre fuori dalla numerazione: [La CI su GitHub: ci.yml, rilascio.yml e il ramo main protetto](docs/ci-github.md).
 
