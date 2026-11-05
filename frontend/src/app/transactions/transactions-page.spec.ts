@@ -137,9 +137,9 @@ describe('TransactionsPage', () => {
     expect(rows[0]).toMatch(
       /^E\s*Esselunga Milano\s*Spesa alimentare · Conto corrente\s*-56,30\s€$/,
     );
-    expect(rows[1]).toContain('trasferimento interno · Conto corrente'); // senza categoria: il tipo
+    expect(rows[1]).toContain('Trasferimento interno · Conto corrente'); // senza categoria: il tipo
     expect(rows[2]).toMatch(/Acme SRL\s*Stipendio e pensione · Conto corrente\s*ottobre/);
-    expect(rows[3]).toContain('senza categoria · Conto corrente · in attesa');
+    expect(rows[3]).toContain('Senza categoria · Conto corrente · in attesa');
     // Un'entrata ha il colore delle entrate (il link al dettaglio lo prova il browser: docs/37, parte H).
     expect(page.querySelectorAll('a.movement .amount.positive').length).toBe(1);
   });

@@ -57,7 +57,7 @@
                     (keydown.escape)="renaming.set(null)"
                   />
                   <button type="button" (click)="rename(category, nameInput.value)">Salva</button>
-                  <button type="button" class="link" (click)="renaming.set(null)">annulla</button>
+                  <button type="button" class="link" (click)="renaming.set(null)">Annulla</button>
                 </div>
               } @else {
                 {{ category.name }}
@@ -101,15 +101,15 @@
                 </span>
                 <button type="button" (click)="remove(category)">Elimina</button>
                 <button type="button" class="link" (click)="confirmingDelete.set(null)">
-                  annulla
+                  Annulla
                 </button>
               } @else {
                 <button type="button" class="link" (click)="renaming.set(category.id)">
-                  rinomina
+                  Rinomina
                 </button>
                 ·
                 <button type="button" class="link" (click)="confirmingDelete.set(category.id)">
-                  elimina
+                  Elimina
                 </button>
               }
             </td>

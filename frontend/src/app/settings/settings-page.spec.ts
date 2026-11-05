@@ -191,8 +191,8 @@ describe('SettingsPage', () => {
     const rows = [...page.querySelectorAll('.redirect-url')];
     expect(rows.map((row) => row.querySelector('code')?.textContent)).toEqual(two);
     expect(rows.map((row) => row.querySelector('button')?.textContent?.trim())).toEqual([
-      'copia',
-      'copia',
+      'Copia',
+      'Copia',
     ]);
   });
 

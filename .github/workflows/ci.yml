@@ -116,6 +116,26 @@ jobs:
       - name: Installa e avvia
         run: ./installa.sh --senza-browser
 
+      # I file da doppio clic (docs/50, parte N). Quelli di Windows (.cmd): fini riga di Windows in ogni riga e solo
+      # caratteri senza accenti (cmd.exe li leggerebbe male). Quelli del Mac (.command): eseguibili e con le fini riga
+      # di Unix. Poi "Avvia WalletTracker.command" lanciato davvero, come farebbe il Terminale del Mac: deve avviare
+      # l'app e aspettare Invio prima di chiudersi.
+      - name: I file da doppio clic
+        run: |
+          test "$(ls ./*.cmd | wc -l)" = 3 && test "$(ls ./*.command | wc -l)" = 3
+          for f in ./*.cmd; do
+            if [ "$(grep -c $'\r$' "$f")" != "$(wc -l < "$f")" ]; then echo "$f: fini riga non di Windows"; exit 1; fi
+            if LC_ALL=C grep -q '[^ -~[:cntrl:]]' "$f"; then echo "$f: caratteri non ASCII"; exit 1; fi
+            grep -q 'installa.ps1' "$f"
+          done
+          for f in ./*.command; do
+            test -x "$f"
+            if grep -q $'\r' "$f"; then echo "$f: fini riga di Windows"; exit 1; fi
+          done
+          printf '\n' | "./Avvia WalletTracker.command" --senza-browser | tee avvio.log
+          grep -q 'è avviato' avvio.log
+          grep -q 'Premi Invio' avvio.log
+
       # -f: curl fallisce se la risposta è un errore (4xx, 5xx). Dal passo 3 (docs/46) le API vogliono il PIN: senza,
       # 401. Poi facciamo quello che fa la dashboard: lo stato (che dà il cookie XSRF-TOKEN), il PIN creato dal PC
       # con il gettone CSRF, e le API con la sessione aperta (i cookie restano nel file "biscotti"). La porta 8001 è

@@ -47,7 +47,7 @@ import { nameOf } from '../transactions/day-groups';
           <button type="button" [disabled]="saving()" (click)="save(amount.value)">
             Salva il saldo
           </button>
-          <button type="button" class="link" (click)="cancelled.emit()">annulla</button>
+          <button type="button" class="link" (click)="cancelled.emit()">Annulla</button>
         </div>
         @if (error()) {
           <p class="error">{{ error() }}</p>

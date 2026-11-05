@@ -138,7 +138,21 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 }
 & docker info *> $null
 if ($LASTEXITCODE -ne 0) {
-    Errore 'Docker non risponde: avvia Docker Desktop, aspetta che dica "Engine running" e riprova.'
+    # Docker Desktop spento (docs/50, parte O): lo accendo io e aspetto che risponda, al massimo 3 minuti.
+    $dockerDesktop = Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
+    if (-not (Test-Path $dockerDesktop)) {
+        Errore 'Docker non risponde, e non trovo Docker Desktop: avvialo tu (o installalo: docs/45, parte B), aspetta che dica "Engine running" e riprova.'
+    }
+    Write-Host 'Docker Desktop era spento: lo sto accendendo (al massimo 3 minuti)...'
+    Start-Process -FilePath $dockerDesktop
+    $secondi = 0
+    while ($true) {
+        & docker info *> $null
+        if ($LASTEXITCODE -eq 0) { break }
+        if ($secondi -ge 180) { Errore 'Docker Desktop non risponde dopo 3 minuti: aprilo tu, aspetta che dica "Engine running" e riprova.' }
+        Start-Sleep -Seconds 3
+        $secondi += 3
+    }
 }
 & docker compose version *> $null
 if ($LASTEXITCODE -ne 0) { Errore 'Manca Docker Compose v2 (il comando "docker compose"): aggiorna Docker Desktop.' }
@@ -586,4 +600,27 @@ if ((Valore-Env 'WALLETTRACKER_BACKUP_PASSWORD') -eq '') {
     Write-Host 'Backup automatico SPENTO: per accenderlo, e fare il primo backup, rilancia lo script con -Backup (docs/48).'
 }
 Write-Host 'Per fermarlo:  docker compose down   (i dati restano)'
+
+# L'avvio automatico (docs/50, parte P): come in installa.sh, lo controllo soltanto. Docker Desktop scrive le sue
+# impostazioni in %APPDATA%\Docker (settings-store.json nelle versioni nuove, settings.json in quelle vecchie).
+$avvioAutomatico = ''
+foreach ($nome in 'settings-store.json', 'settings.json') {
+    $file = Join-Path $env:APPDATA "Docker\$nome"
+    if ($avvioAutomatico -eq '' -and (Test-Path $file)) {
+        $testo = [System.IO.File]::ReadAllText($file)
+        if ($testo -match '"autostart"\s*:\s*true') { $avvioAutomatico = 'si' }
+        elseif ($testo -match '"autostart"\s*:\s*false') { $avvioAutomatico = 'no' }
+    }
+}
+if ($avvioAutomatico -eq 'si') {
+    Write-Host 'All''accensione del computer WalletTracker riparte da solo (parte Docker Desktop, e i container con lui).'
+}
+elseif ($avvioAutomatico -eq 'no') {
+    Write-Host 'AVVIO AUTOMATICO SPENTO: all''accensione del computer Docker Desktop non parte da solo, e quindi nemmeno WalletTracker.' -ForegroundColor Yellow
+    Write-Host '  Per accenderlo: Docker Desktop -> Settings (l''ingranaggio) -> General -> "Start Docker Desktop when you sign in'
+    Write-Host '  to your computer" -> Apply (docs/50, parte P).'
+}
+else {
+    Write-Host 'Per farlo ripartire da solo all''accensione: Docker Desktop -> Settings -> General -> "Start Docker Desktop when you sign in" (docs/50, parte P).'
+}
 if (-not $SenzaBrowser) { Start-Process $indirizzo }

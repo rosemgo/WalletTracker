@@ -140,10 +140,10 @@ describe('TransactionDetail', () => {
 
     expect(page.querySelector('h1')?.textContent?.trim()).toBe('Pagamento POS Amazon.it');
     expect(page.querySelector('.detail-amount')?.textContent).toMatch(/-9,98\s€/);
-    expect(text).toContain('sabato 24 ottobre 2026 · Carta di credito');
+    expect(text).toContain('Sabato 24 ottobre 2026 · Carta di credito');
     expect(text).toContain('Scelta da te: le regole non la cambiano.');
     expect(text).toMatch(/4 movimenti nell'ultimo anno · -78,28\s€ in tutto/);
-    expect(text).toContain('martedì 6 ottobre');
+    expect(text).toContain('Martedì 6 ottobre');
     expect(text).toContain('dalla banca, con la sincronizzazione');
     expect(text).toContain('Data valuta');
     expect(page.querySelector('.rule-advice a')?.getAttribute('href')).toContain(
@@ -272,7 +272,15 @@ describe('TransactionDetail', () => {
     );
     const { fixture, page, button } = await render();
     expect(page.textContent).toContain('Suggerita: Bar e ristoranti');
-    expect(page.textContent).toContain('Nessuna categoria: sceglila tu, o crea una regola.');
+    expect(page.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Nessuna categoria: sceglila tu, o crea una regola.',
+    );
+    // "crea una regola" porta alle Regole con l'esercente e il tipo già scritti, senza categoria.
+    const link = page.querySelector('[data-testid="create-rule"]') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('crea una regola');
+    expect(link.getAttribute('href')).toContain('/regole?pattern=');
+    expect(link.getAttribute('href')).toContain('resultType=EXPENSE');
+    expect(link.getAttribute('href')).toMatch(/categoryId=($|&)/);
 
     button('Accetta').click();
     await fixture.whenStable();
@@ -327,7 +335,9 @@ describe('TransactionDetail', () => {
     );
     const { page } = await render();
 
-    expect(page.textContent).toContain('Nessuna categoria: sceglila tu, o crea una regola.');
+    expect(page.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Nessuna categoria: sceglila tu, o crea una regola.',
+    );
     expect(page.textContent).not.toContain('Non serve');
   });
 

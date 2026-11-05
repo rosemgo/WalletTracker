@@ -9,6 +9,7 @@ import { InvestmentsCard } from '../investments/investments-card';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { MonthChart, Trend } from './month-chart';
+import { UpperFirstPipe } from '../text/upper-first.pipe';
 
 /** Quante categorie mostrare in "Dove vanno": le altre sono in Analisi. */
 export const TOP_CATEGORIES = 5;
@@ -50,6 +51,7 @@ function capitalized(text: string): string {
     MonthChart,
     NgTemplateOutlet,
     RouterLink,
+    UpperFirstPipe,
   ],
   templateUrl: './overview-page.html',
 })

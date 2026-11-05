@@ -309,9 +309,9 @@ export class TransactionsPage implements OnInit {
     if (t.category) {
       what = t.category;
     } else if (t.type === 'EXPENSE' || t.type === 'INCOME') {
-      what = 'senza categoria';
+      what = 'Senza categoria';
     } else {
-      what = t.type ? this.typeLabels[t.type].toLowerCase() : 'da verificare';
+      what = t.type ? this.typeLabels[t.type] : 'Da verificare';
     }
     const parts = [what, this.accountNames().get(t.accountId) ?? ''];
     if (t.status === 'PENDING') {

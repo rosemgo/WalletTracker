@@ -140,7 +140,7 @@
             <li>
               <span>
                 {{ u.name }}
-                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' }}</span>
+                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' | upperFirst }}</span>
               </span>
               <strong>{{ u.amount | money: o.currency }}</strong>
             </li>

@@ -148,7 +148,23 @@ fi
 # --- 1. Docker ---------------------------------------------------------------------------------------------
 passo "Controllo Docker"
 command -v docker >/dev/null 2>&1 || errore "Docker non è installato: installa Docker Desktop (docs/45, parte B)."
-docker info >/dev/null 2>&1 || errore "Docker non risponde: avvia Docker Desktop, aspetta che dica \"Engine running\" e riprova."
+# Docker spento (docs/50, parte O): sul Mac lo accendo io e aspetto che risponda; su Linux Docker di solito è un
+# servizio del sistema, e accenderlo vuole la password di amministratore: lo spiego e basta.
+if ! docker info >/dev/null 2>&1; then
+  if [ "$(uname -s)" = "Darwin" ] && open -a Docker >/dev/null 2>&1; then
+    echo "Docker Desktop era spento: lo sto accendendo (al massimo 3 minuti)..."
+    secondi=0
+    until docker info >/dev/null 2>&1; do
+      [ "$secondi" -ge 180 ] && errore "Docker Desktop non risponde dopo 3 minuti: aprilo tu, aspetta che dica \"Engine running\" e riprova."
+      sleep 3
+      secondi=$((secondi + 3))
+    done
+  elif [ "$(uname -s)" = "Darwin" ]; then
+    errore "Docker non risponde, e non trovo Docker Desktop: installalo (docs/45, parte B) e riprova."
+  else
+    errore "Docker non risponde: avvialo (di solito  sudo systemctl start docker , oppure apri Docker Desktop) e riprova."
+  fi
+fi
 docker compose version >/dev/null 2>&1 || errore "Manca Docker Compose v2 (il comando \"docker compose\"): aggiorna Docker Desktop."
 echo "Docker è avviato."
 
@@ -517,7 +533,7 @@ if [ "$AGGIORNA" = true ]; then
     case "$f" in .env | .data/* | backup/* | secrets/* | .aggiornamento/*) continue ;; esac
     metti_al_posto "$sorgente/$f" "$f"
   done <"$agg/file-nuovi.txt"
-  chmod +x installa.sh
+  chmod +x installa.sh ./*.command 2>/dev/null || true
 
   passo "Avvio di WalletTracker $nuova (con lo script nuovo)"
   opzioni=(--senza-browser)
@@ -660,6 +676,42 @@ if [ -z "$(valore_env WALLETTRACKER_BACKUP_PASSWORD)" ]; then
   echo "Backup automatico SPENTO: per accenderlo, e fare il primo backup:  ./installa.sh --backup   (docs/48)"
 fi
 echo "Per fermarlo:  docker compose down   (i dati restano)"
+
+# L'avvio automatico (docs/50, parte P): i container ripartono da soli quando parte Docker (restart: unless-stopped),
+# quindi WalletTracker riparte all'accensione del computer se parte Docker. Qui lo controllo soltanto, senza cambiare
+# niente: le impostazioni di Docker Desktop sono sue.
+avvio_automatico() { # stampa: si, no, o niente se non lo so
+  local f
+  if [ "$(uname -s)" = "Darwin" ]; then
+    for f in "$HOME/Library/Group Containers/group.com.docker/settings-store.json" \
+      "$HOME/Library/Group Containers/group.com.docker/settings.json"; do
+      [ -f "$f" ] || continue
+      if grep -qiE '"autostart"[[:space:]]*:[[:space:]]*true' "$f"; then echo si; return; fi
+      if grep -qiE '"autostart"[[:space:]]*:[[:space:]]*false' "$f"; then echo no; return; fi
+    done
+  elif command -v systemctl >/dev/null 2>&1; then
+    # Docker Engine è il servizio "docker"; Docker Desktop per Linux il servizio "docker-desktop" dell'utente.
+    if [ "$(systemctl is-enabled docker 2>/dev/null)" = enabled ] ||
+      [ "$(systemctl --user is-enabled docker-desktop 2>/dev/null)" = enabled ]; then
+      echo si
+    else
+      echo no
+    fi
+  fi
+}
+case "$(avvio_automatico)" in
+  si) echo "All'accensione del computer WalletTracker riparte da solo (parte Docker, e i container con lui)." ;;
+  no)
+    echo "AVVIO AUTOMATICO SPENTO: all'accensione del computer Docker non parte da solo, e quindi nemmeno WalletTracker."
+    if [ "$(uname -s)" = "Darwin" ]; then
+      echo "  Per accenderlo: Docker Desktop -> Settings (l'ingranaggio) -> General -> \"Start Docker Desktop when you sign in"
+      echo "  to your computer\" -> Apply (docs/50, parte P)."
+    else
+      echo "  Per accenderlo:  sudo systemctl enable docker   (docs/50, parte P)."
+    fi
+    ;;
+  *) echo "Per farlo ripartire da solo all'accensione: Docker Desktop -> Settings -> General -> \"Start Docker Desktop when you sign in\" (docs/50, parte P)." ;;
+esac
 if [ "$APRI_BROWSER" = true ]; then
   # open su macOS, xdg-open sui Linux con un desktop; se non c'è nessuno dei due, basta l'indirizzo scritto sopra.
   if command -v open >/dev/null 2>&1; then
