@@ -150,8 +150,12 @@ export class RulesPage implements OnInit {
       ...(this.amountSigns.includes(amountSign) ? { amountSign } : {}),
       ...(Number.isInteger(categoryId) && categoryId > 0 ? { categoryId } : {}),
     });
+    // Dalla scheda di un movimento: dopo una correzione (con la categoria scelta) o da "crea una regola" in un
+    // movimento ancora senza categoria, che allora va scelta qui.
     this.message.set(
-      'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.',
+      Number.isInteger(categoryId) && categoryId > 0
+        ? 'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.'
+        : 'Modulo compilato dal movimento: scegli la categoria, accorcia il testo da cercare se serve, controlla la prova e salva.',
     );
     this.tryRule();
   }

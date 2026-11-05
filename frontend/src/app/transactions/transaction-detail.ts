@@ -134,6 +134,9 @@ export class TransactionDetail implements OnInit {
     return `Per ${what} non serve una categoria: il tipo dice già che cos'è.`;
   });
 
+  /** La frase di un movimento senza categoria che ne vuole una: nella pagina, "crea una regola" è un link. */
+  protected readonly noCategoryText = 'Nessuna categoria: sceglila tu, o crea una regola.';
+
   /** Perché ha questa categoria, in una frase. */
   protected readonly categoryWhy = computed(() => {
     const d = this.detail();
@@ -149,9 +152,7 @@ export class TransactionDetail implements OnInit {
         if (d.transaction.type === null || d.transaction.type === 'TO_REVIEW') {
           return 'Nessuna categoria: prima scegli il tipo, in «Conta come».';
         }
-        return needsCategory(d.transaction.type)
-          ? 'Nessuna categoria: sceglila tu, o crea una regola.'
-          : 'Nessuna categoria.';
+        return needsCategory(d.transaction.type) ? this.noCategoryText : 'Nessuna categoria.';
     }
   });
 

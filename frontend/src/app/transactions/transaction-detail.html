@@ -51,7 +51,17 @@
           </span>
           <span class="action">Cambia</span>
         </button>
-        <p class="secondary why">{{ categoryWhy() }}</p>
+        @if (categoryWhy() === noCategoryText) {
+          <!-- "crea una regola" porta alle Regole con l'esercente e il tipo già scritti: la categoria si sceglie lì. -->
+          <p class="secondary why">
+            Nessuna categoria: sceglila tu, o
+            <a routerLink="/regole" [queryParams]="ruleParams(t)" data-testid="create-rule"
+              >crea una regola</a
+            >.
+          </p>
+        } @else {
+          <p class="secondary why">{{ categoryWhy() }}</p>
+        }
       }
       <button type="button" class="detail-row" (click)="sheet.set('type')">
         <span>

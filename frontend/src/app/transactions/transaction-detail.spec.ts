@@ -272,7 +272,15 @@ describe('TransactionDetail', () => {
     );
     const { fixture, page, button } = await render();
     expect(page.textContent).toContain('Suggerita: Bar e ristoranti');
-    expect(page.textContent).toContain('Nessuna categoria: sceglila tu, o crea una regola.');
+    expect(page.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Nessuna categoria: sceglila tu, o crea una regola.',
+    );
+    // "crea una regola" porta alle Regole con l'esercente e il tipo già scritti, senza categoria.
+    const link = page.querySelector('[data-testid="create-rule"]') as HTMLAnchorElement;
+    expect(link.textContent?.trim()).toBe('crea una regola');
+    expect(link.getAttribute('href')).toContain('/regole?pattern=');
+    expect(link.getAttribute('href')).toContain('resultType=EXPENSE');
+    expect(link.getAttribute('href')).toMatch(/categoryId=($|&)/);
 
     button('Accetta').click();
     await fixture.whenStable();
@@ -327,7 +335,9 @@ describe('TransactionDetail', () => {
     );
     const { page } = await render();
 
-    expect(page.textContent).toContain('Nessuna categoria: sceglila tu, o crea una regola.');
+    expect(page.textContent?.replace(/\s+/g, ' ')).toContain(
+      'Nessuna categoria: sceglila tu, o crea una regola.',
+    );
     expect(page.textContent).not.toContain('Non serve');
   });
 

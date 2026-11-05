@@ -283,6 +283,21 @@ describe('RulesPage', () => {
     expect(created).toEqual([]); // salva solo l'utente
   });
 
+  it('from a movement still without category, the form asks to choose it', async () => {
+    queryParams = {
+      pattern: 'FINDOMESTIC',
+      resultType: 'EXPENSE',
+      amountSign: 'NEGATIVE',
+      categoryId: '',
+    };
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.textContent).toContain('Modulo compilato dal movimento: scegli la categoria');
+    expect(page.textContent).not.toContain('dalla tua correzione');
+  });
+
   it('ignores unknown values in the address', async () => {
     queryParams = { pattern: 'BAR', resultType: 'BOH', amountSign: '<script>', categoryId: '-1' };
     const fixture = TestBed.createComponent(RulesPage);

@@ -7,7 +7,7 @@ compilare niente e senza aprire un terminale. Il passo è diviso in quattro part
 |---|---|---|
 | **6a** | **il numero di versione e le immagini già pronte** (GitHub Container Registry, release con lo ZIP) | **fatto: parti A-H** |
 | **6b** | **"Aggiorna": passare alla versione nuova con un comando, backup prima, ritorno da solo se va male; l'avviso nell'app** | **fatto: parti I-M** |
-| 6c | il doppio clic (Windows e Mac) e l'avvio automatico | da fare |
+| **6c** | **il doppio clic (Windows e Mac), Docker acceso dallo script, l'avvio automatico controllato** | **fatto: parti N-R** |
 | 6d | la guida per chi non è informatico (`GUIDA.md`), e la prova di `installa.ps1` su Windows | da fare |
 
 Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira Docker con WalletTracker.
@@ -49,6 +49,11 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte K: la sicurezza di "Aggiorna"
 - Parte L: verifiche fatte e difetti trovati (6b)
 - Parte M: problemi comuni ed esercizi (6b)
+- Parte N: i file da doppio clic (6c)
+- Parte O: Docker spento? Lo accende lo script
+- Parte P: l'avvio automatico all'accensione
+- Parte Q: la prima volta, Windows e il Mac diffidano
+- Parte R: verifiche, difetti trovati, problemi comuni ed esercizi (6c)
 
 ---
 
@@ -697,3 +702,220 @@ segno tra le cose da valutare.
    prima, senza il backup, dopo che il backend nuovo ha applicato una migrazione V40?
 5. **La prova.** Leggi `.github/ci/prova-aggiornamento.sh`: come fa la 0.9.2 a essere "rotta"? E come fa la prova a
    sapere che il backend acceso alla fine è proprio la 0.9.1?
+
+---
+
+# 6c. Il doppio clic e l'avvio automatico
+
+**Le scelte fatte insieme:**
+
+| Domanda | Scelta |
+|---|---|
+| quali file da doppio clic? | **Avvia, Aggiorna, Backup**, per Windows e per il Mac. Il ripristino resta dal terminale, apposta: sostituisce i dati e vuole il nome del file |
+| Docker Desktop spento? | lo script **lo accende e aspetta** (Windows e Mac); su Linux spiega il comando |
+| l'avvio automatico? | lo script **controlla e lo dice**, senza toccare le impostazioni di Docker Desktop |
+
+**Che cosa è cambiato nel 6c:**
+
+| Dove | Che cosa |
+|---|---|
+| `Avvia WalletTracker.cmd`, `Aggiorna WalletTracker.cmd`, `Backup WalletTracker.cmd` (nuovi) | il doppio clic su Windows |
+| `Avvia WalletTracker.command`, `Aggiorna WalletTracker.command`, `Backup WalletTracker.command` (nuovi) | il doppio clic sul Mac |
+| `.gitattributes` | le fini riga giuste per i `.cmd` (Windows) e i `.command` (Unix) |
+| `installa.sh`, `installa.ps1` | Docker Desktop acceso da soli se è spento; alla fine, se all'accensione WalletTracker ripartirà da solo |
+| `.github/ci/prepara-zip.sh` | i sei file nello ZIP di ogni versione (e quindi anche negli aggiornamenti) |
+| `ci.yml` (job "Installazione con Docker") | il passo "I file da doppio clic" |
+| fuori dal 6c: la scheda di un movimento | in "Nessuna categoria: sceglila tu, o crea una regola", **crea una regola** ora è un collegamento alle Regole, con l'esercente e il tipo già scritti |
+
+![Il doppio clic e l'avvio automatico](img/doppio-clic.svg)
+
+## Parte N: i file da doppio clic
+
+### N1. Che cosa sono
+
+Sono **file di testo con dentro dei comandi**, che il sistema esegue quando li apri con un doppio clic. Non fanno niente
+di nuovo: lanciano lo script di sempre, con l'opzione giusta, dalla cartella in cui si trovano.
+
+| File | Lancia |
+|---|---|
+| `Avvia WalletTracker` | lo script senza opzioni: prepara quello che manca, avvia e apre l'app nel browser |
+| `Aggiorna WalletTracker` | lo script con `-Aggiorna` / `--aggiorna` (parte I) |
+| `Backup WalletTracker` | lo script con `-Backup` / `--backup` (`docs/48`) |
+
+### N2. Windows: i file `.cmd`
+
+Un file `.cmd` è uno script per **cmd.exe**, il vecchio "Prompt dei comandi" di Windows: con un doppio clic Windows apre
+una finestra nera e lo esegue riga per riga.
+
+```bat
+@echo off
+cd /d "%~dp0"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0installa.ps1" -Aggiorna %*
+set codice=%errorlevel%
+echo.
+pause
+exit /b %codice%
+```
+
+Riga per riga:
+- `@echo off`: non ripetere ogni comando prima di eseguirlo (la finestra mostra solo i messaggi dello script);
+- `%~dp0` è **la cartella di questo file** ("d" = disco, "p" = percorso, "0" = il file stesso). `cd /d "%~dp0"` ci entra,
+  anche su un altro disco (`/d`): così lo script trova i suoi file, da qualunque posto si faccia il doppio clic;
+- `powershell … -File installa.ps1`: il comando della `docs/45`. `-NoProfile`: senza le personalizzazioni di PowerShell
+  di chi usa il computer, che potrebbero cambiare qualcosa; `%*`: le eventuali opzioni in più, passate allo script;
+- `set codice=%errorlevel%`: si ricorda com'è andata (0 = bene);
+- `pause`: "Premere un tasto per continuare…". Senza, la finestra si chiuderebbe appena finito lo script, e un errore
+  sparirebbe prima di poterlo leggere;
+- `exit /b %codice%`: il file finisce con il risultato dello script, non con quello della pausa.
+
+Due attenzioni:
+- **solo caratteri senza accenti.** cmd.exe legge i `.cmd` con una codifica vecchia (quella di MS-DOS): una "è" diventerebbe
+  un simbolo strano. Per questo nei `.cmd` c'è "e stata" invece di "è stata". I messaggi con gli accenti li scrive
+  PowerShell, che non ha questo problema;
+- **le fini riga di Windows** (CRLF, `\r\n`). Con quelle di Unix, cmd.exe in certi casi salta dei pezzi. Il file
+  `.gitattributes` dice a Git di scriverli sempre con CRLF, anche quando il progetto è scaricato su Linux o sul Mac.
+
+### N3. Il Mac: i file `.command`
+
+Un file `.command` è uno script per il **Terminale** del Mac: con un doppio clic il Mac apre il Terminale e lo esegue.
+
+```bash
+#!/bin/bash
+cd "$(dirname "$0")" || exit 1
+./installa.sh --aggiorna "$@"
+codice=$?
+echo "Premi Invio per chiudere questa finestra."
+read -r _
+exit "$codice"
+```
+
+- `#!/bin/bash`: con quale programma eseguirlo;
+- `cd "$(dirname "$0")"`: entra nella cartella di questo file (come `%~dp0` su Windows);
+- `read -r _`: aspetta Invio, per lo stesso motivo della `pause` di Windows;
+- il file deve essere **eseguibile** (il permesso "x" della `docs/45`): Git lo ricorda, e lo ZIP lo conserva.
+
+Su Linux i `.command` funzionano da terminale (`"./Avvia WalletTracker.command"`), ma i file manager di solito non li
+eseguono con un doppio clic: lì resta lo script, come avevamo deciso.
+
+### N4. Dove sono
+
+Nella cartella dello ZIP di ogni versione, accanto agli script (`prepara-zip.sh` ce li mette, e controlla che siano
+sei), e nella cartella del progetto. "Aggiorna" li sostituisce come gli altri file dell'app: anche loro migliorano
+con le versioni.
+
+## Parte O: Docker spento? Lo accende lo script
+
+Prima, se Docker Desktop era spento, lo script si fermava: "Docker non risponde: avvia Docker Desktop…". Ora:
+
+| Sistema | Che cosa fa |
+|---|---|
+| **Windows** | avvia `C:\Program Files\Docker\Docker\Docker Desktop.exe` e chiede a Docker ogni 3 secondi se risponde (`docker info`), al massimo 3 minuti |
+| **Mac** | `open -a Docker`, poi la stessa attesa |
+| **Linux** | spiega il comando (`sudo systemctl start docker`, o aprire Docker Desktop), perché accendere un servizio del sistema vuole la password di amministratore, e uno script non deve chiederla da solo |
+
+Se dopo 3 minuti Docker non risponde, lo script si ferma e lo dice: di solito Docker Desktop sta mostrando una finestra
+(un aggiornamento, le condizioni d'uso da accettare) che aspetta te.
+
+## Parte P: l'avvio automatico all'accensione
+
+### P1. È una catena di tre anelli
+
+1. **accendi il computer** ed entri con il tuo utente;
+2. **parte Docker Desktop**, se nelle sue impostazioni c'è "Start Docker Desktop when you sign in to your computer"
+   (Settings, l'ingranaggio → General);
+3. **ripartono i container**, perché in `docker-compose.yml` hanno `restart: unless-stopped` (dal passo 1, `docs/44`).
+
+Quando il terzo anello ha finito (un minuto circa), l'app risponde, anche dal telefono: Tailscale, sul server, parte da
+solo con il sistema.
+
+Il terzo anello c'è già. Il secondo dipende da un'impostazione di Docker Desktop.
+
+### P2. Che cosa fa lo script
+
+Alla fine di ogni avvio **legge** l'impostazione di Docker Desktop, senza cambiarla:
+- Windows: nel file `%APPDATA%\Docker\settings-store.json` (o `settings.json` nelle versioni vecchie);
+- Mac: in `~/Library/Group Containers/group.com.docker/settings-store.json` (o `settings.json`);
+- Linux: chiede a systemd se il servizio `docker` (o `docker-desktop` dell'utente) parte da solo.
+
+E dice una di tre cose:
+- "All'accensione del computer WalletTracker riparte da solo";
+- "**AVVIO AUTOMATICO SPENTO**", con dove cliccare per accenderlo;
+- se non riesce a capirlo (un formato nuovo di Docker Desktop), dove controllare.
+
+Perché solo leggere? Perché quel file è di Docker Desktop: il suo formato cambia tra le versioni, e una modifica
+sbagliata potrebbe rovinare le sue impostazioni. Cliccare una casella, una volta, è più sicuro.
+
+### P3. Due cose da sapere
+
+- **"unless-stopped"** vuol dire "riparti sempre, **tranne** se ti ha fermato qualcuno". Dopo `docker compose down`, o il
+  quadratino ■ in Docker Desktop, WalletTracker resta spento anche al riavvio del computer. Per riaccenderlo: doppio clic
+  su "Avvia WalletTracker".
+- **Il server deve restare acceso**, non in sospensione: un computer che dorme non risponde al telefono, e il backup di
+  ogni notte aspetta che si svegli (`docs/48`). Su Windows: Impostazioni → Sistema → Alimentazione → "Sospensione":
+  "Mai" con l'alimentatore collegato.
+
+## Parte Q: la prima volta, Windows e il Mac diffidano
+
+I file scaricati da Internet ricevono un **"segno"** dal sistema: su Windows il *Mark of the Web*, sul Mac la
+*quarantena*. Quando apri un programma con quel segno, il sistema controlla se è **firmato**, cioè se dentro c'è una firma
+digitale di uno sviluppatore che il sistema conosce. I nostri file non lo sono, e allora:
+
+| Sistema | Che cosa vedi | Che cosa fare |
+|---|---|---|
+| Windows | "Windows ha protetto il PC" (SmartScreen) | **Ulteriori informazioni** → **Esegui comunque**. Oppure, **prima** di aprire lo ZIP: tasto destro sullo ZIP → **Proprietà** → spunta **Sblocca** → OK: tutti i file dentro nascono senza segno |
+| Windows | "Avviso di sicurezza: l'autore non può essere verificato" | **Esegui** |
+| Mac | "non può essere aperto perché proviene da uno sviluppatore non identificato" | **tasto destro** sul file → **Apri** → **Apri**. Una volta per file: poi il Mac se lo ricorda |
+| Mac (versioni nuove) | il tasto destro non basta | **Impostazioni di Sistema** → **Privacy e sicurezza** → in fondo, "Apri comunque" |
+
+**Perché non firmarli?** La firma si compra: un certificato per Windows costa qualche centinaio di euro all'anno, quello
+di Apple 99 dollari all'anno (il programma per sviluppatori). Per un'app che ognuno installa a casa propria, una volta,
+spiegare il clic in più è la scelta ragionevole. Le schermate saranno nella `GUIDA.md` (6d).
+
+**È sicuro dire "Esegui comunque"?** Sì, se lo ZIP è quello della pagina delle versioni di WalletTracker: lì c'è anche la
+sua impronta (`SHA256SUMS`, parte I2) per controllarlo. Il segno serve proprio a farti fermare un attimo a pensare da
+dove arriva un file.
+
+## Parte R: verifiche, difetti trovati, problemi comuni ed esercizi (6c)
+
+**Fatto, qui nel cloud:**
+- i **`.cmd`**: fini riga di Windows in ogni riga, solo caratteri ASCII; i **`.command`**: eseguibili, fini riga di Unix.
+  Lo controlla anche la CI, a ogni push;
+- **`Avvia WalletTracker.command` lanciato davvero** (su Linux, come farebbe il Terminale del Mac), dal codice: l'app
+  parte e la finestra aspetta Invio. Anche questo lo rifà la CI;
+- **lo ZIP** di una versione contiene i sei file, con il permesso di esecuzione dei `.command`; la prova dell'aggiornamento
+  (parte L) li sostituisce, nomi con gli spazi compresi;
+- **Docker spento su Linux**, con un finto `docker` che non risponde: lo script spiega il comando e si ferma;
+- dashboard: il collegamento **crea una regola**, con i test e nel browser, sull'app vera con un movimento finto senza
+  categoria (un finanziamento): il link apre le Regole con l'esercente, "solo uscite" e "Spesa" già scritti, e la
+  categoria da scegliere.
+
+**Non fatto, perché qui non si può:** i `.cmd` e `installa.ps1` su Windows, i `.command` su un Mac vero, l'accensione di
+Docker Desktop e la lettura delle sue impostazioni. È la prova del 6d, sul tuo PC.
+
+**Difetti trovati (e corretti):**
+- i file da doppio clic finivano sempre "bene" (codice 0), anche con lo script fallito: l'ultima cosa che facevano era
+  aspettare un tasto. Ora tengono il risultato dello script;
+- sul Mac la domanda "Premi Invio…" era scritta con `read -p`, che la mostra solo se si scrive dalla tastiera: nella
+  prova automatica non compariva. Ora è un `echo`, e poi l'attesa.
+- nella pagina Regole, arrivando da "crea una regola" di un movimento senza categoria, il messaggio diceva "Modulo compilato
+  dalla tua correzione", ma non c'era stata nessuna correzione. Ora dice "Modulo compilato dal movimento: scegli la
+  categoria…";
+- nella prova dell'aggiornamento, la copia del progetto da cui si preparano gli ZIP non aveva i file da doppio clic, e
+  `prepara-zip.sh` (giustamente) si fermava. Ora la prova li copia, e controlla che dopo l'aggiornamento ci siano.
+
+| Che cosa vedi | Perché | Che cosa fare |
+|---|---|---|
+| doppio clic su un `.cmd`: la finestra si apre e si chiude subito | lo hai aperto da dentro lo ZIP, senza estrarlo | estrai lo ZIP (tasto destro → Estrai tutto) e apri il file dalla cartella estratta |
+| Mac: "permesso negato" / il `.command` si apre in un editor | lo ZIP è stato estratto da un programma che non conserva i permessi | estrailo con il doppio clic del Finder (Utility Archivio), oppure nel Terminale: `chmod +x *.command` nella cartella |
+| "Docker Desktop non risponde dopo 3 minuti" | Docker Desktop sta mostrando una sua finestra (un aggiornamento, le condizioni d'uso) | guarda la sua finestra, rispondi, e rifai il doppio clic |
+| "AVVIO AUTOMATICO SPENTO" | Docker Desktop non parte quando entri nel computer | Settings → General → "Start Docker Desktop when you sign in to your computer" → Apply |
+| dopo il riavvio l'app non risponde, ma l'avvio automatico è acceso | l'avevi fermata tu (`docker compose down`, o ■) | doppio clic su "Avvia WalletTracker" |
+
+**Esercizi**
+1. Apri `Avvia WalletTracker.cmd` con il Blocco note (tasto destro → Modifica): trova `%~dp0`. Che cosa succederebbe
+   senza `cd /d "%~dp0"`, facendo il doppio clic su un collegamento al file messo sul Desktop?
+2. Togli per prova la riga `pause` (in una copia del file) e fai il doppio clic: che cosa vedi? Perché serve?
+3. Sul Mac, nel Terminale: `ls -l *.command`. Trova la "x" del permesso di esecuzione (`docs/45`).
+4. In Docker Desktop spegni "Start Docker Desktop when you sign in", fai il doppio clic su "Avvia WalletTracker" e leggi
+   l'ultima riga. Poi riaccendilo e rifallo.
+5. Ferma l'app con ■ in Docker Desktop, riavvia il computer: l'app risponde? Perché? (Parte P3.)
