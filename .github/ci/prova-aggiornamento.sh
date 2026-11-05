@@ -55,8 +55,9 @@ passo "Preparo gli ZIP delle tre versioni e il finto GitHub"
 copia="$lavoro/copia"
 rm -rf "$copia" "$github"
 mkdir -p "$copia/.github/ci" "$github"
-cp "$radice"/{installa.sh,installa.ps1,.env.example} "$copia/"
-cp -p "$radice"/*.cmd "$radice"/*.command "$copia/"
+# Tutti i file della radice del progetto (non un elenco a mano: due volte un file nuovo dello ZIP mancava qui, e
+# prepara-zip.sh si fermava). -p tiene il permesso di esecuzione dei .command.
+find "$radice" -maxdepth 1 -type f -exec cp -p {} "$copia/" \;
 cp "$radice/docker-compose.yml" "$lavoro/compose-originale.yml"
 cp "$radice/.github/ci/prepara-zip.sh" "$copia/.github/ci/"
 cat >"$copia/NOVITA.md" <<'FINE'
