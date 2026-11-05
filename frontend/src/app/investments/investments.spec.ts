@@ -188,7 +188,7 @@ describe('Investments', () => {
     // conoscono. Il bollo a parte, non tolto dal netto.
     expect(incomeCard.querySelector('.mid-figure')?.textContent).toMatch(/39\s€/);
     expect(incomeCard.textContent).not.toContain('Lordo');
-    expect(incomeCard.textContent).toContain('netti: quello che è arrivato sul conto');
+    expect(incomeCard.textContent).toContain('Netti: quello che è arrivato sul conto');
     expect(text).toMatch(
       /Altre tasse sugli investimenti\s*Imposta di bollo\s*1 movimento\s*-2,00\s€/,
     );
@@ -307,9 +307,9 @@ describe('Investments', () => {
 
     // Il totale somma i saldi che si conoscono.
     expect(card.querySelector('.mid-figure')?.textContent).toMatch(/165\s€/);
-    expect(text).toMatch(/Trade Republic al 14 ott 2026 · dalla banca 118,50\s€/);
-    expect(text).toMatch(/Tinaba · Wallet al 28 ott 2026 · dal saldo che hai scritto 46,74\s€/);
-    expect(text).toContain('Fondo Beta · PAC saldo non scritto: scrivilo in Conti');
+    expect(text).toMatch(/Trade Republic Al 14 ott 2026 · dalla banca 118,50\s€/);
+    expect(text).toMatch(/Tinaba · Wallet Al 28 ott 2026 · dal saldo che hai scritto 46,74\s€/);
+    expect(text).toContain('Fondo Beta · PAC Saldo non scritto: scrivilo in Conti');
     expect(card.querySelector('a')?.getAttribute('href')).toBe('/conti');
   });
 

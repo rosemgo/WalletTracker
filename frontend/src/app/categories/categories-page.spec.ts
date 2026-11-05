@@ -95,7 +95,7 @@ describe('CategoriesPage', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    rowButton(page, 'Animali', 'rinomina').click();
+    rowButton(page, 'Animali', 'Rinomina').click();
     await fixture.whenStable();
     // Durante la rinomina il nome sta nel campo di testo, non nel testo della riga: la cerchiamo così.
     const editor = page.querySelector('.category-edit') as HTMLElement;
@@ -110,7 +110,7 @@ describe('CategoriesPage', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    rowButton(page, 'Animali', 'elimina').click();
+    rowButton(page, 'Animali', 'Elimina').click();
     await fixture.whenStable();
     expect(deleted).toEqual([]); // non ancora: serve la conferma
     expect(page.textContent).toContain('3 movimenti resteranno senza categoria');

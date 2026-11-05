@@ -119,7 +119,7 @@ describe('RulesPage', () => {
     expect(text).toContain('inizia con «Div.su»');
     expect(text).toContain('solo entrate');
     expect(text).toContain('Cedole, dividendi e interessi');
-    expect(text).toContain('regola di partenza');
+    expect(text).toContain('Regola di partenza');
   });
 
   it('saves a new rule with the values typed in the form', async () => {
@@ -281,6 +281,21 @@ describe('RulesPage', () => {
     ]);
     expect(page.textContent).toContain('Modulo compilato dalla tua correzione');
     expect(created).toEqual([]); // salva solo l'utente
+  });
+
+  it('from a movement still without category, the form asks to choose it', async () => {
+    queryParams = {
+      pattern: 'FINDOMESTIC',
+      resultType: 'EXPENSE',
+      amountSign: 'NEGATIVE',
+      categoryId: '',
+    };
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.textContent).toContain('Modulo compilato dal movimento: scegli la categoria');
+    expect(page.textContent).not.toContain('dalla tua correzione');
   });
 
   it('ignores unknown values in the address', async () => {

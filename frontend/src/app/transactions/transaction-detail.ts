@@ -32,6 +32,7 @@ export { MAX_SEARCH_WORDS, merchantSearch } from './merchant-search';
 import { TransactionsChanged } from './transactions-changed';
 import { shortAccountName } from '../accounts/accounts-store';
 import { Avatar } from './avatar';
+import { UpperFirstPipe } from '../text/upper-first.pipe';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
 export const TYPE_HINTS: Record<TransactionType, string> = {
@@ -76,7 +77,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [Avatar, DatePipe, MoneyPipe, RouterLink],
+  imports: [Avatar, DatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {
@@ -134,6 +135,9 @@ export class TransactionDetail implements OnInit {
     return `Per ${what} non serve una categoria: il tipo dice già che cos'è.`;
   });
 
+  /** La frase di un movimento senza categoria che ne vuole una: nella pagina, "crea una regola" è un link. */
+  protected readonly noCategoryText = 'Nessuna categoria: sceglila tu, o crea una regola.';
+
   /** Perché ha questa categoria, in una frase. */
   protected readonly categoryWhy = computed(() => {
     const d = this.detail();
@@ -149,9 +153,7 @@ export class TransactionDetail implements OnInit {
         if (d.transaction.type === null || d.transaction.type === 'TO_REVIEW') {
           return 'Nessuna categoria: prima scegli il tipo, in «Conta come».';
         }
-        return needsCategory(d.transaction.type)
-          ? 'Nessuna categoria: sceglila tu, o crea una regola.'
-          : 'Nessuna categoria.';
+        return needsCategory(d.transaction.type) ? this.noCategoryText : 'Nessuna categoria.';
     }
   });
 

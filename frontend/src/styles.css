@@ -1069,14 +1069,15 @@ app-file-drop {
   }
 }
 
-/* Mentre si trascina un file sopra, o quando il campo è attivo con la tastiera. */
+/* Mentre si trascina un file sopra, o quando il campo è attivo con la tastiera (:focus-visible: con il mouse il
+   campo riceve il focus lo stesso, e il bordo restava acceso dopo aver scelto il file). */
 .file-drop.dragging,
-.file-drop:focus-within {
+.file-drop:has(input:focus-visible) {
   border-color: var(--acc);
   background: var(--soft);
 }
 
-.file-drop:focus-within {
+.file-drop:has(input:focus-visible) {
   box-shadow: 0 0 0 4px var(--ring);
 }
 
@@ -1189,6 +1190,14 @@ button.link {
   cursor: pointer;
   font-size: inherit;
   font-weight: 500;
+}
+
+/* Un'azione resta intera: si va a capo tra un'azione e l'altra, mai in mezzo ("Carica il / logo" in una colonna
+   stretta della pagina Conti). I testi delle azioni sono tutti brevi. */
+button.link,
+label.link,
+a.action {
+  white-space: nowrap;
 }
 
 @media (hover: hover) {
@@ -2457,8 +2466,10 @@ button.icon svg {
   font-weight: 500;
 }
 
-/* Con la tastiera il campo nascosto ha il focus: il contorno va sul link che si vede. */
-.logo-upload:focus-within {
+/* Con la tastiera il campo nascosto ha il focus: il contorno va sul link che si vede. Solo con la tastiera
+   (:focus-visible): con il mouse il campo riceve il focus lo stesso, e :focus-within lasciava un riquadro attorno al
+   link dopo ogni clic. */
+.logo-upload:has(input:focus-visible) {
   outline: 2px solid var(--acc);
   outline-offset: 2px;
 }
