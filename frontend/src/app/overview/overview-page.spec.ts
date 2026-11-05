@@ -167,7 +167,7 @@ describe('OverviewPage', () => {
     const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
 
     expect(text).toContain('In arrivo nei prossimi 7 giorni');
-    expect(text).toMatch(/Netflix\s*martedì 3 novembre\s*12,99\s€/);
+    expect(text).toMatch(/Netflix\s*Martedì 3 novembre\s*12,99\s€/);
     const links = Array.from(page.querySelectorAll<HTMLAnchorElement>('.todo a'));
     expect(links.map((a) => a.getAttribute('aria-label'))).toEqual([
       '7 movimenti da verificare',
