@@ -34,11 +34,46 @@
   </label>
 </div>
 
-@if (error()) {
+<!-- Senza indirizzo di ritorno basta la spiegazione qui sotto: un errore delle banche in più confonderebbe. -->
+@if (error() && returnAddress() !== null) {
   <p class="error">{{ error() }}</p>
 }
 
-@if (loading()) {
+<!-- Dove tornerà la banca (docs/47, parte Q): detto prima, perché dopo il consenso è tardi. -->
+@if (returnAddress() === null) {
+  <div class="card warning" data-testid="needs-tailscale">
+    <h2>Per collegare una banca serve Tailscale</h2>
+    <p>
+      Dopo il consenso, la banca rimanda il tuo browser a un indirizzo <strong>https</strong> di
+      WalletTracker (Enable Banking non ne accetta altri), e quello lo dà Tailscale: è anche quello
+      che apre l'app dal telefono.
+    </p>
+    <p>
+      Prepara Tailscale seguendo la
+      <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">guida</a>
+      (capitolo «Tailscale»), registra su Enable Banking l'indirizzo che comparirà in
+      <a routerLink="/impostazioni">Impostazioni</a>, e torna qui.
+    </p>
+  </div>
+} @else if (returnAddress(); as r) {
+  @if (!r.samePage) {
+    <p class="message" data-testid="return-elsewhere">
+      Al ritorno dalla banca si aprirà <strong>{{ r.url.replace('/callback', '') }}</strong
+      >, l'indirizzo di Tailscale: lì l'app ti chiederà il PIN, poi finirà il collegamento da sola.
+    </p>
+    @if (needsPin()) {
+      <p class="error" data-testid="needs-pin">
+        Prima crea un PIN in
+        <a routerLink="/impostazioni" fragment="accesso">Impostazioni → Accesso</a>: dall'indirizzo
+        di Tailscale, senza PIN, l'app non si apre.
+      </p>
+    }
+  }
+}
+
+@if (returnAddress() === null) {
+  <!-- Senza un indirizzo di ritorno "Collega" non potrebbe funzionare: l'elenco delle banche non serve. -->
+} @else if (loading()) {
   <p>Caricamento delle banche...</p>
 } @else {
   <div class="table-scroll">

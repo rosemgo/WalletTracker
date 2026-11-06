@@ -34,18 +34,30 @@
         <strong>Production</strong>.
       </li>
       <li>
-        @if (status.redirectUrls.length > 1) {
-          Come indirizzi di ritorno (<em>Redirect URLs</em>) inseriscili tutti, esattamente così:
+        @if (status.redirectUrls.length === 0) {
+          <!-- Nessun indirizzo di ritorno (installazione da ZIP, docs/47 parte Q): serve prima Tailscale. -->
+          <div class="needs-tailscale" data-testid="needs-tailscale">
+            <strong>Prima prepara Tailscale.</strong> Come indirizzo di ritorno (<em
+              >Redirect URL</em
+            >) Enable Banking accetta solo indirizzi <strong>https</strong>, e quello di
+            WalletTracker lo dà Tailscale: è anche quello che apre l'app dal telefono. I passi sono
+            nella <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">guida</a>, capitolo
+            «Tailscale». Dopo, qui comparirà l'indirizzo da registrare.
+          </div>
         } @else {
-          Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
-        }
-        @for (url of status.redirectUrls; track url) {
-          <span class="redirect-url">
-            <code>{{ url }}</code>
-            <button type="button" class="link" (click)="copyRedirectUrl(url)">
-              {{ copied() === url ? 'Copiato ✓' : 'Copia' }}
-            </button>
-          </span>
+          @if (status.redirectUrls.length > 1) {
+            Come indirizzi di ritorno (<em>Redirect URLs</em>) inseriscili tutti, esattamente così:
+          } @else {
+            Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
+          }
+          @for (url of status.redirectUrls; track url) {
+            <span class="redirect-url">
+              <code>{{ url }}</code>
+              <button type="button" class="link" (click)="copyRedirectUrl(url)">
+                {{ copied() === url ? 'Copiato ✓' : 'Copia' }}
+              </button>
+            </span>
+          }
         }
       </li>
       <li>
@@ -114,7 +126,7 @@
 </div>
 
 <!-- Come si entra nell'app (docs/46): con il PIN o senza, solo dal server. -->
-<h2>Accesso</h2>
+<h2 id="accesso">Accesso</h2>
 <div class="card">
   <app-access-section />
 </div>

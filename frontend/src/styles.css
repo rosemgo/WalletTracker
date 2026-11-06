@@ -1373,6 +1373,14 @@ progress::-moz-progress-bar {
 
 /* ---- Riepilogo ---- */
 
+/* Impostazioni, senza indirizzi di ritorno: "Prima prepara Tailscale" al posto dell'indirizzo da registrare. */
+.needs-tailscale {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--soft);
+  border-radius: 10px;
+}
+
 .card.warning {
   background: var(--soft);
 }

@@ -321,7 +321,7 @@ export interface SetupStatus {
   configured: boolean;
   source: 'DASHBOARD' | 'ENV' | null; // da dove arrivano le credenziali in uso
   applicationId: string | null;
-  redirectUrl: string; // il primo degli indirizzi qui sotto
+  redirectUrl: string | null; // il primo degli indirizzi qui sotto; null se non ce n'è nessuno (docs/47, parte Q)
   // Gli indirizzi di ritorno da registrare nell'applicazione Enable Banking: uno per ogni nome con cui si apre l'app
   // (dal PC localhost, dal telefono il nome Tailscale: docs/47, parte I).
   redirectUrls: string[];

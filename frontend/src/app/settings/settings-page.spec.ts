@@ -295,4 +295,22 @@ describe('SettingsPage', () => {
     expect(saved).toEqual([]);
     expect(page.textContent).toContain('scegli il file .pem');
   });
+
+  it('without return addresses it says to prepare Tailscale first, instead of an address to register', async () => {
+    TestBed.inject(SetupStore).status.set({
+      configured: false,
+      source: null,
+      applicationId: null,
+      redirectUrl: null,
+      redirectUrls: [],
+    } as unknown as SetupStatus);
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('[data-testid="needs-tailscale"]')?.textContent).toContain(
+      'Prima prepara Tailscale',
+    );
+    expect(page.querySelectorAll('.redirect-url').length).toBe(0);
+  });
 });
