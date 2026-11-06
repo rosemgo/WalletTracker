@@ -20,7 +20,7 @@ export const FIRST_MOVEMENTS = 8;
   imports: [Avatar, DatePipe, MoneyPipe, RouterLink],
   template: `
     @if (movements().length > 0) {
-      <h2 class="days-title">{{ title() }}</h2>
+      <h2 class="days-title" #heading>{{ title() }}</h2>
       <section class="day">
         <ul>
           @for (t of shown(); track t.id) {
@@ -38,9 +38,14 @@ export const FIRST_MOVEMENTS = 8;
             </li>
           }
         </ul>
-        @if (hidden() > 0) {
-          <button type="button" class="link show-all" (click)="all.set(true)">
-            Mostra tutti ({{ movements().length }})
+        @if (movements().length > FIRST) {
+          <button
+            type="button"
+            class="link show-all"
+            [attr.aria-expanded]="all()"
+            (click)="toggle(heading)"
+          >
+            {{ all() ? 'Mostra meno' : 'Mostra tutti (' + movements().length + ')' }}
           </button>
         }
       </section>
@@ -53,13 +58,24 @@ export class InvestmentMovements {
 
   protected readonly nameOf = nameOf;
 
-  /** true dopo "Mostra tutti"; torna false quando arrivano movimenti nuovi (un altro periodo). */
+  /** true dopo "Mostra tutti" (false di nuovo con "Mostra meno"); torna false con movimenti nuovi (un altro periodo). */
   protected readonly all = linkedSignal({ source: this.movements, computation: () => false });
 
   protected readonly shown = computed(() =>
     this.all() ? this.movements() : this.movements().slice(0, FIRST_MOVEMENTS),
   );
 
-  /** Quanti movimenti restano nascosti. */
-  protected readonly hidden = computed(() => this.movements().length - this.shown().length);
+  protected readonly FIRST = FIRST_MOVEMENTS;
+
+  /** "Mostra tutti" / "Mostra meno". Richiudendo, se il titolo è uscito dallo schermo, lo si riporta in vista. */
+  protected toggle(heading: HTMLElement): void {
+    if (this.all()) {
+      this.all.set(false);
+      if (heading.getBoundingClientRect().top < 0) {
+        heading.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    } else {
+      this.all.set(true);
+    }
+  }
 }

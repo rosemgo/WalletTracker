@@ -1,5 +1,13 @@
 import { DatePipe, formatCurrency, formatDate } from '@angular/common';
-import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  LOCALE_ID,
+  OnInit,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { InvestmentGroup, InvestmentPeriod, Investments } from '../api/models';
@@ -34,6 +42,15 @@ const PERIODS: { value: InvestmentPeriod; label: string }[] = [
  * Sotto, i movimenti che fanno i due grafici. L'investito non è quanto valgono oggi i titoli: l'app non conosce le
  * quotazioni, e la pagina lo dice.
  */
+/** Gli elenchi della colonna "Cedole, dividendi e interessi" e della liquidità (docs/investimenti.md, parte I). */
+export type RowList = 'type' | 'source' | 'taxes' | 'cash';
+
+/** Quante righe si vedono di un elenco lungo, prima di "Mostra tutti". */
+export const FIRST_ROWS = 5;
+
+/** Un elenco si accorcia solo se è più lungo di così: nascondere una o due righe sarebbe solo un clic in più. */
+export const SHORTEN_FROM = 8;
+
 @Component({
   selector: 'app-investments-page',
   imports: [
@@ -61,6 +78,15 @@ export class InvestmentsPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   /** Il mese su cui si scorre nel grafico (null = nessuno): la cifra grande mostra quel mese. */
   protected readonly scrubIndex = signal<number | null>(null);
+
+  /**
+   * Gli elenchi aperti con "Mostra tutti". Tornano chiusi con dati nuovi (un altro periodo, un'altra valuta): un elenco
+   * di 30 titoli aperto spingerebbe in fondo alla pagina gli acquisti e le vendite.
+   */
+  protected readonly openLists = linkedSignal<Investments | null, ReadonlySet<RowList>>({
+    source: this.data,
+    computation: () => new Set<RowList>(),
+  });
 
   private lastRequest = 0;
 
@@ -263,6 +289,35 @@ export class InvestmentsPage implements OnInit {
     return g.name === 'Senza categoria'
       ? { ...range, type: 'INVESTMENT_TAX', uncategorized: 'true' }
       : { ...range, type: 'INVESTMENT_TAX', text: g.name.toLowerCase() };
+  }
+
+  /** Le righe da mostrare: tutte se l'elenco è corto o è stato aperto, altrimenti le prime {@link FIRST_ROWS}. */
+  protected rows<T>(list: RowList, items: readonly T[]): readonly T[] {
+    return items.length < SHORTEN_FROM || this.openLists().has(list)
+      ? items
+      : items.slice(0, FIRST_ROWS);
+  }
+
+  /** true se l'elenco è abbastanza lungo da avere "Mostra tutti". */
+  protected shortened(items: readonly unknown[]): boolean {
+    return items.length >= SHORTEN_FROM;
+  }
+
+  /**
+   * Apre o richiude un elenco. Richiudendo, se il titolo dell'elenco è uscito dallo schermo (l'elenco aperto era
+   * lungo), lo si riporta in vista: altrimenti ci si troverebbe più in basso, in mezzo ad altro.
+   */
+  protected toggle(list: RowList, title?: HTMLElement): void {
+    const open = new Set(this.openLists());
+    if (open.delete(list)) {
+      this.openLists.set(open);
+      if (title && title.getBoundingClientRect().top < 0) {
+        title.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    } else {
+      open.add(list);
+      this.openLists.set(open);
+    }
   }
 
   ngOnInit(): void {

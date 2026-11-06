@@ -276,10 +276,74 @@ describe('Investments', () => {
     expect(transfers.querySelectorAll('a.movement').length).toBe(8);
     const more = transfers.querySelector('button.show-all') as HTMLButtonElement;
     expect(more.textContent).toContain('Mostra tutti (10)');
+    expect(more.getAttribute('aria-expanded')).toBe('false');
     more.click();
     await fixture.whenStable();
     expect(transfers.querySelectorAll('a.movement').length).toBe(10);
-    expect(transfers.querySelector('button.show-all')).toBeNull();
+    // Aperto, si può richiudere.
+    expect(more.textContent?.trim()).toBe('Mostra meno');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    more.click();
+    await fixture.whenStable();
+    expect(transfers.querySelectorAll('a.movement').length).toBe(8);
+  });
+
+  it('a long list of the column shows the first five, then all, then five again; a short one stays whole', async () => {
+    const sources = Array.from({ length: 12 }, (_, i) => ({
+      name: `TITOLO ${i + 1}`,
+      amount: 100 - i,
+      movements: 1,
+    }));
+    answer = (period) => ({ ...investments(period), incomeBySource: sources });
+    const { fixture, page: p } = await page();
+    const list = () =>
+      Array.from(p.querySelectorAll('h3')).find((h) => h.textContent === 'Da dove')!
+        .nextElementSibling as HTMLElement;
+    const button = () => list().nextElementSibling as HTMLButtonElement;
+
+    expect(list().querySelectorAll('li').length).toBe(5);
+    expect(list().textContent).toContain('Titolo 1');
+    expect(list().textContent).not.toContain('Titolo 6');
+    expect(button().textContent?.trim()).toBe('Mostra tutti (12)');
+
+    button().click();
+    await fixture.whenStable();
+    expect(list().querySelectorAll('li').length).toBe(12);
+    expect(button().textContent?.trim()).toBe('Mostra meno');
+
+    button().click();
+    await fixture.whenStable();
+    expect(list().querySelectorAll('li').length).toBe(5);
+
+    // "Per tipo" ha poche righe: tutte, e nessun pulsante.
+    const types = Array.from(p.querySelectorAll('h3')).find((h) => h.textContent === 'Per tipo')!
+      .nextElementSibling as HTMLElement;
+    expect(types.nextElementSibling?.tagName).toBe('H3');
+  });
+
+  it('a list opened with "Mostra tutti" closes again with another period', async () => {
+    const sources = Array.from({ length: 9 }, (_, i) => ({
+      name: `T${i}`,
+      amount: 9 - i,
+      movements: 1,
+    }));
+    answer = (period) => ({ ...investments(period), incomeBySource: sources });
+    const { fixture, page: p } = await page();
+    const count = () =>
+      (
+        Array.from(p.querySelectorAll('h3')).find((h) => h.textContent === 'Da dove')!
+          .nextElementSibling as HTMLElement
+      ).querySelectorAll('li').length;
+    (p.querySelector('.card button.show-all') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(count()).toBe(9);
+
+    const other = Array.from(p.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === 'Tutto',
+    );
+    other!.click();
+    await fixture.whenStable();
+    expect(count()).toBe(5);
   });
 
   it('shows the cash on the investment accounts, and how to get a balance that is missing', async () => {
