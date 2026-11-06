@@ -105,6 +105,8 @@
               d.transferredInPeriod | money: d.currency : 'symbol' : '1.0-0'
             }}</span>
             <p class="bar-pick">{{ transferBarText() }}</p>
+            <!-- Il colore di sempre, non il verde e rosso del "netto" di Analisi (diverging): qui non c'è un "sopra
+                 o sotto" da giudicare. Un mese con più soldi tornati indietro resta una barra verso il basso. -->
             <app-bar-chart
               [values]="transferred()"
               [labels]="barLabels()"
@@ -112,7 +114,6 @@
               [selected]="transferBar()"
               [average]="transferAverage()"
               [averageLabel]="transferAverageLabel()"
-              [diverging]="true"
               [interactive]="true"
               [description]="transferDescription()"
               (picked)="transferPick.set($event)"

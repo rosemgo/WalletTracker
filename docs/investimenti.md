@@ -777,3 +777,10 @@ lettore di schermo sa se l'elenco è aperto.
 **Prova nel browser**, con 21 titoli inventati: a computer, "Acquisti e vendite" da 2733 a 1513 pixel dall'inizio
 della pagina, e le due colonne che finiscono a 24 pixel l'una dall'altra; sul telefono, la pagina larga quanto lo
 schermo; nessun errore nella console.
+
+**I colori del grafico dei bonifici.** Prima le barre erano verdi sopra lo zero e rosse sotto (`diverging`, lo stesso
+del "netto" di Analisi, dove sopra vuol dire "hai risparmiato" e sotto "hai speso più di quanto è entrato"). Per i
+bonifici non c'è niente da giudicare: un mese con meno bonifici non è "andato male". Ora hanno il colore di sempre,
+come il grafico delle rendite; un mese con più soldi tornati indietro che partiti resta una barra verso il basso, dello
+stesso colore (la linea dello zero c'è sempre). Il verde e il rosso restano dove c'è un riferimento: il netto di
+Analisi, e "sopra o sotto il solito" del Riepilogo.

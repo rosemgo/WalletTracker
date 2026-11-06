@@ -171,7 +171,8 @@ describe('Investments', () => {
     );
     const transferBars = Array.from(transfers.querySelectorAll('app-bar-chart path.bar'));
     expect(transferBars.length).toBe(12);
-    expect(transferBars.filter((b) => b.classList.contains('neg')).length).toBe(1);
+    // Il colore di sempre: niente verde e rosso (quello è per il netto di Analisi).
+    expect(transferBars.filter((b) => b.matches('.pos, .neg')).length).toBe(0);
     expect(transfers.textContent).toContain('Non dicono quanti ne hai investiti');
 
     // Le rendite: solo le due barre dei mesi con una rendita; in evidenza l'ultima (giugno 2026, il dividendo).
@@ -451,5 +452,22 @@ describe('Investments', () => {
     const empty = TestBed.createComponent(InvestmentsCard);
     await empty.whenStable();
     expect((empty.nativeElement as HTMLElement).querySelector('a')).toBeNull();
+  });
+
+  it('the transfers chart has the usual color, not green and red: a month back is a bar downwards', async () => {
+    const { page: p } = await page();
+    const card = p.querySelector('.transfers-card') as HTMLElement;
+    const bars = Array.from(card.querySelectorAll('.bar-chart path.bar'));
+
+    expect(bars.length).toBeGreaterThan(0);
+    expect(card.querySelectorAll('.bar-chart path.pos, .bar-chart path.neg').length).toBe(0);
+    // Il mese con -100 € (soldi tornati indietro) c'è lo stesso, sotto la linea dello zero.
+    const zero = Number(card.querySelector('.bar-chart line.zero')?.getAttribute('y1'));
+    // Una barra verso il basso comincia sulla linea dello zero ("M x zero V ..."), una verso l'alto finisce lì.
+    const below = bars.filter((b) => {
+      const start = (b.getAttribute('d') ?? '').match(/^M[\d.]+ ([\d.]+)V([\d.]+)/);
+      return start !== null && Math.abs(Number(start[1]) - zero) < 0.2 && Number(start[2]) > zero;
+    });
+    expect(below.length).toBe(1);
   });
 });
