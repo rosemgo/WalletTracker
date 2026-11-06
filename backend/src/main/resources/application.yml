@@ -95,6 +95,12 @@ enable-banking:
   base-url: https://api.enablebanking.com
   application-id: ${ENABLE_BANKING_APP_ID:}
   private-key-path: ${ENABLE_BANKING_PRIVATE_KEY_PATH:../secrets/enable-banking.pem}
+  # Gli indirizzi di ritorno, separati da virgole (docs/47, parti I e Q): dopo il consenso, la banca rimanda il browser
+  # a quello scelto da EnableBankingProperties.redirectUrlFor. Il valore di serie è quello di ng serve (npm start),
+  # perché qui arriva chi sviluppa con ./mvnw; l'app in Docker ha il suo (vuoto, in docker-compose.yml).
+  # Chi sviluppa: se nel .env scrivi SOLO l'indirizzo di Tailscale, la banca tornerebbe all'app in Docker invece che a
+  # questo backend, e il collegamento non si completerebbe. Tieni anche https://localhost:8443/callback nell'elenco
+  # (docs/sviluppo-comandi.md, e docs/47 parte Q).
   redirect-url: ${ENABLE_BANKING_REDIRECT_URL:https://localhost:8443/callback}
 
 # Sincronizzazione automatica (Fase 1, passo 5): vedi SyncProperties e docs/08.

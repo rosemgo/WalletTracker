@@ -97,9 +97,9 @@
 <text x="820" y="974" font-size="12" font-weight="700" fill="#15803d">funziona per tutti</text>
 
 <rect x="40" y="1030" width="1120" height="130" rx="12" fill="#f8fafc" stroke="#94a3b8"/>
-<text x="60" y="1058" font-size="14" font-weight="700" fill="#0f172a">Quale indirizzo di ritorno sceglie l'app? Quello con lo stesso NOME dell'indirizzo che hai nel browser (la porta non conta)</text>
-<text x="60" y="1084" font-size="13" fill="#334155">• apri l'app da https://localhost:8443 (npm start) → sceglie https://localhost:8443/callback → al punto ⑦ risponde ng serve: funziona</text>
-<text x="60" y="1106" font-size="13" fill="#334155">• apri l'app da http://localhost:8000 (installa.ps1) → nome "localhost" → sceglie https://localhost:8443/callback → al punto ⑦ non risponde nessuno</text>
-<text x="60" y="1128" font-size="13" fill="#334155">• apri l'app da https://nome-server.….ts.net (Tailscale) → sceglie https://nome-server.….ts.net/callback → al punto ⑦ risponde Tailscale: funziona</text>
-<text x="60" y="1150" font-size="12" fill="#475569">(EnableBankingProperties.redirectUrlFor, docs/47 parte I)</text>
+<text x="60" y="1058" font-size="14" font-weight="700" fill="#0f172a">Quale indirizzo di ritorno sceglie l'app? Guarda l'indirizzo COMPLETO della pagina (schema, nome e porta: l'header Origin)</text>
+<text x="60" y="1084" font-size="13" fill="#334155">1. uno UGUALE alla pagina: https://localhost:8443 (npm start) → https://localhost:8443/callback; Tailscale (telefono) → quello di Tailscale</text>
+<text x="60" y="1106" font-size="13" fill="#334155">2. altrimenti quello di TAILSCALE: da http://localhost:8000 (installa.ps1) → al punto ⑦ risponde Tailscale, che chiede il PIN</text>
+<text x="60" y="1128" font-size="13" fill="#334155">3. altrimenti NESSUNO: il collegamento non parte, e l'app dice "serve Tailscale" (prima era 8443, dove in Docker non risponde nessuno)</text>
+<text x="60" y="1150" font-size="12" fill="#475569">EnableBankingProperties.redirectUrlFor nel backend; la stessa regola in return-address.ts, per avvisare prima (docs/47, parte Q)</text>
 </svg>

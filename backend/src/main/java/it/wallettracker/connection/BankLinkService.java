@@ -98,7 +98,7 @@ public class BankLinkService {
      * (http://localhost:8000) Enable Banking vuole un indirizzo https, e quello vero è di Tailscale (docs/47, parte Q).
      */
     static final String NO_RETURN_ADDRESS = "Per collegare una banca serve un indirizzo https: prepara Tailscale "
-            + "(GUIDA.md, capitolo 8), poi registra su Enable Banking l'indirizzo che compare in Impostazioni.";
+            + "(GUIDA.md, capitolo «Tailscale»), poi registra su Enable Banking l'indirizzo che compare in Impostazioni.";
 
     /** Le banche di un paese supportate da Enable Banking, in ordine alfabetico. */
     public List<Aspsp> banks(String country) {
