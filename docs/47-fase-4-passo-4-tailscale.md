@@ -1323,6 +1323,12 @@ banca rimanda il browser a Tailscale, cioè all'app **in Docker**, che quello `s
 è scaduto". Con `https://localhost:8443/callback` **anche** nell'elenco, ognuno torna a casa sua. Lo dicono anche i
 commenti in `.env.example` e in `application.yml`, e il promemoria `docs/sviluppo-comandi.md`.
 
+E lo dice la pagina **"Collega una banca"**, ma **solo a chi sviluppa**: un riquadro "Sviluppo: la banca non tornerebbe
+qui", con che cosa aggiungere al `.env`. Compare solo se la pagina è aperta da un indirizzo **https di "questo
+computer"** (`https://localhost:8443`, cioè `ng serve`: `isDevServer` in `return-address.ts`) **e** la banca non
+tornerebbe lì. Chi usa l'app non lo vede mai: dal server la apre in http (`http://localhost:8000`), dal telefono da
+Tailscale, che non è "questo computer". E chi sviluppa con l'8443 nell'elenco non lo vede nemmeno lui.
+
 ### Q6. Prove
 
 - backend: `EnableBankingPropertiesTest` (tutti i casi della regola: `ng serve`, server, telefono, nessun indirizzo,

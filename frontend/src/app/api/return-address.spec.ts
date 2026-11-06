@@ -1,4 +1,9 @@
-import { originOf, reachableFromEveryDevice, returnAddressFor } from './return-address';
+import {
+  isDevServer,
+  originOf,
+  reachableFromEveryDevice,
+  returnAddressFor,
+} from './return-address';
 
 /** Gli stessi casi di EnableBankingPropertiesTest (backend): le due regole devono dire la stessa cosa. */
 describe('returnAddressFor', () => {
@@ -43,5 +48,11 @@ describe('returnAddressFor', () => {
     expect(originOf('non è un indirizzo')).toBeNull();
     expect(reachableFromEveryDevice(TAILSCALE)).toBe(true);
     expect(reachableFromEveryDevice(NG_SERVE)).toBe(false);
+  });
+
+  it('the development dashboard is https on this computer; the app in Docker is http', () => {
+    expect(isDevServer('https://localhost:8443')).toBe(true);
+    expect(isDevServer('http://localhost:8000')).toBe(false);
+    expect(isDevServer('https://pc-casa.tail0000.ts.net')).toBe(false);
   });
 });

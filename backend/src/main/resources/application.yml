@@ -100,7 +100,8 @@ enable-banking:
   # perché qui arriva chi sviluppa con ./mvnw; l'app in Docker ha il suo (vuoto, in docker-compose.yml).
   # Chi sviluppa: se nel .env scrivi SOLO l'indirizzo di Tailscale, la banca tornerebbe all'app in Docker invece che a
   # questo backend, e il collegamento non si completerebbe. Tieni anche https://localhost:8443/callback nell'elenco
-  # (docs/sviluppo-comandi.md, e docs/47 parte Q).
+  # (docs/sviluppo-comandi.md, docs/47 parte Q). La pagina "Collega una banca" lo dice da sola, ma solo a chi sviluppa:
+  # aperta da https://localhost (ng serve), vedi isDevServer in return-address.ts.
   redirect-url: ${ENABLE_BANKING_REDIRECT_URL:https://localhost:8443/callback}
 
 # Sincronizzazione automatica (Fase 1, passo 5): vedi SyncProperties e docs/08.

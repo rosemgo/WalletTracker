@@ -173,4 +173,18 @@ describe('LinkPage', () => {
     expect(page.querySelector('[data-testid="needs-tailscale"]')).toBeNull();
     expect(page.querySelector('[data-testid="return-elsewhere"]')).toBeNull();
   });
+
+  it('in development, with only the Tailscale address, it warns that the bank would not come back here', async () => {
+    origin = 'https://localhost:8443';
+    redirectUrls = ['https://pc-casa.tail0000.ts.net/callback'];
+    const fixture = TestBed.createComponent(LinkPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    const warning = page.querySelector('[data-testid="dev-return-elsewhere"]');
+    expect(warning?.textContent).toContain('https://localhost:8443/callback');
+    expect(warning?.textContent).toContain('./mvnw');
+    // Non l'avviso del server: lì Tailscale è la strada giusta, qui no.
+    expect(page.querySelector('[data-testid="return-elsewhere"]')).toBeNull();
+  });
 });

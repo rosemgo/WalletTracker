@@ -50,5 +50,20 @@ export function returnAddressFor(origin: string, urls: readonly string[]): Retur
   return everywhere === undefined ? null : { url: everywhere, samePage: false };
 }
 
+/**
+ * La dashboard di sviluppo: https su "questo computer" (ng serve, https://localhost:8443). L'app in Docker sul server è
+ * in http (http://localhost:8000), e non si confonde: da lì tornare su Tailscale è giusto, perché risponde lo stesso
+ * backend. Da qui invece no: su Tailscale risponde l'app in Docker, non il backend di ./mvnw che avvia il
+ * collegamento.
+ */
+export function isDevServer(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    return u.protocol === 'https:' && THIS_COMPUTER.has(u.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 /** La guida, per i passi di Tailscale (capitolo "Tailscale"). */
 export const GUIDE_URL = 'https://github.com/rosemgo/WalletTracker/blob/main/GUIDA.md';

@@ -55,6 +55,21 @@
       <a routerLink="/impostazioni">Impostazioni</a>, e torna qui.
     </p>
   </div>
+} @else if (devReturnElsewhere()) {
+  <!-- Sviluppo (ng serve): la banca tornerebbe all'app in Docker, non a questo backend. -->
+  <div class="card warning" data-testid="dev-return-elsewhere">
+    <h2>Sviluppo: la banca non tornerebbe qui</h2>
+    <p>
+      Al ritorno la banca andrà su <strong>{{ returnAddress()?.url }}</strong
+      >, cioè all'app in Docker (è lei che risponde su Tailscale), non al backend di
+      <code>./mvnw</code> che avvia il collegamento: il collegamento non si completerebbe.
+    </p>
+    <p>
+      Aggiungi <code>https://localhost:8443/callback</code> a
+      <code>ENABLE_BANKING_REDIRECT_URL</code> nel <code>.env</code> (separato da una virgola),
+      registralo anche su Enable Banking, e riavvia <code>./mvnw</code>.
+    </p>
+  </div>
 } @else if (returnAddress(); as r) {
   @if (!r.samePage) {
     <p class="message" data-testid="return-elsewhere">

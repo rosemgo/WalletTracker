@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { BrowserLocation } from '../api/browser-location';
-import { GUIDE_URL, returnAddressFor } from '../api/return-address';
+import { GUIDE_URL, isDevServer, returnAddressFor } from '../api/return-address';
 import { SetupStore } from '../api/setup-store';
 import { AuthStore } from '../auth/auth-store';
 import { Bank } from '../api/models';
@@ -49,6 +49,14 @@ export class LinkPage implements OnInit {
     const status = this.setup.status();
     return status ? returnAddressFor(this.location.origin(), status.redirectUrls) : undefined;
   });
+
+  /**
+   * Sviluppo con ng serve, ma la banca tornerebbe all'indirizzo di Tailscale: lì risponde l'app in Docker, non il
+   * backend di ./mvnw che avvia il collegamento, e il collegamento non si completerebbe (docs/sviluppo-comandi.md).
+   */
+  protected readonly devReturnElsewhere = computed(
+    () => this.returnAddress()?.samePage === false && isDevServer(this.location.origin()),
+  );
 
   /** Si torna da un altro indirizzo (quello di Tailscale), dove l'app chiede il PIN: e il PIN non c'è ancora. */
   protected readonly needsPin = computed(

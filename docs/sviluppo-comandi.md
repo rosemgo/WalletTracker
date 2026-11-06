@@ -89,7 +89,9 @@ ENABLE_BANKING_REDIRECT_URL=https://localhost:8443/callback,https://pc-casa.tail
 
 **Il caso da evitare**: solo l'indirizzo di Tailscale. La banca tornerebbe all'app **in Docker** (è lei che risponde su
 Tailscale), non al backend di `./mvnw` che ha avviato il collegamento, e quello risponderebbe "non è valido o è
-scaduto". Perché, con lo schema: `docs/47`, parte Q.
+scaduto". Perché, con lo schema: `docs/47`, parte Q. In questo caso la pagina "Collega una banca", aperta da
+`ng serve`, lo dice da sola con un riquadro "Sviluppo: la banca non tornerebbe qui" (solo a chi sviluppa: aperta da
+`http://localhost:8000` o da Tailscale non compare mai).
 
 ---
 
