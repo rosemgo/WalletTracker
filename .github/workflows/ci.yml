@@ -203,7 +203,8 @@ jobs:
           PATH="$PWD/.github/ci:$PATH" ./installa.sh --tailscale --senza-browser
           grep -q 'serve --bg --https=443 http://127.0.0.1:8001' .github/ci/serve-chiamato
           grep -q '^WALLETTRACKER_ALLOWED_HOSTS=localhost,127.0.0.1,pc-casa.tail0000.ts.net$' .env
-          grep -q '^ENABLE_BANKING_REDIRECT_URL=.*,https://pc-casa.tail0000.ts.net/callback$' .env
+          # Dal codice: quello di ng serve (npm start) e quello di Tailscale. Da uno ZIP solo Tailscale (prova-aggiornamento.sh).
+          grep -q '^ENABLE_BANKING_REDIRECT_URL=https://localhost:8443/callback,https://pc-casa.tail0000.ts.net/callback$' .env
           curl -fsS -H 'Host: pc-casa.tail0000.ts.net' http://localhost:8001/api/auth/status | grep -q '"local":false'
 
       - name: Cambia la password del database e ricontrolla

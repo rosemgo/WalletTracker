@@ -235,7 +235,8 @@ function Aggiungi-A-Elenco([string]$nome, [string]$nuovo, [string]$predefinito) 
     $attuale = Valore-Env $nome
     if ($attuale -eq '') { $attuale = $predefinito }
     if (($attuale -split ',') -contains $nuovo) { return $false }
-    Scrivi-Env $nome "$attuale,$nuovo"
+    # Con l'elenco vuoto (e niente valore di serie), il nuovo da solo: senza una virgola davanti.
+    if ($attuale -eq '') { Scrivi-Env $nome $nuovo } else { Scrivi-Env $nome "$attuale,$nuovo" }
     return $true
 }
 
@@ -279,7 +280,10 @@ if ($Tailscale) {
     if (Aggiungi-A-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $NomeTs 'localhost,127.0.0.1') {
         Write-Host "Aggiunto $NomeTs ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)."
     }
-    if (Aggiungi-A-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" 'https://localhost:8443/callback') {
+    # Come in installa.sh: dal codice anche quello di ng serve (npm start), da una versione scaricata solo Tailscale.
+    $ritornoDiSerie = ''
+    if ($DalCodice) { $ritornoDiSerie = 'https://localhost:8443/callback' }
+    if (Aggiungi-A-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" $ritornoDiSerie) {
         Write-Host "Aggiunto https://$NomeTs/callback agli indirizzi di ritorno di Enable Banking (nel .env)."
     }
 }
