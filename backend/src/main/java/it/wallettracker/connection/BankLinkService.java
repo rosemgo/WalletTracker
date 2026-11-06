@@ -93,6 +93,13 @@ public class BankLinkService {
         this.logoService = logoService;
     }
 
+    /**
+     * Il collegamento non parte perché non c'è un indirizzo di ritorno che risponda da questa pagina: dal server
+     * (http://localhost:8000) Enable Banking vuole un indirizzo https, e quello vero è di Tailscale (docs/47, parte Q).
+     */
+    static final String NO_RETURN_ADDRESS = "Per collegare una banca serve un indirizzo https: prepara Tailscale "
+            + "(GUIDA.md, capitolo 8), poi registra su Enable Banking l'indirizzo che compare in Impostazioni.";
+
     /** Le banche di un paese supportate da Enable Banking, in ordine alfabetico. */
     public List<Aspsp> banks(String country) {
         return client.listAspsps(country).stream()
@@ -103,10 +110,13 @@ public class BankLinkService {
     /**
      * Avvia il collegamento: restituisce l'indirizzo della pagina di login della banca.
      *
-     * @param host il nome con cui è aperta l'app (header Host): alla fine la banca rimanda il browser lì, con
-     *             l'indirizzo di ritorno di quel nome ({@link EnableBankingProperties#redirectUrlFor})
+     * @param origin l'indirizzo della pagina da cui parte il collegamento (header Origin): sceglie l'indirizzo di
+     *               ritorno ({@link EnableBankingProperties#redirectUrlFor}). Se non ce n'è uno che risponda, il
+     *               collegamento non parte: dopo il consenso, la banca rimanderebbe a una pagina di errore
      */
-    public String start(String bankName, String country, String host) {
+    public String start(String bankName, String country, String origin) {
+        String redirectUrl = properties.redirectUrlFor(origin).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.CONFLICT, NO_RETURN_ADDRESS));
         Aspsp bank = banks(country).stream()
                 .filter(b -> b.name().equals(bankName))
                 .findFirst()
@@ -116,7 +126,7 @@ public class BankLinkService {
         Instant validUntil = consentValidUntil(bank, Instant.now());
         String state = UUID.randomUUID().toString();
         String url = client.startAuthorization(new AuthorizationRequest(new Access(validUntil),
-                new AspspRef(bank.name(), bank.country()), state, properties.redirectUrlFor(host), "personal")).url();
+                new AspspRef(bank.name(), bank.country()), state, redirectUrl, "personal")).url();
 
         removeExpired();
         pending.put(state, new Pending(validUntil, Instant.now()));

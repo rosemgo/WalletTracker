@@ -35,14 +35,15 @@ public class ConnectionController {
     }
 
     /**
-     * {@code POST /api/connections} con {@code {"bank": "ING", "country": "IT"}}: avvia il collegamento. Il nome con cui
-     * è aperta l'app ({@code getServerName()}, dall'header Host) sceglie l'indirizzo di ritorno: dal telefono, la
-     * banca rimanda al telefono (docs/47, parte I).
+     * {@code POST /api/connections} con {@code {"bank": "ING", "country": "IT"}}: avvia il collegamento. L'indirizzo
+     * della pagina da cui parte (l'header {@code Origin}, che il browser manda con ogni POST: schema, nome e porta)
+     * sceglie l'indirizzo di ritorno ({@link it.wallettracker.bank.enablebanking.EnableBankingProperties#redirectUrlFor}):
+     * dal telefono la banca rimanda al telefono, dal server all'indirizzo di Tailscale (docs/47, parti I e Q).
      */
     @PostMapping("/connections")
     public StartedLink start(@Valid @RequestBody StartLink request, HttpServletRequest httpRequest) {
         return new StartedLink(bankLinkService.start(request.bank(), request.country().toUpperCase(),
-                httpRequest.getServerName()));
+                httpRequest.getHeader("Origin")));
     }
 
     /**

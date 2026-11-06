@@ -3,6 +3,7 @@ package it.wallettracker.connection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,12 +17,15 @@ import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationRequest;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.AuthorizationResponse;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.web.PublicIpAddress;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -112,5 +116,29 @@ class ConnectionControllerTest {
                 .bodyJson().extractingPath("$.updated").isEqualTo(1);
 
         verify(client).getTransactions(eq("uid-1"), any(), any(), eq(new PsuHeaders("1.2.3.4", "Firefox")));
+    }
+
+    /**
+     * L'indirizzo di ritorno lo sceglie l'header Origin della pagina (docs/47, parte Q): da ng serve torna lì; dal
+     * server in Docker (http://localhost:8000), con il solo indirizzo di ng serve, il collegamento non parte.
+     */
+    @Test
+    void theReturnAddressFollowsTheOriginOfThePage() {
+        when(client.listAspsps("IT")).thenReturn(List.of(
+                new Aspsp("ING", "IT", List.of(), Duration.ofDays(90).toSeconds(), List.of())));
+        when(client.startAuthorization(any())).thenReturn(new AuthorizationResponse("https://banca.example/login", "a-1"));
+
+        assertThat(mvc.post().uri("/api/connections").header("Origin", "https://localhost:8443")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"bank\": \"ING\", \"country\": \"IT\"}"))
+                .hasStatusOk();
+        ArgumentCaptor<AuthorizationRequest> sent = ArgumentCaptor.forClass(AuthorizationRequest.class);
+        verify(client).startAuthorization(sent.capture());
+        assertThat(sent.getValue().redirectUrl()).isEqualTo("https://localhost:8443/callback");
+
+        assertThat(mvc.post().uri("/api/connections").header("Origin", "http://localhost:8000")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"bank\": \"ING\", \"country\": \"IT\"}"))
+                .hasStatus(409)
+                .bodyJson().extractingPath("$.detail").asString().contains("prepara Tailscale");
+        verify(client).startAuthorization(any()); // sempre e solo la prima volta
     }
 }
