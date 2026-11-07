@@ -99,6 +99,7 @@ describe('OverviewPage', () => {
     respond = () => of(overview());
     const fakeApi: Partial<WalletApi> = {
       investments: () => of(NO_INVESTMENTS), // la scheda degli investimenti: qui non c'è niente
+      accounts: () => of([]), // la scheda della liquidità: nessun conto, nessuna scheda
       alerts: () => of([]),
       overview: (month: string | null, currency: string | null) => {
         requests.push([month, currency]);

@@ -39,55 +39,61 @@
       </label>
     }
 
-    <section class="card hero">
-      <span class="secondary">{{ figure()?.label }}</span>
-      <span class="big-figure">{{
-        figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
-      }}</span>
-      <p
-        class="comparison"
-        [class.trend-under]="trend() === 'under'"
-        [class.trend-over]="trend() === 'over'"
-      >
-        @if (trend() === 'over') {
-          <span aria-hidden="true">▲ </span>
-        } @else if (trend() === 'under') {
-          <span aria-hidden="true">▼ </span>
-        }
-        {{ comparison() }}
-      </p>
-      <app-month-chart
-        [spentByDay]="o.spentByDay"
-        [usualByDay]="o.usualByDay"
-        [daysInMonth]="o.daysInMonth"
-        [monthShort]="monthShort()"
-        [description]="chartDescription()"
-        [currency]="o.currency"
-        [live]="isCurrent()"
-        [trend]="trend()"
-        (scrubbed)="scrubDay.set($event)"
-      />
-      <div class="chart-keys">
-        <span
-          ><span
-            class="key month"
-            [class.trend-under]="trend() === 'under'"
-            [class.trend-over]="trend() === 'over'"
-          ></span
-          >{{ monthTitle() }}</span
+    <!-- Sul PC la colonna di sinistra: la cifra del mese con il grafico, e sotto la liquidità. -->
+    <div class="overview-main">
+      <section class="card hero">
+        <span class="secondary">{{ figure()?.label }}</span>
+        <span class="big-figure">{{
+          figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
+        }}</span>
+        <p
+          class="comparison"
+          [class.trend-under]="trend() === 'under'"
+          [class.trend-over]="trend() === 'over'"
         >
-        @if (o.usualMonths > 0) {
-          <span>
-            <span class="key usual"></span>Un mese tipico (media di
-            {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
-          </span>
-        }
-      </div>
-      <p class="secondary income">
-        Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
-        {{ o.income | money: o.currency : 'symbol' : '1.0-0' }}
-      </p>
-    </section>
+          @if (trend() === 'over') {
+            <span aria-hidden="true">▲ </span>
+          } @else if (trend() === 'under') {
+            <span aria-hidden="true">▼ </span>
+          }
+          {{ comparison() }}
+        </p>
+        <app-month-chart
+          [spentByDay]="o.spentByDay"
+          [usualByDay]="o.usualByDay"
+          [daysInMonth]="o.daysInMonth"
+          [monthShort]="monthShort()"
+          [description]="chartDescription()"
+          [currency]="o.currency"
+          [live]="isCurrent()"
+          [trend]="trend()"
+          (scrubbed)="scrubDay.set($event)"
+        />
+        <div class="chart-keys">
+          <span
+            ><span
+              class="key month"
+              [class.trend-under]="trend() === 'under'"
+              [class.trend-over]="trend() === 'over'"
+            ></span
+            >{{ monthTitle() }}</span
+          >
+          @if (o.usualMonths > 0) {
+            <span>
+              <span class="key usual"></span>Un mese tipico (media di
+              {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
+            </span>
+          }
+        </div>
+        <p class="secondary income">
+          Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
+          {{ o.income | money: o.currency : 'symbol' : '1.0-0' }}
+        </p>
+      </section>
+
+      <!-- Quanti soldi ci sono sui conti adesso (docs/saldi.md, parte K). -->
+      <app-liquidity-card [currency]="o.currency" />
+    </div>
 
     @if (topCategories().length > 0) {
       <section class="card">

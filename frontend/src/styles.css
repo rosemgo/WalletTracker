@@ -2113,10 +2113,11 @@ ul.rows li > span {
     justify-self: start;
   }
 
-  /* La scheda del grafico resta alta quanto il suo contenuto, anche se la colonna a destra finisce più in basso:
-     allungata, lasciava un grande spazio vuoto sopra il grafico (provato e tolto, su richiesta dell'utente). */
-  .overview > .hero {
-    grid-row: span 3;
+  /* La colonna di sinistra (la cifra del mese con il grafico, la liquidità) resta alta quanto il suo contenuto, anche se
+     la colonna a destra finisce più in basso. Allungare la scheda del grafico lasciava un grande spazio vuoto sopra il
+     grafico (provato e tolto, su richiesta dell'utente). Quattro righe: a destra ci sono al massimo quattro schede. */
+  .overview > .overview-main {
+    grid-row: span 4;
   }
 }
 
@@ -3070,13 +3071,15 @@ ul.groups > li.secondary {
   padding: 10px 0;
 }
 
-/* "Senza categoria" in Analisi: un link, con l'invito a sistemarli (docs/43). */
+/* Le righe di Analisi che portano ai movimenti: "Senza categoria", un esercente, un conto. */
 a.group-row {
   box-sizing: border-box;
   text-decoration: none;
 }
 
-a.group-row .group-text > span:first-child::after {
+/* Solo "Senza categoria" ha l'invito a sistemarli (docs/43): gli altri movimenti hanno già la loro categoria. Prima
+   l'invito era su ogni riga-link, e un esercente categorizzato diceva "da sistemare". */
+a.group-row.uncategorized .group-text > span:first-child::after {
   content: ' · da sistemare ›';
   color: var(--acc);
   font-size: 0.85em;
@@ -3352,6 +3355,42 @@ ul.steps li + li {
   min-height: 44px;
   margin: 4px auto 0;
   padding: 0 16px;
+}
+
+/* La liquidità del Riepilogo: come la scheda degli investimenti, tutta toccabile; il totale grande, poi i conti. */
+a.card.liquidity-card {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s var(--ease);
+}
+
+@media (hover: hover) {
+  a.card.liquidity-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.liquidity-card .card-head span {
+  color: var(--acc);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.liquidity-total {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.liquidity-card ul.rows {
+  margin-top: 10px;
+}
+
+.liquidity-card .missing {
+  margin: 8px 0 0;
 }
 
 /* La scheda del Riepilogo: tutta toccabile, porta alla pagina. */
