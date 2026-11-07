@@ -52,7 +52,6 @@ describe('LiquidityCard', () => {
       ],
     });
     const fixture = TestBed.createComponent(LiquidityCard);
-    fixture.componentRef.setInput('currency', 'EUR');
     await fixture.whenStable();
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -64,11 +63,13 @@ describe('LiquidityCard', () => {
       account(2, 'Broker Beta', 'INVESTMENT', 410.5),
       account(3, 'Carta Gamma', 'CREDIT_CARD', 1500),
       account(4, 'Conto chiuso', 'EXCLUDED', 99),
-      account(5, 'Conto in dollari', 'SPENDING', 700, 'USD'),
     ];
     const page = await render();
 
-    expect(page.querySelector('[data-testid="liquidity-total"]')?.textContent).toMatch(/3\.656\s€/);
+    const totals = page.querySelectorAll('[data-testid="liquidity-total"]');
+    expect(totals).toHaveLength(1);
+    expect(totals[0].textContent).toMatch(/3\.656\s€/);
+    expect(page.querySelector('.liquidity-currency')).toBeNull(); // una valuta sola: niente titoletti
     const rows = Array.from(page.querySelectorAll('ul.rows li')).map((li) =>
       li.textContent?.replace(/\s+/g, ' ').trim(),
     );
@@ -79,6 +80,30 @@ describe('LiquidityCard', () => {
     ]);
     expect(page.textContent).toContain('Su 2 conti, adesso');
     expect(page.querySelector('a')?.getAttribute('href')).toBe('/conti');
+  });
+
+  it('shows one total for each currency, without converting, and the accounts under their currency', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 3245.18),
+      account(2, 'Broker Beta', 'INVESTMENT', 410.5),
+      account(5, 'Conto in dollari', 'SPENDING', 700, 'USD'),
+    ];
+    const page = await render();
+
+    // Prima l'euro (più conti), poi il dollaro; le due cifre non si sommano.
+    const totals = Array.from(page.querySelectorAll('[data-testid="liquidity-total"]')).map((t) =>
+      t.textContent?.trim(),
+    );
+    expect(totals).toEqual([
+      expect.stringMatching(/^3\.656\s€$/),
+      expect.stringMatching(/^700\sUSD$/), // in italiano il dollaro si scrive con il codice
+    ]);
+    expect(
+      Array.from(page.querySelectorAll('.liquidity-currency')).map((h) => h.textContent?.trim()),
+    ).toEqual(['EUR', 'USD']);
+    const lists = page.querySelectorAll('ul.rows');
+    expect(lists[1].textContent).toContain('Conto in dollari');
+    expect(page.textContent).toContain('Su 3 conti, adesso');
   });
 
   it('says how many accounts have no balance, and is not there without any balance', async () => {

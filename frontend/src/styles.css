@@ -3377,6 +3377,22 @@ a.card.liquidity-card {
   font-weight: 600;
 }
 
+/* Un totale per ogni valuta, uno accanto all'altro (vanno a capo se non ci stanno). */
+.liquidity-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+/* Con più valute, il codice sopra i conti di ognuna. */
+.liquidity-currency {
+  margin: 14px 0 0;
+  color: var(--sec);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
 .liquidity-total {
   display: block;
   font-size: 1.4rem;

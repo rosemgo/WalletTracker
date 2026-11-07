@@ -407,8 +407,16 @@ Richiesta dell'utente: vedere nel Riepilogo **quanti soldi ci sono sui conti**, 
 | conto escluso | no | l'hai escluso tu, da tutto |
 | conto senza saldo | no | non sappiamo quanto c'è: la scheda dice "1 conto senza saldo non è nel totale" |
 
-Si sommano solo i conti nella valuta del Riepilogo (con più valute, quella scelta in alto): 100 € e 100 $ non fanno
-200 di niente.
+**Le valute: un totale per ognuna, senza conversioni.** 100 € e 100 $ non fanno 200 di niente: la scheda mostra un
+totale per valuta, uno accanto all'altro ("7.344 €" e "520 USD": in italiano il dollaro si scrive con il codice), e
+sotto i conti di ogni valuta con il suo codice (EUR, USD). Prima la valuta con più conti, di solito l'euro. Con una
+valuta sola i codici non compaiono. Niente cambio in euro, apposta: servirebbe un servizio esterno per i tassi (un
+collegamento in più verso terzi, che l'app oggi non ha), e la cifra cambierebbe ogni giorno anche senza movimenti. Se
+un giorno servisse, si aggiungerebbe come stima dichiarata ("≈ … in tutto").
+
+La scheda non segue il menu "Valuta" del Riepilogo, che è per le spese del mese e compare solo se nel mese ci sono
+movimenti in più valute: con quel menu un conto in dollari fermo sarebbe sparito (era così nella prima versione della
+scheda, corretto su segnalazione dell'utente).
 
 **Dove sta.** Sul PC nella colonna di sinistra, sotto la scheda del grafico; sul telefono subito dopo. Nel modello
 (`overview-page.html`) le due schede stanno in un contenitore, `overview-main`, che nella griglia occupa le quattro righe
@@ -421,6 +429,7 @@ a destra. Non è legata al mese guardato: i saldi sono quelli di adesso, e ogni 
 aggiornamento dalla banca e a ogni importazione. Il totale si calcola nella dashboard: è una somma di pochi numeri già
 arrivati.
 
-**I test.** `liquidity-card.spec.ts`: il totale con il conto di investimento ma senza la carta, il conto escluso e
-quello in un'altra valuta; i conti dal più ricco; il conto senza saldo detto a parte; nessuna scheda senza saldi.
+**I test.** `liquidity-card.spec.ts`: il totale con il conto di investimento ma senza la carta e il conto escluso; un
+totale per valuta, euro e dollari, con i conti sotto il loro codice; i conti dal più ricco; il conto senza saldo
+detto a parte; nessuna scheda senza saldi.
 
