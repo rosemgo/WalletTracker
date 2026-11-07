@@ -153,13 +153,13 @@ describe('Investments', () => {
     const { page: p } = await page();
     const text = p.textContent?.replace(/\s+/g, ' ') ?? '';
 
-    expect(requests).toEqual(['YEAR']);
+    expect(requests).toEqual(['YEAR_TO_DATE']); // di serie: Quest'anno
     // L'investito in titoli: la cifra grande, la linea, acquistato e rientrato separati, la frase vera.
     expect(text).toContain('Investito in titoli');
     expect(p.querySelector('.big-figure')?.textContent).toMatch(/3\.700\s€/);
     expect(text).toMatch(/2\.900\s€ quest'anno · 200\s€ questo mese/);
     expect(p.querySelector('app-trend-chart path.month')).not.toBeNull();
-    expect(text).toMatch(/Acquistato · ultimi 12 mesi\s*3\.600\s€/);
+    expect(text).toMatch(/Acquistato · da inizio anno\s*3\.600\s€/);
     expect(text).toMatch(/Rientrato dalle vendite\s*300\s€/);
     expect(text).toContain('Non è quanto valgono oggi');
     expect(text).not.toContain('Versato');
@@ -167,7 +167,7 @@ describe('Investments', () => {
     // I bonifici: la loro cifra e le barre, una per mese, in su e in giù (settembre: 100 € tornati indietro).
     const transfers = p.querySelector('.transfers-card') as HTMLElement;
     expect(transfers.textContent).toMatch(
-      /Bonifici verso i conti di investimento · ultimi 12 mesi\s*3\.300\s€/,
+      /Bonifici verso i conti di investimento · da inizio anno\s*3\.300\s€/,
     );
     const transferBars = Array.from(transfers.querySelectorAll('app-bar-chart path.bar'));
     expect(transferBars.length).toBe(12);
@@ -265,8 +265,8 @@ describe('Investments', () => {
     const { fixture, page: p } = await page();
     const lists = Array.from(p.querySelectorAll('app-investment-movements'));
     expect(lists.map((l) => l.querySelector('h2')?.textContent?.trim())).toEqual([
-      'Acquisti e vendite · ultimi 12 mesi',
-      'Bonifici verso i conti di investimento · ultimi 12 mesi',
+      'Acquisti e vendite · da inizio anno',
+      'Bonifici verso i conti di investimento · da inizio anno',
     ]);
 
     const [trades, transfers] = lists as HTMLElement[];
@@ -401,14 +401,19 @@ describe('Investments', () => {
         (b) => b.textContent?.trim() === label,
       ) as HTMLButtonElement;
 
-    button("Quest'anno").click();
-    await fixture.whenStable();
+    // Di serie "Quest'anno", ed è il primo pulsante; "12 mesi" viene dopo.
+    expect(p.querySelector('.segmented button')?.textContent?.trim()).toBe("Quest'anno");
     expect(button("Quest'anno").getAttribute('aria-pressed')).toBe('true');
     expect(p.textContent).toContain('da inizio anno');
 
+    button('12 mesi').click();
+    await fixture.whenStable();
+    expect(button('12 mesi').getAttribute('aria-pressed')).toBe('true');
+    expect(p.textContent).toContain('ultimi 12 mesi');
+
     button('Tutto').click();
     await fixture.whenStable();
-    expect(requests).toEqual(['YEAR', 'YEAR_TO_DATE', 'ALL']);
+    expect(requests).toEqual(['YEAR_TO_DATE', 'YEAR', 'ALL']);
     expect(button('Tutto').getAttribute('aria-pressed')).toBe('true');
     expect(p.textContent).toContain('da sempre');
 

@@ -91,6 +91,10 @@ class BackupServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThat(standard.status().serverDirectory()).isNull(); // la dashboard dice "la cartella backup"
+        // Invio alla domanda dello script scrive quella di serie nel .env: per la dashboard è la stessa cosa.
+        assertThat(BackupService.onServer("./backup")).isNull();
+        assertThat(BackupService.onServer(".\\backup")).isNull();
+        assertThat(BackupService.onServer("D:/Backup/WalletTracker")).isEqualTo("D:/Backup/WalletTracker");
     }
 
     @Test

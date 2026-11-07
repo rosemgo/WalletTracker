@@ -1231,8 +1231,22 @@ button.link:not(:disabled):active {
 
 /* Un riquadro subito dopo una tabella (es. il modulo sotto l'elenco dei conti): un po' di spazio. */
 table + .card,
+/* Una tabella più larga dello spazio (un PC con lo schermo ingrandito, molte colonne) scorre da sola, non fa scorrere
+   tutta la pagina. Il margine interno, annullato da quello esterno negativo, lascia spazio all'ombra della tabella:
+   senza, overflow la taglierebbe ai bordi. */
+.table-scroll {
+  overflow-x: auto;
+  padding: 0 16px 24px;
+  margin: 0 -16px -24px;
+}
+
 .table-scroll + .card {
   margin-top: 1.5rem;
+}
+
+/* Un IBAN è una parola sola di 27 caratteri: nelle tabelle può andare a capo, invece di allargare la colonna. */
+.iban {
+  overflow-wrap: anywhere;
 }
 
 .form-grid {
@@ -2099,8 +2113,17 @@ ul.rows li > span {
     justify-self: start;
   }
 
+  /* La scheda del grafico è alta quanto la colonna a destra (align-self: stretch), così i bordi in basso combaciano;
+     lo spazio in più va sopra il grafico, che scende in fondo alla scheda con la legenda e le entrate. Il grafico non
+     si stira: ha proporzioni fisse, e linee e punti si deformerebbero. Se invece la scheda è più alta della colonna,
+     le righe della griglia si allungano e non cambia niente. */
   .overview > .hero {
     grid-row: span 3;
+    align-self: stretch;
+  }
+
+  .overview > .hero > app-month-chart {
+    margin-top: auto;
   }
 }
 
@@ -2469,6 +2492,7 @@ button.icon svg {
 
 /* "carica il logo": un link che apre la scelta del file; il campo vero resta nascosto. */
 .logo-upload {
+  position: relative; /* il campo nascosto qui sotto si posiziona qui: fuori, sfuggiva al riquadro della tabella */
   color: var(--acc);
   cursor: pointer;
   font-weight: 500;
@@ -3543,6 +3567,31 @@ a.budget-name:hover {
 .budget-actions {
   display: flex;
   gap: 16px;
+}
+
+/* "Perché a volte una regola non vale?": una spiegazione da aprire, sotto quella della pagina Regole. Il titolo ha il
+   colore dei link, perché si capisca che si clicca. */
+details.why-rules {
+  margin: -4px 0 20px; /* stretto sotto la spiegazione, a cui appartiene; staccato dalla scheda che segue */
+}
+
+details.why-rules summary {
+  width: fit-content;
+  color: var(--acc);
+  cursor: pointer;
+}
+
+details.why-rules[open] summary {
+  margin-bottom: 10px;
+}
+
+details.why-rules ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+details.why-rules li + li {
+  margin-top: 6px;
 }
 
 /* Le regole di partenza: una sezione da aprire, sotto le regole dell'utente. */

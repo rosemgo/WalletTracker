@@ -1,10 +1,12 @@
 <h1>Importa CSV</h1>
 
-<p class="hint">
-  Hai Trade Republic <strong>collegato</strong> con la banca? Allora non serve importare: usa
-  <a routerLink="/importa/completa">Completa i movimenti</a>, che aggiunge le causali ai movimenti
-  già arrivati.
-</p>
+@if (linkedTradeRepublic()) {
+  <!-- Solo a chi ha Trade Republic collegato: per lui c'è una pagina apposta (docs/31). -->
+  <p class="hint" data-testid="trade-republic-hint">
+    Il tuo conto Trade Republic è collegato: per aggiungere le causali ai movimenti già arrivati non
+    serve importare, usa <a routerLink="/importa/completa">Completa i movimenti</a>.
+  </p>
+}
 
 <p class="hint">
   Per i conti che Enable Banking non copre (conti manuali): esporta i movimenti dalla banca in un

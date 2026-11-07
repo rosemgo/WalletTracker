@@ -122,6 +122,21 @@ describe('RulesPage', () => {
     expect(text).toContain('Regola di partenza');
   });
 
+  it('explains, closed by default, what comes before the rules', async () => {
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const why = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="why-rules"]',
+    ) as HTMLDetailsElement;
+
+    expect(why.open).toBe(false);
+    expect(why.querySelector('summary')?.textContent).toContain(
+      'Perché a volte una regola non vale?',
+    );
+    expect(why.textContent).toContain("se il movimento l'hai sistemato tu");
+    expect(why.textContent).toContain('da un tuo conto a un altro');
+  });
+
   it('saves a new rule with the values typed in the form', async () => {
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();

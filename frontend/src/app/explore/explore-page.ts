@@ -35,10 +35,10 @@ export const PERIODS: { value: ExplorePeriod; label: string; slug: string }[] = 
   { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
   { value: 'MONTH', label: 'Mese', slug: 'mese' },
   { value: 'SIX_MONTHS', label: '6 mesi', slug: '6mesi' },
+  // L'anno in corso, da gennaio a oggi (YTD): la scelta di serie, prima dei 12 mesi.
+  { value: 'YEAR_TO_DATE', label: "Quest'anno", slug: 'questanno' },
   // "anno" resta nell'indirizzo per i link già salvati: sono gli ultimi 12 mesi.
   { value: 'YEAR', label: '12 mesi', slug: 'anno' },
-  // L'anno in corso, da gennaio a oggi (YTD).
-  { value: 'YEAR_TO_DATE', label: "Quest'anno", slug: 'questanno' },
 ];
 export const GROUPINGS: { value: GroupBy; label: string; slug: string }[] = [
   { value: 'CATEGORY', label: 'Categoria', slug: 'categoria' },
@@ -80,7 +80,7 @@ export class ExplorePage implements OnInit {
   protected readonly nameOf = nameOf;
 
   protected readonly metric = signal<Metric>('EXPENSES');
-  protected readonly period = signal<ExplorePeriod>('YEAR');
+  protected readonly period = signal<ExplorePeriod>('YEAR_TO_DATE'); // di serie: Quest'anno
   protected readonly by = signal<GroupBy>('CATEGORY');
   protected readonly category = signal<{ id: number; name: string } | null>(null);
   /** Il tipo di ogni categoria (spesa, entrata...): una categoria di spesa non ha senso tra le entrate. */
@@ -263,7 +263,7 @@ export class ExplorePage implements OnInit {
     const find = <T>(list: { value: T; slug: string }[], slug: string | null) =>
       list.find((x) => x.slug === slug)?.value;
     this.metric.set(find(METRICS, q.get('cosa')) ?? 'EXPENSES');
-    this.period.set(find(PERIODS, q.get('periodo')) ?? 'YEAR');
+    this.period.set(find(PERIODS, q.get('periodo')) ?? 'YEAR_TO_DATE');
     this.by.set(find(GROUPINGS, q.get('per')) ?? 'CATEGORY');
     const categoryId = Number(q.get('categoria'));
     if (Number.isInteger(categoryId) && categoryId > 0) {

@@ -64,7 +64,7 @@ public class BackupService {
     public BackupService(BackupProperties properties, Clock clock) {
         this.directory = Path.of(properties.directory());
         this.stateDirectory = Path.of(properties.stateDirectory());
-        this.serverDirectory = blankToNull(properties.serverDirectory());
+        this.serverDirectory = onServer(properties.serverDirectory());
         this.clock = clock;
     }
 
@@ -75,6 +75,19 @@ public class BackupService {
      * @param createdAt quando è stato scritto (la data del file)
      */
     public record BackupFile(String name, String type, Instant createdAt, long sizeBytes) {
+    }
+
+    /**
+     * La cartella dei backup come la mostra la dashboard: null per quella di serie ("./backup", che lo script scrive
+     * nel .env quando si preme solo Invio, o nessuna), altrimenti il percorso scelto (docs/48, parte F).
+     */
+    static String onServer(String backupDir) {
+        String value = blankToNull(backupDir);
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.replace('\\', '/');
+        return normalized.equals("./backup") || normalized.equals("backup") ? null : value;
     }
 
     /**

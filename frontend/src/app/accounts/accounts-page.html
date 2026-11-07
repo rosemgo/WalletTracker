@@ -87,7 +87,8 @@
                 >
               </div>
               <div class="secondary">
-                {{ account.iban ?? 'Senza IBAN' }} · {{ account.currency }}
+                <span class="iban">{{ account.iban ?? 'Senza IBAN' }}</span> ·
+                {{ account.currency }}
                 @if (account.name && account.source !== 'MANUAL') {
                   · per la banca: {{ account.name }}
                 }

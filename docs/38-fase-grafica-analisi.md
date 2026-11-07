@@ -302,3 +302,15 @@ mese, cioè fino a oggi, e il mese aperto per la cifra, il budget e "Dove". La b
 Solo un mese più vecchio delle 12 barre (per esempio da un budget di due anni fa) ha il grafico che finisce con lui,
 altrimenti la sua barra non ci sarebbe. Test: `category-page.spec.ts`, "opened on an earlier month, the chart still
 reaches the current month". Nel browser: dal Riepilogo di ottobre, barre fino a novembre con ottobre acceso.
+
+## Aggiunta: "Quest'anno" di serie
+
+Richiesta dell'utente: aprire Analisi sull'anno in corso, non sugli ultimi 12 mesi. Senza `?periodo=` nell'indirizzo
+il periodo è **"Quest'anno"** (`YEAR_TO_DATE`), e il suo pulsante viene prima di "12 mesi" (`PERIODS` in
+`explore-page.ts`). Lo stesso nel grafico della pagina di una categoria (`chartPeriod` in `category-page.ts`) e nella
+pagina Investimenti (`docs/investimenti.md`, parte R). A gennaio "Quest'anno" ha una barra sola: è l'anno, appena
+cominciato; "12 mesi" è a un clic.
+
+**I test.** `explore-page.spec.ts` (la prima richiesta è `YEAR_TO_DATE`, nell'indirizzo `questanno`, il pulsante
+prima di "12 mesi"); `category-page.spec.ts` (dieci barre da gennaio, poi "12 mesi").
+

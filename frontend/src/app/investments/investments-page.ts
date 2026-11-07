@@ -24,8 +24,8 @@ import { TrendChart } from './trend-chart';
 const UNMATCHED_WITHHOLDING = 'Ritenute non abbinate a una rendita';
 
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
+  { value: 'YEAR_TO_DATE', label: "Quest'anno" }, // da gennaio a oggi (YTD): la scelta di serie
   { value: 'YEAR', label: '12 mesi' },
-  { value: 'YEAR_TO_DATE', label: "Quest'anno" }, // da gennaio a oggi (YTD)
   { value: 'TWO_YEARS', label: '2 anni' },
   { value: 'ALL', label: 'Tutto' },
 ];
@@ -71,7 +71,7 @@ export class InvestmentsPage implements OnInit {
 
   protected readonly periods = PERIODS;
 
-  protected readonly period = signal<InvestmentPeriod>('YEAR');
+  protected readonly period = signal<InvestmentPeriod>('YEAR_TO_DATE'); // di serie: Quest'anno
   protected readonly currency = signal<string | null>(null);
   protected readonly data = signal<Investments | null>(null);
   protected readonly loading = signal(true);

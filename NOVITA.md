@@ -6,14 +6,15 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 
 ## 1.2.0
 
-- **Scegli dove salvare i backup**: al primo backup lo script chiede la cartella (un disco esterno, o la cartella di
+- **Scegli dove salvare i backup**: al primo avvio lo script chiede la cartella (un disco esterno, o la cartella di
   Google Drive sul computer), e per cambiarla dopo c'è `installa.ps1 -CartellaBackup`
   (`./installa.sh --cartella-backup`). Niente più `.env` da modificare a mano.
 - **L'app mostra dove sono i backup**: in Impostazioni → Backup, con il comando per cambiare cartella.
 - **La guida**: come tenere i backup su Google Drive ("Esegui il mirroring dei file"), capitolo 8.
 
-Hai già la 1.1.1? Doppio clic su **Aggiorna WalletTracker**. I backup restano dove sono; se vuoi spostarli, lancia
-`-CartellaBackup` e poi sposta tu i file vecchi nella cartella nuova.
+Hai già la 1.1.1? Doppio clic su **Aggiorna WalletTracker**: una volta sola ti chiederà dove salvare i backup
+(Invio lascia quella di adesso, la cartella **backup**). Se ne scegli un'altra, i backup già fatti restano dove sono:
+spostali tu.
 
 ## 1.1.1
 

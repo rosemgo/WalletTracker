@@ -1,7 +1,7 @@
 import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
@@ -141,7 +141,7 @@ describe('CategoryPage', () => {
     expect(page.textContent?.replace(/\s+/g, ' ')).toContain('a ottobre, finora.');
   });
 
-  it('the chart shows the last 12 months, or this year from January', async () => {
+  it('the chart shows this year from January, or the last 12 months', async () => {
     // Come l'API: i 12 mesi che finiscono con ottobre 2026, da novembre 2025.
     const months = Array.from({ length: 12 }, (_, i) => {
       const date = new Date(2025, 10 + i, 1);
@@ -164,16 +164,18 @@ describe('CategoryPage', () => {
         (b) => b.textContent?.trim() === label,
       ) as HTMLButtonElement;
 
-    expect(chartCard().querySelector('h2')?.textContent?.trim()).toBe('Ultimi 12 mesi');
-    expect(bars()).toBe(12);
-
-    button("Quest'anno").click();
-    await fixture.whenStable();
-    expect(bars()).toBe(10); // da gennaio a ottobre 2026
+    // Di serie "Quest'anno", ed è il primo pulsante: da gennaio a ottobre 2026.
+    expect(chartCard().querySelector('.segmented button')?.textContent?.trim()).toBe("Quest'anno");
     expect(button("Quest'anno").getAttribute('aria-pressed')).toBe('true');
+    expect(bars()).toBe(10);
     expect(chartCard().querySelector('app-bar-chart svg')?.getAttribute('aria-label')).toContain(
       'da gennaio',
     );
+
+    button('12 mesi').click();
+    await fixture.whenStable();
+    expect(chartCard().querySelector('h2')?.textContent?.trim()).toBe('Ultimi 12 mesi');
+    expect(bars()).toBe(12);
   });
 
   it('each merchant of the month leads to its movements in this category', async () => {
@@ -219,6 +221,7 @@ describe('CategoryPage', () => {
     const page = fixture.nativeElement as HTMLElement;
     const text = () => page.textContent?.replace(/\s+/g, ' ') ?? '';
     const bars = () => Array.from(page.querySelectorAll('app-bar-chart path.bar'));
+    await twelveMonths(fixture); // tutte e 12 le barre: qui conta il tocco, non il periodo
 
     expect(page.querySelector('.bar-pick')?.textContent).toMatch(/ottobre 2026: 360,00\s€/);
     expect(bars()[11].classList.contains('on')).toBe(true);
@@ -257,6 +260,7 @@ describe('CategoryPage', () => {
       );
     const fixture = TestBed.createComponent(CategoryPage);
     await fixture.whenStable();
+    await twelveMonths(fixture); // con "Quest'anno", a gennaio il mese scorso non sarebbe tra le barre
     const page = fixture.nativeElement as HTMLElement;
     const bars = Array.from(page.querySelectorAll('app-bar-chart path.bar'));
 
@@ -276,3 +280,12 @@ describe('CategoryPage', () => {
     expect(page.querySelector('.error')?.textContent).toContain('Questa categoria non esiste più.');
   });
 });
+
+/** "12 mesi" nel grafico (di serie è "Quest'anno"). */
+async function twelveMonths(fixture: ComponentFixture<CategoryPage>): Promise<void> {
+  const button = Array.from(
+    (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.segmented button'),
+  ).find((b) => b.textContent?.trim() === '12 mesi');
+  button!.click();
+  await fixture.whenStable();
+}
