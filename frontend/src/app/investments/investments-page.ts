@@ -23,6 +23,7 @@ import { TrendChart } from './trend-chart';
 /** La riga delle ritenute senza la loro rendita (Investments.UNMATCHED_WITHHOLDING nel backend). */
 const UNMATCHED_WITHHOLDING = 'Ritenute non abbinate a una rendita';
 
+// Come in tutte le barre dei periodi (Analisi, il grafico di una categoria): prima "Quest'anno", poi "12 mesi".
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
   { value: 'YEAR_TO_DATE', label: "Quest'anno" }, // da gennaio a oggi (YTD): la scelta di serie
   { value: 'YEAR', label: '12 mesi' },

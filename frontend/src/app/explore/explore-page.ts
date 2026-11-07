@@ -31,14 +31,16 @@ export const METRICS: { value: Metric; label: string; slug: string }[] = [
   { value: 'INCOME', label: 'Entrate', slug: 'entrate' },
   { value: 'NET', label: 'Netto', slug: 'netto' },
 ];
+// Come in tutte le barre dei periodi (Investimenti, il grafico di una categoria): prima "Quest'anno", la scelta di serie,
+// poi "12 mesi", poi gli altri allontanandosi dai 12 mesi.
 export const PERIODS: { value: ExplorePeriod; label: string; slug: string }[] = [
-  { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
-  { value: 'MONTH', label: 'Mese', slug: 'mese' },
-  { value: 'SIX_MONTHS', label: '6 mesi', slug: '6mesi' },
-  // L'anno in corso, da gennaio a oggi (YTD): la scelta di serie, prima dei 12 mesi.
+  // L'anno in corso, da gennaio a oggi (YTD).
   { value: 'YEAR_TO_DATE', label: "Quest'anno", slug: 'questanno' },
   // "anno" resta nell'indirizzo per i link già salvati: sono gli ultimi 12 mesi.
   { value: 'YEAR', label: '12 mesi', slug: 'anno' },
+  { value: 'SIX_MONTHS', label: '6 mesi', slug: '6mesi' },
+  { value: 'MONTH', label: 'Mese', slug: 'mese' },
+  { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
 ];
 export const GROUPINGS: { value: GroupBy; label: string; slug: string }[] = [
   { value: 'CATEGORY', label: 'Categoria', slug: 'categoria' },

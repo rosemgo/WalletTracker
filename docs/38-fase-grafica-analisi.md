@@ -306,11 +306,12 @@ reaches the current month". Nel browser: dal Riepilogo di ottobre, barre fino a 
 ## Aggiunta: "Quest'anno" di serie
 
 Richiesta dell'utente: aprire Analisi sull'anno in corso, non sugli ultimi 12 mesi. Senza `?periodo=` nell'indirizzo
-il periodo è **"Quest'anno"** (`YEAR_TO_DATE`), e il suo pulsante viene prima di "12 mesi" (`PERIODS` in
-`explore-page.ts`). Lo stesso nel grafico della pagina di una categoria (`chartPeriod` in `category-page.ts`) e nella
+il periodo è **"Quest'anno"** (`YEAR_TO_DATE`). L'ordine dei pulsanti è lo stesso in tutte le barre dei periodi:
+prima "Quest'anno", poi "12 mesi", poi gli altri allontanandosi dai 12 mesi. Qui: **Quest'anno · 12 mesi · 6 mesi ·
+Mese · Settimana** (`PERIODS` in `explore-page.ts`); in Investimenti: Quest'anno · 12 mesi · 2 anni · Tutto. Lo stesso nel grafico della pagina di una categoria (`chartPeriod` in `category-page.ts`) e nella
 pagina Investimenti (`docs/investimenti.md`, parte R). A gennaio "Quest'anno" ha una barra sola: è l'anno, appena
 cominciato; "12 mesi" è a un clic.
 
-**I test.** `explore-page.spec.ts` (la prima richiesta è `YEAR_TO_DATE`, nell'indirizzo `questanno`, il pulsante
-prima di "12 mesi"); `category-page.spec.ts` (dieci barre da gennaio, poi "12 mesi").
+**I test.** `explore-page.spec.ts` (la prima richiesta è `YEAR_TO_DATE`, nell'indirizzo `questanno`, l'ordine dei
+pulsanti); `category-page.spec.ts` (dieci barre da gennaio, poi "12 mesi").
 

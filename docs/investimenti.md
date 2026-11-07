@@ -798,8 +798,8 @@ dell'anno. Ora `incomeThisYear` è rendite più ritenute dal 1° gennaio, come t
 "Investito in titoli quest'anno" invece tornava già: nella pagina è la riga sotto la cifra grande ("76.656 €
 quest'anno"); la cifra grande è l'investito di tutta la storia.
 
-**Il periodo di serie.** La pagina si apre su **"Quest'anno"**, e il pulsante è il primo, prima di "12 mesi". Lo stesso
-in Analisi e nel grafico della pagina di una categoria (`docs/38`, aggiunta "Quest'anno di serie"). I link salvati con
+**Il periodo di serie.** La pagina si apre su **"Quest'anno"**, e il pulsante è il primo: Quest'anno · 12 mesi · 2 anni ·
+Tutto. Tutte le barre dei periodi cominciano così, con "Quest'anno" e "12 mesi". Lo stesso in Analisi e nel grafico della pagina di una categoria (`docs/38`, aggiunta "Quest'anno di serie"). I link salvati con
 `?periodo=anno` aprono ancora i 12 mesi. Il filtro dei Movimenti non cambia: lì "Tutto" resta la scelta giusta per
 cercare un movimento.
 
