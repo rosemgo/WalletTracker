@@ -77,6 +77,22 @@ poi apri **https://localhost:8443**. Il server di Angular passa le chiamate `/ap
 **4. Alla fine**: ferma `mvnw` e `npm start` con **Ctrl+C**, poi rilancia lo script (modo A). L'app nel container
 torna accesa, con le tue modifiche.
 
+## Collegare una banca mentre sviluppi
+
+Con il modo B la dashboard è `ng serve` su **https://localhost:8443**, e la banca deve tornare lì. Nel `.env`,
+`ENABLE_BANKING_REDIRECT_URL` deve contenere **`https://localhost:8443/callback`** (se la riga manca, vale di serie per
+`./mvnw`). Con Tailscale, tutti e due, separati da una virgola:
+
+```
+ENABLE_BANKING_REDIRECT_URL=https://localhost:8443/callback,https://pc-casa.tail0000.ts.net/callback
+```
+
+**Il caso da evitare**: solo l'indirizzo di Tailscale. La banca tornerebbe all'app **in Docker** (è lei che risponde su
+Tailscale), non al backend di `./mvnw` che ha avviato il collegamento, e quello risponderebbe "non è valido o è
+scaduto". Perché, con lo schema: `docs/47`, parte Q. In questo caso la pagina "Collega una banca", aperta da
+`ng serve`, lo dice da sola con un riquadro "Sviluppo: la banca non tornerebbe qui" (solo a chi sviluppa: aperta da
+`http://localhost:8000` o da Tailscale non compare mai).
+
 ---
 
 ## Portare le modifiche in `main` (Git e pull request)

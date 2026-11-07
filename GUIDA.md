@@ -13,9 +13,9 @@ azienda vede i tuoi dati.
 3. [Scaricare WalletTracker](#3-scaricare-wallettracker)
 4. [Il primo avvio](#4-il-primo-avvio)
 5. [Il PIN](#5-il-pin)
-6. [Collegare le banche](#6-collegare-le-banche)
-7. [I backup](#7-i-backup)
-8. [Dal telefono](#8-dal-telefono)
+6. [Tailscale: dal telefono, e per collegare le banche](#6-tailscale-dal-telefono-e-per-collegare-le-banche)
+7. [Collegare le banche](#7-collegare-le-banche)
+8. [I backup](#8-i-backup)
 9. [Aggiornare](#9-aggiornare)
 10. [Tenerlo acceso](#10-tenerlo-acceso)
 11. [Se qualcosa non va](#11-se-qualcosa-non-va)
@@ -75,7 +75,7 @@ Dentro ci sono:
 |---|---|
 | **Avvia WalletTracker** (`.cmd` su Windows, `.command` sul Mac) | avvia l'app e la apre nel browser |
 | **Aggiorna WalletTracker** | passa all'ultima versione (capitolo 9) |
-| **Backup WalletTracker** | fa un backup adesso (capitolo 7) |
+| **Backup WalletTracker** | fa un backup adesso (capitolo 8) |
 | `installa.ps1`, `installa.sh`, `docker-compose.yml`… | i file che usano i tre qui sopra: non toccarli |
 
 ## 4. Il primo avvio
@@ -100,7 +100,7 @@ Dentro ci sono:
    > 📷 *Schermata da aggiungere: la finestra alla fine del primo avvio.*
 
 **L'indirizzo dell'app è http://localhost:8000**: salvalo tra i preferiti del browser. "localhost" vuol dire "questo
-computer": funziona solo dal server (dal telefono, vedi il capitolo 8).
+computer": funziona solo dal server (dal telefono, vedi il capitolo 6).
 
 ## 5. Il PIN
 
@@ -109,27 +109,56 @@ La prima pagina chiede come proteggere l'app:
 ![La prima pagina: come proteggere WalletTracker](docs/img/guida/primo-avvio-pin.png)
 
 - **Con un PIN** (da 6 a 10 cifre): lo chiede per aprire l'app, su ogni dispositivo. **Serve se userai l'app dal
-  telefono.** Non usare il PIN del bancomat né una data di nascita.
-- **Senza PIN, solo dal server**: chi usa questo computer entra direttamente. Dal telefono non si potrà entrare
-  finché non crei un PIN (lo puoi fare dopo, dalle Impostazioni).
+  telefono, e per collegare le banche** (capitolo 6). Non usare il PIN del bancomat né una data di nascita.
+- **Senza PIN, solo dal server**: chi usa questo computer entra direttamente. Dal telefono non si potrà entrare, e
+  le banche non si potranno collegare, finché non crei un PIN (lo puoi fare dopo, in **Impostazioni → Accesso**).
 
 Creando il PIN, l'app mostra un **codice di recupero**, una volta sola: **scrivilo su carta**, o in un gestore di
 password. Serve se dimentichi il PIN.
 
-## 6. Collegare le banche
+## 6. Tailscale: dal telefono, e per collegare le banche
+
+**Tailscale** crea una rete privata solo tra i tuoi dispositivi (il server, il telefono, un portatile), con un
+indirizzo https vero, del tipo `https://nome-del-server.….ts.net`. Niente porte aperte su Internet. Serve a due cose:
+
+- **aprire WalletTracker dal telefono** (o da un altro computer), ovunque tu sia;
+- **collegare le banche**: alla fine del consenso, la banca rimanda il tuo browser a un indirizzo **https** di
+  WalletTracker (Enable Banking non ne accetta altri), e quello lo dà Tailscale. Anche se usi l'app solo dal server.
+
+Servono un **PIN** (capitolo 5: dall'indirizzo di Tailscale, senza PIN, l'app non si apre) e, una volta sola, sul
+server:
+1. crea un account gratuito su **tailscale.com** e installa **Tailscale** sul server e sul telefono, entrando con lo
+   stesso account;
+2. nel pannello di Tailscale (**login.tailscale.com/admin**), scheda **DNS**: accendi **MagicDNS** e **HTTPS
+   Certificates**;
+3. nella cartella di WalletTracker, sul server: su Windows, nella barra dell'indirizzo di Esplora file scrivi
+   `powershell` e premi Invio; nella finestra che si apre scrivi
+   `powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale` e premi Invio (sul Mac, nel Terminale:
+   `./installa.sh --tailscale`);
+4. alla fine lo script ti dice l'indirizzo da aprire sul telefono (`https://nome-del-server.….ts.net`). Lo stesso
+   indirizzo, con `/callback` in fondo, compare in **Impostazioni → Enable Banking**: è quello da registrare su Enable
+   Banking (capitolo 7).
+
+Dal server continui ad aprire l'app su **http://localhost:8000**, come sempre: Tailscale lavora da solo, quando serve.
+I dettagli, con le schermate di Tailscale, sono nella `docs/47`.
+
+## 7. Collegare le banche
 
 WalletTracker legge i conti con **Enable Banking**, un servizio autorizzato dalle banche europee (PSD2): è la stessa
 strada delle app che "collegano la banca". Per i tuoi conti è gratuito.
 
-**Una volta sola**, in **Impostazioni** (in basso **Altro → Impostazioni**, o la striscia azzurra "Per iniziare…"),
-la sezione **Enable Banking** ti guida in tre passi: creare il tuo account e la tua applicazione su enablebanking.com,
-copiare l'indirizzo di ritorno che la pagina ti mostra, caricare il file della chiave (`.pem`) che Enable Banking ti
-fa scaricare.
+Serve prima **Tailscale** (capitolo 6). Poi, **una volta sola**, in **Impostazioni** (in basso **Altro →
+Impostazioni**, o la striscia azzurra "Per iniziare…"), la sezione **Enable Banking** ti guida in tre passi: creare il
+tuo account e la tua applicazione su enablebanking.com, copiare l'indirizzo di ritorno che la pagina ti mostra (quello
+di Tailscale, che finisce con `/callback`), caricare il file della chiave (`.pem`) che Enable Banking ti fa scaricare.
+Senza Tailscale, al posto dell'indirizzo la pagina scrive "Prima prepara Tailscale".
 
 ![Impostazioni: i tre passi per Enable Banking](docs/img/guida/impostazioni-enable-banking.png)
 
 Poi, per ogni banca: **Altro → Collega una banca** → scegli la banca → accedi con le tue credenziali **sul sito della
-banca** (WalletTracker non le vede mai) → torni nell'app, e i movimenti arrivano. Il collegamento dura di solito
+banca** (WalletTracker non le vede mai) → torni nell'app, e i movimenti arrivano. Se hai cominciato dal server
+(localhost:8000), al ritorno il browser apre l'indirizzo di Tailscale: lì l'app ti chiede il PIN e finisce il
+collegamento da sola (la pagina lo dice prima). Il collegamento dura di solito
 **180 giorni**: quando sta per scadere, l'app te lo dice e basta un clic su **Ricollega**.
 
 Una banca che Enable Banking non ha (per esempio Trade Republic)? Si possono **importare i movimenti da un file CSV**:
@@ -140,7 +169,7 @@ divide in categorie: le correggi con un tocco sul movimento, e con le **Regole**
 
 ![Il Riepilogo](docs/img/guida/riepilogo.png) ![I Movimenti](docs/img/guida/movimenti.png)
 
-## 7. I backup
+## 8. I backup
 
 Un **backup** è una copia di tutti i tuoi dati in un file solo, **cifrato con una password tua**: chi trova il file
 senza la password non legge niente.
@@ -160,25 +189,6 @@ senza la password non legge niente.
 
 **Rimettere i dati di un backup** (un ripristino) cancella i dati di adesso, ed è l'unica operazione che si fa
 scrivendo un comando: è spiegata nella `docs/48`, parte I, ed è meglio farla con l'aiuto di qualcuno la prima volta.
-
-## 8. Dal telefono
-
-Per aprire WalletTracker dal telefono (o da un altro computer), ovunque tu sia, si usa **Tailscale**: crea una rete
-privata solo tra i tuoi dispositivi, con un indirizzo https vero. Niente porte aperte su Internet.
-
-Servono un PIN (capitolo 5) e una volta sola, sul server:
-1. crea un account gratuito su **tailscale.com** e installa **Tailscale** sul server e sul telefono, entrando con lo
-   stesso account;
-2. nel pannello di Tailscale (**login.tailscale.com/admin**), scheda **DNS**: accendi **MagicDNS** e **HTTPS
-   Certificates**;
-3. nella cartella di WalletTracker, sul server: su Windows, nella barra dell'indirizzo di Esplora file scrivi
-   `powershell` e premi Invio; nella finestra che si apre scrivi
-   `powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale` e premi Invio (sul Mac, nel Terminale:
-   `./installa.sh --tailscale`);
-4. alla fine lo script ti dice l'indirizzo da aprire sul telefono (`https://nome-del-server.….ts.net`) e quello da
-   aggiungere su Enable Banking per collegare le banche anche dal telefono.
-
-I dettagli, con le schermate di Tailscale, sono nella `docs/47`.
 
 ## 9. Aggiornare
 
@@ -220,6 +230,8 @@ I tuoi dati, la configurazione e i backup non si toccano mai.
 | il browser dice "Impossibile raggiungere il sito" su localhost:8000 | fai doppio clic su **Avvia WalletTracker** e aspetta che dica "è avviato" |
 | "AVVIO AUTOMATICO SPENTO" | capitolo 2, punto 5 |
 | dal telefono non si apre | il server è acceso? Tailscale è acceso sul telefono, con lo stesso account? |
+| "Per collegare una banca serve Tailscale" | prepara Tailscale (capitolo 6), registra su Enable Banking l'indirizzo che compare in Impostazioni, e riprova |
+| dopo il consenso alla banca: "Impossibile raggiungere il sito" | l'indirizzo di ritorno non risponde: in Impostazioni → Enable Banking controlla che quello mostrato sia anche su Enable Banking, uguale (capitolo 7) |
 | hai dimenticato il PIN | nella pagina del PIN, "Ho dimenticato il PIN", con il codice di recupero (capitolo 5). Persi tutti e due: `docs/46`, parte K |
 | una striscia in alto dice che i backup hanno un problema | **Impostazioni → Backup**: lì c'è che cosa |
 | "Sono tornato a WalletTracker …" dopo un aggiornamento | l'aggiornamento non è riuscito e l'app è com'era prima: nessun dato perso. Riprova più tardi |

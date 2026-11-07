@@ -100,8 +100,10 @@ services:
       WALLETTRACKER_BACKUP_STATE_DIR: /app/.data/backup-stato
       ENABLE_BANKING_PRIVATE_KEY_PATH: /app/secrets/enable-banking.pem
       ENABLE_BANKING_APP_ID: ${ENABLE_BANKING_APP_ID:-}
-      # Uno o più indirizzi di ritorno, separati da virgole: dal PC e dal telefono (docs/47, parte I).
-      ENABLE_BANKING_REDIRECT_URL: ${ENABLE_BANKING_REDIRECT_URL:-https://localhost:8443/callback}
+      # Uno o più indirizzi di ritorno, separati da virgole (docs/47, parti I e Q). Di serie nessuno: nell'app in Docker
+      # l'unico https che risponde è quello di Tailscale, che installa -Tailscale scrive nel .env. (Il vecchio valore di
+      # serie, https://localhost:8443/callback, era quello di ng serve: in Docker lì non risponde nessuno.)
+      ENABLE_BANKING_REDIRECT_URL: ${ENABLE_BANKING_REDIRECT_URL:-}
       SYNC_INTERVAL: ${SYNC_INTERVAL:-6h}
       # Il servizio "ollama" qui sotto. Se Ollama è installato sul PC (docs/44, parte G), nel .env:
       # OLLAMA_URL=http://host.docker.internal:11434

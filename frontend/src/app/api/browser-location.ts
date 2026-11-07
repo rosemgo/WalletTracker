@@ -13,4 +13,9 @@ export class BrowserLocation {
   go(url: string): void {
     this.document.location.assign(url);
   }
+
+  /** L'indirizzo della pagina, senza percorso: "http://localhost:8000", "https://pc-casa.tail0000.ts.net". */
+  origin(): string {
+    return this.document.location.origin;
+  }
 }

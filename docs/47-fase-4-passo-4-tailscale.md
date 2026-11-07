@@ -116,6 +116,7 @@ Questa guida parte dalle basi delle reti (indirizzi, router, porte, VPN, certifi
 - Parte N: la sicurezza di questo passo, e i limiti
 - Parte O: prova
 - Parte P: problemi comuni
+- Parte Q: l'indirizzo di ritorno, dalle basi (dopo la 1.1.0): chi lo apre, i tre indirizzi del server, la regola nuova
 - Esercizi guidati
 
 ---
@@ -1236,3 +1237,107 @@ il messaggio esatto (senza dati personali).
 7. **Più indirizzi di ritorno.** Leggi `EnableBankingPropertiesTest` e aggiungi un test: con
    `ENABLE_BANKING_REDIRECT_URL` vuoto dopo una virgola (`"https://a.example/callback,"`) l'elenco ha un solo
    indirizzo. Poi pensa: che cosa succede se l'elenco è **tutto** vuoto? (Suggerimento: `@NotBlank`.)
+
+---
+
+## Parte Q: l'indirizzo di ritorno, dalle basi (dopo la 1.1.0)
+
+Questa parte nasce da una prova vera: su Enable Banking, `http://localhost:8000/callback` viene rifiutato con **"uses
+unsupported scheme"**. Enable Banking accetta solo indirizzi **https**. Da lì sono venute la regola nuova per
+scegliere l'indirizzo di ritorno e i valori di serie per chi installa dallo ZIP (versione 1.1.1).
+
+![Collegare una banca: chi parla con chi](img/enable-banking-ritorno.svg)
+
+### Q1. Chi apre l'indirizzo di ritorno
+
+Il punto che chiarisce tutto: **l'indirizzo di ritorno non lo apre Enable Banking, lo apre il tuo browser.**
+
+1. Nell'app clicchi "Collega ING".
+2. Il backend, sul server, chiede a Enable Banking (in https, firmando con la tua chiave `.pem`): "voglio collegare
+   ING; alla fine **rimanda l'utente a** questo indirizzo". Con uno `state` casuale, che servirà a riconoscere la
+   risposta.
+3. Enable Banking risponde con l'indirizzo della pagina di ING, e l'app ci manda il tuo browser.
+4. Sul sito della banca fai login e dai il consenso.
+5. Alla fine la banca **non chiama l'app**: risponde **al tuo browser** "vai a INDIRIZZO-DI-RITORNO?code=…&state=…"
+   (un *redirect*, codice HTTP 302), e il browser ci va da solo.
+6. Il browser apre l'indirizzo di ritorno: **lì qualcuno deve rispondere** con la pagina `/callback`, che passa `code`
+   e `state` al backend.
+
+Per questo l'indirizzo può essere perfino `localhost`: per il browser vuol dire "questo computer". Enable Banking non
+lo apre mai; controlla solo, quando lo registri, che cominci con `https`.
+
+### Q2. I tre indirizzi del server, e chi risponde
+
+| Indirizzo | Chi risponde | Certificato |
+|---|---|---|
+| `https://localhost:8443` | **`ng serve`** (`npm start`), il server di sviluppo di Angular, solo mentre è acceso | **fatto in casa**: `"ssl": true` in `angular.json`, e Angular se lo crea da solo, firmato da sé stesso. Il browser l'ha detto ("La connessione non è privata", `docs/13`) e una volta si è detto "Procedi". Per lo sviluppo, non per gli utenti |
+| `http://localhost:8000` | **nginx**, nel container `web` (`installa.ps1`, Avvia WalletTracker) | **nessuno**: è http. Dal server non serve, i dati non escono dal computer. **Enable Banking non lo accetta** |
+| `https://nome-server.….ts.net` | **Tailscale** sul server (`tailscale serve`), che passa a nginx sulla porta 8001; da tutti i tuoi dispositivi, **server compreso** | **vero**, di Let's Encrypt, chiesto da Tailscale per il tuo nome: nessun avviso. Enable Banking lo accetta |
+
+"Angular" sono due cose diverse: il **framework** (il codice della dashboard, che gira nel browser, ovunque) e **`ng
+serve`** (un programma che serve la dashboard mentre sviluppi). Nell'immagine Docker Angular **compila** la dashboard
+in file fissi (`ng build`), che consegna nginx: `ng serve`, e il suo certificato, lì non ci sono.
+
+### Q3. La regola, prima e dopo
+
+**Prima (fino alla 1.1.0)** l'app sceglieva l'indirizzo con lo stesso **nome** della pagina (l'header Host), senza
+guardare la porta. Dal server (`http://localhost:8000`) il nome è `localhost`, e sceglieva `https://localhost:8443`:
+dove, con l'app in Docker, non risponde nessuno. Dopo il consenso: "Impossibile raggiungere il sito".
+
+**Adesso** l'app guarda l'indirizzo **completo** della pagina: schema, nome e porta. Lo legge dall'header **`Origin`**,
+che il browser manda con ogni POST (la richiesta "collega questa banca"). In ordine
+(`EnableBankingProperties.redirectUrlFor`):
+
+1. **lo stesso indirizzo della pagina**: da `ng serve` (`https://localhost:8443`) quello di `ng serve`; dal telefono
+   (Tailscale) quello di Tailscale. Si torna proprio dove si era partiti;
+2. **altrimenti, quello di Tailscale** (il primo https che non è "questo computer"): dal server su
+   `http://localhost:8000`. Al ritorno il browser del server si apre sull'indirizzo di Tailscale: per l'app è "un
+   dispositivo remoto", quindi chiede il **PIN**, poi completa il collegamento. Lo `state` è salvato nel backend
+   (`BankLinkService`), che è lo stesso, quindi lo riconosce;
+3. **altrimenti nessuno**: il collegamento **non parte**, con il messaggio "Per collegare una banca serve un indirizzo
+   https: prepara Tailscale…". Meglio dirlo prima che finire, dopo il consenso, su una pagina dove non risponde nessuno.
+
+La dashboard ha una copia della regola (`frontend/src/app/api/return-address.ts`) solo per **dirlo prima**: in
+"Collega una banca" ("Al ritorno dalla banca si aprirà l'indirizzo di Tailscale: lì l'app ti chiederà il PIN",
+oppure "serve Tailscale" al posto dell'elenco delle banche), e in Impostazioni ("Prima prepara Tailscale" al posto
+dell'indirizzo da registrare). I suoi test hanno gli stessi casi di `EnableBankingPropertiesTest`.
+
+### Q4. I valori di serie
+
+| Chi | Indirizzi di ritorno di serie | Perché |
+|---|---|---|
+| l'app in Docker (`docker-compose.yml`) | **nessuno** | l'unico https che risponde è Tailscale, e `installa -Tailscale` lo scrive nel `.env` |
+| il backend di sviluppo (`./mvnw`, `application.yml`) | `https://localhost:8443/callback` | lì arriva chi sviluppa con `npm start` |
+| `.env.example` | la riga è un **commento** | così vale il valore di serie di chi legge il `.env`: vuoto per Docker, 8443 per `./mvnw`. Una riga scritta ma vuota toglierebbe l'8443 anche allo sviluppo |
+| `installa -Tailscale` | aggiunge quello di Tailscale; dal codice, se l'elenco è vuoto, anche 8443 | da uno ZIP l'8443 non serve a niente |
+
+### Q5. Chi sviluppa: il caso da conoscere
+
+Sviluppando ci sono **due backend**, sullo **stesso database**:
+- quello di `./mvnw`, a cui arriva la dashboard di `ng serve` (`https://localhost:8443`);
+- quello **in Docker**, a cui arriva Tailscale (`https://….ts.net` → nginx sulla 8001).
+
+Se nel `.env` l'elenco ha **solo** l'indirizzo di Tailscale, dalla dashboard di `ng serve` la regola trova al punto 2
+quello di Tailscale. Il collegamento lo avvia il backend di `./mvnw` (lo `state` lo ricorda lui, in memoria), ma la
+banca rimanda il browser a Tailscale, cioè all'app **in Docker**, che quello `state` non l'ha mai visto: "non è valido o
+è scaduto". Con `https://localhost:8443/callback` **anche** nell'elenco, ognuno torna a casa sua. Lo dicono anche i
+commenti in `.env.example` e in `application.yml`, e il promemoria `docs/sviluppo-comandi.md`.
+
+E lo dice la pagina **"Collega una banca"**, ma **solo a chi sviluppa**: un riquadro "Sviluppo: la banca non tornerebbe
+qui", con che cosa aggiungere al `.env`. Compare solo se la pagina è aperta da un indirizzo **https di "questo
+computer"** (`https://localhost:8443`, cioè `ng serve`: `isDevServer` in `return-address.ts`) **e** la banca non
+tornerebbe lì. Chi usa l'app non lo vede mai: dal server la apre in http (`http://localhost:8000`), dal telefono da
+Tailscale, che non è "questo computer". E chi sviluppa con l'8443 nell'elenco non lo vede nemmeno lui.
+
+### Q6. Prove
+
+- backend: `EnableBankingPropertiesTest` (tutti i casi della regola: `ng serve`, server, telefono, nessun indirizzo,
+  maiuscole e porta di serie, `Origin` mancante o `"null"`), `BankLinkServiceTest` (senza indirizzo il collegamento non
+  parte e Enable Banking non viene chiamato), `ConnectionControllerTest` (l'header `Origin` vero), `SetupServiceTest`
+  (lo stato senza indirizzi);
+- dashboard: `return-address.spec.ts` (gli stessi casi), `link-page.spec.ts` (le tre situazioni), `settings-page.spec.ts`;
+- `prova-aggiornamento.sh`, caso 5: da uno ZIP nessun indirizzo, poi `--tailscale` scrive solo quello di Tailscale;
+- nel browser, sull'app in Docker: senza indirizzi la spiegazione al posto delle banche; con quello di Tailscale
+  l'avviso del ritorno e "Prima crea un PIN";
+- **non** provato qui: il giro completo con una banca vera (consenso, ritorno su Tailscale, PIN, fine). È la prova
+  della versione 1.1.1.

@@ -171,7 +171,8 @@ describe('Investments', () => {
     );
     const transferBars = Array.from(transfers.querySelectorAll('app-bar-chart path.bar'));
     expect(transferBars.length).toBe(12);
-    expect(transferBars.filter((b) => b.classList.contains('neg')).length).toBe(1);
+    // Il colore di sempre: niente verde e rosso (quello è per il netto di Analisi).
+    expect(transferBars.filter((b) => b.matches('.pos, .neg')).length).toBe(0);
     expect(transfers.textContent).toContain('Non dicono quanti ne hai investiti');
 
     // Le rendite: solo le due barre dei mesi con una rendita; in evidenza l'ultima (giugno 2026, il dividendo).
@@ -276,10 +277,74 @@ describe('Investments', () => {
     expect(transfers.querySelectorAll('a.movement').length).toBe(8);
     const more = transfers.querySelector('button.show-all') as HTMLButtonElement;
     expect(more.textContent).toContain('Mostra tutti (10)');
+    expect(more.getAttribute('aria-expanded')).toBe('false');
     more.click();
     await fixture.whenStable();
     expect(transfers.querySelectorAll('a.movement').length).toBe(10);
-    expect(transfers.querySelector('button.show-all')).toBeNull();
+    // Aperto, si può richiudere.
+    expect(more.textContent?.trim()).toBe('Mostra meno');
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    more.click();
+    await fixture.whenStable();
+    expect(transfers.querySelectorAll('a.movement').length).toBe(8);
+  });
+
+  it('a long list of the column shows the first five, then all, then five again; a short one stays whole', async () => {
+    const sources = Array.from({ length: 12 }, (_, i) => ({
+      name: `TITOLO ${i + 1}`,
+      amount: 100 - i,
+      movements: 1,
+    }));
+    answer = (period) => ({ ...investments(period), incomeBySource: sources });
+    const { fixture, page: p } = await page();
+    const list = () =>
+      Array.from(p.querySelectorAll('h3')).find((h) => h.textContent === 'Da dove')!
+        .nextElementSibling as HTMLElement;
+    const button = () => list().nextElementSibling as HTMLButtonElement;
+
+    expect(list().querySelectorAll('li').length).toBe(5);
+    expect(list().textContent).toContain('Titolo 1');
+    expect(list().textContent).not.toContain('Titolo 6');
+    expect(button().textContent?.trim()).toBe('Mostra tutti (12)');
+
+    button().click();
+    await fixture.whenStable();
+    expect(list().querySelectorAll('li').length).toBe(12);
+    expect(button().textContent?.trim()).toBe('Mostra meno');
+
+    button().click();
+    await fixture.whenStable();
+    expect(list().querySelectorAll('li').length).toBe(5);
+
+    // "Per tipo" ha poche righe: tutte, e nessun pulsante.
+    const types = Array.from(p.querySelectorAll('h3')).find((h) => h.textContent === 'Per tipo')!
+      .nextElementSibling as HTMLElement;
+    expect(types.nextElementSibling?.tagName).toBe('H3');
+  });
+
+  it('a list opened with "Mostra tutti" closes again with another period', async () => {
+    const sources = Array.from({ length: 9 }, (_, i) => ({
+      name: `T${i}`,
+      amount: 9 - i,
+      movements: 1,
+    }));
+    answer = (period) => ({ ...investments(period), incomeBySource: sources });
+    const { fixture, page: p } = await page();
+    const count = () =>
+      (
+        Array.from(p.querySelectorAll('h3')).find((h) => h.textContent === 'Da dove')!
+          .nextElementSibling as HTMLElement
+      ).querySelectorAll('li').length;
+    (p.querySelector('.card button.show-all') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(count()).toBe(9);
+
+    const other = Array.from(p.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === 'Tutto',
+    );
+    other!.click();
+    await fixture.whenStable();
+    expect(count()).toBe(5);
   });
 
   it('shows the cash on the investment accounts, and how to get a balance that is missing', async () => {
@@ -387,5 +452,22 @@ describe('Investments', () => {
     const empty = TestBed.createComponent(InvestmentsCard);
     await empty.whenStable();
     expect((empty.nativeElement as HTMLElement).querySelector('a')).toBeNull();
+  });
+
+  it('the transfers chart has the usual color, not green and red: a month back is a bar downwards', async () => {
+    const { page: p } = await page();
+    const card = p.querySelector('.transfers-card') as HTMLElement;
+    const bars = Array.from(card.querySelectorAll('.bar-chart path.bar'));
+
+    expect(bars.length).toBeGreaterThan(0);
+    expect(card.querySelectorAll('.bar-chart path.pos, .bar-chart path.neg').length).toBe(0);
+    // Il mese con -100 € (soldi tornati indietro) c'è lo stesso, sotto la linea dello zero.
+    const zero = Number(card.querySelector('.bar-chart line.zero')?.getAttribute('y1'));
+    // Una barra verso il basso comincia sulla linea dello zero ("M x zero V ..."), una verso l'alto finisce lì.
+    const below = bars.filter((b) => {
+      const start = (b.getAttribute('d') ?? '').match(/^M[\d.]+ ([\d.]+)V([\d.]+)/);
+      return start !== null && Math.abs(Number(start[1]) - zero) < 0.2 && Number(start[2]) > zero;
+    });
+    expect(below.length).toBe(1);
   });
 });

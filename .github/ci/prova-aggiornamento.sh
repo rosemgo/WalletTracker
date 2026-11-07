@@ -11,7 +11,8 @@
 #   1. con l'ultima versione già installata: "Hai già l'ultima versione", niente cambia;
 #   2. uno ZIP che non corrisponde alla sua impronta (SHA256SUMS): rifiutato, niente cambia;
 #   3. l'aggiornamento 0.9.0 → 0.9.1: backup, file nuovi, backend nuovo acceso, dati al loro posto;
-#   4. l'aggiornamento 0.9.1 → 0.9.2 che fallisce: lo script torna da solo alla 0.9.1, con i dati di prima.
+#   4. l'aggiornamento 0.9.1 → 0.9.2 che fallisce: lo script torna da solo alla 0.9.1, con i dati di prima;
+#   5. Enable Banking: nessun indirizzo di ritorno di serie, e --tailscale che scrive solo quello di Tailscale.
 # Le versioni 0.9.x non esistono su GitHub Container Registry: "docker compose pull" fallisce, e lo script usa le
 # immagini costruite qui (lo stesso percorso di chi non ha Internet).
 set -euo pipefail
@@ -175,5 +176,16 @@ grep -q 'SERVER_PORT: 8080' docker-compose.yml || fallito "caso 4: docker-compos
 [ "$(etichetta)" = 0.9.1 ] && [ "$(salute)" = healthy ] || fallito "caso 4: il backend 0.9.1 non è acceso ($(etichetta), $(salute))"
 [ "$(sql 'SELECT count(*) FROM prova_aggiornamento')" = 2 ] || fallito "caso 4: i dati non sono quelli di prima"
 [ -f .env ] && grep -q "^WALLETTRACKER_BACKUP_PASSWORD=$password_backup$" .env || fallito "caso 4: il .env è cambiato"
+
+# --- 5. Enable Banking e Tailscale, in una versione scaricata (docs/47, parte Q) ---
+passo "Caso 5: da uno ZIP nessun indirizzo di ritorno, poi --tailscale scrive solo quello di Tailscale"
+# Dal .env.example della versione nessun indirizzo di ritorno (la riga è un commento): l'app è partita lo stesso, in
+# tutti i casi qui sopra.
+if grep -q '^ENABLE_BANKING_REDIRECT_URL=' .env; then fallito "caso 5: il .env ha già un indirizzo di ritorno"; fi
+[ "$(salute)" = healthy ] || fallito "caso 5: il backend senza indirizzi di ritorno non è acceso"
+PATH="$radice/.github/ci:$PATH" ./installa.sh --tailscale --senza-browser >"$lavoro/caso5.log" 2>&1 ||
+  { cat "$lavoro/caso5.log"; fallito "caso 5: --tailscale non è riuscito"; }
+grep -q '^ENABLE_BANKING_REDIRECT_URL=https://pc-casa.tail0000.ts.net/callback$' .env ||
+  { grep '^ENABLE_BANKING_REDIRECT_URL' .env; fallito "caso 5: l'indirizzo di ritorno non è solo quello di Tailscale"; }
 
 passo "Tutte le prove dell'aggiornamento sono passate"

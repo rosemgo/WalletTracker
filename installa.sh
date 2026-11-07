@@ -277,7 +277,8 @@ aggiungi_a_elenco() {
   case ",$attuale," in
     *",$nuovo,"*) return 1 ;; # c'è già
   esac
-  scrivi_env "$nome" "$attuale,$nuovo"
+  # Con l'elenco vuoto (e niente valore di serie), il nuovo da solo: senza una virgola davanti.
+  scrivi_env "$nome" "${attuale:+$attuale,}$nuovo"
 }
 
 if [ "$CON_TAILSCALE" = true ]; then
@@ -324,7 +325,11 @@ if [ "$CON_TAILSCALE" = true ]; then
   if aggiungi_a_elenco WALLETTRACKER_ALLOWED_HOSTS "$nome_ts" "localhost,127.0.0.1"; then
     echo "Aggiunto $nome_ts ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)."
   fi
-  if aggiungi_a_elenco ENABLE_BANKING_REDIRECT_URL "https://$nome_ts/callback" "https://localhost:8443/callback"; then
+  # Il valore di serie, se nel .env non ce n'è ancora uno: dal codice (sviluppo) quello di ng serve, che serve a
+  # npm start; da una versione scaricata nessuno, perché lì l'unico https che risponde è Tailscale (docs/47, parte Q).
+  ritorno_di_serie=""
+  [ "$DAL_CODICE" = true ] && ritorno_di_serie="https://localhost:8443/callback"
+  if aggiungi_a_elenco ENABLE_BANKING_REDIRECT_URL "https://$nome_ts/callback" "$ritorno_di_serie"; then
     echo "Aggiunto https://$nome_ts/callback agli indirizzi di ritorno di Enable Banking (nel .env)."
   fi
 fi

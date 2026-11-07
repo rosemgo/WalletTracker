@@ -932,6 +932,7 @@ Docker Desktop e la lettura delle sue impostazioni. È la prova del 6d, sul tuo 
 | Versione | Pubblicata | Dal commit | Che cosa contiene |
 |---|---|---|---|
 | **1.0.0** | 5 novembre 2026 | `2bee13c` (la pull request n. 14) | l'app fino al passo **6a**: niente "Aggiorna", niente doppio clic, niente avviso delle versioni nuove |
+| **1.1.0** | 5 novembre 2026 | `77663f6` (la pull request n. 18) | 6b e 6c: "Aggiorna", il doppio clic, l'avviso delle versioni nuove; `GUIDA.md` e `LEGGIMI.txt`. **Difetto**: l'indirizzo di ritorno di serie era quello di `ng serve` (`docs/47`, parte Q), e dallo ZIP le banche non si collegavano |
 
 Le tre immagini della 1.0.0 su GitHub Container Registry sono **pubbliche** (controllato: si scaricano senza account).
 

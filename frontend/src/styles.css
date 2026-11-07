@@ -1373,6 +1373,14 @@ progress::-moz-progress-bar {
 
 /* ---- Riepilogo ---- */
 
+/* Impostazioni, senza indirizzi di ritorno: "Prima prepara Tailscale" al posto dell'indirizzo da registrare. */
+.needs-tailscale {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--soft);
+  border-radius: 10px;
+}
+
 .card.warning {
   background: var(--soft);
 }
@@ -3319,10 +3327,14 @@ ul.steps li + li {
   font-variant-numeric: tabular-nums;
 }
 
-/* "Mostra tutti" sotto gli elenchi dei movimenti. */
-.day button.show-all {
+/* "Mostra tutti" / "Mostra meno" sotto gli elenchi dei movimenti e delle schede di Investimenti: centrato, con
+   spazio intorno per il dito. */
+.day button.show-all,
+.card button.show-all {
   display: block;
-  margin: 8px auto 4px;
+  min-height: 44px;
+  margin: 4px auto 0;
+  padding: 0 16px;
 }
 
 /* La scheda del Riepilogo: tutta toccabile, porta alla pagina. */

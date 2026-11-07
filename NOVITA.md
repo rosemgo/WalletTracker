@@ -4,6 +4,20 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.1.1
+
+- **Collegare le banche dallo ZIP funziona**: Enable Banking vuole un indirizzo https, e ora l'app usa quello di
+  Tailscale anche quando la apri dal server (http://localhost:8000). Al ritorno dalla banca si apre l'indirizzo di
+  Tailscale, l'app chiede il PIN e finisce il collegamento. Prima la banca rimandava a una pagina che non rispondeva.
+- **Senza Tailscale l'app lo dice prima**: in "Collega una banca" e in Impostazioni, con che cosa fare, invece di
+  fermarsi dopo il consenso alla banca.
+- **Investimenti più compatti**: gli elenchi lunghi ("Da dove", con un titolo per riga) mostrano le prime 5 righe, con
+  "Mostra tutti" e "Mostra meno"; la liquidità è sotto i bonifici, e la pagina non lascia più spazi vuoti.
+- **La guida**: Tailscale prima delle banche, perché serve anche a collegarle.
+
+Hai già la 1.1.0? Doppio clic su **Aggiorna WalletTracker**. Se avevi registrato su Enable Banking solo
+`https://localhost:8443/callback`, aggiungi l'indirizzo di Tailscale che trovi in Impostazioni.
+
 ## 1.1.0
 
 - **Aggiorna con un doppio clic** ("Aggiorna WalletTracker"): l'app passa all'ultima versione da sola, con un backup

@@ -49,9 +49,14 @@ public class SetupService {
     public SetupStatus status() {
         return credentials.current()
                 .map(c -> new SetupStatus(true, c.source().name(), c.applicationId(),
-                        properties.redirectUrls().getFirst(), properties.redirectUrls()))
-                .orElseGet(() -> new SetupStatus(false, null, null, properties.redirectUrls().getFirst(),
-                        properties.redirectUrls()));
+                        firstRedirectUrl(), properties.redirectUrls()))
+                .orElseGet(() -> new SetupStatus(false, null, null, firstRedirectUrl(), properties.redirectUrls()));
+    }
+
+    /** Il primo indirizzo di ritorno, o null se non ce n'è nessuno (installazione da ZIP senza Tailscale). */
+    private String firstRedirectUrl() {
+        List<String> urls = properties.redirectUrls();
+        return urls.isEmpty() ? null : urls.getFirst();
     }
 
     /** Verifica le credenziali con Enable Banking e, se vanno bene, le salva. */

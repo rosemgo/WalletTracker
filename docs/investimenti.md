@@ -749,3 +749,38 @@ ritenuta del 1° ottobre: settembre 300 € e −37,50 €, nessuna ritenuta non
 Le righe di "Per tipo", "Da dove" e "Altre tasse" ora sono link a Movimenti, con il periodo guardato. Il perché e il
 come sono in `docs/collegamenti.md`; qui l'unica cosa nuova dell'API: `Group` ha `accountId` e `search` per le righe che
 sono un conto (le rendite senza il nome di un titolo), così il link trova proprio quei movimenti.
+
+## Parte Q: elenchi corti e colonne alla stessa altezza
+
+**Il difetto.** Con tanti titoli, l'elenco "Da dove" della scheda "Cedole, dividendi e interessi" aveva una riga per
+titolo: una trentina. La colonna di destra diventava lunghissima, quella di sinistra finiva molto prima, e sotto
+restava un grande spazio vuoto prima di arrivare agli acquisti e vendite.
+
+**La correzione, in due parti.**
+
+1. **Gli elenchi lunghi si accorciano.** Ogni elenco della colonna (Per tipo, Da dove, Altre tasse, Liquidità) mostra
+   le **prime 5 righe**, che sono le più importanti (gli elenchi sono già in ordine di importo), e sotto **"Mostra tutti
+   (21)"**, con il numero. Aperto diventa **"Mostra meno"**, e richiudendo la pagina torna al titolo dell'elenco, se
+   era uscito dallo schermo. Un elenco di 7 righe o meno resta intero: nascondere una o due righe dietro un pulsante
+   sarebbe solo un clic in più. Cambiando periodo (12 mesi, Quest'anno…) gli elenchi tornano chiusi. Lo stesso
+   "Mostra meno" ora c'è anche negli elenchi degli acquisti e vendite e dei bonifici.
+2. **La Liquidità passa nella colonna di sinistra**, sotto i bonifici: si leggono vicini (quanto hai mandato ai conti
+   di investimento, e quanto ci è ancora fermo), e le due colonne finiscono alla stessa altezza. Sul telefono le
+   schede restano una sotto l'altra, come prima.
+
+**Nel codice.** In `investments-page.ts`: `rows(elenco, righe)` dà le righe da mostrare, `shortened(righe)` dice se
+serve il pulsante, `toggle(elenco, titolo)` apre o richiude. Gli elenchi aperti sono in `openLists`, un
+`linkedSignal` che riparte vuoto quando arrivano dati nuovi (un altro periodo): è il modo di Angular per dire "un
+valore che si può cambiare, ma che si azzera quando cambia un altro". Il pulsante ha `aria-expanded`, così chi usa un
+lettore di schermo sa se l'elenco è aperto.
+
+**Prova nel browser**, con 21 titoli inventati: a computer, "Acquisti e vendite" da 2733 a 1513 pixel dall'inizio
+della pagina, e le due colonne che finiscono a 24 pixel l'una dall'altra; sul telefono, la pagina larga quanto lo
+schermo; nessun errore nella console.
+
+**I colori del grafico dei bonifici.** Prima le barre erano verdi sopra lo zero e rosse sotto (`diverging`, lo stesso
+del "netto" di Analisi, dove sopra vuol dire "hai risparmiato" e sotto "hai speso più di quanto è entrato"). Per i
+bonifici non c'è niente da giudicare: un mese con meno bonifici non è "andato male". Ora hanno il colore di sempre,
+come il grafico delle rendite; un mese con più soldi tornati indietro che partiti resta una barra verso il basso, dello
+stesso colore (la linea dello zero c'è sempre). Il verde e il rosso restano dove c'è un riferimento: il netto di
+Analisi, e "sopra o sotto il solito" del Riepilogo.

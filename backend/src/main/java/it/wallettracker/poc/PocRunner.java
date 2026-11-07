@@ -201,6 +201,9 @@ public class PocRunner implements CommandLineRunner {
         // "state" è un valore casuale che ci torna indietro invariato dopo il login:
         // se coincide, siamo sicuri che la risposta corrisponde alla nostra richiesta.
         String state = UUID.randomUUID().toString();
+        if (properties.redirectUrls().isEmpty()) {
+            throw new IllegalStateException("Manca ENABLE_BANKING_REDIRECT_URL nel file .env");
+        }
 
         AuthorizationRequest request = new AuthorizationRequest(
                 new Access(validUntil),

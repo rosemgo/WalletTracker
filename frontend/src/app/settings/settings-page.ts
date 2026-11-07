@@ -6,6 +6,7 @@ import { AiSettingsPanel } from '../ai/ai-settings-panel';
 import { AccessSection } from '../auth/access-section';
 import { SetupStore } from '../api/setup-store';
 import { UpdateStore } from '../api/update-store';
+import { GUIDE_URL } from '../api/return-address';
 import { WalletApi } from '../api/wallet-api';
 import { BackupSection } from './backup-section';
 import { ThemeSection } from '../theme/theme-section';
@@ -47,6 +48,8 @@ export class SettingsPage {
   protected readonly error = signal<string | null>(null);
   /** La versione dell'app (docs/50, parte B); null finché il backend non risponde. */
   protected readonly version = signal<string | null>(null);
+  /** La guida, per i passi di Tailscale (docs/47, parte Q). */
+  protected readonly guideUrl = GUIDE_URL;
   /** C'è una versione nuova? (docs/50, parte J) */
   protected readonly updates = inject(UpdateStore);
 

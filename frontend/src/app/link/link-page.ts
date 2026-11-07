@@ -1,7 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { BrowserLocation } from '../api/browser-location';
+import { GUIDE_URL, isDevServer, returnAddressFor } from '../api/return-address';
+import { SetupStore } from '../api/setup-store';
+import { AuthStore } from '../auth/auth-store';
 import { Bank } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 
@@ -26,12 +29,39 @@ const COUNTRIES = [
  */
 @Component({
   selector: 'app-link-page',
+  imports: [RouterLink],
   templateUrl: './link-page.html',
 })
 export class LinkPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly location = inject(BrowserLocation);
   private readonly route = inject(ActivatedRoute);
+  private readonly setup = inject(SetupStore);
+  private readonly auth = inject(AuthStore);
+
+  protected readonly guideUrl = GUIDE_URL;
+
+  /**
+   * Dove tornerà la banca, partendo da questa pagina (docs/47, parte Q): null se non c'è un indirizzo che risponda
+   * (serve Tailscale), undefined finché il backend non ha detto quali indirizzi ci sono.
+   */
+  protected readonly returnAddress = computed(() => {
+    const status = this.setup.status();
+    return status ? returnAddressFor(this.location.origin(), status.redirectUrls) : undefined;
+  });
+
+  /**
+   * Sviluppo con ng serve, ma la banca tornerebbe all'indirizzo di Tailscale: lì risponde l'app in Docker, non il
+   * backend di ./mvnw che avvia il collegamento, e il collegamento non si completerebbe (docs/sviluppo-comandi.md).
+   */
+  protected readonly devReturnElsewhere = computed(
+    () => this.returnAddress()?.samePage === false && isDevServer(this.location.origin()),
+  );
+
+  /** Si torna da un altro indirizzo (quello di Tailscale), dove l'app chiede il PIN: e il PIN non c'è ancora. */
+  protected readonly needsPin = computed(
+    () => this.returnAddress()?.samePage === false && this.auth.status()?.pinSet === false,
+  );
 
   protected readonly countries = COUNTRIES;
   protected readonly country = signal('IT');
@@ -63,6 +93,8 @@ export class LinkPage implements OnInit {
       this.search.set(bank);
       this.renewing.set(bank);
     }
+    // Gli indirizzi di ritorno possono essere cambiati da poco (installa -Tailscale): li richiediamo.
+    this.setup.refresh();
     this.loadBanks();
   }
 
