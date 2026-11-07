@@ -154,3 +154,44 @@ Due ritocchi trovati guardando la pagina:
 `danger`. Nel browser: a 1136 pixel e sul telefono, le quattro azioni con lo stesso bordo sinistro; la conferma nel
 tema scuro e in quello chiaro.
 
+---
+
+## Aggiunta: il controllo di tutti i link, e una regola sola
+
+Richiesta dell'utente: controllare tutti i link dell'app e sistemare la grafica dove serve.
+
+**Il controllo.** Uno script con Playwright ha aperto le 16 pagine dell'app, sul PC (1136 pixel, come lo schermo
+ingrandito dell'utente) e sul telefono, con le sezioni da aprire aperte, e per ogni link (`<a>`, i pulsanti e le
+etichette con la classe `link`) ha misurato: se sta in una frase o da solo, il colore, la sottolineatura, il peso, se
+va a capo a metà. Poi ha aperto ognuna delle 97 destinazioni interne: si aprono tutte, nessuna torna al Riepilogo per
+sbaglio. Nei modelli, tutti gli 11 `routerLink` scritti e i 17 calcolati portano a pagine che esistono.
+
+**La regola.** Tre aspetti, ognuno con il suo posto:
+
+| Che cos'è | Aspetto | Esempi |
+|---|---|---|
+| una riga o una scheda intera da toccare | il testo normale, senza sottolineatura | un movimento, "Investito", le voci di Altro |
+| un link **da solo**: un'azione, o il passaggio a un'altra pagina | il colore dell'accento, un poco più spesso, senza sottolineatura (compare passandoci sopra) | "Rinomina", "Vedi i movimenti", "Scarica", "12 movimenti" |
+| un link **dentro una frase** | il colore dell'accento, **sottolineato** | "…usa **Completa i movimenti**", "la **guida**" |
+
+Dentro una frase la sottolineatura serve: senza, il link si distinguerebbe dal testo solo per il colore, e chi vede
+male i colori non lo troverebbe. Da solo, invece, è chiaro che è un'azione, e la sottolineatura appesantisce.
+
+Nel foglio di stile: `a.action` per un link da solo (lo stesso aspetto di `button.link`), `.row-actions` per più azioni
+sulla stessa riga (uno spazio, senza "·"; vanno a capo tra un'azione e l'altra), `.card-head a` per il link
+nell'intestazione di una scheda, con la freccia "›".
+
+**Che cosa non la seguiva, e com'è ora.**
+
+| Dove | Prima | Ora |
+|---|---|---|
+| Riepilogo, "Dove vanno" e "In arrivo" | "Tutte", "Abbonamenti": grigi e sottolineati | "Tutte ›", "Abbonamenti ›", come "Vedi tutto ›" e "Vedi i conti ›" delle altre schede |
+| Conti, in alto | "Collega una banca", "Importa CSV" sottolineati accanto al pulsante | azioni |
+| Conti, colonna Conto | "Rinomina" attaccato al nome, come una parola della frase; "Vedi i movimenti" sottolineato, sopra l'IBAN | nome, IBAN, e sotto le due azioni sulla stessa riga |
+| Categorie | "12 movimenti" sottolineato; "Rinomina · Elimina" | "12 movimenti" azione; "Rinomina" e "Elimina" (in rosso) senza "·"; la conferma con il pulsante rosso, come in Conti |
+| Impostazioni → Backup | "Scarica" sottolineato | azione |
+| pagina di una categoria | "Imposta un budget per questa categoria" grigio e sottolineato, come una nota | azione |
+
+Il controllo, rifatto dopo le correzioni: nessun link da solo sottolineato, tutti e 7 i link nelle frasi
+sottolineati, nessuno spezzato su due righe, nessun errore nella console, nessuna pagina più larga dello schermo.
+

@@ -1200,6 +1200,22 @@ a.action {
   white-space: nowrap;
 }
 
+/* Un link da solo (un'azione, o il passaggio a un'altra pagina: "Vedi i movimenti", "Scarica", "12 movimenti") ha
+   l'aspetto dei pulsanti-azione: il colore dell'accento, senza sottolineatura, che compare passandoci sopra. La
+   sottolineatura resta ai link dentro una frase: lì serve, per non distinguerli dal testo solo con il colore. */
+a.action {
+  color: var(--acc);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  a.action:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 @media (hover: hover) {
   button.link:not(:disabled):hover {
     background: none;
@@ -1260,18 +1276,23 @@ ul.account-actions li.delete {
   margin-top: 6px;
 }
 
-/* "Importa un file" è un link (porta a un'altra pagina), le altre sono pulsanti: nell'elenco hanno lo stesso aspetto,
-   senza sottolineatura (compare passandoci sopra, come per i pulsanti). */
-ul.account-actions a.action {
-  font-weight: 500;
-  text-decoration: none;
+/* Più azioni sulla stessa riga ("Vedi i movimenti", "Rinomina", "Elimina"): uno spazio tra l'una e l'altra, senza "·";
+   se non ci stanno vanno a capo tra un'azione e l'altra, mai in mezzo. */
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
 }
 
-@media (hover: hover) {
-  ul.account-actions a.action:hover {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
+/* In una colonna allineata a destra (le azioni delle Categorie) anche le azioni e la conferma stanno a destra. */
+td.actions .row-actions,
+td.actions .confirm-buttons {
+  justify-content: flex-end;
+}
+
+td.actions .confirm-delete {
+  align-items: flex-end;
 }
 
 /* Un'azione che cancella qualcosa: rossa, come gli errori. Il pulsante pieno (la conferma) ha lo sfondo rosso. */
@@ -2045,9 +2066,19 @@ button.icon svg {
   justify-content: space-between;
 }
 
+/* Il link nell'intestazione di una scheda ("Tutte ›", "Abbonamenti ›"): come "Vedi tutto ›" delle schede intere. */
 .card-head a {
-  color: var(--sec);
+  color: var(--acc);
   font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  .card-head a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 /* "Dove vanno": barre sottili, tutte dello stesso colore (conta la lunghezza), con la differenza dal solito. */
