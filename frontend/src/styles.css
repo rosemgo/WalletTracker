@@ -3545,6 +3545,31 @@ a.budget-name:hover {
   gap: 16px;
 }
 
+/* "Perché a volte una regola non vale?": una spiegazione da aprire, sotto quella della pagina Regole. Il titolo ha il
+   colore dei link, perché si capisca che si clicca. */
+details.why-rules {
+  margin: -4px 0 20px; /* stretto sotto la spiegazione, a cui appartiene; staccato dalla scheda che segue */
+}
+
+details.why-rules summary {
+  width: fit-content;
+  color: var(--acc);
+  cursor: pointer;
+}
+
+details.why-rules[open] summary {
+  margin-bottom: 10px;
+}
+
+details.why-rules ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+details.why-rules li + li {
+  margin-top: 6px;
+}
+
 /* Le regole di partenza: una sezione da aprire, sotto le regole dell'utente. */
 details.builtin-rules {
   margin-top: 1.5rem;

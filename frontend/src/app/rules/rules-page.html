@@ -1,13 +1,33 @@
 <h1>Regole</h1>
 
 <p class="hint">
-  Una regola dice:
-  <em>"se il testo del movimento contiene (o inizia con) queste parole, allora il tipo è..."</em>.
-  Maiuscole, minuscole e il numero di spazi non contano. Le regole si provano in ordine di
-  <strong>priorità</strong> (il numero più basso per primo) e la prima che corrisponde vince. Prima
-  delle regole vengono le correzioni manuali e i trasferimenti tra i tuoi conti. Dopo ogni modifica
-  tutti i movimenti vengono riclassificati.
+  Una regola insegna all'app a riconoscere un movimento:
+  <em
+    >"se il testo contiene (o inizia con) queste parole, allora è una spesa, un'entrata… di questa
+    categoria"</em
+  >. Maiuscole, minuscole e spazi in più non contano. Le regole si provano in ordine di
+  <strong>priorità</strong>, dal numero più basso: vale la prima che corrisponde. Quando salvi,
+  modifichi o cancelli una regola, l'app la applica subito a tutti i movimenti, anche a quelli
+  vecchi.
 </p>
+
+<!-- Che cosa viene prima delle regole (ClassificationService): aperto solo da chi se lo chiede. -->
+<details class="hint why-rules" data-testid="why-rules">
+  <summary>Perché a volte una regola non vale?</summary>
+  <p>Prima delle regole l'app controlla due cose:</p>
+  <ul>
+    <li>
+      <strong>se il movimento l'hai sistemato tu</strong>, cambiandogli tipo o categoria: vale la
+      tua scelta, e nessuna regola la cambia;
+    </li>
+    <li>
+      <strong>se sono soldi che passano da un tuo conto a un altro</strong> (dal conto corrente alla
+      carta di credito, o al conto degli investimenti): li riconosce da sola, perché trova l'uscita
+      su un conto e l'entrata uguale sull'altro. Non sono né una spesa né un'entrata, e le regole
+      non li toccano.
+    </li>
+  </ul>
+</details>
 
 @if (message()) {
   <p class="message">{{ message() }}</p>
