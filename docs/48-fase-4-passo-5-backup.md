@@ -373,9 +373,12 @@ rompono con lui.
 
 La cartella è la variabile `BACKUP_DIR` del `.env`. Non serve aprire il `.env`: **lo script la chiede**.
 
-- **Al primo backup** (`-Backup`, o il doppio clic su **Backup WalletTracker**), prima della password: "Dove salvo i
-  backup?". Invio lascia la cartella di serie. Lo chiede solo se nel `.env` non c'è ancora né la password né
-  `BACKUP_DIR`, e solo in una finestra vera (non quando la risposta arriva da un altro programma, come nella CI).
+- **Una volta sola, al primo avvio** (anche con il doppio clic su **Avvia WalletTracker**): "Dove salvo i backup?".
+  La condizione è "nel `.env` non c'è ancora `BACKUP_DIR`": quindi la domanda arriva alla prima installazione, e una
+  volta anche a chi aggiorna da una versione che non la faceva. Invio scrive `BACKUP_DIR=./backup`, la cartella di
+  serie, proprio perché la domanda non torni a ogni avvio (il backend tratta `./backup` come "la cartella di serie":
+  `BackupService.onServer`). Non la fa con `-Ripristina`, e solo in una finestra vera: non quando la risposta arriva
+  da un altro programma, come nella CI (`[ -t 0 ]` in bash, `[Console]::IsInputRedirected` in PowerShell).
 - **Per cambiarla dopo**, dalla cartella di WalletTracker:
 
   ```

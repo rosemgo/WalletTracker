@@ -191,17 +191,20 @@ else {
     }
 }
 
-# --- 2b. La cartella dei backup (al primo backup, o con -CartellaBackup: docs/48, parte F) ------------------
+# --- 2b. La cartella dei backup (una volta sola, o con -CartellaBackup: docs/48, parte F) -------------------
 # Come in installa.sh (vedi i commenti lì): la si sceglie qui, senza aprire il .env.
 function Chiedi-Cartella-Backup {
     $attuale = Valore-Env 'BACKUP_DIR'
     Write-Host 'Dove salvo i backup? Meglio fuori da questo disco: un disco esterno, o la cartella di Google Drive, OneDrive o'
     Write-Host 'Dropbox sul computer (con Google Drive per desktop: "Esegui il mirroring dei file"). I backup sono cifrati.'
-    if ($attuale -eq '') { Write-Host 'Adesso: la cartella "backup" qui accanto' } else { Write-Host "Adesso: $attuale" }
+    if ($attuale -eq '') { Write-Host 'Adesso: la cartella "backup" qui accanto.' } else { Write-Host "Adesso: $attuale." }
+    Write-Host 'Potrai cambiarla quando vuoi con -CartellaBackup.'
     $risposta = Read-Host "Scrivi (o incolla) il percorso di una cartella, oppure premi Invio per lasciarla com'è"
     # Gli spazi e le virgolette che Esplora file aggiunge con "Copia come percorso".
     $risposta = ([string]$risposta).Trim().Trim('"', "'").Trim()
     if ($risposta -eq '') {
+        # Scritta anche quella di serie: così la domanda non torna a ogni avvio.
+        if ($attuale -eq '') { Scrivi-Env 'BACKUP_DIR' './backup' }
         if ($attuale -eq '') { Write-Host 'La cartella dei backup resta backup, qui accanto.' } else { Write-Host "La cartella dei backup resta $attuale." }
         return
     }
@@ -218,8 +221,9 @@ if ($CartellaBackup) {
     Passo 'La cartella dei backup'
     Chiedi-Cartella-Backup
 }
-elseif ($Backup -and (Valore-Env 'WALLETTRACKER_BACKUP_PASSWORD') -eq '' -and (Valore-Env 'BACKUP_DIR') -eq '' -and -not [Console]::IsInputRedirected) {
-    # Il primo backup (manca la password): insieme alla password, la cartella. Solo da una finestra vera.
+elseif ((Valore-Env 'BACKUP_DIR') -eq '' -and $Ripristina -eq '' -and -not [Console]::IsInputRedirected) {
+    # Nel .env non c'è ancora BACKUP_DIR: si chiede una volta, a qualunque avvio (anche il doppio clic su "Avvia"),
+    # e solo da una finestra vera (installa.sh, parte 2b).
     Passo 'La cartella dei backup'
     Chiedi-Cartella-Backup
 }

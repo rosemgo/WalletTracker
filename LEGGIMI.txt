@@ -7,7 +7,8 @@ WalletTracker - come cominciare
    cosi' WalletTracker riparte da solo quando accendi il computer.
 
 2. Estrai questo ZIP in una cartella che non sposterai piu' (per esempio Documenti).
-   Su Windows, PRIMA di estrarlo: tasto destro sullo ZIP -> Proprieta' -> spunta "Sblocca" -> OK.
+   Su Windows, PRIMA di estrarlo: tasto destro sullo ZIP -> Proprieta' -> spunta "Annulla blocco"
+   ("Sblocca" su Windows 10) -> OK.
 
 3. Doppio clic su "Avvia WalletTracker" (.cmd su Windows, .command sul Mac).
    La prima volta:

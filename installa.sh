@@ -201,7 +201,7 @@ else
   fi
 fi
 
-# --- 2b. La cartella dei backup (al primo backup, o con --cartella-backup: docs/48, parte F) ----------------
+# --- 2b. La cartella dei backup (una volta sola, o con --cartella-backup: docs/48, parte F) -----------------
 # Dove vanno i backup: di serie la cartella "backup" qui accanto. Meglio un'altra: un disco esterno, o una cartella che
 # Google Drive / OneDrive / Dropbox tengono sul disco e copiano nel cloud (i backup sono cifrati: lì sono illeggibili).
 # La si sceglie qui, senza aprire il .env: lo script la scrive come BACKUP_DIR, e all'avvio (parte 5) Docker ricrea i
@@ -211,11 +211,13 @@ chiedi_cartella_backup() {
   attuale=$(valore_env BACKUP_DIR)
   echo "Dove salvo i backup? Meglio fuori da questo disco: un disco esterno, o la cartella di Google Drive, OneDrive o"
   echo "Dropbox sul computer (con Google Drive per desktop: \"Esegui il mirroring dei file\"). I backup sono cifrati."
-  echo "Adesso: ${attuale:-la cartella \"backup\" qui accanto}"
+  echo "Adesso: ${attuale:-la cartella \"backup\" qui accanto}. Potrai cambiarla quando vuoi con --cartella-backup."
   read -r -p "Scrivi (o incolla) il percorso di una cartella, oppure premi Invio per lasciarla com'è: " risposta || risposta=""
   # Gli spazi all'inizio e alla fine, e le virgolette che il terminale aggiunge incollando un percorso con gli spazi.
   risposta=$(printf '%s' "$risposta" | sed -e 's/^[[:space:]"'"'"']*//' -e 's/[[:space:]"'"'"']*$//')
   if [ -z "$risposta" ]; then
+    # Scritta anche quella di serie: così la domanda non torna a ogni avvio.
+    [ -n "$attuale" ] || scrivi_env BACKUP_DIR ./backup
     echo "La cartella dei backup resta ${attuale:-backup, qui accanto}."
     return
   fi
@@ -237,9 +239,10 @@ chiedi_cartella_backup() {
 if [ "$CARTELLA_BACKUP_DA_SCEGLIERE" = true ]; then
   passo "La cartella dei backup"
   chiedi_cartella_backup
-elif [ "$FARE_BACKUP" = true ] && [ -z "$(valore_env WALLETTRACKER_BACKUP_PASSWORD)" ] &&
-  [ -z "$(valore_env BACKUP_DIR)" ] && [ -t 0 ]; then
-  # Il primo backup (manca la password): insieme alla password, la cartella. Solo da un terminale vero.
+elif [ -z "$(valore_env BACKUP_DIR)" ] && [ -z "$FILE_RIPRISTINO" ] && [ -t 0 ]; then
+  # Nel .env non c'è ancora BACKUP_DIR: la prima installazione, o chi viene da una versione di prima. Si chiede una
+  # volta, a qualunque avvio (anche il doppio clic su "Avvia"), e solo da un terminale vero: nella CI, o con la
+  # risposta che arriva da un altro programma, no.
   passo "La cartella dei backup"
   chiedi_cartella_backup
 fi

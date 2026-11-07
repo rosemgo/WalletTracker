@@ -865,7 +865,7 @@ digitale di uno sviluppatore che il sistema conosce. I nostri file non lo sono, 
 
 | Sistema | Che cosa vedi | Che cosa fare |
 |---|---|---|
-| Windows | "Windows ha protetto il PC" (SmartScreen) | **Ulteriori informazioni** → **Esegui comunque**. Oppure, **prima** di aprire lo ZIP: tasto destro sullo ZIP → **Proprietà** → spunta **Sblocca** → OK: tutti i file dentro nascono senza segno |
+| Windows | "Windows ha protetto il PC" (SmartScreen) | **Ulteriori informazioni** → **Esegui comunque**. Oppure, **prima** di aprire lo ZIP: tasto destro sullo ZIP → **Proprietà** → spunta **Annulla blocco** (**Sblocca** su Windows 10) → OK: tutti i file dentro nascono senza segno |
 | Windows | "Avviso di sicurezza: l'autore non può essere verificato" | **Esegui** |
 | Mac | "non può essere aperto perché proviene da uno sviluppatore non identificato" | **tasto destro** sul file → **Apri** → **Apri**. Una volta per file: poi il Mac se lo ricorda |
 | Mac (versioni nuove) | il tasto destro non basta | **Impostazioni di Sistema** → **Privacy e sicurezza** → in fondo, "Apri comunque" |
@@ -1027,17 +1027,18 @@ l'aggiornamento.
 
 ### T2. Le schermate che mancano
 
-Quelle di **Windows** e di **Docker Desktop** si possono fare solo su un PC Windows: nella guida al loro posto c'è
-un segnaposto "📷 *Schermata da aggiungere*". Durante la prova (parte U) servono queste:
+Quelle di **Windows** e di **Docker Desktop** si possono fare solo su un PC Windows. Fatte durante la prova (parte U):
 
-| N. | Che cosa | Capitolo della guida |
-|---|---|---|
-| 1 | l'installazione di Docker Desktop (una finestra qualsiasi dell'installazione) | 2 |
-| 2 | Docker Desktop con "Engine running" | 2 |
-| 3 | Docker Desktop → Settings → General, con "Start Docker Desktop when you sign in" spuntato | 2 |
-| 4 | le Proprietà dello ZIP, con "Sblocca" | 3 |
-| 5 | l'avviso "Windows ha protetto il PC" (se compare) | 4 |
-| 6 | la finestra alla fine di "Avvia WalletTracker" | 4 |
+| N. | Che cosa | Capitolo della guida | Com'è andata |
+|---|---|---|---|
+| 1 | Docker Desktop con "Engine running" | 2 | `docker-engine-running.png` |
+| 2 | Settings → General, con "Start Docker Desktop when you sign in" spuntato | 2 | `docker-avvio-automatico.png` |
+| 3 | le Proprietà dello ZIP, con "Annulla blocco" ("Sblocca" su Windows 10) | 3 | `zip-annulla-blocco.png`, con il nome utente del percorso sostituito |
+| 4 | la finestra alla fine di "Avvia WalletTracker" | 4 | `fine-avvio.png`, senza le due righe sulla password d'esempio (venivano dal `.env` di sviluppo: chi installa dallo ZIP non le vede) |
+
+Due non ci sono, apposta: l'**installazione di Docker Desktop** (la spiega bene il sito di Docker, e cambia a ogni
+versione) e l'**avviso "Windows ha protetto il PC"**, che con lo ZIP sbloccato non compare: nella guida c'è solo il
+testo, con i pulsanti da premere.
 
 Prima di metterle nel repository, guarda che non ci siano dati tuoi: nomi, indirizzi, il nome del computer nella rete
 Tailscale, importi veri.

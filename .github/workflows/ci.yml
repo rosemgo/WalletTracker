@@ -305,11 +305,20 @@ jobs:
           sudo cmp scaricato.backup "backup/$nome"
           test "$(curl -s -o /dev/null -w '%{http_code}' -b remoto "http://localhost:8001/api/backups/$nome")" = 403
 
-      # La cartella dei backup scelta dallo script (docs/48, parte F): un percorso relativo, con uno spazio e tra
-      # virgolette (come lo incolla un terminale), diventa completo nel .env; i container la usano subito, l'app la
-      # mostra; Invio vuoto la lascia com'è. La cartella è già dell'utente 1000, come per .data e backup.
+      # La cartella dei backup scelta dallo script (docs/48, parte F): al primo avvio, una volta sola; poi un percorso
+      # relativo, con uno spazio e tra virgolette (come lo incolla un terminale), diventa completo nel .env; i container
+      # la usano subito, l'app la mostra; Invio vuoto la lascia com'è. La cartella è già dell'utente 1000, come per
+      # .data e backup.
       - name: La cartella dei backup
         run: |
+          # Al primo avvio da una finestra vera ("script" ne simula una) la domanda arriva, una volta sola: Invio scrive
+          # la cartella di serie. Fino a qui la CI non l'aveva vista: la risposta non arrivava da un terminale.
+          if grep -q '^BACKUP_DIR=' .env; then echo "BACKUP_DIR c'è già"; exit 1; fi
+          printf '\n' | script -qec './installa.sh --senza-browser' /dev/null > primo-avvio.txt
+          grep -q 'Dove salvo i backup' primo-avvio.txt
+          grep -qx 'BACKUP_DIR=./backup' .env
+          script -qec './installa.sh --senza-browser' /dev/null < /dev/null > secondo-avvio.txt
+          if grep -q 'Dove salvo i backup' secondo-avvio.txt; then echo "la domanda è tornata"; exit 1; fi
           sudo mkdir "altra cartella" && sudo chown 1000:1000 "altra cartella"
           printf '"altra cartella"\n' | ./installa.sh --cartella-backup --senza-browser
           grep -qxF "BACKUP_DIR=$PWD/altra cartella" .env
