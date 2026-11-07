@@ -8,6 +8,7 @@ import { WalletApi } from '../api/wallet-api';
 import { InvestmentsCard } from '../investments/investments-card';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { LiquidityCard } from './liquidity-card';
 import { MonthChart, Trend } from './month-chart';
 import { UpperFirstPipe } from '../text/upper-first.pipe';
 
@@ -47,6 +48,7 @@ function capitalized(text: string): string {
     AlertsPanel,
     DatePipe,
     InvestmentsCard,
+    LiquidityCard,
     MoneyPipe,
     MonthChart,
     NgTemplateOutlet,

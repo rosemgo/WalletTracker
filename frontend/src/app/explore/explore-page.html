@@ -131,7 +131,7 @@
                 @if (uncategorizedQuery(r); as query) {
                   <!-- "Senza categoria": i movimenti da sistemare, in Movimenti (docs/43). -->
                   <a
-                    class="group-row"
+                    class="group-row uncategorized"
                     routerLink="/movimenti"
                     [queryParams]="query"
                     [attr.aria-label]="r.name + ': apri i movimenti, per dare loro una categoria'"

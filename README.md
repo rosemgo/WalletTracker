@@ -85,6 +85,10 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 > Sempre fuori dalla numerazione: [Le maiuscole, il riquadro dopo un clic e le azioni spezzate](docs/maiuscole-e-contorni.md).
 
+> Sempre fuori dalla numerazione: [I saldi dei conti, il plafond della carta e la liquidità nel Riepilogo](docs/saldi.md).
+
+> Sempre fuori dalla numerazione: [Da ogni riepilogo ai suoi movimenti: i collegamenti](docs/collegamenti.md).
+
 1. [Installazione e setup dell'ambiente](docs/01-installazione-e-setup.md)
 2. [Fase 0: collegamento alla banca](docs/02-fase-0-collegamento-banca.md)
 3. [Modello e regole: le decisioni prese](docs/03-modello-e-regole.md)

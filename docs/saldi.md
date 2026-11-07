@@ -389,3 +389,38 @@ il plafond non era ancora stato **letto** (nessuna sincronizzazione dopo l'aggio
 ancora quello di prima). Prima la versione precedente mostrava il vecchio saldo salvato, 2.500 €, e sembrava
 funzionare. La scritta ora dice "plafond non ancora letto: premi «Aggiorna ora»", vera in tutti e due i casi: se la
 banca il plafond non lo dà, resta così anche dopo.
+
+---
+
+## Parte K: la liquidità nel Riepilogo
+
+Richiesta dell'utente: vedere nel Riepilogo **quanti soldi ci sono sui conti**, in tutto. La scheda **"Liquidità"**
+(`overview/liquidity-card.ts`) somma i saldi di adesso, quelli che si vedono nella pagina Conti.
+
+**Che cosa conta.**
+
+| Conto | Nel totale? | Perché |
+|---|---|---|
+| conto principale, di spesa, senza ruolo | sì | sono i soldi di tutti i giorni |
+| conto di investimento | sì | il suo saldo sono i soldi fermi lì, non investiti in titoli (parte D): liquidità anche lei |
+| carta di credito | no | non ha un saldo ma un plafond (parte J): non sono soldi tuoi |
+| conto escluso | no | l'hai escluso tu, da tutto |
+| conto senza saldo | no | non sappiamo quanto c'è: la scheda dice "1 conto senza saldo non è nel totale" |
+
+Si sommano solo i conti nella valuta del Riepilogo (con più valute, quella scelta in alto): 100 € e 100 $ non fanno
+200 di niente.
+
+**Dove sta.** Sul PC nella colonna di sinistra, sotto la scheda del grafico; sul telefono subito dopo. Nel modello
+(`overview-page.html`) le due schede stanno in un contenitore, `overview-main`, che nella griglia occupa le quattro righe
+della colonna di sinistra: così la liquidità sta subito sotto il grafico, e non sotto la scheda più lunga della colonna
+a destra. Non è legata al mese guardato: i saldi sono quelli di adesso, e ogni conto dice di che giorno è il suo ("al
+6 nov"). La scheda intera porta alla pagina Conti.
+
+**Da dove arrivano i dati.** Nessuna API nuova: la stessa `GET /api/accounts` della pagina Conti, attraverso
+`AccountsStore`. La scheda la richiede a ogni apertura del Riepilogo (`refresh`), perché i saldi cambiano a ogni
+aggiornamento dalla banca e a ogni importazione. Il totale si calcola nella dashboard: è una somma di pochi numeri già
+arrivati.
+
+**I test.** `liquidity-card.spec.ts`: il totale con il conto di investimento ma senza la carta, il conto escluso e
+quello in un'altra valuta; i conti dal più ricco; il conto senza saldo detto a parte; nessuna scheda senza saldi.
+
