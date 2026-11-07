@@ -34,9 +34,9 @@ interface Row {
         <strong class="liquidity-total" data-testid="liquidity-total">{{
           total() | money: currency() : 'symbol' : '1.0-0'
         }}</strong>
-        <span class="secondary">
-          Sui tuoi conti, adesso{{ rows().length > 1 ? ', in ' + rows().length + ' conti' : '' }}
-        </span>
+        <span class="secondary">{{
+          rows().length === 1 ? 'Sul tuo conto, adesso' : 'Su ' + rows().length + ' conti, adesso'
+        }}</span>
         <ul class="rows">
           @for (r of rows(); track r.account.id) {
             <li>

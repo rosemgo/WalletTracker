@@ -77,6 +77,7 @@ describe('LiquidityCard', () => {
       expect.stringMatching(/^Banca Alfa ··0001 al 6 nov\s?3\.245,18\s€$/),
       expect.stringMatching(/^Broker Beta al 6 nov\s?410,50\s€$/),
     ]);
+    expect(page.textContent).toContain('Su 2 conti, adesso');
     expect(page.querySelector('a')?.getAttribute('href')).toBe('/conti');
   });
 
