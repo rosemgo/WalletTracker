@@ -784,3 +784,30 @@ bonifici non c'è niente da giudicare: un mese con meno bonifici non è "andato 
 come il grafico delle rendite; un mese con più soldi tornati indietro che partiti resta una barra verso il basso, dello
 stesso colore (la linea dello zero c'è sempre). Il verde e il rosso restano dove c'è un riferimento: il netto di
 Analisi, e "sopra o sotto il solito" del Riepilogo.
+
+---
+
+## Parte R: le rendite del Riepilogo al netto, e "Quest'anno" di serie
+
+**Il difetto.** La scheda "Investito" del Riepilogo diceva "Rendite quest'anno: 6.993 €", la pagina Investimenti, con
+"Quest'anno", "5.811 €". Le due cifre parlavano dello stesso periodo, ma la scheda prendeva le rendite **lorde**
+(`incomeThisYear` sommava solo `Investments::income`), la pagina le **nette** (parte M): la differenza erano le ritenute
+dell'anno. Ora `incomeThisYear` è rendite più ritenute dal 1° gennaio, come tutte le cifre della pagina. Il test:
+`InvestmentServiceTest.theGrossIncomeTheWithholdingAndTheNetAreSeenApart` (151,87 €: 12,50 + 30 + 125 − 15,63).
+
+"Investito in titoli quest'anno" invece tornava già: nella pagina è la riga sotto la cifra grande ("76.656 €
+quest'anno"); la cifra grande è l'investito di tutta la storia.
+
+**Il periodo di serie.** La pagina si apre su **"Quest'anno"**, e il pulsante è il primo, prima di "12 mesi". Lo stesso
+in Analisi e nel grafico della pagina di una categoria (`docs/38`, aggiunta "Quest'anno di serie"). I link salvati con
+`?periodo=anno` aprono ancora i 12 mesi. Il filtro dei Movimenti non cambia: lì "Tutto" resta la scelta giusta per
+cercare un movimento.
+
+**Perché 5.811 € e 5.812 €.** Sono due periodi diversi: "12 mesi" comincia a dicembre dell'anno prima, "Quest'anno" a
+gennaio. La differenza è dicembre (toccando la barra "D" si legge la sua cifra). E le cifre grandi sono arrotondate
+all'euro (vedi sotto): due somme come 5.811,40 € e 5.811,60 € diventano 5.811 € e 5.812 €.
+
+**Le cifre grandi senza centesimi.** È una scelta della Fase grafica (`docs/36`, "Gli importi sono senza
+decimali"): la cifra grande si legge d'un colpo, e i centesimi su migliaia di euro non cambiano il senso. Le cifre
+precise, con i centesimi, sono negli elenchi e nei movimenti.
+

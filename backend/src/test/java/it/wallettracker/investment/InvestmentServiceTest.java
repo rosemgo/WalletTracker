@@ -209,6 +209,9 @@ class InvestmentServiceTest {
 
         assertThat(o.incomeInPeriod()).isEqualByComparingTo("197.50"); // 72,50 + 125, lordo
         assertThat(o.withholdingInPeriod()).isEqualByComparingTo("-15.63");
+        // La scheda del Riepilogo, come la pagina: netto. 12,50 + 30 di quest'anno, più la cedola di Fineco tolta la
+        // ritenuta (125 - 15,63).
+        assertThat(o.incomeThisYear()).isEqualByComparingTo("151.87");
         assertThat(o.otherTaxesInPeriod()).isEqualByComparingTo("-2");
         assertThat(o.months().getLast().income()).isEqualByComparingTo("125");
         assertThat(o.months().getLast().withholding()).isEqualByComparingTo("-15.63");

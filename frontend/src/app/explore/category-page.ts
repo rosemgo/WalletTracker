@@ -46,7 +46,7 @@ export class CategoryPage implements OnInit {
   private categoryId = 0;
   protected readonly error = signal<string | null>(null);
   /** Il grafico: gli ultimi 12 mesi, o l'anno del mese guardato da gennaio (YTD, docs/38 aggiunta "Quest'anno"). */
-  protected readonly chartPeriod = signal<'YEAR' | 'YEAR_TO_DATE'>('YEAR');
+  protected readonly chartPeriod = signal<'YEAR' | 'YEAR_TO_DATE'>('YEAR_TO_DATE'); // di serie: Quest'anno
 
   /** "ottobre": il mese guardato, in parole. */
   protected readonly monthName = computed(() => {

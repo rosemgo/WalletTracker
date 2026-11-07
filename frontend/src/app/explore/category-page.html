@@ -57,17 +57,17 @@
       <div class="segmented" role="group" aria-label="Periodo del grafico">
         <button
           type="button"
-          [attr.aria-pressed]="chartPeriod() === 'YEAR'"
-          (click)="chartPeriod.set('YEAR')"
-        >
-          12 mesi
-        </button>
-        <button
-          type="button"
           [attr.aria-pressed]="chartPeriod() === 'YEAR_TO_DATE'"
           (click)="chartPeriod.set('YEAR_TO_DATE')"
         >
           Quest'anno
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="chartPeriod() === 'YEAR'"
+          (click)="chartPeriod.set('YEAR')"
+        >
+          12 mesi
         </button>
       </div>
       <!-- Tocca una barra: il mese e la sua cifra qui sopra; la cifra grande, il budget e "Dove" passano a quel mese. -->

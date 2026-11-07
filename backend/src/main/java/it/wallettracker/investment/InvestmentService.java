@@ -115,7 +115,10 @@ public class InvestmentService {
                 Investments.sum(movements, Investments::invested, yearStart, today),
                 Investments.sum(movements, Investments::invested, monthStart, today),
                 Investments.sum(movements, Investments::transferred, LocalDate.MIN, today),
-                Investments.sum(movements, Investments::income, yearStart, today),
+                // Le rendite dell'anno al netto delle ritenute, come tutte le cifre della pagina (parte M): prima erano
+                // lorde, e la scheda del Riepilogo non tornava con la pagina Investimenti.
+                Investments.sum(movements, Investments::income, yearStart, today)
+                        .add(Investments.sum(movements, Investments::withholding, yearStart, today)),
                 Investments.sum(movements, Investments::bought, from, today),
                 Investments.sum(movements, Investments::sold, from, today),
                 Investments.sum(movements, Investments::transferred, from, today),

@@ -144,13 +144,13 @@ describe('ExplorePage', () => {
     return { fixture, page, button };
   }
 
-  it('starts with the expenses of the year, the last month chosen, the usual and the categories', async () => {
+  it('starts with the expenses of this year, the last month chosen, the usual and the categories', async () => {
     const { page } = await render();
     const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
 
     expect(seriesQueries[0]).toMatchObject({
       metric: 'EXPENSES',
-      period: 'YEAR',
+      period: 'YEAR_TO_DATE', // di serie: Quest'anno
       categoryId: null,
     });
     expect(groupQueries[0]).toMatchObject({ by: 'CATEGORY', from: '2026-10-01', to: '2026-10-28' });
@@ -164,7 +164,14 @@ describe('ExplorePage', () => {
     expect(rows[0]).toMatch(/Spesa alimentare\s*4 movimenti · \+32\s€ sul solito\s*412\s€\s*65%/);
     expect(rows[2]).toContain('Senza categoria');
     // Le scelte nell'indirizzo, senza un passo nella cronologia.
-    expect(navigations.at(-1)).toMatchObject({ cosa: 'spese', periodo: 'anno', per: 'categoria' });
+    expect(navigations.at(-1)).toMatchObject({
+      cosa: 'spese',
+      periodo: 'questanno',
+      per: 'categoria',
+    });
+    // "Quest'anno" viene prima di "12 mesi".
+    const periods = Array.from(page.querySelectorAll('button')).map((b) => b.textContent?.trim());
+    expect(periods.indexOf("Quest'anno")).toBe(periods.indexOf('12 mesi') - 1);
   });
 
   it('a bar shows its period; the metric, the period and the grouping change the view', async () => {

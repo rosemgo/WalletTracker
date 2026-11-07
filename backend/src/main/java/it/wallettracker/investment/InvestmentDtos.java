@@ -58,7 +58,7 @@ public final class InvestmentDtos {
      * @param investedThisYear    l'investito netto dal 1° gennaio
      * @param investedThisMonth   l'investito netto del mese in corso
      * @param transferredTotal    i bonifici netti verso i conti di investimento di tutta la storia
-     * @param incomeThisYear      le rendite dal 1° gennaio
+     * @param incomeThisYear      le rendite nette (tolte le ritenute) dal 1° gennaio: la scheda del Riepilogo
      * @param boughtInPeriod      gli acquisti di titoli nei mesi del periodo
      * @param soldInPeriod        quanto è rientrato dalle vendite nei mesi del periodo
      * @param transferredInPeriod i bonifici netti verso i conti di investimento nei mesi del periodo
