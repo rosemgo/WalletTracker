@@ -197,6 +197,20 @@ describe('ImportPage', () => {
     expect(selectByLabel(page, 'Conto').selectedOptions[0].textContent).toContain('Scalable');
   });
 
+  it('with Trade Republic only as a manual account there is no "Completa i movimenti"', async () => {
+    const { page } = await open();
+
+    expect(page.querySelector('[data-testid="trade-republic-hint"]')).toBeNull();
+  });
+
+  it('with a linked Trade Republic account it points to "Completa i movimenti"', async () => {
+    accounts = [...accounts, account(7, 'ENABLE_BANKING', 'Trade Republic Bank GmbH')];
+    const { page } = await open();
+
+    const hint = page.querySelector('[data-testid="trade-republic-hint"]');
+    expect(hint?.querySelector('a')?.getAttribute('href')).toBe('/importa/completa');
+  });
+
   it('without manual accounts it says to create one first', async () => {
     accounts = [account(1, 'ENABLE_BANKING', 'ING')];
     const { page } = await open();

@@ -17,6 +17,7 @@ import { BalanceForm } from '../accounts/balance-form';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { FileDrop } from '../ui/file-drop';
+import { isTradeRepublic } from './completion-page';
 
 /** I separatori che il backend accetta, con un nome leggibile. */
 export const DELIMITERS: { value: string; label: string }[] = [
@@ -64,6 +65,8 @@ export class ImportPage implements OnInit {
   protected readonly dateFormats = DATE_FORMATS;
 
   protected readonly accounts = signal<Account[]>([]); // solo i conti manuali
+  /** C'è un conto Trade Republic collegato: allora la pagina indica "Completa i movimenti" (docs/31). */
+  protected readonly linkedTradeRepublic = signal(false);
   protected readonly loading = signal(true);
   protected readonly file = signal<File | null>(null);
   protected readonly preview = signal<ImportPreview | null>(null);
@@ -169,6 +172,9 @@ export class ImportPage implements OnInit {
       next: (accounts) => {
         const manual = accounts.filter((a) => a.source === 'MANUAL');
         this.accounts.set(manual);
+        this.linkedTradeRepublic.set(
+          accounts.some((a) => a.source !== 'MANUAL' && isTradeRepublic(a)),
+        );
         const chosen = manual.find((a) => a.id === fromLink) ?? manual[0];
         this.account.setValue(chosen?.id ?? null, { emitEvent: false });
         this.loading.set(false);
