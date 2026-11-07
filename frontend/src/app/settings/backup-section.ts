@@ -20,6 +20,8 @@ const TYPES: Record<BackupFile['type'], string> = {
 @Component({
   selector: 'app-backup-section',
   imports: [DatePipe],
+  // Sul telefono: un percorso lungo (D:/Backup/...) va a capo dove serve; un'opzione (-CartellaBackup) mai al trattino.
+  styles: '.path { overflow-wrap: anywhere; } .option { white-space: nowrap; }',
   template: `
     @if (backups.status(); as status) {
       @if (!status.available) {
@@ -89,10 +91,19 @@ const TYPES: Record<BackupFile['type'], string> = {
             </p>
           }
         }
+        <p data-testid="backup-folder">
+          I backup sono in:
+          @if (status.serverDirectory) {
+            <code class="path">{{ status.serverDirectory }}</code>
+          } @else {
+            la cartella <code>backup</code> di WalletTracker, sul server
+          }
+        </p>
         <p class="hint">
-          I backup stanno nella cartella <code>backup</code> del server (o in quella scelta nel
-          .env): copiali ogni tanto anche fuori. Il ripristino si fa dal server, con lo script di
-          installazione (<code>-Ripristina</code>): docs/48.
+          Per cambiarla (un disco esterno, Google Drive) lancia dal server lo script di
+          installazione con <code class="option">-CartellaBackup</code> (Windows) o
+          <code class="option">--cartella-backup</code>. Il ripristino si fa dal server, con
+          <code class="option">-Ripristina</code>: docs/48.
         </p>
       }
     } @else {

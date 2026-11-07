@@ -132,6 +132,8 @@ wallettracker:
     # quelle del progetto; se la seconda non c'è, la dashboard dice che i backup si fanno con l'app in Docker.
     directory: ${WALLETTRACKER_BACKUP_DIR:../backup}
     state-directory: ${WALLETTRACKER_BACKUP_STATE_DIR:../.data/backup-stato}
+    # La cartella dei backup come si chiama sul server (BACKUP_DIR nel .env), solo da mostrare in Impostazioni → Backup.
+    server-directory: ${WALLETTRACKER_BACKUP_DIR_ON_SERVER:}
   sync:
     enabled: true
     # Ogni conto viene aggiornato al massimo ogni 6 ore: 4 letture al giorno, il limite PSD2 in background.

@@ -305,6 +305,25 @@ jobs:
           sudo cmp scaricato.backup "backup/$nome"
           test "$(curl -s -o /dev/null -w '%{http_code}' -b remoto "http://localhost:8001/api/backups/$nome")" = 403
 
+      # La cartella dei backup scelta dallo script (docs/48, parte F): un percorso relativo, con uno spazio e tra
+      # virgolette (come lo incolla un terminale), diventa completo nel .env; i container la usano subito, l'app la
+      # mostra; Invio vuoto la lascia com'è. La cartella è già dell'utente 1000, come per .data e backup.
+      - name: La cartella dei backup
+        run: |
+          sudo mkdir "altra cartella" && sudo chown 1000:1000 "altra cartella"
+          printf '"altra cartella"\n' | ./installa.sh --cartella-backup --senza-browser
+          grep -qxF "BACKUP_DIR=$PWD/altra cartella" .env
+          ./installa.sh --backup --senza-browser
+          ls "altra cartella"/wallettracker-manuale-*.backup
+          rm -f server
+          curl -fsS -c server -b server http://localhost:8000/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' server)
+          curl -fsS -c server -b server -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/login
+          curl -fsS -b server http://localhost:8000/api/backups | grep -qF "\"serverDirectory\":\"$PWD/altra cartella\""
+          printf '\n' | ./installa.sh --cartella-backup --senza-browser
+          grep -qxF "BACKUP_DIR=$PWD/altra cartella" .env
+
       # nginx -t controlla la configurazione senza riavviare il server.
       - name: Controlla la configurazione di nginx
         run: docker compose exec -T web nginx -t

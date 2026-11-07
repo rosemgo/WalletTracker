@@ -365,6 +365,7 @@ export interface BackupStatus {
   attention: boolean; // qualcosa da sistemare: l'app mostra un avviso
   backups: BackupFile[]; // dal più nuovo
   canDownload: boolean; // la richiesta arriva dal server: i backup si possono scaricare
+  serverDirectory: string | null; // BACKUP_DIR del .env, o null: la cartella "backup" di WalletTracker
 }
 
 /** Come sta andando un budget (enum BudgetStatus nel backend). */

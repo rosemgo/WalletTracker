@@ -4,6 +4,17 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.0
+
+- **Scegli dove salvare i backup**: al primo backup lo script chiede la cartella (un disco esterno, o la cartella di
+  Google Drive sul computer), e per cambiarla dopo c'è `installa.ps1 -CartellaBackup`
+  (`./installa.sh --cartella-backup`). Niente più `.env` da modificare a mano.
+- **L'app mostra dove sono i backup**: in Impostazioni → Backup, con il comando per cambiare cartella.
+- **La guida**: come tenere i backup su Google Drive ("Esegui il mirroring dei file"), capitolo 8.
+
+Hai già la 1.1.1? Doppio clic su **Aggiorna WalletTracker**. I backup restano dove sono; se vuoi spostarli, lancia
+`-CartellaBackup` e poi sposta tu i file vecchi nella cartella nuova.
+
 ## 1.1.1
 
 - **Collegare le banche dallo ZIP funziona**: Enable Banking vuole un indirizzo https, e ora l'app usa quello di

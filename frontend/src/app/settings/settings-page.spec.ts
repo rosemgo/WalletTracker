@@ -67,6 +67,7 @@ describe('SettingsPage', () => {
           attention: false,
           backups: [],
           canDownload: false,
+          serverDirectory: null,
         }),
       saveEnableBanking: (applicationId: string, pem: string) => {
         saved.push([applicationId, pem]);
