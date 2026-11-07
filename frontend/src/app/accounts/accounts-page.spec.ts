@@ -374,6 +374,14 @@ describe('AccountsPage', () => {
       a.textContent?.includes('Importa un file'),
     ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/importa?conto=8');
+    // Le azioni: una per riga, in quest'ordine, e "Elimina" in fondo, in rosso.
+    const actions = Array.from(row.querySelectorAll('ul.account-actions > li')).map((li) =>
+      li.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Importa un file', 'Carica il logo', 'Elimina']);
+    expect(row.querySelector('ul.account-actions > li:last-child button')?.classList).toContain(
+      'danger',
+    );
 
     // "elimina" chiede conferma; solo "Elimina" cancella davvero.
     (

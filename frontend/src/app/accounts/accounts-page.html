@@ -165,37 +165,55 @@
               <td data-label="">
                 @if (confirmingDelete() === account.id) {
                   <!-- Eliminare chiede conferma: non si può annullare. -->
-                  <span class="secondary"
-                    >Il conto e tutti i suoi movimenti verranno eliminati.</span
-                  >
-                  <button type="button" (click)="remove(account)">Elimina</button>
-                  <button type="button" class="link" (click)="confirmingDelete.set(null)">
-                    Annulla
-                  </button>
+                  <div class="confirm-delete">
+                    <span class="secondary"
+                      >Il conto e tutti i suoi movimenti verranno eliminati.</span
+                    >
+                    <div class="confirm-buttons">
+                      <button type="button" class="danger" (click)="remove(account)">
+                        Elimina
+                      </button>
+                      <button type="button" class="link" (click)="confirmingDelete.set(null)">
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
                 } @else {
-                  <a class="action" routerLink="/importa" [queryParams]="{ conto: account.id }"
-                    >Importa un file</a
-                  >
-                  ·
-                  <!-- Il logo di un conto manuale: un'immagine scelta dall'utente (docs/loghi.md, parte C). -->
-                  <label class="link logo-upload">
-                    {{ account.logoVersion ? 'Cambia il logo' : 'Carica il logo' }}
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      (change)="uploadLogo(account, $event)"
-                    />
-                  </label>
-                  @if (account.logoVersion) {
-                    ·
-                    <button type="button" class="link" (click)="removeLogo(account)">
-                      Togli il logo
-                    </button>
-                  }
-                  ·
-                  <button type="button" class="link" (click)="confirmingDelete.set(account.id)">
-                    Elimina
-                  </button>
+                  <!-- Le azioni di un conto manuale: una per riga, e "Elimina" in fondo, staccata e in rosso. -->
+                  <ul class="account-actions">
+                    <li>
+                      <a class="action" routerLink="/importa" [queryParams]="{ conto: account.id }"
+                        >Importa un file</a
+                      >
+                    </li>
+                    <li>
+                      <!-- Il logo di un conto manuale: un'immagine scelta dall'utente (docs/loghi.md, parte C). -->
+                      <label class="link logo-upload">
+                        {{ account.logoVersion ? 'Cambia il logo' : 'Carica il logo' }}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          (change)="uploadLogo(account, $event)"
+                        />
+                      </label>
+                    </li>
+                    @if (account.logoVersion) {
+                      <li>
+                        <button type="button" class="link" (click)="removeLogo(account)">
+                          Togli il logo
+                        </button>
+                      </li>
+                    }
+                    <li class="delete">
+                      <button
+                        type="button"
+                        class="link danger"
+                        (click)="confirmingDelete.set(account.id)"
+                      >
+                        Elimina
+                      </button>
+                    </li>
+                  </ul>
                 }
               </td>
             } @else {

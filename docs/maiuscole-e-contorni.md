@@ -129,3 +129,28 @@ mezzo. I testi delle azioni sono tutti brevi, quindi non escono mai dallo scherm
   "Carica il logo" nessun contorno, con Tab il contorno c'è; le azioni non vanno più a capo a metà;
 - la ricerca di tutti i testi che cominciano in minuscolo, file per file: i casi rimasti minuscoli sono quelli della
   regola A1 (parole dentro una frase, righe che completano una cifra, il modulo delle Regole).
+
+---
+
+## Aggiunta: le azioni di un conto manuale, una per riga
+
+**Il difetto.** Nella pagina Conti, per un conto manuale, l'ultima colonna aveva le azioni una dopo l'altra, separate
+da "·": "Importa un file · Cambia il logo · Togli il logo · Elimina". La colonna è stretta, e il testo andava a capo
+dove capitava: il "·" restava in fondo a una riga, "Elimina" cominciava con uno spazio, e non si capiva un ordine.
+`white-space: nowrap` (parte C) teneva intera ogni azione, ma non poteva mettere in fila l'elenco.
+
+**La correzione.** Le azioni sono un elenco vero (`ul.account-actions`), una per riga, allineate a sinistra, senza
+"·". **"Elimina" sta in fondo, un poco staccata, in rosso** (`button.link.danger`): cancella il conto con tutti i suoi
+movimenti, e non deve stare in mezzo alle altre. La conferma ha il pulsante pieno rosso (`button.danger`): testo bianco
+sul rosso scuro del tema chiaro, testo scuro sul rosso chiaro del tema scuro, dove il bianco si leggeva male.
+
+Due ritocchi trovati guardando la pagina:
+- "Importa un file" è un link (porta a un'altra pagina), le altre sono pulsanti: era l'unica sottolineata. Nell'elenco
+  ora hanno lo stesso aspetto, e la sottolineatura compare passandoci sopra, come per i pulsanti;
+- tra "Elimina" e "Annulla" della conferma lo spazio era doppio: la regola generale `td button + button` (un margine
+  tra due pulsanti vicini in una tabella) si sommava allo spazio del contenitore. Lì il margine è tolto.
+
+**I test.** `accounts-page.spec.ts`: le azioni in quest'ordine, una per riga, e "Elimina" in fondo con la classe
+`danger`. Nel browser: a 1136 pixel e sul telefono, le quattro azioni con lo stesso bordo sinistro; la conferma nel
+tema scuro e in quello chiaro.
+
