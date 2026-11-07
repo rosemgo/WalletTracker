@@ -169,9 +169,11 @@ describe('ExplorePage', () => {
       periodo: 'questanno',
       per: 'categoria',
     });
-    // "Quest'anno" viene prima di "12 mesi".
-    const periods = Array.from(page.querySelectorAll('button')).map((b) => b.textContent?.trim());
-    expect(periods.indexOf("Quest'anno")).toBe(periods.indexOf('12 mesi') - 1);
+    // I periodi partono da "Quest'anno" e "12 mesi", come in tutte le barre dei periodi.
+    const periods = Array.from(
+      page.querySelectorAll('.segmented[aria-label="Periodo"] button'),
+    ).map((b) => b.textContent?.trim());
+    expect(periods).toEqual(["Quest'anno", '12 mesi', '6 mesi', 'Mese', 'Settimana']);
   });
 
   it('a bar shows its period; the metric, the period and the grouping change the view', async () => {

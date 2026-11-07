@@ -2113,17 +2113,10 @@ ul.rows li > span {
     justify-self: start;
   }
 
-  /* La scheda del grafico è alta quanto la colonna a destra (align-self: stretch), così i bordi in basso combaciano;
-     lo spazio in più va sopra il grafico, che scende in fondo alla scheda con la legenda e le entrate. Il grafico non
-     si stira: ha proporzioni fisse, e linee e punti si deformerebbero. Se invece la scheda è più alta della colonna,
-     le righe della griglia si allungano e non cambia niente. */
+  /* La scheda del grafico resta alta quanto il suo contenuto, anche se la colonna a destra finisce più in basso:
+     allungata, lasciava un grande spazio vuoto sopra il grafico (provato e tolto, su richiesta dell'utente). */
   .overview > .hero {
     grid-row: span 3;
-    align-self: stretch;
-  }
-
-  .overview > .hero > app-month-chart {
-    margin-top: auto;
   }
 }
 
