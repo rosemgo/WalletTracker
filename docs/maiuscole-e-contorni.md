@@ -137,7 +137,7 @@ mezzo. I testi delle azioni sono tutti brevi, quindi non escono mai dallo scherm
 **Il difetto.** Nella pagina Conti, per un conto manuale, l'ultima colonna aveva le azioni una dopo l'altra, separate
 da "·": "Importa un file · Cambia il logo · Togli il logo · Elimina". La colonna è stretta, e il testo andava a capo
 dove capitava: il "·" restava in fondo a una riga, "Elimina" cominciava con uno spazio, e non si capiva un ordine.
-`white-space: nowrap` (la parte sopra) teneva intera ogni azione, ma non poteva mettere in fila l'elenco.
+`white-space: nowrap` (parte C) teneva intera ogni azione, ma non poteva mettere in fila l'elenco.
 
 **La correzione.** Le azioni sono un elenco vero (`ul.account-actions`), una per riga, allineate a sinistra, senza
 "·". **"Elimina" sta in fondo, un poco staccata, in rosso** (`button.link.danger`): cancella il conto con tutti i suoi
