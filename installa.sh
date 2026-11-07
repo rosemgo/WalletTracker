@@ -9,6 +9,7 @@
 #   ./installa.sh --tailscale            apre l'app ai tuoi dispositivi con Tailscale, con https (docs/47)
 #   ./installa.sh --backup               un backup adesso (la prima volta chiede la password dei backup: docs/48)
 #   ./installa.sh --ripristina FILE      SOSTITUISCE i dati di adesso con quelli del backup FILE (chiede conferma)
+#   ./installa.sh --cartella-backup      sceglie (o cambia) la cartella dei backup: un disco esterno, Google Drive...
 #   ./installa.sh --aggiorna             passa all'ultima versione pubblicata, con un backup prima (docs/50, parte I)
 #   ./installa.sh --senza-browser        non apre il browser alla fine (per la CI)
 #
@@ -37,6 +38,7 @@ CON_TAILSCALE=false
 FARE_BACKUP=false
 FILE_RIPRISTINO=""
 AGGIORNA=false
+CARTELLA_BACKUP_DA_SCEGLIERE=false
 APRI_BROWSER=true
 # Un'opzione alla volta: "shift" toglie quella appena letta. --ripristina è l'unica con un valore (il file), che
 # si prende con un "shift" in più.
@@ -56,9 +58,10 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     --aggiorna) AGGIORNA=true ;;
+    --cartella-backup) CARTELLA_BACKUP_DA_SCEGLIERE=true ;;
     --senza-browser) APRI_BROWSER=false ;;
     -h | --aiuto | --help)
-      sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -196,6 +199,49 @@ else
       echo "            Per sostituirla con una generata a caso:  ./installa.sh --cambia-password-db"
     fi
   fi
+fi
+
+# --- 2b. La cartella dei backup (al primo backup, o con --cartella-backup: docs/48, parte F) ----------------
+# Dove vanno i backup: di serie la cartella "backup" qui accanto. Meglio un'altra: un disco esterno, o una cartella che
+# Google Drive / OneDrive / Dropbox tengono sul disco e copiano nel cloud (i backup sono cifrati: lì sono illeggibili).
+# La si sceglie qui, senza aprire il .env: lo script la scrive come BACKUP_DIR, e all'avvio (parte 5) Docker ricrea i
+# container che la usano. Dall'app no, apposta: cambiarla vuol dire comandare Docker (docs/17, riga 47).
+chiedi_cartella_backup() {
+  local attuale risposta
+  attuale=$(valore_env BACKUP_DIR)
+  echo "Dove salvo i backup? Meglio fuori da questo disco: un disco esterno, o la cartella di Google Drive, OneDrive o"
+  echo "Dropbox sul computer (con Google Drive per desktop: \"Esegui il mirroring dei file\"). I backup sono cifrati."
+  echo "Adesso: ${attuale:-la cartella \"backup\" qui accanto}"
+  read -r -p "Scrivi (o incolla) il percorso di una cartella, oppure premi Invio per lasciarla com'è: " risposta || risposta=""
+  # Gli spazi all'inizio e alla fine, e le virgolette che il terminale aggiunge incollando un percorso con gli spazi.
+  risposta=$(printf '%s' "$risposta" | sed -e 's/^[[:space:]"'"'"']*//' -e 's/[[:space:]"'"'"']*$//')
+  if [ -z "$risposta" ]; then
+    echo "La cartella dei backup resta ${attuale:-backup, qui accanto}."
+    return
+  fi
+  # ~ all'inizio vuol dire la tua cartella personale; nel .env le barre sono sempre "/" (anche i percorsi di Windows).
+  case "$risposta" in "~"*) risposta="$HOME${risposta#\~}" ;; esac
+  risposta=$(printf '%s' "$risposta" | tr '\\' '/')
+  case "$risposta" in
+    *[\$\#\`]*) errore "Il percorso non può contenere \$, # o \`: scegli un'altra cartella." ;;
+  esac
+  mkdir -p "$risposta" 2>/dev/null || errore "Non riesco a creare la cartella $risposta: controlla il percorso, o che il disco sia collegato."
+  # Un percorso relativo (es. ../backup) diventa completo: Compose lo leggerebbe a partire da questa cartella.
+  risposta=$(cd "$risposta" && pwd)
+  [ -w "$risposta" ] || [ "$(id -u)" = 0 ] || [ "$(uname -s)" = Linux ] ||
+    errore "Non posso scrivere nella cartella $risposta: scegline un'altra."
+  scrivi_env BACKUP_DIR "$risposta"
+  echo "I backup andranno in $risposta (BACKUP_DIR nel .env). Quelli vecchi restano dove sono: spostali tu, se vuoi."
+}
+
+if [ "$CARTELLA_BACKUP_DA_SCEGLIERE" = true ]; then
+  passo "La cartella dei backup"
+  chiedi_cartella_backup
+elif [ "$FARE_BACKUP" = true ] && [ -z "$(valore_env WALLETTRACKER_BACKUP_PASSWORD)" ] &&
+  [ -z "$(valore_env BACKUP_DIR)" ] && [ -t 0 ]; then
+  # Il primo backup (manca la password): insieme alla password, la cartella. Solo da un terminale vero.
+  passo "La cartella dei backup"
+  chiedi_cartella_backup
 fi
 
 # --- 3. Le cartelle ----------------------------------------------------------------------------------------

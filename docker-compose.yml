@@ -98,6 +98,8 @@ services:
       # sotto) e dove il container "backup" scrive il suo stato e legge le richieste (dentro .data).
       WALLETTRACKER_BACKUP_DIR: /app/backups
       WALLETTRACKER_BACKUP_STATE_DIR: /app/.data/backup-stato
+      # La stessa cartella dei backup, come si chiama sul server: solo da mostrare in Impostazioni → Backup (docs/48 F).
+      WALLETTRACKER_BACKUP_DIR_ON_SERVER: ${BACKUP_DIR:-}
       ENABLE_BANKING_PRIVATE_KEY_PATH: /app/secrets/enable-banking.pem
       ENABLE_BANKING_APP_ID: ${ENABLE_BANKING_APP_ID:-}
       # Uno o più indirizzi di ritorno, separati da virgole (docs/47, parti I e Q). Di serie nessuno: nell'app in Docker

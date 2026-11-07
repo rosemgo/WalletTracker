@@ -49,6 +49,7 @@ describe('App', () => {
           attention: false,
           backups: [],
           canDownload: true,
+          serverDirectory: null,
           ...backup,
         }),
       // Le versioni nuove (docs/50, parte J): di serie è l'ultima, niente avviso.

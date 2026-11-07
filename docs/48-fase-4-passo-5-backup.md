@@ -366,21 +366,80 @@ Due dettagli del `crea`:
 ## Parte F: dove tenere i backup
 
 Di serie i backup vanno nella cartella **`backup/`** del progetto, esclusa da Git (`.gitignore`). Per la regola del
-3-2-1 (parte A3) è meglio portarli **fuori dal disco del server**:
-- **a mano**: copia ogni tanto i file della cartella su un disco esterno o una chiavetta;
-- **da soli**: scrivi nel `.env` un'altra cartella, per esempio una sincronizzata con il cloud o un disco esterno
-  sempre collegato:
+3-2-1 (parte A3) è meglio portarli **fuori dal disco del server**: se il disco si rompe, i backup dentro di lui si
+rompono con lui.
+
+### F1. La sceglie lo script: `-CartellaBackup`
+
+La cartella è la variabile `BACKUP_DIR` del `.env`. Non serve aprire il `.env`: **lo script la chiede**.
+
+- **Al primo backup** (`-Backup`, o il doppio clic su **Backup WalletTracker**), prima della password: "Dove salvo i
+  backup?". Invio lascia la cartella di serie. Lo chiede solo se nel `.env` non c'è ancora né la password né
+  `BACKUP_DIR`, e solo in una finestra vera (non quando la risposta arriva da un altro programma, come nella CI).
+- **Per cambiarla dopo**, dalla cartella di WalletTracker:
 
   ```
-  BACKUP_DIR=D:/Backup/WalletTracker
+  powershell -ExecutionPolicy Bypass -File installa.ps1 -CartellaBackup      # Windows
+  ./installa.sh --cartella-backup                                           # Linux e Mac
   ```
 
-  Su Windows si scrive con `/` (non `\`). Poi rilancia lo script: Docker monta quella cartella su `/backup`.
+  Per aprire PowerShell già nella cartella giusta: in Esplora file, nella cartella di WalletTracker, clic sulla barra
+  dell'indirizzo, scrivi `powershell` e premi Invio. Sul Mac: clic destro sulla cartella → **Servizi → Nuovo
+  Terminale nella cartella**.
 
-I file sono cifrati, quindi metterli nel cloud va bene: chi li trovasse, senza la password, non legge niente.
+Che cosa fa lo script con la risposta, riga per riga (`chiedi_cartella_backup` in `installa.sh`,
+`Chiedi-Cartella-Backup` in `installa.ps1`):
 
-**Su Linux**, i file appartengono all'utente 1000 (quello dei container) con permessi 600. Se il tuo utente è un altro,
-per copiarli serve `sudo cp`. Lo script controlla anche che la cartella sia dell'utente 1000, come fa con `.data`.
+1. toglie gli spazi e le **virgolette** all'inizio e alla fine: "Copia come percorso" di Esplora file e il Terminale
+   del Mac, con un percorso che contiene spazi, le aggiungono;
+2. rifiuta `$`, `#` e `` ` ``: nel `.env` hanno un significato per Docker Compose (una variabile, un commento);
+3. crea la cartella se non c'è (`mkdir -p` / `New-Item -Force`): se non riesce, di solito il disco esterno non è
+   collegato, e lo dice;
+4. trasforma un percorso **relativo** (`../backup`) in **completo**: Compose lo leggerebbe a partire dalla cartella
+   del progetto, non da dove l'hai scritto tu;
+5. su Windows cambia `\` in `/` (`D:\Backup` → `D:/Backup`): Compose capisce tutti e due, ma `\` in un `.env` è
+   un carattere speciale in molti programmi;
+6. la scrive nel `.env` come `BACKUP_DIR` (`scrivi_env` / `Scrivi-Env`, le stesse di tutte le altre variabili).
+
+Poi lo script continua come sempre: la parte 3 dà la cartella all'utente 1000 (solo Linux), e l'avvio
+(`docker compose up -d`) **ricrea** i container `backend` e `backup`, perché il loro "volume" è cambiato. **I backup vecchi
+restano dove erano**: se li vuoi nella cartella nuova, spostali tu (sono file normali).
+
+**Perché non dall'app?** Cambiare la cartella vuol dire ricreare dei container, cioè comandare Docker: il backend non
+lo può fare, apposta (parte Q2, e `docs/17`). L'app però **la mostra**: in Impostazioni → Backup c'è "I backup sono
+in: …", in sola lettura, con il comando per cambiarla. Il backend non vede il percorso del server (per lui la cartella
+si chiama sempre `/app/backups`): `docker-compose.yml` glielo passa come
+`WALLETTRACKER_BACKUP_DIR_ON_SERVER: ${BACKUP_DIR:-}`, solo da mostrare.
+
+### F2. Google Drive (o OneDrive, Dropbox)
+
+I file sono **cifrati** (parte D): metterli nel cloud va bene, chi li trovasse senza la password non legge niente. Il
+modo più semplice per avere una copia fuori casa, che si aggiorna da sola:
+
+1. installa **Google Drive per desktop** sul server, ed entra con il tuo account;
+2. nelle sue Preferenze → **Google Drive**, scegli **"Esegui il mirroring dei file"**, non "Streaming dei file".
+   Con lo **streaming** i file stanno solo nel cloud e Windows vede un disco "virtuale" (`G:`), che li scarica
+   solo quando qualcuno li apre: Docker Desktop, che passa da una macchina Linux tutta sua, con un disco così può
+   non vedere i file o non riuscire a scriverli; con il **mirroring** i file sono davvero sul disco, in una cartella normale
+   (di solito `C:\Users\<nome>\Il mio Drive`), e Google Drive li copia nel cloud;
+3. crea lì dentro una cartella, per esempio `Il mio Drive\Backup WalletTracker`;
+4. lancia `-CartellaBackup` e incolla il percorso (in Esplora file: clic destro sulla cartella → **Copia come
+   percorso**).
+
+Con OneDrive e Dropbox è lo stesso: la cartella deve essere **sempre sul disco** ("Mantieni sempre su questo
+dispositivo" in OneDrive), non "solo online".
+
+Attenzione a due cose:
+- una cartella sincronizzata **non è un backup da sola** (parte A2): qui lo è perché dentro ci sono file di backup,
+  uno per giorno, che nessuno modifica dopo averli scritti;
+- la **password dei backup** non deve stare nella stessa cartella: chi entra nel tuo Google Drive troverebbe i file e
+  la chiave insieme.
+
+### F3. Su Linux
+
+I file appartengono all'utente 1000 (quello dei container) con permessi 600. Se il tuo utente è un altro, per copiarli
+serve `sudo cp`. Lo script controlla anche che la cartella sia dell'utente 1000, come fa con `.data` (lanciato con
+`sudo`, la sistema da solo).
 
 ---
 

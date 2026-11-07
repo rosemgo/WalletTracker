@@ -11,6 +11,7 @@
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Backup              un backup adesso (docs/48)
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ripristina FILE     SOSTITUISCE i dati con quelli del backup
 #   powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna            l'ultima versione, con un backup prima (docs/50)
+#   powershell -ExecutionPolicy Bypass -File installa.ps1 -CartellaBackup      sceglie (o cambia) la cartella dei backup
 #
 # "-ExecutionPolicy Bypass": Windows, di serie, non esegue gli script scaricati. Così il permesso vale solo per
 # questo comando, senza cambiare le impostazioni del PC.
@@ -26,6 +27,7 @@ param(
     [switch]$Backup,
     [string]$Ripristina = '',
     [switch]$Aggiorna,
+    [switch]$CartellaBackup,
     [switch]$SenzaBrowser
 )
 
@@ -189,12 +191,45 @@ else {
     }
 }
 
+# --- 2b. La cartella dei backup (al primo backup, o con -CartellaBackup: docs/48, parte F) ------------------
+# Come in installa.sh (vedi i commenti lì): la si sceglie qui, senza aprire il .env.
+function Chiedi-Cartella-Backup {
+    $attuale = Valore-Env 'BACKUP_DIR'
+    Write-Host 'Dove salvo i backup? Meglio fuori da questo disco: un disco esterno, o la cartella di Google Drive, OneDrive o'
+    Write-Host 'Dropbox sul computer (con Google Drive per desktop: "Esegui il mirroring dei file"). I backup sono cifrati.'
+    if ($attuale -eq '') { Write-Host 'Adesso: la cartella "backup" qui accanto' } else { Write-Host "Adesso: $attuale" }
+    $risposta = Read-Host "Scrivi (o incolla) il percorso di una cartella, oppure premi Invio per lasciarla com'è"
+    # Gli spazi e le virgolette che Esplora file aggiunge con "Copia come percorso".
+    $risposta = ([string]$risposta).Trim().Trim('"', "'").Trim()
+    if ($risposta -eq '') {
+        if ($attuale -eq '') { Write-Host 'La cartella dei backup resta backup, qui accanto.' } else { Write-Host "La cartella dei backup resta $attuale." }
+        return
+    }
+    if ($risposta -match '[$#`]') { Errore 'Il percorso non può contenere $, # o `: scegli un''altra cartella.' }
+    try { New-Item -ItemType Directory -Force -Path $risposta -ErrorAction Stop | Out-Null }
+    catch { Errore "Non riesco a creare la cartella $risposta`: controlla il percorso, o che il disco sia collegato." }
+    # Nel .env le barre sono "/": Docker Compose le capisce anche su Windows (es. D:/Backup/WalletTracker).
+    $percorso = (Resolve-Path $risposta).Path.Replace('\', '/')
+    Scrivi-Env 'BACKUP_DIR' $percorso
+    Write-Host "I backup andranno in $percorso (BACKUP_DIR nel .env). Quelli vecchi restano dove sono: spostali tu, se vuoi."
+}
+
+if ($CartellaBackup) {
+    Passo 'La cartella dei backup'
+    Chiedi-Cartella-Backup
+}
+elseif ($Backup -and (Valore-Env 'WALLETTRACKER_BACKUP_PASSWORD') -eq '' -and (Valore-Env 'BACKUP_DIR') -eq '' -and -not [Console]::IsInputRedirected) {
+    # Il primo backup (manca la password): insieme alla password, la cartella. Solo da una finestra vera.
+    Passo 'La cartella dei backup'
+    Chiedi-Cartella-Backup
+}
+
 # --- 3. Le cartelle ----------------------------------------------------------------------------------------
 # La cartella dei backup: di serie backup/ nel progetto; BACKUP_DIR nel .env per un'altra (docs/48).
-$CartellaBackup = Valore-Env 'BACKUP_DIR'
-if ($CartellaBackup -eq '') { $CartellaBackup = './backup' }
-New-Item -ItemType Directory -Force -Path '.data', 'secrets', $CartellaBackup | Out-Null
-$CartellaBackup = (Resolve-Path $CartellaBackup).Path
+$CartellaBackupScelta = Valore-Env 'BACKUP_DIR'
+if ($CartellaBackupScelta -eq '') { $CartellaBackupScelta = './backup' }
+New-Item -ItemType Directory -Force -Path '.data', 'secrets', $CartellaBackupScelta | Out-Null
+$CartellaBackupScelta = (Resolve-Path $CartellaBackupScelta).Path
 
 # --- 4. Cambiare la password del database (solo con -CambiaPasswordDb) ------------------------------------
 if ($CambiaPasswordDb) {
@@ -520,7 +555,7 @@ if ($Backup) {
     Passo 'Backup'
     & docker compose run --rm -T backup crea manuale
     if ($LASTEXITCODE -ne 0) { Errore 'Il backup non è riuscito: leggi il messaggio qui sopra.' }
-    Write-Host "Il backup è nella cartella $CartellaBackup. Copialo anche FUORI da questo computer (docs/48, parte F)."
+    Write-Host "Il backup è nella cartella $CartellaBackupScelta. Copialo anche FUORI da questo computer (docs/48, parte F)."
 }
 
 if ($Ripristina -ne '') {
@@ -529,13 +564,13 @@ if ($Ripristina -ne '') {
     # Il container vede solo la cartella dei backup: se il file è altrove, lo copio lì (con lo stesso nome).
     $file = (Resolve-Path $Ripristina).Path
     $nomeBackup = Split-Path $file -Leaf
-    $destinazione = Join-Path $CartellaBackup $nomeBackup
+    $destinazione = Join-Path $CartellaBackupScelta $nomeBackup
     if ($file -ne $destinazione) {
         if ((Test-Path $destinazione) -and ((Get-FileHash $file).Hash -ne (Get-FileHash $destinazione).Hash)) {
             Errore "Nella cartella dei backup c'è già un file diverso di nome $nomeBackup`: rinomina quello da ripristinare."
         }
         Copy-Item $file $destinazione -Force
-        Write-Host "Copiato $nomeBackup nella cartella dei backup ($CartellaBackup)."
+        Write-Host "Copiato $nomeBackup nella cartella dei backup ($CartellaBackupScelta)."
     }
 
     Write-Host ''

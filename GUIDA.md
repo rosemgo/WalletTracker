@@ -174,18 +174,38 @@ divide in categorie: le correggi con un tocco sul movimento, e con le **Regole**
 Un **backup** è una copia di tutti i tuoi dati in un file solo, **cifrato con una password tua**: chi trova il file
 senza la password non legge niente.
 
-1. **La prima volta**: doppio clic su **Backup WalletTracker**. Chiede di scegliere la **password dei backup** (almeno
-   12 caratteri). **Scrivila anche fuori da questo computer** (su carta, o in un gestore di password): **senza, i
-   backup non si aprono**, nemmeno per te.
-2. Da quel momento WalletTracker fa **un backup ogni notte da solo** (e tiene gli ultimi 14), nella cartella
-   **backup** dentro la cartella di WalletTracker.
-3. In **Impostazioni → Backup** vedi com'è andato l'ultimo, e puoi farne uno subito con **Fai un backup adesso**. Se
-   qualcosa non va, una striscia in alto nell'app te lo dice.
+1. **La prima volta**: doppio clic su **Backup WalletTracker**. Chiede due cose:
+   - **dove salvare i backup**. Meglio fuori da questo disco: un disco esterno sempre collegato, oppure la cartella
+     di **Google Drive** sul computer (qui sotto). Incolla il percorso della cartella (in Esplora file: clic destro
+     sulla cartella → **Copia come percorso**), oppure premi solo **Invio** per la cartella **backup** dentro quella
+     di WalletTracker;
+   - la **password dei backup** (almeno 12 caratteri). **Scrivila anche fuori da questo computer** (su carta, o in un
+     gestore di password): **senza, i backup non si aprono**, nemmeno per te.
+2. Da quel momento WalletTracker fa **un backup ogni notte da solo** (e tiene gli ultimi 14), nella cartella che hai
+   scelto.
+3. In **Impostazioni → Backup** vedi com'è andato l'ultimo, **dove sono** i backup, e puoi farne uno subito con **Fai
+   un backup adesso**. Se qualcosa non va, una striscia in alto nell'app te lo dice.
 
 ![Impostazioni: i backup](docs/img/guida/impostazioni-backup.png)
 
-4. **Copia ogni tanto un backup fuori dal computer** (una chiavetta, un disco esterno, il cloud): se il computer si
-   rompe, i backup dentro di lui si rompono con lui. Dal server, **Scarica** accanto a un backup lo salva dove vuoi.
+4. **Tieni sempre una copia fuori dal computer**: se il computer si rompe, i backup dentro di lui si rompono con lui.
+   Con Google Drive succede da solo; altrimenti copia ogni tanto un backup su una chiavetta o un disco esterno (dal
+   server, **Scarica** accanto a un backup lo salva dove vuoi).
+
+**Con Google Drive**: installa **Google Drive per desktop**, e nelle sue Preferenze scegli **"Esegui il mirroring dei
+file"** (non "Streaming dei file": così i file stanno davvero sul disco, e Docker li vede). Crea una cartella dentro
+**Il mio Drive**, per esempio **Backup WalletTracker**, e scegli quella. I backup sono cifrati: anche su Google Drive
+nessuno li legge senza la password. La password, però, **non** metterla nella stessa cartella.
+
+**Cambiare la cartella dopo**: apri la cartella di WalletTracker, clic sulla barra dell'indirizzo di Esplora file,
+scrivi `powershell` e premi Invio; nella finestra blu scrivi:
+
+```
+powershell -ExecutionPolicy Bypass -File installa.ps1 -CartellaBackup
+```
+
+(sul Mac: clic destro sulla cartella → Servizi → Nuovo Terminale nella cartella, e `./installa.sh --cartella-backup`).
+I backup già fatti restano nella cartella vecchia: spostali tu, se vuoi. Tutti i dettagli: `docs/48`, parte F.
 
 **Rimettere i dati di un backup** (un ripristino) cancella i dati di adesso, ed è l'unica operazione che si fa
 scrivendo un comando: è spiegata nella `docs/48`, parte I, ed è meglio farla con l'aiuto di qualcuno la prima volta.

@@ -58,10 +58,13 @@ public class BackupService {
     private final Path directory;
     private final Path stateDirectory;
     private final Clock clock;
+    /** La cartella dei backup come si chiama sul server (BACKUP_DIR), o null per quella di serie (docs/48, parte F). */
+    private final String serverDirectory;
 
     public BackupService(BackupProperties properties, Clock clock) {
         this.directory = Path.of(properties.directory());
         this.stateDirectory = Path.of(properties.stateDirectory());
+        this.serverDirectory = blankToNull(properties.serverDirectory());
         this.clock = clock;
     }
 
@@ -84,20 +87,22 @@ public class BackupService {
      * @param lastSuccessAt    il backup più nuovo (null se non ce n'è nessuno)
      * @param attention        c'è qualcosa da sistemare: la dashboard mostra un avviso
      * @param canDownload      la richiesta arriva dal server: i backup si possono scaricare
+     * @param serverDirectory  dove sono i backup sul server (BACKUP_DIR), o null per la cartella "backup" di
+     *                         WalletTracker: la dashboard lo mostra, in sola lettura (si cambia con lo script)
      */
     public record Status(boolean available, boolean serviceRunning, boolean automaticEnabled, String backupTime,
             int keep, boolean inProgress, Instant lastErrorAt, String lastError, Instant lastSuccessAt,
-            boolean attention, List<BackupFile> backups, boolean canDownload) {
+            boolean attention, List<BackupFile> backups, boolean canDownload, String serverDirectory) {
 
         Status withCanDownload(boolean value) {
             return new Status(available, serviceRunning, automaticEnabled, backupTime, keep, inProgress, lastErrorAt,
-                    lastError, lastSuccessAt, attention, backups, value);
+                    lastError, lastSuccessAt, attention, backups, value, serverDirectory);
         }
     }
 
     public Status status() {
         if (!Files.isDirectory(stateDirectory)) {
-            return new Status(false, false, false, null, 0, false, null, null, null, false, List.of(), false);
+            return new Status(false, false, false, null, 0, false, null, null, null, false, List.of(), false, null);
         }
         Instant now = clock.instant();
         Map<String, String> state = readState();
@@ -117,7 +122,7 @@ public class BackupService {
         int keep = parseInt(state.get("tieni"));
         return new Status(true, running, automatic, blankToNull(state.get("ora")), keep, inProgress,
                 errorAfterSuccess ? errorAt : null, errorAfterSuccess ? error : null, lastSuccess, attention, backups,
-                false);
+                false, serverDirectory);
     }
 
     /**

@@ -33,7 +33,7 @@ class BackupServiceTest {
     void setUp() throws IOException {
         backups = Files.createDirectory(root.resolve("backup"));
         state = root.resolve("backup-stato");
-        service = new BackupService(new BackupProperties(backups.toString(), state.toString()),
+        service = new BackupService(new BackupProperties(backups.toString(), state.toString(), "D:/Backup/WalletTracker"),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
@@ -81,6 +81,16 @@ class BackupServiceTest {
         assertThat(status.backups().getFirst().type()).isEqualTo("automatico");
         assertThat(status.lastSuccessAt()).isEqualTo(NOW.minus(Duration.ofHours(7)));
         assertThat(status.attention()).isFalse();
+        assertThat(status.serverDirectory()).isEqualTo("D:/Backup/WalletTracker"); // BACKUP_DIR, da mostrare
+    }
+
+    @Test
+    void withoutBackupDirTheBackupsAreInTheDefaultFolder() throws IOException {
+        writeState(30, true, "");
+        BackupService standard = new BackupService(new BackupProperties(backups.toString(), state.toString(), " "),
+                Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThat(standard.status().serverDirectory()).isNull(); // la dashboard dice "la cartella backup"
     }
 
     @Test

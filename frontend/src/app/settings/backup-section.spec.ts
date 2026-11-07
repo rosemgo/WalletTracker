@@ -33,6 +33,7 @@ describe('BackupSection', () => {
       },
     ],
     canDownload: true,
+    serverDirectory: 'D:/Backup/WalletTracker',
   };
 
   let answers: BackupStatus[];
@@ -72,6 +73,23 @@ describe('BackupSection', () => {
     expect(rows[0].querySelector('a')?.getAttribute('href')).toBe(
       '/api/backups/wallettracker-automatico-20261031-031500.backup',
     );
+  });
+
+  it('says where the backups are on the server, and how to change the folder', async () => {
+    const page = await render();
+    const folder = page.querySelector('[data-testid="backup-folder"]')!;
+    expect(folder.querySelector('code')?.textContent).toBe('D:/Backup/WalletTracker');
+    expect(page.textContent).toContain('-CartellaBackup');
+    expect(page.textContent).toContain('--cartella-backup');
+  });
+
+  it('without BACKUP_DIR in the .env the backups are in the folder "backup" of WalletTracker', async () => {
+    answers = [{ ...READY, serverDirectory: null }];
+    const page = await render();
+
+    const folder = page.querySelector('[data-testid="backup-folder"]')!;
+    expect(folder.querySelector('code')?.textContent).toBe('backup');
+    expect(folder.textContent).toContain('la cartella backup di WalletTracker');
   });
 
   it('from a remote device there is no download link, and it says why', async () => {
