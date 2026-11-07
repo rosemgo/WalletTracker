@@ -1244,6 +1244,71 @@ table + .card,
   margin-top: 1.5rem;
 }
 
+/* Le azioni di un conto manuale (pagina Conti): una per riga, allineate a sinistra. "Elimina" in fondo, un poco
+   staccata: cancella il conto con tutti i suoi movimenti, non deve stare in mezzo alle altre. */
+ul.account-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+ul.account-actions li.delete {
+  margin-top: 6px;
+}
+
+/* "Importa un file" è un link (porta a un'altra pagina), le altre sono pulsanti: nell'elenco hanno lo stesso aspetto,
+   senza sottolineatura (compare passandoci sopra, come per i pulsanti). */
+ul.account-actions a.action {
+  font-weight: 500;
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  ul.account-actions a.action:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* Un'azione che cancella qualcosa: rossa, come gli errori. Il pulsante pieno (la conferma) ha lo sfondo rosso. */
+button.link.danger {
+  color: var(--bad);
+}
+
+/* Il testo: bianco sul rosso scuro del tema chiaro; scuro sul rosso chiaro del tema scuro (il bianco lì si legge male). */
+button.danger:not(.link) {
+  background: var(--bad);
+  color: light-dark(#ffffff, #0c0e12);
+}
+
+@media (hover: hover) {
+  button.danger:not(.link):not(:disabled):hover {
+    background-color: var(--bad);
+    filter: brightness(1.08);
+  }
+}
+
+.confirm-delete {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm-buttons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Lo spazio tra i due pulsanti lo dà già gap: senza questo si sommerebbe al margine di "td button + button". */
+.confirm-buttons button + button {
+  margin-left: 0;
+}
+
 /* Un IBAN è una parola sola di 27 caratteri: nelle tabelle può andare a capo, invece di allargare la colonna. */
 .iban {
   overflow-wrap: anywhere;
