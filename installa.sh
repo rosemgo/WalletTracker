@@ -472,7 +472,9 @@ if [ "$AGGIORNA" = true ]; then
   indirizzo_versioni=${WALLETTRACKER_RELEASES_URL:-https://api.github.com/repos/rosemgo/WalletTracker/releases/latest}
   agg=.aggiornamento
   # -f: un errore HTTP (404, 500) è un errore anche per lo script; -sS: niente barra di avanzamento, ma gli errori sì.
-  scarica() { curl -fsSL --max-time "$1" -o "$2" "$3"; }
+  # --retry: fino a 3 tentativi in più, 5 secondi tra l'uno e l'altro, se l'errore è passeggero (nessuna risposta, 5xx,
+  # 429): un 503 di GitHub dura di solito pochi secondi o minuti.
+  scarica() { curl -fsSL --retry 3 --retry-delay 5 --max-time "$1" -o "$2" "$3"; }
   impronta() {
     if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
   }
@@ -493,7 +495,7 @@ if [ "$AGGIORNA" = true ]; then
   mkdir -p "$agg/nuova"
   # Il motivo vero lo scrive curl nella riga qui sopra (per esempio "error: 403"); qui si dice come leggerlo.
   scarica 30 "$agg/nuova/ultima.json" "$indirizzo_versioni" ||
-    errore "Non riesco a chiedere a GitHub l'ultima versione: il motivo è nella riga di curl qui sopra. Con 403 o 429 è il limite di richieste di GitHub senza account, che si azzera entro un'ora: riprova più tardi. Altrimenti controlla la connessione a Internet. Non è cambiato niente."
+    errore "Non riesco a chiedere a GitHub l'ultima versione: il motivo è nella riga di curl qui sopra. Con 403 o 429 è il limite di richieste di GitHub senza account, che si azzera entro un'ora; con 5xx GitHub non risponde in questo momento: riprova più tardi. Altrimenti controlla la connessione a Internet (e, se c'è, la VPN o il proxy). Non è cambiato niente."
   # Dal JSON di GitHub servono il nome del tag e gli indirizzi dei file: li leggo con sed, senza programmi in più.
   campo() { tr ',' '\n' <"$agg/nuova/ultima.json" | sed -n "s/^[[:space:]{]*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"; }
   tag=$(campo tag_name | head -n 1)

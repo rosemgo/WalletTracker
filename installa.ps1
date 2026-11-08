@@ -417,8 +417,28 @@ if ($Aggiorna) {
         if ($codice -eq 403 -or $codice -eq 429) {
             return "GitHub ha rifiutato la richiesta (codice $codice): di solito è il limite di richieste senza account, che si azzera entro un'ora. Riprova più tardi."
         }
+        if ($codice -ge 500) {
+            return "GitHub non risponde in questo momento (codice $codice), anche dopo 3 tentativi: di solito dura pochi minuti, riprova più tardi. Se continua, una VPN, un proxy o l'antivirus potrebbero mettersi in mezzo."
+        }
         if ($codice) { return "GitHub ha risposto con il codice $codice." }
         return "Windows dice: $($errore.Exception.Message) Controlla la connessione a Internet (e, se c'è, il proxy o l'antivirus)."
+    }
+    # Una richiesta a GitHub, ritentata fino a 3 volte (5 secondi tra l'una e l'altra) se l'errore è passeggero: nessuna
+    # risposta, un 5xx (GitHub momentaneamente non disponibile) o 429. Un altro errore (404, 403) non cambia riprovando.
+    # È quello che fa curl --retry nella versione per Linux e Mac.
+    function Con-Tentativi([scriptblock]$richiesta) {
+        for ($tentativo = 1; ; $tentativo++) {
+            try { return & $richiesta }
+            catch {
+                $errore = $_  # salvato: il try qui sotto non deve cambiare l'errore che si rilancia
+                $codice = $null
+                if ($errore.Exception.Response) { try { $codice = [int]$errore.Exception.Response.StatusCode } catch { } }
+                $passeggero = ($null -eq $codice) -or ($codice -ge 500) -or ($codice -eq 429)
+                if (-not $passeggero -or $tentativo -ge 3) { throw $errore }
+                Write-Host "GitHub non ha risposto (tentativo $tentativo di 3): riprovo tra 5 secondi..."
+                Start-Sleep -Seconds 5
+            }
+        }
     }
     # I file da non toccare mai, anche se uno ZIP li contenesse.
     function Da-Non-Toccare([string]$f) { return $f -eq '.env' -or $f -match '^(\.data|backup|secrets|\.aggiornamento)/' }
@@ -438,7 +458,7 @@ if ($Aggiorna) {
     Passo 'Cerco una versione nuova'
     if (Test-Path $cartellaNuova) { Remove-Item -Recurse -Force $cartellaNuova }
     New-Item -ItemType Directory -Force -Path $cartellaNuova | Out-Null
-    try { $ultima = Invoke-RestMethod -UseBasicParsing -TimeoutSec 30 -Uri $indirizzoVersioni -Headers @{ Accept = 'application/vnd.github+json' } }
+    try { $ultima = Con-Tentativi { Invoke-RestMethod -UseBasicParsing -TimeoutSec 30 -Uri $indirizzoVersioni -Headers @{ Accept = 'application/vnd.github+json' } } }
     catch { Errore "Non riesco a chiedere a GitHub l'ultima versione. $(Motivo-Rete $_) Non è cambiato niente." }
     $tag = [string]$ultima.tag_name
     if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { Errore "GitHub ha risposto qualcosa che non capisco (versione: `"$tag`"). Non è cambiato niente." }
@@ -467,8 +487,8 @@ if ($Aggiorna) {
     $zip = Join-Path $cartellaNuova "WalletTracker-$nuova.zip"
     $impronte = Join-Path $cartellaNuova 'SHA256SUMS'
     try {
-        Invoke-WebRequest -UseBasicParsing -TimeoutSec 600 -Uri $urlZip -OutFile $zip
-        Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $urlImpronte -OutFile $impronte
+        Con-Tentativi { Invoke-WebRequest -UseBasicParsing -TimeoutSec 600 -Uri $urlZip -OutFile $zip }
+        Con-Tentativi { Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $urlImpronte -OutFile $impronte }
     }
     catch { Errore "Lo scaricamento non è riuscito. $(Motivo-Rete $_) Non è cambiato niente." }
     $attesa = ''

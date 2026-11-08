@@ -686,6 +686,7 @@ segno tra le cose da valutare.
 |---|---|---|
 | "Questa è la cartella del CODICE SORGENTE" | lanciato sul tuo PC, nel progetto clonato | `git switch main`, `git pull`, rilancia lo script |
 | "Non riesco a chiedere a GitHub l'ultima versione" | niente Internet, un proxy o un antivirus che blocca, o il **limite di richieste** di GitHub (60 all'ora per indirizzo, senza account: codice 403 o 429) | il messaggio dice il motivo (dalla 1.2.1; prima diceva sempre "controlla la connessione"). Con 403/429 riprova dopo un'ora; non è cambiato niente |
+| "GitHub non risponde in questo momento (codice 503)" | GitHub momentaneamente non disponibile, o una VPN, un proxy o un antivirus in mezzo | lo script ha già riprovato 3 volte, a 5 secondi di distanza (dalla 1.2.1): riprova tra qualche minuto; se continua, prova ad aprire nel browser l'indirizzo delle versioni (`api.github.com/repos/rosemgo/WalletTracker/releases/latest`) |
 | "Manca il programma unzip" (Linux) | il Linux non ha `unzip` | `sudo apt install unzip` (o il comando della tua distribuzione) |
 | "NON corrisponde alla sua impronta" | lo ZIP è arrivato rovinato | riprova; se succede ancora, non usarlo e guarda la pagina della versione su GitHub |
 | "Il backup non è riuscito" | per esempio, disco pieno o cartella dei backup non scrivibile | sistema il problema (`docs/48`, parte H), poi riprova |
