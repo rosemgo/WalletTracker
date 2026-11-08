@@ -42,6 +42,8 @@ describe('App', () => {
           automaticEnabled: true,
           backupTime: '03:15',
           keep: 14,
+          keepManual: 10,
+          keepBefore: 3,
           inProgress: false,
           lastErrorAt: null,
           lastError: null,

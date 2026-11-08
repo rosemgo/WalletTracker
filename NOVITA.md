@@ -8,6 +8,8 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 
 - **Riepilogo**: "Dove vanno" ora si chiama **"Spese per categoria"**; sul telefono la scheda sta subito sotto il
   grafico, e la liquidità dopo.
+- **I backup non crescono più per sempre**: si tengono gli ultimi 14 automatici, 10 fatti a mano e 3 di prima di ogni
+  aggiornamento o ripristino. In Impostazioni → Backup se ne vedono 5, con "Mostra tutti", e le date in colonna.
 
 ## 1.2.1
 

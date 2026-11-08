@@ -481,9 +481,38 @@ Tre dettagli:
 
 ### G2. Quanti se ne tengono
 
-Dopo ogni backup automatico, `sfoltisci` tiene i **14 più nuovi** (`BACKUP_KEEP`) e cancella gli altri. I nomi
-contengono data e ora (`wallettracker-automatico-20261031-031500.backup`), quindi in ordine alfabetico inverso i più
-nuovi vengono prima. I backup **manuali** e quelli **prima-del-ripristino** non si toccano mai: li cancelli tu.
+Dopo **ogni** backup, `sfoltisci` tiene i più nuovi **del suo tipo** e cancella gli altri:
+
+| Tipo | Se ne tengono | Perché |
+|---|---|---|
+| automatico | **14** (`BACKUP_KEEP` nel `.env`) | due settimane indietro |
+| manuale ("Fatto a mano") | **10** | fatti apposta: se ne tengono di più |
+| prima-dell-aggiornamento | **3** | conta l'ultimo; per i giorni prima ci sono gli automatici |
+| prima-del-ripristino | **3** | lo stesso |
+
+I nomi contengono data e ora (`wallettracker-automatico-20261031-031500.backup`), quindi in ordine alfabetico inverso
+i più nuovi vengono prima; quello appena fatto resta sempre. Ogni tipo si sfoltisce **da solo**: un aggiornamento non
+cancella mai un backup fatto a mano, né il contrario. Ogni backup tolto è scritto nel log del container ("Tolto il
+backup vecchio (manuale, se ne tengono 10): …").
+
+**Perché un limite anche per quelli fatti a mano.** All'inizio i manuali e quelli di prima di un ripristino non si
+toccavano mai ("li cancelli tu"), e con "Aggiorna" (`docs/50`) sono arrivati anche quelli di prima di un
+aggiornamento, uno per volta. Ma l'app non può cancellare i backup (il backend li vede in sola lettura: parte Q2), e
+cancellarli a mano dalla cartella non lo fa nessuno: l'elenco di Impostazioni → Backup cresceva per sempre. Il posto
+non era il problema (circa 500 kB l'uno), lo schermo sì. Con i limiti i backup sono al massimo 30; per tenerne uno per
+sempre lo si **scarica** e lo si mette altrove.
+
+**Che cosa vede la dashboard.** Il container scrive i numeri in `stato.txt` (`tieni`, `tieni-manuali`,
+`tieni-prima`), il backend li passa (`keep`, `keepManual`, `keepBefore`) e Impostazioni → Backup li dice sotto
+l'elenco: "Si tengono gli ultimi 14 automatici, 10 fatti a mano e 3 di prima di ogni aggiornamento o ripristino".
+L'elenco mostra i **5 più nuovi**, con "Mostra tutti (N)" e "Mostra meno" (da 8 backup in su, come gli elenchi di
+Investimenti). Le colonne sono fisse, così le date stanno una sotto l'altra anche con "Prima di un aggiornamento"; sul
+telefono ogni backup ha due righe, con la data e "Scarica" a destra.
+
+**Le prove.** Nella CI, il passo "Quanti backup si tengono": 3 backup di prima di un aggiornamento e 12 fatti a mano
+di fila, poi uno di prima di un aggiornamento in più. Devono restarne 10 fatti a mano (i più nuovi: quelli che
+c'erano prima non ci sono più), 3 di prima di un aggiornamento, e gli automatici quanti erano. `BackupServiceTest`
+(i numeri dallo stato) e `backup-section.spec.ts` (5 righe, poi 10, poi di nuovo 5; un elenco corto intero).
 
 ### G3. Senza password
 
