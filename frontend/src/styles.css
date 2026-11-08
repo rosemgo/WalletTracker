@@ -2081,7 +2081,7 @@ button.icon svg {
   }
 }
 
-/* "Dove vanno": barre sottili, tutte dello stesso colore (conta la lunghezza), con la differenza dal solito. */
+/* "Spese per categoria": barre sottili, tutte dello stesso colore (conta la lunghezza), con la differenza dal solito. */
 ul.bars,
 ul.rows {
   list-style: none;
@@ -2122,7 +2122,7 @@ ul.rows strong {
   overflow: hidden;
 }
 
-/* Le barre orizzontali ("Dove vanno", i gruppi di Analisi): la sfumatura dell'accento, e crescono all'apertura. */
+/* Le barre orizzontali ("Spese per categoria", i gruppi di Analisi): la sfumatura dell'accento, e crescono all'apertura. */
 .bar-line .fill,
 .group-row .fill {
   display: block;
@@ -2193,6 +2193,43 @@ ul.rows li > span {
 .todo span {
   color: var(--sec);
   font-size: 0.85rem;
+}
+
+/* Sul telefono (e su uno schermo stretto) il Riepilogo è una colonna sola, in quest'ordine: la cifra con il grafico,
+   le spese per categoria (che spiegano il grafico), la liquidità, poi il resto. Nel modello la liquidità sta nel
+   contenitore della colonna di sinistra del PC (overview-main): qui il contenitore si "scioglie" (display: contents)
+   e le sue schede si mettono in fila con le altre, nell'ordine di "order". */
+@media (max-width: 1099px) {
+  .overview {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .overview > .overview-main {
+    display: contents;
+  }
+
+  .overview > *,
+  .overview-main > * {
+    order: 4;
+  }
+
+  .overview > .currency-choice {
+    order: 0;
+    align-self: flex-start;
+  }
+
+  .overview-main > .hero {
+    order: 1;
+  }
+
+  .overview > .spending-card {
+    order: 2;
+  }
+
+  .overview-main > app-liquidity-card {
+    order: 3;
+  }
 }
 
 /* Sul PC il Riepilogo sta in due colonne: a sinistra la cifra e il grafico, a destra il resto. */
@@ -3236,7 +3273,7 @@ a.group-row.uncategorized .group-text > span:first-child::after {
   margin: 16px 4px 8px;
 }
 
-/* Il Riepilogo: una categoria di "Dove vanno" apre la sua pagina. */
+/* Il Riepilogo: una categoria di "Spese per categoria" apre la sua pagina. */
 a.bar-link {
   display: flex;
   flex-direction: column;

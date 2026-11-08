@@ -418,7 +418,9 @@ La scheda non segue il menu "Valuta" del Riepilogo, che è per le spese del mese
 movimenti in più valute: con quel menu un conto in dollari fermo sarebbe sparito (era così nella prima versione della
 scheda, corretto su segnalazione dell'utente).
 
-**Dove sta.** Sul PC nella colonna di sinistra, sotto la scheda del grafico; sul telefono subito dopo. Nel modello
+**Dove sta.** Sul PC nella colonna di sinistra, sotto la scheda del grafico. Sul telefono dopo "Spese per categoria",
+che sta subito sotto il grafico perché lo spiega (richiesta dell'utente; vedi `docs/36`, aggiunta "L'ordine sul
+telefono"). Nel modello
 (`overview-page.html`) le due schede stanno in un contenitore, `overview-main`, che nella griglia occupa le quattro righe
 della colonna di sinistra: così la liquidità sta subito sotto il grafico, e non sotto la scheda più lunga della colonna
 a destra. Non è legata al mese guardato: i saldi sono quelli di adesso, e ogni conto dice di che giorno è il suo ("al

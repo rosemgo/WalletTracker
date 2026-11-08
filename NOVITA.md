@@ -4,6 +4,11 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.2
+
+- **Riepilogo**: "Dove vanno" ora si chiama **"Spese per categoria"**; sul telefono la scheda sta subito sotto il
+  grafico, e la liquidità dopo.
+
 ## 1.2.1
 
 - **"Aggiorna" funziona anche quando il servizio di GitHub per le versioni non risponde**: lo script riprova da solo, e

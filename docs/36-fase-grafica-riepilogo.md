@@ -263,3 +263,35 @@ apre Movimenti con i tre movimenti filtrati.
    del mese?
 3. **Il mese nell'indirizzo.** Metti il mese guardato nell'indirizzo (`/riepilogo?mese=2026-09`), come il filtro dei
    Movimenti: il tasto "indietro" del telefono torna al mese di prima.
+
+---
+
+## Aggiunta: "Spese per categoria", e l'ordine sul telefono
+
+**Il titolo.** La scheda con le categorie del mese si chiamava "Dove vanno": all'utente non piaceva, e non era
+abbastanza chiaro. Ora si chiama **"Spese per categoria"**, il nome di quello che mostra, lo stesso che si usa in
+Analisi ("per Categoria"). Il titolo c'è in tutte e due le versioni della scheda, con le categorie e senza spese
+("Nessuna spesa finora"); nelle guide più vecchie resta il nome di allora.
+
+**L'ordine sul telefono.** Con la scheda della liquidità (`docs/saldi.md`, parte K) sul telefono l'ordine era: il
+grafico, la liquidità, poi le spese per categoria. Ma le spese per categoria **spiegano** il grafico (che cosa fa la
+cifra grande), e devono stare subito sotto. Ora, sotto i 1100 pixel:
+
+1. la cifra del mese con il grafico;
+2. Spese per categoria;
+3. Liquidità;
+4. il resto: In arrivo, Investito, le cose da sistemare.
+
+Sul PC non cambia niente: a sinistra il grafico e sotto la liquidità, a destra le spese per categoria e il resto.
+
+**Come.** Nel modello la liquidità sta nel contenitore della colonna di sinistra del PC (`overview-main`), insieme al
+grafico. Sotto i 1100 pixel il Riepilogo diventa una colonna flessibile (`display: flex; flex-direction: column`), il
+contenitore si "scioglie" con `display: contents` (le sue schede diventano schede della colonna, come se il
+contenitore non ci fosse) e l'ordine lo dà la proprietà `order`: 1 il grafico, 2 le spese per categoria (classe
+`spending-card`), 3 la liquidità, 4 tutte le altre. Le schede hanno solo il margine in basso, quindi in colonna lo
+spazio tra l'una e l'altra resta lo stesso (15 pixel, misurato).
+
+**Le prove.** `overview-page.spec.ts`: il titolo "Spese per categoria". Nel browser, sul telefono e a 900 pixel:
+grafico, Spese per categoria, Liquidità, Investito, con lo stesso spazio; sul PC le due colonne come prima; nessuna
+pagina più larga dello schermo, nessun errore.
+
