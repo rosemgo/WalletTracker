@@ -558,7 +558,9 @@ if [ "$AGGIORNA" = true ]; then
 
   passo "Le novità dalla $WALLETTRACKER_VERSION alla $nuova"
   # NOVITA.md ha una sezione "## X.Y.Z" per versione, dalla più nuova: stampo fino a quella che hai adesso.
-  awk -v adesso="## $WALLETTRACKER_VERSION" '$0 == adesso { exit } /^## / { dentro = 1 } dentro' "$sorgente/NOVITA.md" || true
+  # Nel terminale il grassetto (**) e il codice (`) di Markdown non si vedono come tali: si tolgono i segni.
+  awk -v adesso="## $WALLETTRACKER_VERSION" '$0 == adesso { exit } /^## / { dentro = 1 } dentro' "$sorgente/NOVITA.md" |
+    sed -e 's/\*\*//g' -e 's/`//g' || true
   echo
   read -r -p "Aggiorno WalletTracker alla $nuova? Prima faccio un backup dei dati. [s/N] " risposta || risposta=""
   case "$risposta" in

@@ -9,6 +9,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 - **"Aggiorna" funziona anche quando il servizio di GitHub per le versioni non risponde**: lo script riprova da solo, e
   se serve legge l'ultima versione dalla pagina normale di GitHub. Lo ZIP si controlla con la sua impronta, come sempre.
 - **Gli errori dicono il motivo**: il codice di GitHub e che cosa vuol dire, invece di "controlla la connessione".
+- **Ritocchi di "Aggiorna"**: su Windows la domanda di conferma diceva "Aggiorno WalletTracker alla  Prima…", senza il
+  numero della versione; e le novità si leggono senza i segni di formattazione (`**`).
+
+Chi ha già scelto la cartella dei backup non si vede fare la domanda: lo script la chiede solo a chi non l'ha mai scelta.
 
 ## 1.2.0
 
