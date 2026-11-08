@@ -115,9 +115,26 @@ export class InvestmentsPage implements OnInit {
     (this.data()?.cash ?? []).reduce((sum, c) => sum + (c.balance?.amount ?? 0), 0),
   );
 
-  protected readonly invested = computed(
-    () => this.data()?.months.map((m) => m.investedCumulative) ?? [],
-  );
+  /**
+   * La linea dell'investito NEL PERIODO: parte da zero all'inizio del periodo e somma mese per mese (acquisti meno
+   * vendite). Non da tutta la storia: l'app conosce solo i movimenti che la banca le ha dato, e un totale "da sempre"
+   * sembrerebbe vero anche quando lo storico è più corto (docs/investimenti.md, parte S).
+   */
+  protected readonly invested = computed(() => {
+    const months = this.data()?.months ?? [];
+    if (months.length === 0) {
+      return [];
+    }
+    // L'investito prima del periodo: il cumulato del primo mese, tolto quello che è successo nel primo mese.
+    const before = months[0].investedCumulative - (months[0].bought - months[0].sold);
+    return months.map((m) => m.investedCumulative - before);
+  });
+
+  /** L'investito nel periodo: acquisti meno vendite dei mesi scelti. */
+  protected readonly investedInPeriod = computed(() => {
+    const d = this.data();
+    return d === null ? 0 : d.boughtInPeriod - d.soldInPeriod;
+  });
   protected readonly transferred = computed(
     () => this.data()?.months.map((m) => m.transferred) ?? [],
   );
@@ -197,38 +214,46 @@ export class InvestmentsPage implements OnInit {
   protected readonly incomeBarNames = computed(() => this.barNames(this.income()));
   protected readonly transferBarNames = computed(() => this.barNames(this.transferred()));
 
-  /** La cifra grande: l'investito in totale, o fino al mese scelto scorrendo il grafico. */
+  /**
+   * La cifra grande: l'investito nel periodo scelto, o dall'inizio del periodo al mese scelto scorrendo il grafico
+   * ("Investito da dicembre 2024 a marzo 2026").
+   */
   protected readonly figure = computed(() => {
     const d = this.data();
     if (d === null) {
       return null;
     }
     const i = this.scrubIndex();
+    const names = this.monthNames();
     if (i !== null && d.months[i]) {
       return {
-        label: `Investito fino a ${this.monthNames()[i]}`,
-        value: d.months[i].investedCumulative,
+        label: i === 0 ? `Investito a ${names[0]}` : `Investito da ${names[0]} a ${names[i]}`,
+        value: this.invested()[i],
       };
     }
-    return { label: 'Investito in titoli', value: d.investedTotal };
+    return {
+      label: `Investito in titoli · ${this.periodLabel(d.period)}`,
+      value: this.investedInPeriod(),
+    };
   });
 
-  /** "1.200 € quest'anno · 0 € questo mese". */
+  /** "1.200 € quest'anno · 0 € questo mese"; con "Quest'anno" solo il mese (l'anno è già la cifra grande). */
   protected readonly comparison = computed(() => {
     const d = this.data();
     if (d === null) {
       return '';
     }
-    const year = this.euros(d.investedThisYear, d.currency);
-    const month = this.euros(d.investedThisMonth, d.currency);
-    return `${year} quest'anno · ${month} questo mese`;
+    const month = `${this.euros(d.investedThisMonth, d.currency)} questo mese`;
+    return d.period === 'YEAR_TO_DATE'
+      ? month
+      : `${this.euros(d.investedThisYear, d.currency)} quest'anno · ${month}`;
   });
 
   protected readonly lineDescription = computed(() => {
     const d = this.data();
     return d === null
       ? ''
-      : `Investito in titoli, acquisti meno vendite, mese per mese: ${this.euros(d.investedTotal, d.currency)} in tutto`;
+      : `Investito in titoli, acquisti meno vendite, mese per mese: ${this.euros(this.investedInPeriod(), d.currency)} ${this.periodLabel(d.period)}`;
   });
 
   protected readonly transferDescription = computed(() => {

@@ -70,7 +70,7 @@
           <section class="card hero">
             <span class="secondary">{{ figure()?.label }}</span>
             <span class="big-figure">{{
-              figure()?.value ?? d.investedTotal | money: d.currency : 'symbol' : '1.0-0'
+              figure()?.value ?? investedInPeriod() | money: d.currency : 'symbol' : '1.0-0'
             }}</span>
             <p class="comparison">{{ comparison() }}</p>
             <app-trend-chart
@@ -92,8 +92,10 @@
               </div>
             </div>
             <p class="secondary note-value">
-              Acquisti di titoli meno vendite, da tutti i conti. Non è quanto valgono oggi: per
-              quello servirebbero le quotazioni.
+              Acquisti di titoli meno vendite, da tutti i conti, nel periodo scelto. Non è quanto
+              valgono oggi: per quello servirebbero le quotazioni. Contano i movimenti che
+              WalletTracker conosce: se lo storico della banca è più corto, i più vecchi non ci
+              sono.
             </p>
           </section>
 

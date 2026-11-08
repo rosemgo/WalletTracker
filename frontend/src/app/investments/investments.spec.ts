@@ -155,9 +155,14 @@ describe('Investments', () => {
 
     expect(requests).toEqual(['YEAR_TO_DATE']); // di serie: Quest'anno
     // L'investito in titoli: la cifra grande, la linea, acquistato e rientrato separati, la frase vera.
-    expect(text).toContain('Investito in titoli');
-    expect(p.querySelector('.big-figure')?.textContent).toMatch(/3\.700\s€/);
-    expect(text).toMatch(/2\.900\s€ quest'anno · 200\s€ questo mese/);
+    // La cifra grande è l'investito NEL PERIODO (3.600 acquistati - 300 rientrati), non da tutta la storia (3.700).
+    expect(text).toContain('Investito in titoli · da inizio anno');
+    expect(p.querySelector('.big-figure')?.textContent).toMatch(/3\.300\s€/);
+    // Con "Quest'anno" la riga sotto dice solo il mese: l'anno è già la cifra grande.
+    expect(p.querySelector('.hero .comparison')?.textContent?.trim()).toMatch(
+      /^200\s€ questo mese$/,
+    );
+    expect(text).toContain('Contano i movimenti che WalletTracker conosce');
     expect(p.querySelector('app-trend-chart path.month')).not.toBeNull();
     expect(text).toMatch(/Acquistato · da inizio anno\s*3\.600\s€/);
     expect(text).toMatch(/Rientrato dalle vendite\s*300\s€/);
@@ -410,6 +415,10 @@ describe('Investments', () => {
     await fixture.whenStable();
     expect(button('12 mesi').getAttribute('aria-pressed')).toBe('true');
     expect(p.textContent).toContain('ultimi 12 mesi');
+    // Con un altro periodo la riga sotto dice anche l'anno.
+    expect(p.querySelector('.hero .comparison')?.textContent).toMatch(
+      /2\.900\s€ quest'anno · 200\s€ questo mese/,
+    );
 
     button('Tutto').click();
     await fixture.whenStable();
@@ -420,8 +429,15 @@ describe('Investments', () => {
     const slider = p.querySelector('app-trend-chart [role="slider"]') as HTMLElement;
     slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
     await fixture.whenStable();
-    expect(p.textContent).toContain('Investito fino a novembre 2025');
-    expect(p.querySelector('.big-figure')?.textContent).toMatch(/600\s€/);
+    // La linea parte da zero all'inizio del periodo: il primo mese vale i suoi acquisti (200), non lo storico di prima.
+    expect(p.textContent).toContain('Investito a novembre 2025');
+    expect(p.querySelector('.big-figure')?.textContent).toMatch(/200\s€/);
+    slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    await fixture.whenStable();
+    // In fondo, la somma dei mesi della linea: 11 × 200 + 1.200 - 300. (Qui il finto backend scrive a mano i totali del
+    // periodo, 3.600 e 300: quello vero li calcola dagli stessi movimenti dei mesi, e le due cifre coincidono.)
+    expect(p.textContent).toContain('Investito da novembre 2025 a ottobre 2026');
+    expect(p.querySelector('.big-figure')?.textContent).toMatch(/3\.100\s€/);
   });
 
   it('with nothing invested explains how to mark the purchases and the transfers', async () => {

@@ -702,7 +702,7 @@ netto); `InvestmentServiceTest` (il BTP con l'ISIN: 109,37 € netti); `investme
 
 Accanto a 12 mesi, 2 anni e Tutto, il pulsante **"Quest'anno"**: da gennaio al mese di oggi (`Period.YEAR_TO_DATE`,
 `InvestmentService.firstMonth` dà gennaio dell'anno in corso). Le schede dicono "da inizio anno". La linea
-dell'investito parte, come sempre, da tutta la storia prima del periodo; le barre, le rendite e gli elenchi contano
+dell'investito partiva, allora, da tutta la storia prima del periodo (oggi parte da zero: parte S); le barre, le rendite e gli elenchi contano
 solo i mesi dell'anno. La scheda del Riepilogo diceva già "quest'anno" e non cambia.
 
 Lo stesso periodo c'è in Analisi (`docs/38`, aggiunta "Quest'anno").
@@ -810,4 +810,36 @@ all'euro (vedi sotto): due somme come 5.811,40 € e 5.811,60 € diventano 5.81
 **Le cifre grandi senza centesimi.** È una scelta della Fase grafica (`docs/36`, "Gli importi sono senza
 decimali"): la cifra grande si legge d'un colpo, e i centesimi su migliaia di euro non cambiano il senso. Le cifre
 precise, con i centesimi, sono negli elenchi e nei movimenti.
+
+---
+
+## Parte S: l'investito del periodo, non "da sempre"
+
+**La segnalazione.** La cifra grande della pagina era l'investito di tutta la storia (`investedTotal`, 80.330 €), qualunque
+periodo si scegliesse; e la linea partiva da quella storia. Ma l'app conosce solo i movimenti che la banca le ha dato
+(di solito qualche anno, a volte meno) e quelli importati: se lo storico è più corto della vita del conto, il "totale"
+sembra vero e non lo è.
+
+**Ora tutto dipende dal periodo scelto.**
+
+| | Prima | Ora |
+|---|---|---|
+| la cifra grande | l'investito di tutta la storia | l'investito **nel periodo**: acquisti meno vendite (`boughtInPeriod - soldInPeriod`), con il periodo scritto accanto: "Investito in titoli · da inizio anno" |
+| la linea | il cumulato di tutta la storia | parte da **zero** all'inizio del periodo e somma mese per mese |
+| scorrendo il grafico | "Investito fino a marzo 2026" | "Investito da dicembre 2024 a marzo 2026" (il primo mese: "Investito a dicembre 2024") |
+| la riga sotto | "76.656 € quest'anno · 200 € questo mese" | uguale; con "Quest'anno" solo "200 € questo mese" (l'anno è già la cifra grande) |
+| la nota | "Acquisti di titoli meno vendite…" | in più: "Contano i movimenti che WalletTracker conosce: se lo storico della banca è più corto, i più vecchi non ci sono" |
+
+"Tutto" resta: è l'investito di tutti i movimenti conosciuti, scelto apposta, e la nota dice che cosa vuol dire.
+
+**Nel codice, solo la dashboard.** I dati c'erano già: `investments-page.ts` calcola `investedInPeriod` dagli
+acquisti e dalle vendite del periodo, e la linea togliendo a ogni mese il cumulato di prima del periodo (il cumulato del
+primo mese meno quello che è successo nel primo mese). La cifra grande e l'ultimo punto della linea coincidono, perché
+il backend calcola le due cose dagli stessi movimenti e dalle stesse date. `investedTotal` resta nell'API: serve a
+dire se c'è qualcosa da mostrare.
+
+**Le prove.** `investments.spec.ts`: la cifra grande è il periodo (3.300 €, non i 3.700 € della storia), la riga sotto
+con e senza l'anno, la nota; il grafico parte dal primo mese (200 €, non 600 €) e finisce con la somma dei mesi. Nel
+browser, con un acquisto inventato del 2025: "Quest'anno" e "12 mesi" 3.500 €, "2 anni" e "Tutto" 4.500 €; per ogni
+periodo la cifra grande uguale alla fine della linea, sul PC e sul telefono, senza errori.
 
