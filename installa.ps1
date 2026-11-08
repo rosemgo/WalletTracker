@@ -402,12 +402,47 @@ Write-Host 'Il backend è pronto.'
 if ($Aggiorna) {
     $indirizzoVersioni = 'https://api.github.com/repos/rosemgo/WalletTracker/releases/latest'
     if ($env:WALLETTRACKER_RELEASES_URL) { $indirizzoVersioni = $env:WALLETTRACKER_RELEASES_URL }
+    # La seconda strada, se il servizio API non risponde: la pagina normale, che rinvia a quella dell'ultima versione.
+    $paginaVersioni = 'https://github.com/rosemgo/WalletTracker/releases/latest'
+    if ($env:WALLETTRACKER_RELEASES_PAGE) { $paginaVersioni = $env:WALLETTRACKER_RELEASES_PAGE }
     $agg = Join-Path $PSScriptRoot '.aggiornamento'
     $cartellaNuova = Join-Path $agg 'nuova'
     $precedente = Join-Path $agg 'precedente'
     # Windows PowerShell 5.1: https moderno (TLS 1.2) e niente barra di avanzamento, che rallenta moltissimo gli scaricamenti.
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     $ProgressPreference = 'SilentlyContinue'
+    # Il motivo vero di un errore di rete, in una frase: il codice HTTP se c'è (403/429: il limite di richieste di GitHub
+    # senza account, 60 all'ora per indirizzo, che si azzera da solo), altrimenti il messaggio di Windows (nome non
+    # trovato, connessione rifiutata, proxy...). Prima diceva sempre "controlla la connessione", anche quando non era quella.
+    function Motivo-Rete($errore) {
+        $codice = $null
+        if ($errore.Exception.Response) { try { $codice = [int]$errore.Exception.Response.StatusCode } catch { } }
+        if ($codice -eq 403 -or $codice -eq 429) {
+            return "GitHub ha rifiutato la richiesta (codice $codice): di solito è il limite di richieste senza account, che si azzera entro un'ora. Riprova più tardi."
+        }
+        if ($codice -ge 500) {
+            return "GitHub non risponde in questo momento (codice $codice), anche dopo 3 tentativi: di solito dura pochi minuti, riprova più tardi. Se continua, una VPN, un proxy o l'antivirus potrebbero mettersi in mezzo."
+        }
+        if ($codice) { return "GitHub ha risposto con il codice $codice." }
+        return "Windows dice: $($errore.Exception.Message) Controlla la connessione a Internet (e, se c'è, il proxy o l'antivirus)."
+    }
+    # Una richiesta a GitHub, ritentata fino a 3 volte (5 secondi tra l'una e l'altra) se l'errore è passeggero: nessuna
+    # risposta, un 5xx (GitHub momentaneamente non disponibile) o 429. Un altro errore (404, 403) non cambia riprovando.
+    # È quello che fa curl --retry nella versione per Linux e Mac.
+    function Con-Tentativi([scriptblock]$richiesta) {
+        for ($tentativo = 1; ; $tentativo++) {
+            try { return & $richiesta }
+            catch {
+                $errore = $_  # salvato: il try qui sotto non deve cambiare l'errore che si rilancia
+                $codice = $null
+                if ($errore.Exception.Response) { try { $codice = [int]$errore.Exception.Response.StatusCode } catch { } }
+                $passeggero = ($null -eq $codice) -or ($codice -ge 500) -or ($codice -eq 429)
+                if (-not $passeggero -or $tentativo -ge 3) { throw $errore }
+                Write-Host "GitHub non ha risposto (tentativo $tentativo di 3): riprovo tra 5 secondi..."
+                Start-Sleep -Seconds 5
+            }
+        }
+    }
     # I file da non toccare mai, anche se uno ZIP li contenesse.
     function Da-Non-Toccare([string]$f) { return $f -eq '.env' -or $f -match '^(\.data|backup|secrets|\.aggiornamento)/' }
     function Metti-Al-Posto([string]$da, [string]$dove) {
@@ -426,9 +461,26 @@ if ($Aggiorna) {
     Passo 'Cerco una versione nuova'
     if (Test-Path $cartellaNuova) { Remove-Item -Recurse -Force $cartellaNuova }
     New-Item -ItemType Directory -Force -Path $cartellaNuova | Out-Null
-    try { $ultima = Invoke-RestMethod -UseBasicParsing -TimeoutSec 30 -Uri $indirizzoVersioni -Headers @{ Accept = 'application/vnd.github+json' } }
-    catch { Errore 'Non riesco a chiedere a GitHub l''ultima versione (controlla la connessione a Internet). Non è cambiato niente.' }
-    $tag = [string]$ultima.tag_name
+    # Prima strada: il servizio API (api.github.com).
+    $ultima = $null
+    $dallaPagina = $false
+    try { $ultima = Con-Tentativi { Invoke-RestMethod -UseBasicParsing -TimeoutSec 30 -Uri $indirizzoVersioni -Headers @{ Accept = 'application/vnd.github+json' } } }
+    catch {
+        # Seconda strada: la pagina normale rinvia a quella dell'ultima versione (…/releases/tag/v1.2.0), e il numero è
+        # in fondo all'indirizzo d'arrivo. Gli indirizzi dei due file si ricavano dal numero.
+        $primoMotivo = Motivo-Rete $_
+        Write-Host "Il servizio di GitHub per le versioni non risponde: provo dalla pagina delle versioni."
+        try { $pagina = Con-Tentativi { Invoke-WebRequest -UseBasicParsing -TimeoutSec 30 -Uri $paginaVersioni } }
+        catch { Errore "Non riesco a chiedere a GitHub l'ultima versione, né dal servizio API ($primoMotivo) né dalla pagina delle versioni ($(Motivo-Rete $_)). Non è cambiato niente." }
+        # L'indirizzo d'arrivo, dopo i rinvii: in Windows PowerShell 5.1 è in ResponseUri, in PowerShell 7 nella richiesta.
+        $arrivo = ''
+        if ($pagina.BaseResponse.ResponseUri) { $arrivo = [string]$pagina.BaseResponse.ResponseUri.AbsoluteUri }
+        elseif ($pagina.BaseResponse.RequestMessage.RequestUri) { $arrivo = [string]$pagina.BaseResponse.RequestMessage.RequestUri.AbsoluteUri }
+        $tag = ''
+        if ($arrivo -match '/releases/tag/(v[0-9]+\.[0-9]+\.[0-9]+)$') { $tag = $Matches[1] }
+        $dallaPagina = $true
+    }
+    if (-not $dallaPagina) { $tag = [string]$ultima.tag_name }
     if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { Errore "GitHub ha risposto qualcosa che non capisco (versione: `"$tag`"). Non è cambiato niente." }
     $nuova = $tag.Substring(1)
     $adesso = $env:WALLETTRACKER_VERSION
@@ -441,10 +493,17 @@ if ($Aggiorna) {
     }
     Write-Host "C'è una versione nuova: $nuova (adesso hai la $adesso)."
 
-    $urlZip = [string]($ultima.assets | Where-Object { $_.name -eq "WalletTracker-$nuova.zip" } | Select-Object -First 1).browser_download_url
-    $urlImpronte = [string]($ultima.assets | Where-Object { $_.name -eq 'SHA256SUMS' } | Select-Object -First 1).browser_download_url
+    if ($dallaPagina) {
+        $baseDownload = $paginaVersioni -replace '/latest$', "/download/$tag"
+        $urlZip = "$baseDownload/WalletTracker-$nuova.zip"
+        $urlImpronte = "$baseDownload/SHA256SUMS"
+    }
+    else {
+        $urlZip = [string]($ultima.assets | Where-Object { $_.name -eq "WalletTracker-$nuova.zip" } | Select-Object -First 1).browser_download_url
+        $urlImpronte = [string]($ultima.assets | Where-Object { $_.name -eq 'SHA256SUMS' } | Select-Object -First 1).browser_download_url
+    }
     if ($urlZip -eq '' -or $urlImpronte -eq '') { Errore "La versione $nuova non ha lo ZIP o SHA256SUMS. Non è cambiato niente." }
-    if (-not $env:WALLETTRACKER_RELEASES_URL) {
+    if (-not $env:WALLETTRACKER_RELEASES_URL -and -not $env:WALLETTRACKER_RELEASES_PAGE) {
         $origine = "https://github.com/rosemgo/WalletTracker/releases/download/$tag/"
         if (-not $urlZip.StartsWith($origine) -or -not $urlImpronte.StartsWith($origine)) {
             Errore 'Gli indirizzi dei file non sono quelli della pagina delle versioni di WalletTracker. Non è cambiato niente.'
@@ -455,10 +514,10 @@ if ($Aggiorna) {
     $zip = Join-Path $cartellaNuova "WalletTracker-$nuova.zip"
     $impronte = Join-Path $cartellaNuova 'SHA256SUMS'
     try {
-        Invoke-WebRequest -UseBasicParsing -TimeoutSec 600 -Uri $urlZip -OutFile $zip
-        Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $urlImpronte -OutFile $impronte
+        Con-Tentativi { Invoke-WebRequest -UseBasicParsing -TimeoutSec 600 -Uri $urlZip -OutFile $zip }
+        Con-Tentativi { Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $urlImpronte -OutFile $impronte }
     }
-    catch { Errore 'Lo scaricamento non è riuscito (controlla la connessione a Internet). Non è cambiato niente.' }
+    catch { Errore "Lo scaricamento non è riuscito. $(Motivo-Rete $_) Non è cambiato niente." }
     $attesa = ''
     foreach ($riga in [System.IO.File]::ReadAllLines($impronte)) {
         $parti = $riga -split '\s+', 2

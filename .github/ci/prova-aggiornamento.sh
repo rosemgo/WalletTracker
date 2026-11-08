@@ -10,6 +10,8 @@
 # I casi provati, in ordine:
 #   1. con l'ultima versione già installata: "Hai già l'ultima versione", niente cambia;
 #   2. uno ZIP che non corrisponde alla sua impronta (SHA256SUMS): rifiutato, niente cambia;
+#   2b. lo stesso, con il servizio API di GitHub che risponde 503: lo script trova la versione dalla pagina normale
+#      (che rinvia a .../releases/tag/v0.9.1), scarica dagli indirizzi ricavati, e rifiuta lo ZIP per l'impronta;
 #   3. l'aggiornamento 0.9.0 → 0.9.1: backup, file nuovi, backend nuovo acceso, dati al loro posto;
 #   4. l'aggiornamento 0.9.1 → 0.9.2 che fallisce: lo script torna da solo alla 0.9.1, con i dati di prima;
 #   5. Enable Banking: nessun indirizzo di ritorno di serie, e --tailscale che scrive solo quello di Tailscale.
@@ -25,6 +27,7 @@ github="$lavoro/github"
 server="$lavoro/WalletTracker"
 porta_github=8765
 export WALLETTRACKER_RELEASES_URL="http://127.0.0.1:$porta_github/latest.json"
+export WALLETTRACKER_RELEASES_PAGE="http://127.0.0.1:$porta_github/releases/latest"
 export WALLETTRACKER_ATTESA_BACKEND=90
 password_backup='prova-aggiornamento-1234'
 
@@ -87,8 +90,10 @@ for v in 0.9.0 0.9.1 0.9.2; do
   "$copia/.github/ci/prepara-zip.sh" "$v" "$github/download/v$v" >/dev/null
 done
 
-# Il finto GitHub: latest.json dice qual è l'ultima versione, come api.github.com/repos/.../releases/latest.
+# Il finto GitHub (finto-github.py): latest.json dice qual è l'ultima versione, come api.github.com/.../releases/latest;
+# "ultima-versione" la stessa cosa per la pagina normale, che rinvia a /releases/tag/vX.Y.Z.
 ultima() { # $1 = versione
+  echo "$1" >"$github/ultima-versione"
   cat >"$github/latest.json" <<FINE
 {
   "tag_name": "v$1",
@@ -101,7 +106,7 @@ ultima() { # $1 = versione
 }
 FINE
 }
-python3 -m http.server "$porta_github" --bind 127.0.0.1 --directory "$github" >"$lavoro/github.log" 2>&1 &
+python3 "$radice/.github/ci/finto-github.py" "$porta_github" "$github" >"$lavoro/github.log" 2>&1 &
 pid_github=$!
 trap 'kill $pid_github 2>/dev/null || true' EXIT
 sleep 1
@@ -144,6 +149,35 @@ grep -q "NON corrisponde alla sua impronta" "$lavoro/caso2.log" || fallito "caso
 [ "$(cat VERSION)" = 0.9.0 ] && [ "$(etichetta)" = 0.9.0 ] || fallito "caso 2: qualcosa è cambiato"
 [ ! -d .aggiornamento/precedente ] || fallito "caso 2: i file sono stati toccati"
 come_1000 ls backup | grep -q prima-dell-aggiornamento && fallito "caso 2: il backup non doveva nemmeno partire"
+
+# --- 2b. Il servizio API di GitHub non risponde: la seconda strada, dalla pagina delle versioni ---
+# Come il 2 (l'impronta è ancora quella sbagliata), ma latest.json risponde 503. Se lo script arriva a rifiutare lo ZIP
+# per l'impronta, vuol dire che ha trovato la versione dal rinvio della pagina e scaricato i file dagli indirizzi giusti.
+passo "Caso 2b: il servizio API risponde 503, la versione si trova dalla pagina"
+touch "$github/api-rotta"
+if echo s | ./installa.sh --aggiorna --senza-browser >"$lavoro/caso2b.log" 2>&1; then
+  cat "$lavoro/caso2b.log"
+  fallito "caso 2b: lo ZIP manomesso è stato accettato"
+fi
+cat "$lavoro/caso2b.log"
+grep -q "provo dalla pagina delle versioni" "$lavoro/caso2b.log" || fallito "caso 2b: non ha provato la seconda strada"
+grep -q "C'è una versione nuova: 0.9.1" "$lavoro/caso2b.log" || fallito "caso 2b: non ha trovato la versione dalla pagina"
+grep -q "NON corrisponde alla sua impronta" "$lavoro/caso2b.log" || fallito "caso 2b: non è arrivato al controllo dell'impronta"
+grep -q "GET /releases/download/v0.9.1/WalletTracker-0.9.1.zip" "$lavoro/github.log" ||
+  fallito "caso 2b: lo ZIP non è stato scaricato dall'indirizzo ricavato dalla pagina"
+[ "$(cat VERSION)" = 0.9.0 ] && [ "$(etichetta)" = 0.9.0 ] || fallito "caso 2b: qualcosa è cambiato"
+# E se anche la pagina non risponde: un errore chiaro, e niente cambia.
+mv "$github/ultima-versione" "$github/ultima-versione.via"
+if echo s | ./installa.sh --aggiorna --senza-browser >"$lavoro/caso2c.log" 2>&1; then
+  cat "$lavoro/caso2c.log"
+  fallito "caso 2b: senza API né pagina l'aggiornamento è andato avanti"
+fi
+grep -q "né dal servizio API né dalla pagina delle versioni" "$lavoro/caso2c.log" || {
+  cat "$lavoro/caso2c.log"
+  fallito "caso 2b: senza API né pagina manca il messaggio"
+}
+mv "$github/ultima-versione.via" "$github/ultima-versione"
+rm "$github/api-rotta"
 cp "$lavoro/SHA256SUMS.buono" "$github/download/v0.9.1/SHA256SUMS"
 
 # --- 3. L'aggiornamento riuscito ---

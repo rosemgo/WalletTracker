@@ -4,6 +4,12 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.1
+
+- **"Aggiorna" funziona anche quando il servizio di GitHub per le versioni non risponde**: lo script riprova da solo, e
+  se serve legge l'ultima versione dalla pagina normale di GitHub. Lo ZIP si controlla con la sua impronta, come sempre.
+- **Gli errori dicono il motivo**: il codice di GitHub e che cosa vuol dire, invece di "controlla la connessione".
+
 ## 1.2.0
 
 - **Scegli dove salvare i backup**: al primo avvio lo script chiede la cartella (un disco esterno, o la cartella di
