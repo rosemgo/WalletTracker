@@ -470,6 +470,9 @@ echo "Il backend è pronto."
 if [ "$AGGIORNA" = true ]; then
   # L'indirizzo si può cambiare solo per le prove (la CI usa un finto GitHub sul computer stesso).
   indirizzo_versioni=${WALLETTRACKER_RELEASES_URL:-https://api.github.com/repos/rosemgo/WalletTracker/releases/latest}
+  # La seconda strada, se il servizio API di GitHub non risponde: la pagina normale delle versioni, che rinvia a quella
+  # dell'ultima (…/releases/tag/v1.2.0). Anche questa si cambia solo per le prove.
+  pagina_versioni=${WALLETTRACKER_RELEASES_PAGE:-https://github.com/rosemgo/WalletTracker/releases/latest}
   agg=.aggiornamento
   # -f: un errore HTTP (404, 500) è un errore anche per lo script; -sS: niente barra di avanzamento, ma gli errori sì.
   # --retry: fino a 3 tentativi in più, 5 secondi tra l'uno e l'altro, se l'errore è passeggero (nessuna risposta, 5xx,
@@ -493,12 +496,22 @@ if [ "$AGGIORNA" = true ]; then
   command -v unzip >/dev/null 2>&1 || errore "Manca il programma unzip: installalo (per esempio  sudo apt install unzip) e riprova."
   rm -rf "$agg/nuova"
   mkdir -p "$agg/nuova"
-  # Il motivo vero lo scrive curl nella riga qui sopra (per esempio "error: 403"); qui si dice come leggerlo.
-  scarica 30 "$agg/nuova/ultima.json" "$indirizzo_versioni" ||
-    errore "Non riesco a chiedere a GitHub l'ultima versione: il motivo è nella riga di curl qui sopra. Con 403 o 429 è il limite di richieste di GitHub senza account, che si azzera entro un'ora; con 5xx GitHub non risponde in questo momento: riprova più tardi. Altrimenti controlla la connessione a Internet (e, se c'è, la VPN o il proxy). Non è cambiato niente."
   # Dal JSON di GitHub servono il nome del tag e gli indirizzi dei file: li leggo con sed, senza programmi in più.
   campo() { tr ',' '\n' <"$agg/nuova/ultima.json" | sed -n "s/^[[:space:]{]*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"; }
-  tag=$(campo tag_name | head -n 1)
+  # Prima strada: il servizio API (api.github.com). Il motivo di un errore lo scrive curl nella riga qui sopra.
+  if scarica 30 "$agg/nuova/ultima.json" "$indirizzo_versioni"; then
+    tag=$(campo tag_name | head -n 1)
+    dalla_pagina=false
+  else
+    # Seconda strada: la pagina normale rinvia a quella dell'ultima versione, e il numero è in fondo all'indirizzo.
+    # Gli indirizzi dei due file si ricavano dal numero: sono sempre .../releases/download/vX.Y.Z/<file>.
+    echo "Il servizio di GitHub per le versioni non risponde: provo dalla pagina delle versioni."
+    arrivo=$(curl -fsSL --retry 3 --retry-delay 5 --max-time 30 -o /dev/null -w '%{url_effective}' "$pagina_versioni") ||
+      errore "Non riesco a chiedere a GitHub l'ultima versione, né dal servizio API né dalla pagina delle versioni: il motivo è nelle righe di curl qui sopra. Con 403 o 429 è il limite di richieste di GitHub senza account, che si azzera entro un'ora; con 5xx GitHub non risponde in questo momento: riprova più tardi. Altrimenti controlla la connessione a Internet (e, se c'è, la VPN o il proxy). Non è cambiato niente."
+    tag=${arrivo##*/releases/tag/}
+    [ "$tag" != "$arrivo" ] || tag=""
+    dalla_pagina=true
+  fi
   [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || errore "GitHub ha risposto qualcosa che non capisco (versione: \"$tag\"). Non è cambiato niente."
   nuova=${tag#v}
   [[ "$WALLETTRACKER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
@@ -511,10 +524,16 @@ if [ "$AGGIORNA" = true ]; then
   echo "C'è una versione nuova: $nuova (adesso hai la $WALLETTRACKER_VERSION)."
 
   # Gli indirizzi dei due file. Da GitHub vero, solo dalla pagina delle versioni di WalletTracker.
-  url_zip=$(campo browser_download_url | grep -F "/WalletTracker-$nuova.zip" | head -n 1 || true)
-  url_impronte=$(campo browser_download_url | grep -E '/SHA256SUMS$' | head -n 1 || true)
+  if [ "$dalla_pagina" = true ]; then
+    base_download="${pagina_versioni%/latest}/download/$tag"
+    url_zip="$base_download/WalletTracker-$nuova.zip"
+    url_impronte="$base_download/SHA256SUMS"
+  else
+    url_zip=$(campo browser_download_url | grep -F "/WalletTracker-$nuova.zip" | head -n 1 || true)
+    url_impronte=$(campo browser_download_url | grep -E '/SHA256SUMS$' | head -n 1 || true)
+  fi
   [ -n "$url_zip" ] && [ -n "$url_impronte" ] || errore "La versione $nuova non ha lo ZIP o SHA256SUMS. Non è cambiato niente."
-  if [ -z "${WALLETTRACKER_RELEASES_URL:-}" ]; then
+  if [ -z "${WALLETTRACKER_RELEASES_URL:-}" ] && [ -z "${WALLETTRACKER_RELEASES_PAGE:-}" ]; then
     origine="https://github.com/rosemgo/WalletTracker/releases/download/$tag/"
     case "$url_zip$url_impronte" in
       "$origine"*"$origine"*) ;;

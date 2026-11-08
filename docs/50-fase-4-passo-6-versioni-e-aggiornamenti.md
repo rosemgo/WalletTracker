@@ -57,6 +57,7 @@ Le parole sono quelle della `docs/47`: il **server** è la macchina su cui gira 
 - Parte S: pubblicare una versione nuova, e vedere quelle già pubblicate
 - Parte T: la guida per chi non è informatico (6d)
 - Parte U: la prova vera su Windows, passo per passo
+- Parte V: quando il servizio API di GitHub non risponde (la seconda strada, dalla 1.2.1)
 
 ---
 
@@ -1093,3 +1094,58 @@ wallettracker`, in `docker-compose.yml`): gli stessi container e lo stesso volum
 
 Arriverà con la versione dopo la 1.1.0 (per esempio una 1.1.1): doppio clic su **Aggiorna WalletTracker** nella
 cartella della 1.1.0, e deve passare alla nuova da solo (parte I), con il backup prima.
+
+---
+
+## Parte V: quando il servizio API di GitHub non risponde
+
+**Che cosa è successo.** La prima prova vera di "Aggiorna" (dalla 1.1.1 alla 1.2.0) si è fermata con "Non riesco a
+chiedere a GitHub l'ultima versione". Lo script della 1.1.1 nascondeva il motivo; chiesto a mano con PowerShell, era
+**503 "Server non disponibile"**, e nel browser l'unicorno di GitHub ("We couldn't respond to your request in time").
+Dalla stessa zona, però, la pagina normale `github.com/rosemgo/WalletTracker/releases/latest` funzionava. Il problema
+era solo il **servizio API** (`api.github.com`), l'indirizzo da cui lo script legge qual è l'ultima versione.
+
+GitHub è fatto di più servizi: il sito, i file delle release (gli "asset"), l'API. Possono smettere di rispondere uno
+alla volta, anche solo per una zona, e di solito per poco. Lo script dipendeva da uno solo.
+
+**Che cosa fa ora lo script (dalla 1.2.1), in ordine.**
+
+1. Chiede l'ultima versione al **servizio API**, come prima. Se l'errore è passeggero (nessuna risposta, un 5xx, 429)
+   riprova da solo **3 volte, a 5 secondi** di distanza (`Con-Tentativi` in PowerShell, `curl --retry` in bash).
+2. Se l'API proprio non risponde, scrive "Il servizio di GitHub per le versioni non risponde: provo dalla pagina delle
+   versioni", e chiede la **pagina normale** `…/releases/latest`. GitHub la **rinvia** a quella dell'ultima versione,
+   `…/releases/tag/v1.2.0`: il numero si legge in fondo all'indirizzo d'arrivo (in bash `curl -w '%{url_effective}'`; in
+   PowerShell l'indirizzo d'arrivo della risposta). Un rinvio, in HTTP, è la risposta 302 "vai a quest'altro
+   indirizzo": il programma lo segue da solo, come il browser.
+3. Gli indirizzi dei due file non servono dall'API: si ricavano dal numero, perché su GitHub sono sempre
+   `…/releases/download/v1.2.0/WalletTracker-1.2.0.zip` e `…/SHA256SUMS`.
+4. Da qui è tutto come prima: lo ZIP si controlla con la sua impronta, le novità si leggono da `NOVITA.md` **dentro lo
+   ZIP** (già prima non si leggevano dall'API), poi la conferma, il backup e il ritorno da solo se la versione nuova
+   non parte.
+5. Se non risponde neanche la pagina, l'errore dice tutti e due i motivi, e non cambia niente.
+
+**La sicurezza non cambia.** Lo ZIP arriva sempre dalla pagina delle versioni di WalletTracker su GitHub, il numero
+deve essere `vX.Y.Z`, e lo ZIP si usa solo se corrisponde all'impronta di `SHA256SUMS`. Come prima, chi entrasse
+nell'account GitHub potrebbe pubblicare uno ZIP e la sua impronta insieme (`docs/17`, riga 49): la seconda strada non
+lo rende né più facile né più difficile.
+
+**Gli errori, con il motivo.** Prima lo script diceva sempre "controlla la connessione a Internet". Ora dice il
+codice e che cosa vuol dire: 403/429 il limite di richieste di GitHub senza account (60 all'ora per indirizzo, che si
+azzera da solo), 5xx GitHub che non risponde in quel momento, oppure il messaggio di Windows (nome non trovato,
+connessione rifiutata, proxy).
+
+**La prova.** In `.github/ci/prova-aggiornamento.sh` il finto GitHub è ora un piccolo server, `finto-github.py`, che
+fa le tre parti di GitHub: l'API (`latest.json`, che risponde 503 se c'è il file `api-rotta`), la pagina che rinvia
+(`/releases/latest` → `/releases/tag/vX.Y.Z`) e i file. Il **caso 2b**: con l'API rotta, lo script trova la 0.9.1
+dalla pagina, scarica lo ZIP dall'indirizzo ricavato e lo rifiuta per l'impronta sbagliata (la stessa del caso 2):
+così si vede che la seconda strada arriva fino in fondo, senza aggiornare davvero. E senza API né pagina: l'errore con
+tutti e due i motivi. Su GitHub vero, a mano: il rinvio arriva a `…/releases/tag/v1.2.0`, e dagli indirizzi ricavati
+`SHA256SUMS` e lo ZIP si scaricano.
+
+La parte per Windows (`installa.ps1`) non si è potuta eseguire nell'ambiente di sviluppo (lì PowerShell non c'è): va
+provata su Windows, la prima volta che il servizio API non risponde, o con `WALLETTRACKER_RELEASES_URL` puntato a un
+indirizzo che non esiste.
+
+**Una cosa da sapere.** La seconda strada vale dalla versione che la contiene: "Aggiorna" usa lo script della versione
+installata. Chi ha la 1.1.1 o la 1.2.0, la prima volta, ha ancora bisogno che l'API risponda.
+
