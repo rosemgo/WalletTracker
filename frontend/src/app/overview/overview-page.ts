@@ -12,7 +12,7 @@ import { LiquidityCard } from './liquidity-card';
 import { MonthChart, Trend } from './month-chart';
 import { UpperFirstPipe } from '../text/upper-first.pipe';
 
-/** Quante categorie mostrare in "Dove vanno": le altre sono in Analisi. */
+/** Quante categorie mostrare in "Spese per categoria": le altre sono in Analisi. */
 export const TOP_CATEGORIES = 5;
 
 /** Sotto questa differenza (in euro) si è "in linea con il solito": 3 € di scarto non sono una notizia. */

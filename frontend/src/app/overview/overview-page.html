@@ -96,9 +96,9 @@
     </div>
 
     @if (topCategories().length > 0) {
-      <section class="card">
+      <section class="card spending-card">
         <div class="card-head">
-          <h2>Dove vanno</h2>
+          <h2>Spese per categoria</h2>
           <a routerLink="/analisi">Tutte ›</a>
         </div>
         <ul class="bars">
@@ -129,8 +129,8 @@
         </ul>
       </section>
     } @else {
-      <section class="card">
-        <h2>Dove vanno</h2>
+      <section class="card spending-card">
+        <h2>Spese per categoria</h2>
         <p class="secondary">Nessuna spesa {{ isCurrent() ? 'finora' : 'in questo mese' }}.</p>
       </section>
     }
@@ -184,7 +184,7 @@
   <p>Caricamento...</p>
 }
 
-<!-- Una categoria di "Dove vanno": il nome, l'importo, la barra e la differenza dal solito. -->
+<!-- Una categoria di "Spese per categoria": il nome, l'importo, la barra e la differenza dal solito. -->
 <ng-template #bar let-c>
   <span class="bar-label">
     <span>{{ categoryName(c) }}</span>

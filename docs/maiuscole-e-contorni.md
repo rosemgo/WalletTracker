@@ -185,7 +185,7 @@ nell'intestazione di una scheda, con la freccia "›".
 
 | Dove | Prima | Ora |
 |---|---|---|
-| Riepilogo, "Dove vanno" e "In arrivo" | "Tutte", "Abbonamenti": grigi e sottolineati | "Tutte ›", "Abbonamenti ›", come "Vedi tutto ›" e "Vedi i conti ›" delle altre schede |
+| Riepilogo, "Spese per categoria" (allora "Dove vanno") e "In arrivo" | "Tutte", "Abbonamenti": grigi e sottolineati | "Tutte ›", "Abbonamenti ›", come "Vedi tutto ›" e "Vedi i conti ›" delle altre schede |
 | Conti, in alto | "Collega una banca", "Importa CSV" sottolineati accanto al pulsante | azioni |
 | Conti, colonna Conto | "Rinomina" attaccato al nome, come una parola della frase; "Vedi i movimenti" sottolineato, sopra l'IBAN | nome, IBAN, e sotto le due azioni sulla stessa riga |
 | Categorie | "12 movimenti" sottolineato; "Rinomina · Elimina" | "12 movimenti" azione; "Rinomina" e "Elimina" (in rosso) senza "·"; la conferma con il pulsante rosso, come in Conti |

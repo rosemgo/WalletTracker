@@ -144,6 +144,9 @@ describe('OverviewPage', () => {
       li.textContent?.replace(/\s+/g, ' ').trim(),
     );
 
+    expect(page.querySelector('.spending-card h2')?.textContent?.trim()).toBe(
+      'Spese per categoria',
+    );
     expect(rows.length).toBe(5); // la sesta (senza categoria) è in Analisi
     expect(rows[0]).toMatch(/^Spesa alimentare\s*412\s€\s*\+32\s€ sul solito$/);
     expect(rows[1]).toContain('come al solito');
