@@ -79,7 +79,7 @@ const TYPES: Record<BackupFile['type'], string> = {
                 <span>{{ file.createdAt | date: 'd MMM y, HH:mm' }}</span>
                 <span class="hint">{{ size(file.sizeBytes) }}</span>
                 @if (status.canDownload) {
-                  <a [href]="url(file)" download>Scarica</a>
+                  <a class="action" [href]="url(file)" download>Scarica</a>
                 }
               </li>
             }

@@ -4,8 +4,8 @@
   <button type="button" [disabled]="syncing()" (click)="syncNow()">
     {{ syncing() ? 'Aggiornamento in corso...' : 'Aggiorna ora' }}
   </button>
-  <a routerLink="/collega">Collega una banca</a>
-  <a routerLink="/importa">Importa CSV</a>
+  <a class="action" routerLink="/collega">Collega una banca</a>
+  <a class="action" routerLink="/importa">Importa CSV</a>
 </div>
 
 @if (message()) {
@@ -77,15 +77,7 @@
                   <img class="account-logo" [src]="logoUrl(account)" alt="" />
                 }
                 {{ account.label }}
-                <button type="button" class="link" (click)="renaming.set(account.id)">
-                  Rinomina
-                </button>
               }
-              <div>
-                <a class="action" routerLink="/movimenti" [queryParams]="{ accountId: account.id }"
-                  >Vedi i movimenti</a
-                >
-              </div>
               <div class="secondary">
                 <span class="iban">{{ account.iban ?? 'Senza IBAN' }}</span> ·
                 {{ account.currency }}
@@ -93,6 +85,20 @@
                   · per la banca: {{ account.name }}
                 }
               </div>
+              <!-- Le azioni del conto su una riga a parte, sotto il nome e l'IBAN. -->
+              @if (renaming() !== account.id) {
+                <div class="row-actions account-row-actions">
+                  <a
+                    class="action"
+                    routerLink="/movimenti"
+                    [queryParams]="{ accountId: account.id }"
+                    >Vedi i movimenti</a
+                  >
+                  <button type="button" class="link" (click)="renaming.set(account.id)">
+                    Rinomina
+                  </button>
+                </div>
+              }
             </td>
             <td data-label="Ruolo">
               <select

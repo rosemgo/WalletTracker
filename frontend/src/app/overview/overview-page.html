@@ -99,7 +99,7 @@
       <section class="card">
         <div class="card-head">
           <h2>Dove vanno</h2>
-          <a routerLink="/analisi">Tutte</a>
+          <a routerLink="/analisi">Tutte ›</a>
         </div>
         <ul class="bars">
           @for (c of topCategories(); track c.categoryId) {
@@ -139,7 +139,7 @@
       <section class="card">
         <div class="card-head">
           <h2>In arrivo nei prossimi 7 giorni</h2>
-          <a routerLink="/abbonamenti">Abbonamenti</a>
+          <a routerLink="/abbonamenti">Abbonamenti ›</a>
         </div>
         <ul class="rows">
           @for (u of o.upcoming; track u.subscriptionId) {
