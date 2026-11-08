@@ -491,8 +491,9 @@ if [ "$AGGIORNA" = true ]; then
   command -v unzip >/dev/null 2>&1 || errore "Manca il programma unzip: installalo (per esempio  sudo apt install unzip) e riprova."
   rm -rf "$agg/nuova"
   mkdir -p "$agg/nuova"
+  # Il motivo vero lo scrive curl nella riga qui sopra (per esempio "error: 403"); qui si dice come leggerlo.
   scarica 30 "$agg/nuova/ultima.json" "$indirizzo_versioni" ||
-    errore "Non riesco a chiedere a GitHub l'ultima versione (controlla la connessione a Internet). Non è cambiato niente."
+    errore "Non riesco a chiedere a GitHub l'ultima versione: il motivo è nella riga di curl qui sopra. Con 403 o 429 è il limite di richieste di GitHub senza account, che si azzera entro un'ora: riprova più tardi. Altrimenti controlla la connessione a Internet. Non è cambiato niente."
   # Dal JSON di GitHub servono il nome del tag e gli indirizzi dei file: li leggo con sed, senza programmi in più.
   campo() { tr ',' '\n' <"$agg/nuova/ultima.json" | sed -n "s/^[[:space:]{]*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p"; }
   tag=$(campo tag_name | head -n 1)

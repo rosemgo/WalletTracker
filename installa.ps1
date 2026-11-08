@@ -408,6 +408,18 @@ if ($Aggiorna) {
     # Windows PowerShell 5.1: https moderno (TLS 1.2) e niente barra di avanzamento, che rallenta moltissimo gli scaricamenti.
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     $ProgressPreference = 'SilentlyContinue'
+    # Il motivo vero di un errore di rete, in una frase: il codice HTTP se c'è (403/429: il limite di richieste di GitHub
+    # senza account, 60 all'ora per indirizzo, che si azzera da solo), altrimenti il messaggio di Windows (nome non
+    # trovato, connessione rifiutata, proxy...). Prima diceva sempre "controlla la connessione", anche quando non era quella.
+    function Motivo-Rete($errore) {
+        $codice = $null
+        if ($errore.Exception.Response) { try { $codice = [int]$errore.Exception.Response.StatusCode } catch { } }
+        if ($codice -eq 403 -or $codice -eq 429) {
+            return "GitHub ha rifiutato la richiesta (codice $codice): di solito è il limite di richieste senza account, che si azzera entro un'ora. Riprova più tardi."
+        }
+        if ($codice) { return "GitHub ha risposto con il codice $codice." }
+        return "Windows dice: $($errore.Exception.Message) Controlla la connessione a Internet (e, se c'è, il proxy o l'antivirus)."
+    }
     # I file da non toccare mai, anche se uno ZIP li contenesse.
     function Da-Non-Toccare([string]$f) { return $f -eq '.env' -or $f -match '^(\.data|backup|secrets|\.aggiornamento)/' }
     function Metti-Al-Posto([string]$da, [string]$dove) {
@@ -427,7 +439,7 @@ if ($Aggiorna) {
     if (Test-Path $cartellaNuova) { Remove-Item -Recurse -Force $cartellaNuova }
     New-Item -ItemType Directory -Force -Path $cartellaNuova | Out-Null
     try { $ultima = Invoke-RestMethod -UseBasicParsing -TimeoutSec 30 -Uri $indirizzoVersioni -Headers @{ Accept = 'application/vnd.github+json' } }
-    catch { Errore 'Non riesco a chiedere a GitHub l''ultima versione (controlla la connessione a Internet). Non è cambiato niente.' }
+    catch { Errore "Non riesco a chiedere a GitHub l'ultima versione. $(Motivo-Rete $_) Non è cambiato niente." }
     $tag = [string]$ultima.tag_name
     if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { Errore "GitHub ha risposto qualcosa che non capisco (versione: `"$tag`"). Non è cambiato niente." }
     $nuova = $tag.Substring(1)
@@ -458,7 +470,7 @@ if ($Aggiorna) {
         Invoke-WebRequest -UseBasicParsing -TimeoutSec 600 -Uri $urlZip -OutFile $zip
         Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $urlImpronte -OutFile $impronte
     }
-    catch { Errore 'Lo scaricamento non è riuscito (controlla la connessione a Internet). Non è cambiato niente.' }
+    catch { Errore "Lo scaricamento non è riuscito. $(Motivo-Rete $_) Non è cambiato niente." }
     $attesa = ''
     foreach ($riga in [System.IO.File]::ReadAllLines($impronte)) {
         $parti = $riga -split '\s+', 2
