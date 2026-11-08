@@ -73,7 +73,7 @@ cat >"$copia/NOVITA.md" <<'FINE'
 
 ## 0.9.1
 
-- Una novità di prova.
+- **Una novità** di prova, con `codice`.
 
 ## 0.9.0
 
@@ -183,7 +183,7 @@ cp "$lavoro/SHA256SUMS.buono" "$github/download/v0.9.1/SHA256SUMS"
 # --- 3. L'aggiornamento riuscito ---
 passo "Caso 3: aggiornamento da 0.9.0 a 0.9.1"
 echo s | ./installa.sh --aggiorna --senza-browser | tee "$lavoro/caso3.log"
-grep -q "Una novità di prova" "$lavoro/caso3.log" || fallito "caso 3: le novità non sono state mostrate"
+grep -q "Una novità di prova, con codice." "$lavoro/caso3.log" || fallito "caso 3: le novità non sono state mostrate (o con i segni di Markdown)"
 grep -q "Aggiornamento completato: WalletTracker 0.9.1 è avviato" "$lavoro/caso3.log" || fallito "caso 3: manca il messaggio finale"
 [ "$(cat VERSION)" = 0.9.1 ] || fallito "caso 3: VERSION non è 0.9.1"
 [ "$(etichetta)" = 0.9.1 ] && [ "$(salute)" = healthy ] || fallito "caso 3: il backend non è la 0.9.1 acceso ($(etichetta), $(salute))"

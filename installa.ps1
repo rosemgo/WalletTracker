@@ -540,10 +540,12 @@ if ($Aggiorna) {
     foreach ($riga in [System.IO.File]::ReadAllLines((Join-Path $sorgente 'NOVITA.md'), $Utf8)) {
         if ($riga -eq "## $adesso") { break }
         if ($riga.StartsWith('## ')) { $dentro = $true }
-        if ($dentro) { Write-Host $riga }
+        # Nel terminale il grassetto (**) e il codice (`) di Markdown non si vedono come tali: si tolgono i segni.
+        if ($dentro) { Write-Host ($riga -replace '\*\*', '' -replace '`', '') }
     }
     Write-Host ''
-    $risposta = Read-Host "Aggiorno WalletTracker alla $nuova? Prima faccio un backup dei dati. [s/N]"
+    # ${nuova} con le graffe: in PowerShell "?" può far parte del nome di una variabile, e "$nuova?" sarebbe vuota.
+    $risposta = Read-Host "Aggiorno WalletTracker alla ${nuova}? Prima faccio un backup dei dati. [s/N]"
     if ($risposta -notmatch '^(s|si|sì)$') {
         Write-Host 'Aggiornamento annullato: non è cambiato niente.'
         exit 0
