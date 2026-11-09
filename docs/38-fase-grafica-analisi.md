@@ -315,3 +315,22 @@ cominciato; "12 mesi" è a un clic.
 **I test.** `explore-page.spec.ts` (la prima richiesta è `YEAR_TO_DATE`, nell'indirizzo `questanno`, l'ordine dei
 pulsanti); `category-page.spec.ts` (dieci barre da gennaio, poi "12 mesi").
 
+## Correzione: "Quest'anno" usciva dal suo riquadro sul telefono
+
+**Il difetto.** In Investimenti, sul telefono, la scritta "Quest'anno" usciva dal riquadro che la evidenzia. I
+pulsanti di una barra di scelta (`.segmented`) erano tutti **larghi uguali** (una griglia di colonne uguali): con
+quattro pulsanti ognuno aveva da 67 a 90 pixel, secondo il telefono, e "Quest'anno" ne vuole 91. Le altre parole ("12
+mesi", "2 anni", "Tutto") ci stavano con spazio d'avanzo. Misurato a 320, 360, 375, 390 e 412 pixel: usciva sempre.
+
+**La correzione.** Sotto i 520 pixel ogni pulsante parte dalla **larghezza del suo testo**, e lo spazio che avanza si
+divide in parti uguali (`display: flex` e `flex: 1 1 auto`): "Quest'anno" ha ora da 97 a 120 pixel, "Tutto" un poco
+meno. Vale per tutte le barre di scelta del telefono. Sul PC restano larghe uguali.
+
+Controllando tutte le barre è uscito anche un caso più piccolo: a **320 pixel** (il primo iPhone SE) i cinque pulsanti
+di Analisi volevano 304 pixel e ne avevano 280, e "Settimana" usciva. Sotto i 360 pixel quei pulsanti hanno il
+carattere un poco più piccolo e meno margine ai lati: 266 pixel.
+
+**La prova.** Le barre di Investimenti, Analisi e della pagina di una categoria, a 320, 360, 375, 390, 412 e 1280
+pixel: nessun testo più largo del suo pulsante, nessun pulsante fuori dalla barra, nessuna pagina più larga dello
+schermo.
+

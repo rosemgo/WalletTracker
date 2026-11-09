@@ -2995,8 +2995,21 @@ button.choice .check {
   font-weight: 550;
 }
 
-/* Con cinque scelte (Analisi: settimana ... quest'anno), sul telefono le etichette non ci starebbero: ogni pulsante
-   prende la larghezza del suo testo, con un carattere un poco più piccolo. */
+/* Sul telefono i pulsanti non sono più tutti larghi uguali: ognuno parte dalla larghezza del suo testo, e lo spazio che
+   avanza si divide in parti uguali (flex: 1 1 auto). Con colonne uguali "Quest'anno" (91 pixel) usciva dal suo
+   riquadro in Investimenti, a ogni larghezza da 320 a 412: le altre parole ci stavano con spazio d'avanzo. */
+@media (max-width: 520px) {
+  .segmented {
+    display: flex;
+  }
+
+  .segmented button {
+    flex: 1 1 auto;
+    white-space: nowrap;
+  }
+}
+
+/* Con cinque scelte (Analisi: Quest'anno ... Settimana) non basta: un carattere un poco più piccolo, e meno spazio. */
 @media (max-width: 520px) {
   .segmented:has(> button:nth-child(5)) {
     grid-auto-columns: auto;
@@ -3007,6 +3020,15 @@ button.choice .check {
     padding: 0 4px;
     font-size: 0.86rem;
     white-space: nowrap;
+  }
+}
+
+/* Sui telefoni più stretti (320 pixel, il primo iPhone SE) i cinque pulsanti volevano 304 pixel e ne avevano 280:
+   "Settimana" usciva dalla barra. Ancora un poco più piccoli, con meno margine ai lati: 266 pixel. */
+@media (max-width: 359px) {
+  .segmented:has(> button:nth-child(5)) button {
+    padding: 0 2px;
+    font-size: 0.8rem;
   }
 }
 

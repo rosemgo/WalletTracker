@@ -514,6 +514,49 @@ di fila, poi uno di prima di un aggiornamento in più. Devono restarne 10 fatti 
 c'erano prima non ci sono più), 3 di prima di un aggiornamento, e gli automatici quanti erano. `BackupServiceTest`
 (i numeri dallo stato) e `backup-section.spec.ts` (5 righe, poi 10, poi di nuovo 5; un elenco corto intero).
 
+### G4. Niente backup di un database vuoto
+
+**Che cosa è successo.** Sul PC dell'utente alcuni backup automatici pesavano 4640 byte invece di circa 500 kB. Aperti
+con `verifica`, dicevano `migrazione=` (vuota): il database fotografato quel giorno **non aveva le tabelle** di
+WalletTracker, era un database appena creato. Quei backup non contengono i dati: ripristinarne uno darebbe un'app
+vuota. E con i limiti della parte G2 il rischio cresce: 14 backup automatici vuoti di fila prenderebbero il posto di 14
+buoni.
+
+**La protezione.** Prima di salvare, `crea` fa due domande al database:
+
+1. risponde? (`SELECT 1`). Se no: "Non riesco a collegarmi al database", codice 2;
+2. ha l'ultima migrazione di Flyway (la tabella `flyway_schema_history`, la stessa che dà il numero `migrazione` del
+   manifesto)? Se no: "Il database non ha le tabelle di WalletTracker: non c'è niente da salvare. Backup non fatto, e i
+   backup di prima restano tutti", **codice 6**.
+
+Con il codice 6 non si scrive nessun file e `sfoltisci` non parte: i backup che ci sono restano tutti. La dashboard lo
+dice come ogni backup non riuscito: la striscia in alto ("l'ultimo backup non è riuscito") e, in Impostazioni → Backup,
+il motivo in rosso: "Backup non fatto: il database non ha ancora i dati di WalletTracker".
+
+**E il ripristino?** Prima di sostituire i dati, `-Ripristina` fa la copia di sicurezza "prima-del-ripristino". Con un
+database senza tabelle quella copia dà il codice 6: lo script lo riconosce, scrive "niente copia di sicurezza, non c'è
+niente da salvare" e **va avanti**, perché è proprio il caso in cui il ripristino serve (un computer nuovo, un database
+ricreato). Con ogni altro errore il ripristino si ferma, come prima. (Di solito non succede: prima del ripristino lo
+script avvia l'app, e il backend crea le tabelle.) "Aggiorna" invece si ferma anche con il codice 6: senza il backup
+non potrebbe tornare indietro.
+
+**Che cosa fare, se compare.** Vuol dire che l'app installata in quel momento non è quella con i tuoi dati, o che il
+database è stato appena ricreato (un'installazione nuova, un `docker compose down -v`). Controlla da quale cartella è
+avviata WalletTracker, e in Docker Desktop, scheda **Volumes**, quanti volumi `db-data` ci sono.
+
+**Per sapere che cosa c'è in un backup**, senza toccare niente: dalla cartella di WalletTracker,
+
+```
+docker compose run --rm -T backup verifica /backup/wallettracker-automatico-20261108-095036.backup
+```
+
+(il nome esatto con `Get-ChildItem <cartella dei backup>` su Windows, `ls` su Linux e Mac). La riga `migrazione=` vuota
+vuol dire "database senza tabelle"; un numero (oggi 36) vuol dire che le tabelle c'erano.
+
+**La prova.** Nella CI, il passo "Niente backup di un database vuoto": un database creato apposta (`vuoto`), il backup
+che si rifiuta con il codice 6, la cartella dei backup uguale a prima. A mano, nell'app di prova: la richiesta dalla
+dashboard rifiutata, la striscia in alto e il motivo in rosso, nessun backup tolto; poi un backup normale riuscito.
+
 ### G3. Senza password
 
 Se nel `.env` non c'è la password, il container resta acceso ma non fa niente, e lo scrive nei suoi log:

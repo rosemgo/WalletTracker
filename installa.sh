@@ -693,8 +693,16 @@ if [ -n "$FILE_RIPRISTINO" ]; then
 
   # 1. La copia di sicurezza di adesso, con la password del .env (non con un'altra che arrivasse da fuori).
   if password_backup_valida "$password_backup"; then
+    codice=0
     WALLETTRACKER_BACKUP_PASSWORD="$password_backup" docker compose run --rm -T backup crea prima-del-ripristino </dev/null ||
+      codice=$?
+    # 6: il database di adesso non ha le tabelle di WalletTracker (docs/48, parte G4). Non c'è niente da salvare, e
+    # proprio allora il ripristino serve (un computer nuovo, un database ricreato): si va avanti.
+    if [ "$codice" = 6 ]; then
+      echo "Il database di adesso non ha dati di WalletTracker: niente copia di sicurezza, non c'è niente da salvare."
+    elif [ "$codice" != 0 ]; then
       errore "Non riesco a fare la copia di sicurezza dei dati di adesso: ripristino annullato, non è cambiato niente."
+    fi
   else
     echo "Nel .env non c'è la password dei backup: niente copia di sicurezza dei dati di adesso."
   fi
