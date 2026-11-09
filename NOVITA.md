@@ -9,6 +9,9 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 - **I backup non crescono più per sempre**: si tengono gli ultimi 14 automatici, 10 fatti a mano e 3 di prima di ogni
   aggiornamento o ripristino. In Impostazioni → Backup se ne vedono 5, con "Mostra tutti", e le date in colonna.
 
+- **Niente backup "vuoti"**: se il database non ha ancora le tabelle di WalletTracker (un'installazione appena creata),
+  il backup non si fa, e l'app lo dice. Così un backup senza i tuoi dati non prende mai il posto di uno buono.
+
 I backup in più si tolgono da soli, ognuno al primo backup nuovo del suo tipo dopo l'aggiornamento.
 
 ## 1.2.2

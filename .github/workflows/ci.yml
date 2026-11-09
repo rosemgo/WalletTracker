@@ -326,6 +326,22 @@ jobs:
           sudo grep -qx 'tieni-manuali=10' .data/backup-stato/stato.txt
           sudo grep -qx 'tieni-prima=3' .data/backup-stato/stato.txt
 
+      # Niente backup di un database senza le tabelle di WalletTracker (docs/48, parte G4): sarebbe un backup "vuoto",
+      # e con i limiti di "Quanti backup si tengono" 14 vuoti di fila toglierebbero 14 buoni. Un database vuoto apposta
+      # (PGDATABASE=vuoto): il backup si rifiuta con il codice 6, e nella cartella non cambia niente.
+      - name: Niente backup di un database vuoto
+        run: |
+          utente=$(grep '^POSTGRES_USER=' .env | cut -d= -f2)
+          docker compose exec -T db psql -q -U "$utente" -d postgres -c 'CREATE DATABASE vuoto'
+          prima=$(sudo find backup -maxdepth 1 -name '*.backup' | sort)
+          codice=0
+          docker compose run --rm -T -e PGDATABASE=vuoto backup crea manuale > vuoto.log 2>&1 || codice=$?
+          cat vuoto.log
+          test "$codice" = 6
+          grep -q "non ha le tabelle di WalletTracker" vuoto.log
+          test "$(sudo find backup -maxdepth 1 -name '*.backup' | sort)" = "$prima"
+          docker compose exec -T db psql -q -U "$utente" -d postgres -c 'DROP DATABASE vuoto'
+
       # La cartella dei backup scelta dallo script (docs/48, parte F): al primo avvio, una volta sola; poi un percorso
       # relativo, con uno spazio e tra virgolette (come lo incolla un terminale), diventa completo nel .env; i container
       # la usano subito, l'app la mostra; Invio vuoto la lascia com'è. La cartella è già dell'utente 1000, come per

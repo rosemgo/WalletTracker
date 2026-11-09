@@ -648,7 +648,9 @@ if ($Ripristina -ne '') {
     if (Password-Backup-Valida $PasswordBackup) {
         $env:WALLETTRACKER_BACKUP_PASSWORD = $PasswordBackup
         & docker compose run --rm -T backup crea prima-del-ripristino
-        if ($LASTEXITCODE -ne 0) { Errore 'Non riesco a fare la copia di sicurezza dei dati di adesso: ripristino annullato, non è cambiato niente.' }
+        # 6: il database di adesso non ha le tabelle di WalletTracker (installa.sh, e docs/48 parte G4): si va avanti.
+        if ($LASTEXITCODE -eq 6) { Write-Host 'Il database di adesso non ha dati di WalletTracker: niente copia di sicurezza, non c''è niente da salvare.' }
+        elseif ($LASTEXITCODE -ne 0) { Errore 'Non riesco a fare la copia di sicurezza dei dati di adesso: ripristino annullato, non è cambiato niente.' }
     }
     else { Write-Host 'Nel .env non c''è la password dei backup: niente copia di sicurezza dei dati di adesso.' }
     # Il primo tentativo usa la password del .env: niente variabile d'ambiente che la copra.

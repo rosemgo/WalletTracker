@@ -24,7 +24,8 @@
 # (docker-compose.yml). I file: la cartella dei backup è montata su /backup, quella della chiave (.data) su /data.
 #
 # Codici d'uscita, per lo script di installazione: 0 tutto bene; 2 errore; 3 password sbagliata (o il file non è un
-# backup, o è rovinato prima ancora di aprirlo); 4 manca la password; 5 il backup si apre ma il contenuto non torna.
+# backup, o è rovinato prima ancora di aprirlo); 4 manca la password; 5 il backup si apre ma il contenuto non torna;
+# 6 il database non ha le tabelle di WalletTracker (backup non fatto, docs/48 parte G4).
 
 # -e: un comando che fallisce ferma lo script; -u: una variabile mai assegnata è un errore; -o pipefail: in
 # "a | b" conta anche il fallimento di "a" (senza, conterebbe solo "b").
@@ -75,6 +76,18 @@ crea() {
   controlla_password
   [ -r "$CHIAVE" ] || errore 2 "Non trovo la chiave di cifratura ($CHIAVE): l'app è mai stata avviata?"
 
+  # 0. Il database ha le tabelle di WalletTracker? L'ultima migrazione di Flyway c'è solo se il backend l'ha preparato.
+  #    Un database appena creato, o un altro database, darebbe un backup "vuoto" (pochi kB) che non contiene i tuoi
+  #    dati: e con i limiti di "sfoltisci" 14 backup vuoti di fila prenderebbero il posto di 14 buoni. Quindi niente
+  #    backup, e nessun backup vecchio tolto (docs/48, parte G4).
+  local migrazione
+  # Prima: il database risponde? Se no, la domanda qui sotto tornerebbe vuota, e il messaggio sarebbe sbagliato.
+  psql -tAc 'SELECT 1' >/dev/null 2>&1 ||
+    errore 2 "Non riesco a collegarmi al database ($PGDATABASE): è acceso? Backup non fatto."
+  migrazione=$(psql -tAc 'SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1' 2>/dev/null || true)
+  [ -n "$migrazione" ] ||
+    errore 6 "Il database ($PGDATABASE) non ha le tabelle di WalletTracker: non c'è niente da salvare. Backup non fatto, e i backup di prima restano tutti (docs/48, parte G4)."
+
   local nome lavoro
   nome="wallettracker-$tipo-$(date +%Y%m%d-%H%M%S).backup"
   # Una cartella di lavoro in /tmp (in memoria: docker-compose.yml, tmpfs), cancellata alla fine.
@@ -90,7 +103,7 @@ crea() {
     echo "creato=$(date '+%Y-%m-%d %H:%M:%S %z')"
     echo "tipo=$tipo"
     echo "postgres=$(pg_dump --version)"
-    echo "migrazione=$(psql -tAc 'SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1' 2>/dev/null || true)"
+    echo "migrazione=$migrazione"
   } >"$lavoro/manifest.txt"
   # 4. Le impronte SHA-256 dei tre file.
   (cd "$lavoro" && sha256sum database.dump encryption.key manifest.txt >SHA256SUMS)
@@ -242,6 +255,8 @@ esegui() {
     ERRORE_QUANDO=$(date +%s)
     if [ "$codice" = 4 ]; then
       ERRORE="Manca la password dei backup: dal server, lancia lo script di installazione con -Backup (docs/48)."
+    elif [ "$codice" = 6 ]; then
+      ERRORE="Backup non fatto: il database non ha ancora i dati di WalletTracker. I backup di prima restano tutti (docs/48, parte G4)."
     else
       ERRORE="Backup non riuscito: dal server, guarda i log con  docker compose logs backup"
     fi
