@@ -971,6 +971,23 @@ versione dopo **a mano, una volta sola** (S4). Da lì in poi basta il doppio cli
 la release). Si corregge in `main` e si pubblica un **numero nuovo** (`v1.1.1`): un tag già usato non si riusa, perché
 qualcuno potrebbe aver già scaricato quella versione.
 
+**È successo con la 1.2.4.** Le novità della 1.2.4 erano finite, per sbaglio, nella sezione della 1.2.3, già
+pubblicata: con il tag `v1.2.4` lo ZIP si è fermato ("In NOVITA.md manca la sezione \"## 1.2.4\""). Ma il controllo
+era solo alla fine, in `prepara-zip.sh`: le tre immagini `1.2.4` erano già su GitHub Container Registry. Nessuno ha
+potuto aggiornare (senza release "Aggiorna" non vede la versione), ma le immagini esistono: quindi la 1.2.4 resta
+saltata, e le stesse novità escono con la **1.2.5**. Da allora `rilascio.yml` controlla le novità **per prima cosa**
+(il job "Le novità della versione"): senza la sezione si ferma prima di pubblicare qualsiasi cosa.
+
+**Un trucco per non sbagliare**: la sezione delle novità si scrive con il numero della versione che si **pubblicherà**,
+e si controlla prima del tag, su `main` aggiornato:
+
+```
+git switch main
+git pull
+Select-String -Path NOVITA.md -Pattern '^## 1.2.5$'      # Windows: deve trovare una riga
+grep -x '## 1.2.5' NOVITA.md                            # Linux e Mac
+```
+
 ### S3. Dove si vedono le versioni
 
 | Dove | Che cosa vedi |
