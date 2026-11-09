@@ -34,12 +34,34 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/ci.yml
 
+  # 1b. Le novità ci sono? Ogni versione ha la sua sezione "## X.Y.Z" in NOVITA.md, che diventa la descrizione della
+  #     release. Si controlla PRIMA di pubblicare le immagini: con la 1.2.4 il controllo era solo alla fine (in
+  #     prepara-zip.sh), e le immagini erano già su GitHub Container Registry quando la release si è fermata.
+  novita:
+    name: Le novità della versione
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      - name: NOVITA.md ha la sezione di questa versione
+        run: |
+          versione="${GITHUB_REF_NAME#v}"
+          grep -qx "## $versione" NOVITA.md || {
+            echo "::error::In NOVITA.md manca la sezione \"## $versione\": scrivi le novità, fai il merge, poi rimetti il tag (docs/50, parte S)."
+            exit 1
+          }
+
   # 2. Le immagini. Una "matrix": lo stesso job tre volte, una per immagine, in parallelo.
   immagini:
     name: Immagine ${{ matrix.nome }}
-    needs: [ci]
-    # Senza tag il job "ci" viene saltato: si va avanti lo stesso (si costruisce e basta). Con il tag, solo se è passato.
-    if: always() && (needs.ci.result == 'success' || needs.ci.result == 'skipped')
+    needs: [ci, novita]
+    # Senza tag i job "ci" e "novita" vengono saltati: si va avanti lo stesso (si costruisce e basta). Con il tag,
+    # solo se sono passati tutti e due.
+    if: >-
+      always() && (needs.ci.result == 'success' || needs.ci.result == 'skipped')
+      && (needs.novita.result == 'success' || needs.novita.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read

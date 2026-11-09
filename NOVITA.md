@@ -4,15 +4,19 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.5
+
+(La 1.2.4 non è stata pubblicata: il rilascio si è fermato perché mancavano queste novità.)
+
+- **Niente backup "vuoti"**: se il database non ha ancora le tabelle di WalletTracker (un'installazione appena creata),
+  il backup non si fa, e l'app lo dice. Così un backup senza i tuoi dati non prende mai il posto di uno buono.
+- **Sul telefono "Quest'anno" sta nel suo riquadro**: in Investimenti usciva dal pulsante, e sui telefoni più stretti
+  anche "Settimana" in Analisi.
+
 ## 1.2.3
 
 - **I backup non crescono più per sempre**: si tengono gli ultimi 14 automatici, 10 fatti a mano e 3 di prima di ogni
   aggiornamento o ripristino. In Impostazioni → Backup se ne vedono 5, con "Mostra tutti", e le date in colonna.
-
-- **Sul telefono "Quest'anno" sta nel suo riquadro**: in Investimenti usciva dal pulsante, e sui telefoni più stretti
-  anche "Settimana" in Analisi.
-- **Niente backup "vuoti"**: se il database non ha ancora le tabelle di WalletTracker (un'installazione appena creata),
-  il backup non si fa, e l'app lo dice. Così un backup senza i tuoi dati non prende mai il posto di uno buono.
 
 I backup in più si tolgono da soli, ognuno al primo backup nuovo del suo tipo dopo l'aggiornamento.
 
