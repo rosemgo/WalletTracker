@@ -41,7 +41,8 @@ class BackupServiceTest {
     private void writeState(long secondsAgo, boolean automatic, String extra) throws IOException {
         Files.createDirectories(state);
         Files.writeString(state.resolve("stato.txt"), "aggiornato=" + NOW.minusSeconds(secondsAgo).getEpochSecond()
-                + "\nautomatico=" + (automatic ? "acceso" : "spento") + "\nora=03:15\ntieni=14\n" + extra);
+                + "\nautomatico=" + (automatic ? "acceso" : "spento") + "\nora=03:15\ntieni=14\ntieni-manuali=10\ntieni-prima=3\n"
+                + extra);
     }
 
     private Path backup(String name, Duration age) throws IOException {
@@ -75,6 +76,8 @@ class BackupServiceTest {
         assertThat(status.automaticEnabled()).isTrue();
         assertThat(status.backupTime()).isEqualTo("03:15");
         assertThat(status.keep()).isEqualTo(14);
+        assertThat(status.keepManual()).isEqualTo(10); // quanti se ne tengono di ogni tipo: la dashboard lo dice
+        assertThat(status.keepBefore()).isEqualTo(3);
         assertThat(status.backups()).extracting(BackupService.BackupFile::name)
                 .containsExactly("wallettracker-automatico-20261031-031500.backup",
                         "wallettracker-manuale-20261030-101500.backup");

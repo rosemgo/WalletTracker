@@ -60,6 +60,8 @@ describe('SettingsPage', () => {
           automaticEnabled: false,
           backupTime: null,
           keep: 0,
+          keepManual: 10,
+          keepBefore: 3,
           inProgress: false,
           lastErrorAt: null,
           lastError: null,

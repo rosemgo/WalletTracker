@@ -96,6 +96,9 @@ public class BackupService {
      * @param available        il container "backup" c'è (l'app è installata con Docker): senza, il resto non conta
      * @param serviceRunning   il container ha rinnovato lo stato da poco
      * @param automaticEnabled la password dei backup c'è: il backup di ogni notte è acceso
+     * @param keep             quanti backup automatici si tengono (BACKUP_KEEP, di serie 14)
+     * @param keepManual       quanti backup fatti a mano si tengono (10), 0 se il container non lo dice
+     * @param keepBefore       quanti backup di prima di un aggiornamento, o di un ripristino, si tengono (3)
      * @param inProgress       un backup chiesto o in corso
      * @param lastSuccessAt    il backup più nuovo (null se non ce n'è nessuno)
      * @param attention        c'è qualcosa da sistemare: la dashboard mostra un avviso
@@ -104,18 +107,20 @@ public class BackupService {
      *                         WalletTracker: la dashboard lo mostra, in sola lettura (si cambia con lo script)
      */
     public record Status(boolean available, boolean serviceRunning, boolean automaticEnabled, String backupTime,
-            int keep, boolean inProgress, Instant lastErrorAt, String lastError, Instant lastSuccessAt,
-            boolean attention, List<BackupFile> backups, boolean canDownload, String serverDirectory) {
+            int keep, int keepManual, int keepBefore, boolean inProgress, Instant lastErrorAt, String lastError,
+            Instant lastSuccessAt, boolean attention, List<BackupFile> backups, boolean canDownload,
+            String serverDirectory) {
 
         Status withCanDownload(boolean value) {
-            return new Status(available, serviceRunning, automaticEnabled, backupTime, keep, inProgress, lastErrorAt,
-                    lastError, lastSuccessAt, attention, backups, value, serverDirectory);
+            return new Status(available, serviceRunning, automaticEnabled, backupTime, keep, keepManual, keepBefore,
+                    inProgress, lastErrorAt, lastError, lastSuccessAt, attention, backups, value, serverDirectory);
         }
     }
 
     public Status status() {
         if (!Files.isDirectory(stateDirectory)) {
-            return new Status(false, false, false, null, 0, false, null, null, null, false, List.of(), false, null);
+            return new Status(false, false, false, null, 0, 0, 0, false, null, null, null, false, List.of(), false,
+                    null);
         }
         Instant now = clock.instant();
         Map<String, String> state = readState();
@@ -133,7 +138,8 @@ public class BackupService {
         boolean attention = !running || !automatic || lastSuccess == null
                 || Duration.between(lastSuccess, now).compareTo(TOO_OLD) > 0 || errorAfterSuccess;
         int keep = parseInt(state.get("tieni"));
-        return new Status(true, running, automatic, blankToNull(state.get("ora")), keep, inProgress,
+        return new Status(true, running, automatic, blankToNull(state.get("ora")), keep,
+                parseInt(state.get("tieni-manuali")), parseInt(state.get("tieni-prima")), inProgress,
                 errorAfterSuccess ? errorAt : null, errorAfterSuccess ? error : null, lastSuccess, attention, backups,
                 false, serverDirectory);
     }

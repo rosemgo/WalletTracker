@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 
 import { BackupStore } from '../api/backup-store';
 import { BackupFile } from '../api/models';
@@ -38,8 +38,7 @@ const TYPES: Record<BackupFile['type'], string> = {
         }
         @if (status.automaticEnabled) {
           <p class="message">
-            ✓ Backup automatico acceso: uno al giorno, dalle {{ status.backupTime }}; si tengono gli
-            ultimi {{ status.keep }}.
+            ✓ Backup automatico acceso: uno al giorno, dalle {{ status.backupTime }}.
           </p>
         } @else {
           <p class="error">
@@ -73,7 +72,7 @@ const TYPES: Record<BackupFile['type'], string> = {
 
         @if (status.backups.length > 0) {
           <ul class="backup-list">
-            @for (file of status.backups; track file.name) {
+            @for (file of shown(status.backups); track file.name) {
               <li>
                 <span class="backup-type">{{ type(file) }}</span>
                 <span>{{ file.createdAt | date: 'd MMM y, HH:mm' }}</span>
@@ -84,6 +83,26 @@ const TYPES: Record<BackupFile['type'], string> = {
               </li>
             }
           </ul>
+          @if (status.backups.length >= shortenFrom) {
+            <button
+              type="button"
+              class="link show-all"
+              [attr.aria-expanded]="showAll()"
+              (click)="showAll.set(!showAll())"
+            >
+              {{ showAll() ? 'Mostra meno' : 'Mostra tutti (' + status.backups.length + ')' }}
+            </button>
+          }
+          <!-- Quanti se ne tengono (docs/48, parte G2): li cancella il container dei backup, non l'app. -->
+          <p class="hint" data-testid="backup-keep">
+            @if (status.keepManual > 0) {
+              Si tengono gli ultimi {{ status.keep }} automatici, {{ status.keepManual }} fatti a
+              mano e {{ status.keepBefore }} di prima di ogni aggiornamento o ripristino: i più
+              vecchi si cancellano da soli. Per tenerne uno per sempre, scaricalo.
+            } @else {
+              Si tengono gli ultimi {{ status.keep }} backup automatici.
+            }
+          </p>
           @if (!status.canDownload) {
             <p class="hint">
               I backup si scaricano solo dal server (<code>http://localhost:8000</code>): sono
@@ -113,10 +132,22 @@ const TYPES: Record<BackupFile['type'], string> = {
 })
 export class BackupSection implements OnInit {
   protected readonly backups = inject(BackupStore);
+
+  /** Come gli elenchi di Investimenti: i primi 5, e "Mostra tutti" solo da 8 in su (per una o due righe non serve). */
+  protected readonly shortenFrom = 8;
+  private readonly firstRows = 5;
+  protected readonly showAll = signal(false);
   private readonly api = inject(WalletApi);
 
   ngOnInit(): void {
     this.backups.refresh();
+  }
+
+  /** I backup da mostrare: tutti se sono pochi o se l'elenco è aperto, altrimenti i 5 più nuovi. */
+  protected shown(files: BackupFile[]): BackupFile[] {
+    return files.length < this.shortenFrom || this.showAll()
+      ? files
+      : files.slice(0, this.firstRows);
   }
 
   protected type(file: BackupFile): string {

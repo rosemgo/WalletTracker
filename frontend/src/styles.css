@@ -1439,6 +1439,34 @@ code {
   min-width: 11rem;
 }
 
+/* Sul telefono ogni backup sta su due righe, sempre uguali: il tipo a sinistra e la data a destra, poi la dimensione e
+   "Scarica". Così le date stanno in colonna sul bordo destro, qualunque sia la lunghezza del tipo. */
+@media (max-width: 699px) {
+  .backup-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .backup-list li > :nth-child(2),
+  .backup-list li > :nth-child(4) {
+    justify-self: end;
+  }
+}
+
+/* Da 700 pixel in su l'elenco è una tabella: colonne fisse per tipo, data, dimensione e "Scarica", così le date stanno
+   in colonna anche quando il tipo è lungo ("Prima di un aggiornamento"). */
+@media (min-width: 700px) {
+  .backup-list li {
+    display: grid;
+    grid-template-columns: 14rem 10rem 4.5rem auto;
+    justify-content: start;
+  }
+
+  .backup-list .backup-type {
+    min-width: 0;
+  }
+}
+
 /* Impostazioni: gli indirizzi di ritorno di Enable Banking, uno per riga (sono lunghi, sul telefono vanno a capo). */
 .redirect-url {
   display: block;

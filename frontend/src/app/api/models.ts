@@ -358,6 +358,8 @@ export interface BackupStatus {
   automaticEnabled: boolean; // c'è la password: il backup di ogni notte è acceso
   backupTime: string | null; // es. "03:15"
   keep: number; // quanti backup automatici si tengono
+  keepManual: number; // quanti backup fatti a mano si tengono (0 se il container non lo dice)
+  keepBefore: number; // quanti backup di prima di un aggiornamento o di un ripristino si tengono
   inProgress: boolean; // un backup chiesto o in corso
   lastErrorAt: string | null;
   lastError: string | null; // l'ultimo errore, se è più recente dell'ultimo backup riuscito

@@ -13,6 +13,8 @@ describe('BackupSection', () => {
     automaticEnabled: true,
     backupTime: '03:15',
     keep: 14,
+    keepManual: 10,
+    keepBefore: 3,
     inProgress: false,
     lastErrorAt: null,
     lastError: null,
@@ -90,6 +92,43 @@ describe('BackupSection', () => {
     const folder = page.querySelector('[data-testid="backup-folder"]')!;
     expect(folder.querySelector('code')?.textContent).toBe('backup');
     expect(folder.textContent).toContain('la cartella backup di WalletTracker');
+  });
+
+  it('shows the newest 5 backups of a long list, then all of them, and says how many are kept', async () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({
+      name: `wallettracker-automatico-202610${String(30 - i).padStart(2, '0')}-031500.backup`,
+      type: 'automatico' as const,
+      createdAt: `2026-10-${String(30 - i).padStart(2, '0')}T02:15:00Z`,
+      sizeBytes: 40 * 1024,
+    }));
+    answers = [{ ...READY, backups: many }];
+    const fixture = TestBed.createComponent(BackupSection);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    const rows = () => page.querySelectorAll('.backup-list li').length;
+    const button = () => page.querySelector('button.show-all') as HTMLButtonElement;
+
+    expect(rows()).toBe(5);
+    expect(button().textContent?.trim()).toBe('Mostra tutti (10)');
+    button().click();
+    fixture.detectChanges();
+    expect(rows()).toBe(10);
+    expect(button().textContent?.trim()).toBe('Mostra meno');
+    button().click();
+    fixture.detectChanges();
+    expect(rows()).toBe(5);
+    expect(
+      page.querySelector('[data-testid="backup-keep"]')?.textContent?.replace(/\s+/g, ' '),
+    ).toContain(
+      'Si tengono gli ultimi 14 automatici, 10 fatti a mano e 3 di prima di ogni aggiornamento o ripristino',
+    );
+  });
+
+  it('a short list is shown whole, without the button', async () => {
+    const page = await render(); // due backup
+    expect(page.querySelectorAll('.backup-list li')).toHaveLength(2);
+    expect(page.querySelector('button.show-all')).toBeNull();
   });
 
   it('from a remote device there is no download link, and it says why', async () => {

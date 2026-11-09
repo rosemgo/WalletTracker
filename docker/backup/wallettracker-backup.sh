@@ -104,19 +104,31 @@ crea() {
   rm -rf "$lavoro"
 
   log "Backup creato: $nome ($(du -h "$CARTELLA/$nome" | cut -f1))"
-  if [ "$tipo" = automatico ]; then
-    sfoltisci
-  fi
+  sfoltisci "$tipo"
 }
 
-# Tiene solo gli ultimi BACKUP_KEEP backup automatici (di serie 14). Quelli fatti a mano non li tocca mai.
+# Quanti backup tenere di ogni tipo (docs/48, parte G2). Senza un limite i backup fatti a mano e quelli di prima di un
+# aggiornamento crescevano per sempre, e con loro l'elenco della dashboard. Per tenerne uno per sempre: "Scarica".
+TIENI_MANUALI=10 # fatti apposta: se ne tengono di più
+TIENI_PRIMA=3    # prima di un aggiornamento o di un ripristino: conta l'ultimo; per i più vecchi ci sono gli automatici
+quanti_tenere() {
+  case "$1" in
+    automatico) echo "${BACKUP_KEEP:-14}" ;;
+    manuale) echo "$TIENI_MANUALI" ;;
+    *) echo "$TIENI_PRIMA" ;;
+  esac
+}
+
+# Tiene solo gli ultimi backup del tipo $1 (quello appena fatto è il più nuovo, quindi resta sempre). Si fa dopo ogni
+# backup, solo per il suo tipo: un aggiornamento non cancella mai un backup fatto a mano, né il contrario.
 sfoltisci() {
-  local tieni=${BACKUP_KEEP:-14} vecchio
+  local tipo=$1 tieni vecchio
+  tieni=$(quanti_tenere "$tipo")
   # I nomi contengono data e ora (20261031-031500): in ordine alfabetico inverso, i più nuovi vengono prima.
-  find "$CARTELLA" -maxdepth 1 -name 'wallettracker-automatico-*.backup' | sort -r | tail -n +"$((tieni + 1))" |
+  find "$CARTELLA" -maxdepth 1 -name "wallettracker-$tipo-*.backup" | sort -r | tail -n +"$((tieni + 1))" |
     while read -r vecchio; do
       rm -f "$vecchio"
-      log "Tolto il backup automatico vecchio: $(basename "$vecchio")"
+      log "Tolto il backup vecchio ($tipo, se ne tengono $tieni): $(basename "$vecchio")"
     done
 }
 
@@ -204,6 +216,8 @@ scrivi_stato() {
     echo "automatico=$automatico"
     echo "ora=$ORA"
     echo "tieni=${BACKUP_KEEP:-14}"
+    echo "tieni-manuali=$TIENI_MANUALI"
+    echo "tieni-prima=$TIENI_PRIMA"
     echo "in-corso=$IN_CORSO"
     echo "errore-quando=$ERRORE_QUANDO"
     echo "errore=$ERRORE"
