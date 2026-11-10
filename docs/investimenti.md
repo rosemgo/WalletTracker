@@ -1139,3 +1139,28 @@ Che cosa funziona da solo e che cosa fare:
   - "Ritenute sui ratei" −29,78 € tra le altre tasse, con la nota sul segno;
   - la barra di settembre è la cedola netta, anche se la ritenuta è registrata il 1° ottobre;
   - PC e telefono, tema scuro, nessun errore nella console, nessuna pagina più larga dello schermo.
+
+---
+
+## Parte V: le vendite sono come le registra la banca
+
+**La domanda.** "Rientrato dalle vendite" è lordo, o è tolto il capital gain? È **lordo**: `Investments.sold` prende
+l'importo della vendita così com'è. Fineco registra la tassa sulla plusvalenza come un movimento a parte ("Imposta
+Sostitutiva"), che la regola di partenza mette in **Altre tasse investimenti → Capital gain**.
+
+**Che cosa vuol dire.** "Investito in titoli" è un conto di cassa: acquisti meno vendite. Una vendita in guadagno lo fa
+scendere dell'incasso intero, plusvalenza compresa; la tassa sta in "Altre tasse". Con una banca che togliesse la tassa
+già dall'importo della vendita, quella vendita sarebbe netta: la cifra mescolerebbe vendite lorde e nette. Con i
+movimenti veri di quest'anno la differenza è piccola (255,38 € di capital gain su 77.161 € di vendite, circa lo 0,3%).
+
+**La scelta, per ora.** I conti restano come sono, e la nota sotto il grafico lo dice: "Le vendite sono come le
+registra la banca: le tasse che paga a parte (il capital gain) sono in Altre tasse".
+
+**Le strade per dopo**, valutate e lasciate da parte:
+
+- **A.** Un tipo nuovo per il capital gain (`CAPITAL_GAIN_TAX`, come `WITHHOLDING_TAX` nella parte T: il codice non
+  deve decidere su un nome di categoria) e le vendite nette di quella tassa. Così le vendite sarebbero nette per tutte
+  le banche.
+- **B.** Un tipo "Tasse sulle compravendite" per tutto quello che riguarda una compravendita (capital gain, ritenute sui
+  ratei, Tobin tax), con acquisti e vendite netti; in "Altre tasse" resterebbe solo il bollo. Da decidere: la Tobin tax
+  è un'uscita ma riguarda un acquisto.

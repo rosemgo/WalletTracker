@@ -17,6 +17,8 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   rendite.
 - **Lo stesso titolo da due banche è una riga sola** in "Da dove" (per esempio "ENEL" di Fineco ed "Enel" di Trade
   Republic).
+- **La nota sotto l'investito dice che cosa contengono le vendite**: sono come le registra la banca, e il capital gain
+  che la banca paga a parte è in "Altre tasse".
 - La riga che resta per le ritenute senza la loro cedola nel periodo si chiama "Ritenute senza la loro rendita nel
   periodo" e non porta più a un elenco sbagliato.
 
