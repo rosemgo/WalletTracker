@@ -734,13 +734,6 @@ td.amount.negative {
   font-size: 0.85rem;
 }
 
-/* Sotto il nome di una categoria con un ruolo (pagina Categorie): a che cosa serve, in una riga a parte. */
-.role-note {
-  max-width: 22rem; /* va a capo lei: sul PC, intera su una riga, allargherebbe la colonna e schiaccerebbe le altre */
-  margin-top: 2px;
-  font-weight: 400;
-}
-
 .hint {
   color: var(--sec);
   max-width: 50rem;
@@ -3898,13 +3891,6 @@ table.cards.compact td {
     padding: 0;
     border: none;
     font-size: 1rem;
-  }
-
-  /* Il nome e "N movimenti" sulla stessa linea di base (la prima riga di testo), anche quando sotto il nome c'è una
-     nota (la categoria delle ritenute): centrati in verticale, i movimenti scenderebbero a metà della nota. */
-  table.cards.compact td.card-title,
-  table.cards.compact td[data-label='Movimenti'] {
-    align-self: baseline;
   }
 
   table.cards.compact td.group select {

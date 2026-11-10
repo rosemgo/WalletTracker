@@ -47,20 +47,17 @@ public final class Investments {
     /**
      * Un movimento, con quello che serve ai calcoli.
      *
-     * @param category            il nome della categoria, per gli elenchi ("Cedole"); null senza categoria
-     * @param withholdingCategory la categoria è quella delle ritenute (il ruolo WITHHOLDING, V37), qualunque sia il suo
-     *                            nome (docs/investimenti.md, parte T)
-     * @param sourceAccountId     quando {@code source} è il nome del conto (il testo non ha il nome di un titolo): l'id
-     *                            di quel conto, per aprirne i movimenti; altrimenti null
-     * @param sourceSearch        in quel caso, le parole fisse del testo da cercare in Movimenti ("interest payment for
-     *                            payout collection"): con il conto, trovano proprio quei movimenti
+     * @param sourceAccountId quando {@code source} è il nome del conto (il testo non ha il nome di un titolo): l'id di
+     *                        quel conto, per aprirne i movimenti; altrimenti null
+     * @param sourceSearch    in quel caso, le parole fisse del testo da cercare in Movimenti ("interest payment for payout
+     *                        collection"): con il conto, trovano proprio quei movimenti
      */
     public record Movement(LocalDate date, BigDecimal amount, TransactionType type, boolean onInvestmentAccount,
-            String category, boolean withholdingCategory, String source, Long sourceAccountId, String sourceSearch) {
+            String category, String source, Long sourceAccountId, String sourceSearch) {
 
         public Movement(LocalDate date, BigDecimal amount, TransactionType type, boolean onInvestmentAccount,
-                String category, boolean withholdingCategory, String source) {
-            this(date, amount, type, onInvestmentAccount, category, withholdingCategory, source, null, null);
+                String category, String source) {
+            this(date, amount, type, onInvestmentAccount, category, source, null, null);
         }
     }
 
@@ -114,16 +111,18 @@ public final class Investments {
         return m.type() == TransactionType.INVESTMENT_INCOME ? m.amount() : BigDecimal.ZERO;
     }
 
-    /** Tasse sugli investimenti: l'importo così com'è (negativo; positivo se una tassa viene restituita). */
+    /**
+     * Tutte le tasse sugli investimenti, ritenute comprese: l'importo così com'è (negativo; positivo se una tassa viene
+     * restituita).
+     */
     public static BigDecimal taxes(Movement m) {
-        return m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
+        return isWithholding(m) || m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
     }
 
     /**
-     * Le ritenute sulle rendite (docs/investimenti.md, parte J): le tasse con la categoria delle ritenute (all'inizio
-     * "Ritenute"; il codice la riconosce dal ruolo, non dal nome: parte T). Fineco paga la cedola lorda e trattiene la
-     * ritenuta con un movimento a parte; rendite più ritenute danno il netto. Trade Republic paga già il netto, e non
-     * c'è niente da togliere.
+     * Le ritenute sulle rendite (docs/investimenti.md, parti J e T): i movimenti di tipo WITHHOLDING_TAX. Fineco paga
+     * la cedola lorda e trattiene la ritenuta con un movimento a parte; rendite più ritenute danno il netto. Trade
+     * Republic paga già il netto, e non c'è niente da togliere.
      */
     public static BigDecimal withholding(Movement m) {
         return isWithholding(m) ? m.amount() : BigDecimal.ZERO;
@@ -131,11 +130,12 @@ public final class Investments {
 
     /** Le altre tasse sugli investimenti (bollo, capital gain, Tobin tax...): non riguardano le rendite. */
     public static BigDecimal otherTaxes(Movement m) {
-        return m.type() == TransactionType.INVESTMENT_TAX && !isWithholding(m) ? m.amount() : BigDecimal.ZERO;
+        return m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
     }
 
+    /** Una ritenuta: lo dice il tipo, non la categoria (che è un nome dell'utente, e può cambiare: parte T). */
     private static boolean isWithholding(Movement m) {
-        return m.type() == TransactionType.INVESTMENT_TAX && m.withholdingCategory();
+        return m.type() == TransactionType.WITHHOLDING_TAX;
     }
 
     /**
@@ -273,7 +273,7 @@ public final class Investments {
             if (best != null) {
                 pairedIncomes.add(best);
                 result.set(i, new Movement(movements.get(best).date(), w.amount(), w.type(), w.onInvestmentAccount(),
-                        w.category(), w.withholdingCategory(), w.source(), w.sourceAccountId(), w.sourceSearch()));
+                        w.category(), w.source(), w.sourceAccountId(), w.sourceSearch()));
             }
         }
         return result;

@@ -24,6 +24,7 @@ export function kindOf(type: TransactionType | null): CategoryKind {
     case 'INCOME':
       return 'INCOME';
     case 'INVESTMENT_INCOME':
+    case 'WITHHOLDING_TAX':
     case 'INVESTMENT_TAX':
     case 'SECURITIES_BUY':
     case 'SECURITIES_SELL':
@@ -60,6 +61,7 @@ export const WITHOUT_CATEGORY: Partial<Record<TransactionType, string>> = {
   INTERNAL_TRANSFER: 'un trasferimento tra i tuoi conti',
   CARD_SETTLEMENT: 'il saldo della carta di credito',
   IGNORED: 'un movimento ignorato',
+  WITHHOLDING_TAX: 'una ritenuta', // docs/investimenti.md, parte T: il tipo dice già tutto
 };
 
 /** Un gruppo pronto per un <optgroup>: il titolo e le sue categorie. */

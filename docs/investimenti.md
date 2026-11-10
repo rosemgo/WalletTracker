@@ -846,9 +846,11 @@ periodo la cifra grande uguale alla fine della linea, sul PC e sul telefono, sen
 
 ---
 
-## Parte T: la categoria delle ritenute si riconosce dal ruolo, non dal nome
 
-**Il difetto, trovato pensando all'app in inglese.** Fino alla 1.2.5 la pagina riconosceva le ritenute (parte J) così:
+## Parte T: le ritenute diventano un tipo di movimento
+
+**Il difetto, trovato pensando all'app in inglese.** Fino alla 1.2.5 una ritenuta era un movimento di tipo **Tasse
+investimenti** (`INVESTMENT_TAX`) con la categoria **"Ritenute"**, e la pagina la riconosceva così:
 
 ```java
 static final String WITHHOLDING = "Ritenute";
@@ -864,98 +866,116 @@ la trovava più, e:
 - il **netto** delle rendite diventava uguale al lordo, quindi troppo alto;
 - **nessun messaggio** lo diceva: le cifre sembravano giuste.
 
-Era l'unico punto del backend che dipendeva dal nome di una categoria (le altre cose usano l'id, `docs/24`).
+![Prima la categoria, adesso il tipo](img/tipo-ritenute.svg)
 
-![Prima dal nome, adesso dal ruolo](img/ruolo-categoria.svg)
+### La teoria: il tipo decide, la categoria è un'etichetta
 
-### La teoria: dati dell'utente e chiavi del codice
+Ogni movimento ha due informazioni (`docs/categorie-e-tipi.md`):
 
-In un'app ci sono due tipi di valori che a prima vista si somigliano:
-
-| | Chi lo decide | Può cambiare? | Esempio |
+| | Che cos'è | Chi lo sceglie | Può cambiare nome? |
 |---|---|---|---|
-| **un dato dell'utente** | l'utente | sì, quando vuole | il nome "Ritenute", "Spesa alimentare" |
-| **una chiave del codice** | il programmatore | mai (cambiarla vuol dire cambiare il codice) | `INVESTMENT_TAX`, `EXPENSE`, `WITHHOLDING` |
+| **tipo** (`TransactionType`) | *che cosa* è il movimento; decide in quali totali conta | il codice: una lista fissa | no: è una chiave del codice |
+| **categoria** | *per che cosa*, più nel dettaglio | l'utente | sì, quando vuole |
 
-Il codice deve fare i suoi controlli **solo sulle chiavi**. Un controllo su un dato dell'utente si rompe appena
-l'utente lo cambia. WalletTracker lo fa già da sempre con i tipi dei movimenti: il tipo è un `enum`
-(`TransactionType`), e la dashboard ne mostra il nome in italiano ("Tasse investimenti"). La categoria delle ritenute
-era l'eccezione.
+Il codice deve prendere le sue decisioni **solo sulle chiavi**. Un `if` su un nome dell'utente smette di funzionare
+appena l'utente lo cambia.
 
-Si chiama anche **"codice stabile"** o **"identificativo naturale"**, al contrario del nome visibile (*label*). È lo
-stesso principio che serve per avere l'app in più lingue: il codice guarda `WITHHOLDING`, l'utente vede "Ritenute" o
-"Withholding tax".
+**Perché il problema c'era con "Ritenute" e non con "Cedole" o "Dividendi".** Una categoria è un problema solo se il
+codice la usa in una decisione:
 
-### La soluzione: una colonna `role`
+| | Tipo | Il codice li tratta in modo diverso? | La categoria decide qualcosa? |
+|---|---|---|---|
+| Cedole, Dividendi, Interessi | tutti `INVESTMENT_INCOME` | no: li somma tutti | no: è solo il nome della riga in "Per tipo" |
+| Ritenute e Bollo, Capital gain, Tobin tax | tutti `INVESTMENT_TAX` | **sì**: la ritenuta si toglie dalla rendita, il bollo no | **sì**: era l'unica cosa che le distingueva |
 
-**La migrazione `V37__ruolo_delle_categorie.sql`** aggiunge alla tabella `category` una colonna:
+Rinominando "Cedole" in "Coupon" cambiava solo la scritta della riga; rinominando "Ritenute" cambiavano i conti. Mancava
+un'informazione nel **tipo**, e la categoria la sostituiva.
 
-```sql
-ALTER TABLE category ADD COLUMN role VARCHAR(20) CHECK (role IN ('WITHHOLDING'));
-ALTER TABLE category ADD CONSTRAINT uq_category_role UNIQUE (role);
-```
+### La soluzione: il tipo `WITHHOLDING_TAX`
 
-- `NULL` per quasi tutte le categorie: per il codice sono solo un nome;
-- `WITHHOLDING` per la categoria delle ritenute;
-- `CHECK`: solo i ruoli che il codice conosce;
-- `UNIQUE`: un ruolo, una categoria sola. Le righe con `NULL` non contano, perché in PostgreSQL due `NULL` non sono
-  mai "uguali" (per questo il vincolo non dà fastidio alle altre categorie).
+Le tasse sugli investimenti ora sono **due tipi**:
 
-**Quale categoria riceve il ruolo.** La migrazione gira su database già pieni, anche su quelli in cui l'utente ha già
-cambiato le cose. In ordine:
+| Tipo | Nella dashboard | Che cosa fa Investimenti | Categoria |
+|---|---|---|---|
+| `WITHHOLDING_TAX` (nuovo) | **Ritenute sulle rendite** | le toglie dalle rendite: lordo + ritenute = **netto** | non serve: il tipo dice già tutto |
+| `INVESTMENT_TAX` | **Altre tasse investimenti** | elenco "Altre tasse", non toccano il netto | sì: quale tassa (Imposta di bollo, Capital gain, Tobin tax) |
 
-1. la categoria che **oggi si chiama "Ritenute"** (maiuscole e minuscole non contano). È proprio quella che il codice
-   riconosceva fino a ieri: per chi non l'ha toccata non cambia niente;
-2. se non c'è (l'utente l'ha rinominata), quella che assegnano le **regole di partenza delle ritenute** (`Rit.ced`,
-   `Rit.div`... di `V4`): è la stessa categoria con il nome nuovo;
-3. se non c'è neanche quella (l'utente l'ha eliminata), **nessuna**: come prima, nessuna tassa si toglie dalle
-   rendite.
+Così la regola dell'app vale ovunque, senza eccezioni: il **tipo** decide, la **categoria** è solo un'etichetta. Si
+può rinominare o eliminare qualunque categoria senza cambiare nessun conto.
 
-**Nel backend:**
+**Prima di questa scelta** c'era stata un'altra strada: una colonna `role` sulla categoria, con la categoria delle
+ritenute che non si poteva eliminare. Funzionava, ma lasciava l'eccezione: una categoria "speciale", diversa dalle
+altre. Il tipo nuovo è la soluzione coerente con il resto dell'app, e quella strada non è mai stata pubblicata.
 
-| File | Che cosa cambia |
+### La migrazione `V37__tipo_ritenute.sql`
+
+Le colonne dei tipi sono testo (`VARCHAR(30)`, `V4`) senza un elenco nel database: un tipo nuovo non cambia le tabelle.
+La migrazione cambia i **dati**, in cinque passi, dentro una transazione (se un passo fallisse, il database tornerebbe
+com'era):
+
+1. **Trova la categoria delle ritenute**, una volta sola: quella che si chiama "Ritenute" (maiuscole e minuscole non
+   contano) o, se è stata rinominata, quella che danno le regole di partenza `Rit.ced`, `Rit.div`... È l'ultima volta
+   che si guarda un nome. La tiene in una tabella temporanea (`CREATE TEMPORARY TABLE ... ON COMMIT DROP`: sparisce
+   da sola alla fine della transazione).
+2. **Le regole** che davano "tassa + categoria delle ritenute" (le quattro di partenza: `Rit.ced`, `Rit.div`,
+   `Ritenuta Fiscale`, `Rit. Fisc`, e quelle create dall'utente) danno il tipo nuovo, senza categoria.
+3. **Le scelte fatte a mano**: un tipo "tassa" scelto a mano su un movimento con la categoria delle ritenute voleva dire
+   "è una ritenuta": diventa il tipo nuovo.
+4. **I movimenti** già classificati come ritenute: il tipo nuovo, senza categoria. Così la pagina è giusta subito.
+5. **La categoria si elimina**. Non se c'è un budget su di lei: un budget non si perde senza che l'utente lo decida
+   (la pagina Categorie fa lo stesso). Un movimento di un altro tipo che la usasse ancora resta senza categoria
+   (`ON DELETE SET NULL` di `V13`).
+
+Il bollo, il capital gain e la Tobin tax restano `INVESTMENT_TAX`, con le loro categorie.
+
+### Nel codice
+
+| Dove | Che cosa cambia |
 |---|---|
-| `CategoryRole` (nuovo) | l'`enum` dei ruoli: per ora solo `WITHHOLDING` |
-| `Category` | il campo `role`, senza un metodo per cambiarlo: la dashboard non lo può modificare |
-| `CategoryRepository` | `findByRole`: la categoria con un ruolo, se c'è |
-| `Investments.Movement` | al posto del confronto con il nome, un campo `withholdingCategory` (vero o falso) |
-| `InvestmentService` | riempie `withholdingCategory` dal ruolo della categoria del movimento; nell'API manda anche il nome di oggi della categoria (`withholdingCategory`), per le note della pagina |
-| `CategoryService.delete` | la categoria con il ruolo **non si elimina** (409, con il motivo) |
+| `TransactionType` | il tipo `WITHHOLDING_TAX`; non è in `WITH_CATEGORY` (non serve una categoria) |
+| `Investments` | `withholding` guarda il tipo; `otherTaxes` è solo `INVESTMENT_TAX`; sparisce il nome "Ritenute" |
+| `CategoryKind`, `SummaryService`, `BankTransactionRepository` | il caso in più: gruppo "investimenti", rendite nette del Riepilogo, la query degli investimenti |
+| `labels.ts` | il nome "Ritenute sulle rendite"; "Tasse investimenti" diventa "Altre tasse investimenti" |
+| `transaction-detail.ts` | la spiegazione sotto il tipo; "Per una ritenuta non serve una categoria" (`category-groups.ts`) |
+| `investments-page` | la riga "Ritenute non abbinate a una rendita" porta a Movimenti filtrando per **tipo** (prima cercava la parola "ritenute" nella categoria); le note dicono "tipo Ritenute sulle rendite" |
 
-**Perché non si elimina.** Un ruolo non passa con il nome: se si eliminasse "Ritenute" e se ne creasse una nuova con
-lo stesso nome, la nuova **non** avrebbe il ruolo, e le ritenute non si toglierebbero più. Rinominarla invece si può
-sempre. È la stessa scelta delle regole di partenza, che si possono modificare e disattivare ma non cancellare.
+Il menu dei tipi (Movimenti, Regole, "Conta come") si costruisce da `TYPE_LABELS`: il tipo nuovo compare da solo. E
+siccome `TYPE_LABELS` è un `Record<TransactionType, string>`, dimenticare il suo nome avrebbe fatto fallire la
+compilazione.
 
-**Nella dashboard:**
+### Come si vedono le ritenute pagate
 
-- **Categorie**: sotto il nome della categoria delle ritenute, una nota "Investimenti la usa per togliere le ritenute
-  dalle rendite: puoi rinominarla, non eliminarla", e il pulsante **Elimina** non c'è. Sul telefono il nome e
-  "N movimenti" restano sulla stessa riga anche con la nota (`align-self: baseline`); sul PC la nota va a capo da sola
-  (`max-width`), così non allarga la colonna;
-- **Investimenti**: le due note che dicevano `categoria "Ritenute"` ora dicono il nome di oggi, per esempio
-  `categoria "Ritenute fiscali"`.
+Come prima, anzi più semplice:
+
+- **Investimenti**: la scheda delle rendite mostra lordo, **ritenute** e netto del periodo; toccando una barra, le
+  cifre del mese; "Da dove" toglie da ogni titolo le sue ritenute;
+- **Movimenti**: il filtro **Tipo → Ritenute sulle rendite** elenca tutte le ritenute, con quante sono e i totali dei
+  giorni (prima si filtrava per la categoria "Ritenute");
+- una ritenuta che le regole non riconoscono si sistema con **"Conta come" → Ritenute sulle rendite**, come si fa per
+  un acquisto di titoli.
 
 ### Le prove
 
-- `V37RuoloDelleCategorieTest`: un database vero alla V36, poi la V37. Il ruolo va a "Ritenute"; a "Ritenute fiscali"
-  se era stata rinominata (trovata dalle regole); il nome vince sulle regole e le maiuscole non contano; senza la
-  categoria nessuno riceve il ruolo; `UNIQUE` e `CHECK` rifiutano un secondo `WITHHOLDING` e un ruolo inventato.
-- `InvestmentsTest`: una tassa con la categoria rinominata ("Withholding tax") e il ruolo è una ritenuta; una che si
-  chiama "Ritenute" ma senza il ruolo è una tassa come le altre.
-- `InvestmentServiceTest`: con "Ritenute" rinominata il netto resta 151,87 €, come con il nome di partenza.
-- `CategoryControllerTest`: il ruolo arriva nell'API, solo per una categoria; eliminarla dà 409; rinominarla si può,
-  e il ruolo resta.
-- `categories-page.spec.ts` e `investments.spec.ts`: la nota, niente "Elimina", e le note di Investimenti con il nome
-  nuovo.
-- Nel browser, con movimenti inventati (una cedola da 125 € con la ritenuta da -15,63 €, un dividendo da 80 € con
-  -20,80 €, il bollo): "Ritenute" rinominata in "Ritenute fiscali" dalla pagina Categorie, e Investimenti mostra
-  sempre 169 € netti, con il solo bollo tra le altre tasse. Con il codice di prima le due ritenute sarebbero finite tra
-  le altre tasse, e il netto sarebbe stato 205 €. PC e telefono, tema scuro, nessun errore nella console, nessuna
+- `V37TipoRitenuteTest`: un database vero alla V36, poi la V37. Su un database nuovo le quattro regole danno il tipo
+  nuovo e la categoria non c'è; con i dati: un movimento classificato da una regola, uno con tipo e categoria scelti a
+  mano, uno con solo il tipo scelto a mano, una regola dell'utente, il bollo (che non cambia), una spesa con la
+  categoria "Ritenute" per sbaglio (resta una spesa, senza categoria); la categoria rinominata, trovata dalle regole; la
+  categoria con un budget, che resta.
+- `InvestmentsTest`: una ritenuta resta tale qualunque categoria abbia; una tassa con una categoria che si chiama
+  "Ritenute" è una tassa come le altre.
+- `InvestmentServiceTest`, `ClassificationServiceTest` ("Rit.div" dà il tipo nuovo), `SummaryControllerTest`.
+- `category-groups.spec.ts` (il gruppo e "non serve una categoria"), `investments.spec.ts` (il link per tipo).
+- Nel browser, la prova dell'**aggiornamento vero**: un database creato dal codice della 1.2.5 (V36) con tre ritenute
+  classificate alla vecchia maniera (una scelta a mano), il bollo e due rendite; poi il codice nuovo. Dopo la V37:
+  le tre ritenute hanno il tipo nuovo, il bollo no, la categoria non c'è più; Investimenti mostra 165 € netti (205 €
+  lordi meno 40,43 € di ritenute) con il solo bollo tra le altre tasse; la riga delle ritenute non abbinate porta a
+  Movimenti con il filtro "Ritenute sulle rendite" (3 movimenti); il dettaglio dice "Per una ritenuta non serve una
+  categoria"; il tipo nuovo c'è nei menu delle Regole. PC e telefono, tema scuro, nessun errore nella console, nessuna
   pagina più larga dello schermo.
 
 ### Un limite che resta
 
-Altri testi del backend sono **nomi di gruppi scritti in italiano**: "Altre rendite", "Senza nome del titolo",
-"Ritenute non abbinate a una rendita", "Senza categoria" (in `Investments`). Non sono un difetto oggi, perché sono solo
-etichette e il codice non ci fa dei controlli. Se un giorno l'app avrà l'inglese, diventeranno chiavi tradotte dalla
-dashboard (è il punto P2 dell'analisi sulla lingua).
+Alcuni testi del backend sono **nomi di gruppi scritti in italiano**: "Altre rendite", "Senza nome del titolo",
+"Ritenute non abbinate a una rendita", "Senza categoria" (in `Investments`). Oggi non sono un difetto: sono solo
+etichette, e il codice non ci prende decisioni (la dashboard le confronta solo per scegliere il link). Se un giorno
+l'app avrà l'inglese, diventeranno chiavi tradotte dalla dashboard (il punto P2 dell'analisi sulla lingua).

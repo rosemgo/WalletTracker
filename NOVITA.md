@@ -6,11 +6,15 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 
 ## 1.2.6
 
-- **Puoi rinominare la categoria "Ritenute" senza sbagliare i conti**: prima, con un altro nome, Investimenti non
-  riconosceva più le ritenute e mostrava le rendite più alte del vero. Ora la categoria si riconosce da un segno che
-  non cambia con il nome. In Categorie lo dice una nota, e quella categoria non si può eliminare.
+- **Le ritenute hanno un tipo tutto loro, "Ritenute sulle rendite"**: prima erano una tassa con la categoria
+  "Ritenute", e se rinominavi quella categoria Investimenti non le riconosceva più e mostrava le rendite più alte del
+  vero. Ora il conto è giusto qualunque nome abbiano le tue categorie. Le altre tasse (bollo, capital gain, Tobin tax)
+  si chiamano "Altre tasse investimenti".
+- **Per vedere le ritenute pagate**: in Investimenti come prima (lordo, ritenute, netto), e in Movimenti con il filtro
+  Tipo → "Ritenute sulle rendite".
 
-Se l'avevi già rinominata, l'aggiornamento la ritrova da solo.
+L'aggiornamento sistema da solo le ritenute che hai già, anche quelle scelte a mano, e le regole; poi la categoria
+"Ritenute" non serve più e sparisce (resta solo se ci avevi messo un budget).
 
 ## 1.2.5
 

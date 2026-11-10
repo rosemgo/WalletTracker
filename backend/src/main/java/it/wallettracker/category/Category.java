@@ -31,11 +31,6 @@ public class Category {
     @Column(name = "builtin", nullable = false)
     private boolean builtin;
 
-    /** Il ruolo (V37): null per quasi tutte. Non cambia con il nome, e la dashboard non lo può modificare. */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role")
-    private CategoryRole role;
-
     protected Category() {
     }
 
@@ -45,8 +40,8 @@ public class Category {
     }
 
     /**
-     * Cambia nome e gruppo. Movimenti, regole e budget tengono l'id della categoria (V13), e il ruolo non cambia: il
-     * nuovo nome compare ovunque da solo.
+     * Cambia nome e gruppo. Il nuovo nome arriva nel database con un UPDATE; da lì la chiave esterna
+     * {@code ON UPDATE CASCADE} lo porta da sola in movimenti, regole e budget.
      */
     public void update(String name, CategoryKind kind) {
         this.name = name;
@@ -71,9 +66,5 @@ public class Category {
 
     public boolean isBuiltin() {
         return builtin;
-    }
-
-    public CategoryRole getRole() {
-        return role;
     }
 }

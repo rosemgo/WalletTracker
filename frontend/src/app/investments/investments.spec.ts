@@ -89,7 +89,6 @@ function investments(period: InvestmentPeriod): Investments {
     transfers,
     onlyTransfers: [],
     cash: [],
-    withholdingCategory: 'Ritenute',
   };
 }
 
@@ -240,6 +239,7 @@ describe('Investments', () => {
       ...investments(period),
       incomeBySource: [
         { name: 'ROMANIA-7OT45 6,5%', amount: 455, movements: 1 },
+        { name: 'Ritenute non abbinate a una rendita', amount: -4, movements: 1 },
         {
           name: 'Trade Republic',
           amount: 6.69,
@@ -262,6 +262,8 @@ describe('Investments', () => {
     expect(href('Trade Republic')).toBe(
       `/movimenti?${period}&accountId=9&type=INVESTMENT_INCOME&text=interest%20payment%20for%20payout%20collection`,
     );
+    // Le ritenute senza la loro rendita: tutte quelle del periodo, dal tipo (parte T).
+    expect(href('Ritenute non abbinate')).toBe(`/movimenti?${period}&type=WITHHOLDING_TAX`);
     expect(href('Imposta di bollo')).toBe(
       `/movimenti?${period}&type=INVESTMENT_TAX&text=imposta%20di%20bollo`,
     );
@@ -387,21 +389,6 @@ describe('Investments', () => {
   it('without investment accounts there is no cash card', async () => {
     const { page: p } = await page();
     expect(p.querySelector('.cash-card')).toBeNull();
-  });
-
-  it('the notes call the withholding category by its name of today, even when renamed', async () => {
-    // Parte T: il codice la riconosce dal ruolo; le note dicono il nome che vede l'utente.
-    answer = (period) => ({ ...investments(period), withholdingCategory: 'Ritenute fiscali' });
-    const { page: p } = await page();
-
-    const notes = Array.from(p.querySelectorAll('.note-value')).map((n) =>
-      n.textContent?.replace(/\s+/g, ' '),
-    );
-    expect(notes.some((n) => n?.includes('categoria "Ritenute fiscali", che qui si toglie'))).toBe(
-      true,
-    );
-    expect(notes.some((n) => n?.includes('dalle la categoria "Ritenute fiscali".'))).toBe(true);
-    expect(notes.some((n) => n?.includes('"Ritenute"'))).toBe(false);
   });
 
   it('warns about the accounts where only the transfers are seen', async () => {

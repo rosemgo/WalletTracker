@@ -10,14 +10,6 @@ const CATEGORIES: Category[] = [
   { id: 1, name: 'Spesa alimentare', kind: 'EXPENSE', builtin: true, uses: 42 },
   { id: 2, name: 'Animali', kind: 'EXPENSE', builtin: false, uses: 3 },
   { id: 3, name: 'Stipendio e pensione', kind: 'INCOME', builtin: true, uses: 12 },
-  {
-    id: 4,
-    name: 'Ritenute fiscali',
-    kind: 'INVESTMENT',
-    builtin: true,
-    role: 'WITHHOLDING',
-    uses: 2,
-  },
 ];
 
 describe('CategoriesPage', () => {
@@ -76,7 +68,7 @@ describe('CategoriesPage', () => {
     const page = await render();
 
     expect(Array.from(page.querySelectorAll('h2.section-title')).map((h) => h.textContent)).toEqual(
-      ['Categorie di spesa', 'Categorie di entrata', 'Categorie di investimento'],
+      ['Categorie di spesa', 'Categorie di entrata'],
     );
     expect(page.querySelector('tbody tr')?.textContent).toContain('42 movimenti');
     // "42 movimenti" porta ai movimenti della categoria.
@@ -128,21 +120,5 @@ describe('CategoriesPage', () => {
     await fixture.whenStable();
     expect(deleted).toEqual([2]);
     expect(page.querySelector('.error')?.textContent).toContain('C\'è un budget per "Animali"');
-  });
-
-  it('the withholding category says what it is for, and can be renamed but not deleted', async () => {
-    const page = await render();
-
-    const row = Array.from(page.querySelectorAll('tbody tr')).find((r) =>
-      r.textContent?.includes('Ritenute fiscali'),
-    ) as HTMLElement;
-    expect(row.querySelector('.role-note')?.textContent?.replace(/\s+/g, ' ')).toContain(
-      'Investimenti la usa per togliere le ritenute dalle rendite',
-    );
-    expect(rowButton(page, 'Ritenute fiscali', 'Rinomina')).toBeTruthy();
-    expect(rowButton(page, 'Ritenute fiscali', 'Elimina')).toBeUndefined();
-    // Le altre categorie non hanno la nota, e si eliminano come sempre.
-    expect(page.querySelectorAll('.role-note').length).toBe(1);
-    expect(rowButton(page, 'Animali', 'Elimina')).toBeTruthy();
   });
 });

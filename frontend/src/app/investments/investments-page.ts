@@ -284,7 +284,7 @@ export class InvestmentsPage implements OnInit {
       return { ...range, type: 'INVESTMENT_INCOME', uncategorized: 'true' };
     }
     if (g.name === UNMATCHED_WITHHOLDING) {
-      return { ...range, type: 'INVESTMENT_TAX', text: 'ritenute' };
+      return { ...range, type: 'WITHHOLDING_TAX' };
     }
     return { ...range, type: 'INVESTMENT_INCOME', text: g.name.toLowerCase() };
   }
@@ -304,7 +304,7 @@ export class InvestmentsPage implements OnInit {
       return query;
     }
     if (g.name === UNMATCHED_WITHHOLDING) {
-      return { ...range, type: 'INVESTMENT_TAX', text: 'ritenute' };
+      return { ...range, type: 'WITHHOLDING_TAX' };
     }
     return { ...range, text: merchantSearch(g.name) };
   }

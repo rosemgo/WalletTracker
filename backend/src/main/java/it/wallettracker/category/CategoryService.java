@@ -49,7 +49,7 @@ public class CategoryService {
                 .sorted(Comparator.comparing(Category::getKind)
                         .thenComparing(Category::getPosition)
                         .thenComparing(Category::getName, collator))
-                .map(c -> new CategoryDto(c.getId(), c.getName(), c.getKind(), c.isBuiltin(), c.getRole(),
+                .map(c -> new CategoryDto(c.getId(), c.getName(), c.getKind(), c.isBuiltin(),
                         uses.getOrDefault(c.getId(), 0L)))
                 .toList();
     }
@@ -59,7 +59,7 @@ public class CategoryService {
         String name = request.name().trim();
         checkNameFree(name, null);
         Category category = categoryRepository.save(new Category(name, request.kind()));
-        return new CategoryDto(category.getId(), category.getName(), category.getKind(), false, null, 0);
+        return new CategoryDto(category.getId(), category.getName(), category.getKind(), false, 0);
     }
 
     /**
@@ -78,18 +78,10 @@ public class CategoryService {
     /**
      * Elimina una categoria: movimenti e regole restano senza categoria. Se c'è un budget, no: il budget
      * perderebbe senso, ed è meglio che l'utente decida prima che cosa farne.
-     *
-     * <p>Neanche se ha un ruolo (V37): il codice la cerca, e senza di lei sbaglierebbe i conti. Una categoria nuova
-     * con lo stesso nome non la sostituirebbe, perché il ruolo non passa con il nome (docs/investimenti.md, parte T).
-     * Si può rinominare.
      */
     @Transactional
     public void delete(Long id) {
         Category category = find(id);
-        if (category.getRole() == CategoryRole.WITHHOLDING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "\"" + category.getName() + "\" serve a "
-                    + "Investimenti per togliere le ritenute dalle rendite: puoi rinominarla, non eliminarla.");
-        }
         if (budgetRepository.existsByCategory(category)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "C'è un budget per \"" + category.getName() + "\": eliminalo prima dalla pagina Budget.");

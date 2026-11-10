@@ -177,7 +177,7 @@ class ClassificationServiceTest {
         classificationService.classifyAll();
 
         assertThat(typeOf(bill)).isEqualTo(TransactionType.EXPENSE);
-        assertThat(typeOf(tax)).isEqualTo(TransactionType.INVESTMENT_TAX);
+        assertThat(typeOf(tax)).isEqualTo(TransactionType.WITHHOLDING_TAX); // la regola "Rit.div" (V37)
     }
 
     @Test
