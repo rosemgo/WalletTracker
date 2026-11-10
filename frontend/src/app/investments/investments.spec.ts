@@ -89,6 +89,7 @@ function investments(period: InvestmentPeriod): Investments {
     transfers,
     onlyTransfers: [],
     cash: [],
+    withholdingCategory: 'Ritenute',
   };
 }
 
@@ -386,6 +387,21 @@ describe('Investments', () => {
   it('without investment accounts there is no cash card', async () => {
     const { page: p } = await page();
     expect(p.querySelector('.cash-card')).toBeNull();
+  });
+
+  it('the notes call the withholding category by its name of today, even when renamed', async () => {
+    // Parte T: il codice la riconosce dal ruolo; le note dicono il nome che vede l'utente.
+    answer = (period) => ({ ...investments(period), withholdingCategory: 'Ritenute fiscali' });
+    const { page: p } = await page();
+
+    const notes = Array.from(p.querySelectorAll('.note-value')).map((n) =>
+      n.textContent?.replace(/\s+/g, ' '),
+    );
+    expect(notes.some((n) => n?.includes('categoria "Ritenute fiscali", che qui si toglie'))).toBe(
+      true,
+    );
+    expect(notes.some((n) => n?.includes('dalle la categoria "Ritenute fiscali".'))).toBe(true);
+    expect(notes.some((n) => n?.includes('"Ritenute"'))).toBe(false);
   });
 
   it('warns about the accounts where only the transfers are seen', async () => {

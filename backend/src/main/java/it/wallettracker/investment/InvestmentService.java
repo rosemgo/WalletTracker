@@ -17,6 +17,9 @@ import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
 import it.wallettracker.account.AccountService;
 import it.wallettracker.account.AccountSource;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryRepository;
+import it.wallettracker.category.CategoryRole;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.investment.InvestmentDtos.Cash;
 import it.wallettracker.investment.InvestmentDtos.Overview;
@@ -50,12 +53,14 @@ public class InvestmentService {
     private final BankTransactionRepository repository;
     private final AccountRepository accountRepository;
     private final AccountService accountService;
+    private final CategoryRepository categoryRepository;
 
     public InvestmentService(BankTransactionRepository repository, AccountRepository accountRepository,
-            AccountService accountService) {
+            AccountService accountService, CategoryRepository categoryRepository) {
         this.repository = repository;
         this.accountRepository = accountRepository;
         this.accountService = accountService;
+        this.categoryRepository = categoryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -129,7 +134,8 @@ public class InvestmentService {
                 Investments.netIncomeBy(movements, from, today, true),
                 Investments.netIncomeBy(movements, from, today, false),
                 Investments.otherTaxesBy(movements, from, today),
-                trades, transfers, onlyTransfers(transactions), cash(chosen));
+                trades, transfers, onlyTransfers(transactions), cash(chosen),
+                categoryRepository.findByRole(CategoryRole.WITHHOLDING).map(Category::getName).orElse(null));
     }
 
     /**
@@ -173,9 +179,12 @@ public class InvestmentService {
         // Republic), il nome del conto, che almeno dice da dove arriva.
         String text = MerchantKey.merchantText(t.getCounterparty(), t.getDescription(), owners);
         String security = Investments.securityName(text);
+        Category category = t.getCategory();
         return new Movement(t.getBookingDate(), t.getAmount(), t.getType(),
                 t.getAccount().getRole() == AccountRole.INVESTMENT,
-                t.getCategory() == null ? null : t.getCategory().getName(),
+                category == null ? null : category.getName(),
+                // le ritenute si riconoscono dal ruolo della categoria, non dal nome (parte T)
+                category != null && category.getRole() == CategoryRole.WITHHOLDING,
                 security != null ? security : t.getAccount().label(),
                 security != null ? null : t.getAccount().getId(),
                 security != null ? null : Investments.searchWords(text));

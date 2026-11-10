@@ -20,7 +20,14 @@ class InvestmentsTest {
 
     private static Movement m(String date, String amount, TransactionType type, boolean investmentAccount,
             String category, String source) {
-        return new Movement(LocalDate.parse(date), new BigDecimal(amount), type, investmentAccount, category, source);
+        return new Movement(LocalDate.parse(date), new BigDecimal(amount), type, investmentAccount, category, false,
+                source);
+    }
+
+    /** Una ritenuta: una tassa con la categoria delle ritenute (il ruolo WITHHOLDING, V37), di partenza "Ritenute". */
+    private static Movement withheld(String date, String amount, String source) {
+        return new Movement(LocalDate.parse(date), new BigDecimal(amount), TransactionType.INVESTMENT_TAX, false,
+                "Ritenute", true, source);
     }
 
     /**
@@ -121,7 +128,7 @@ class InvestmentsTest {
     void theWithholdingIsTakenFromTheGrossIncomeAndTheOtherTaxesStayApart() {
         // Fineco: la cedola lorda e la ritenuta a parte. Il bollo non riguarda le rendite.
         Movement coupon = m("2026-10-01", "125", TransactionType.INVESTMENT_INCOME, false, "Cedole", "BTP");
-        Movement withheld = m("2026-10-01", "-15.63", TransactionType.INVESTMENT_TAX, false, "Ritenute", "BTP");
+        Movement withheld = withheld("2026-10-01", "-15.63", "BTP");
         Movement stamp = m("2026-10-01", "-8.50", TransactionType.INVESTMENT_TAX, false, "Imposta di bollo", null);
 
         assertThat(Investments.withholding(withheld)).isEqualByComparingTo("-15.63");
@@ -135,6 +142,20 @@ class InvestmentsTest {
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
         // Dalla più pesante; le ritenute non ci sono.
         assertThat(others).extracting(Group::name).containsExactly("Imposta di bollo", "Senza categoria");
+    }
+
+    @Test
+    void aWithholdingIsRecognisedByTheRoleOfItsCategoryNotByTheName() {
+        // Parte T: la categoria delle ritenute rinominata (o in un'altra lingua) resta la categoria delle ritenute...
+        Movement renamed = new Movement(LocalDate.parse("2026-10-01"), new BigDecimal("-15.63"),
+                TransactionType.INVESTMENT_TAX, false, "Withholding tax", true, "BTP");
+        // ...e una categoria che si chiama "Ritenute" senza il ruolo è una tassa come le altre.
+        Movement sameNameOnly = m("2026-10-01", "-2", TransactionType.INVESTMENT_TAX, false, "Ritenute", null);
+
+        assertThat(Investments.withholding(renamed)).isEqualByComparingTo("-15.63");
+        assertThat(Investments.otherTaxes(renamed)).isEqualByComparingTo("0");
+        assertThat(Investments.withholding(sameNameOnly)).isEqualByComparingTo("0");
+        assertThat(Investments.otherTaxes(sameNameOnly)).isEqualByComparingTo("-2");
     }
 
     @Test
@@ -160,9 +181,9 @@ class InvestmentsTest {
         String bond = "ROMANIA-7OT45 6,5%";
         List<Movement> movements = List.of(
                 m("2026-10-20", "520", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
-                m("2026-10-20", "-65", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                withheld("2026-10-20", "-65", bond),
                 m("2026-05-20", "247.91", TransactionType.INVESTMENT_INCOME, true, "Dividendi", "Intesa Sanpaolo"),
-                m("2026-06-01", "-4", TransactionType.INVESTMENT_TAX, false, "Ritenute", "Titolo sconosciuto"),
+                withheld("2026-06-01", "-4", "Titolo sconosciuto"),
                 m("2026-07-01", "-2", TransactionType.INVESTMENT_TAX, true, "Imposta di bollo", null)); // non c'entra
         LocalDate from = LocalDate.of(2026, 1, 1);
         LocalDate to = LocalDate.of(2026, 12, 31);
@@ -189,9 +210,9 @@ class InvestmentsTest {
         String bond = "ROMANIA-7OT45 6,5%";
         List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
                 m("2026-10-30", "520", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
-                m("2026-11-01", "-65", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                withheld("2026-11-01", "-65", bond),
                 // un'altra ritenuta dello stesso titolo, troppo lontana: nessuna rendita vicina, tiene la sua data
-                m("2026-03-01", "-30", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                withheld("2026-03-01", "-30", bond),
                 // il bollo non è una ritenuta: non si sposta
                 m("2026-11-01", "-2", TransactionType.INVESTMENT_TAX, false, "Imposta di bollo", bond)));
 
@@ -216,10 +237,10 @@ class InvestmentsTest {
         List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
                 m("2026-04-01", "30", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
                 m("2026-10-01", "30", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
-                m("2026-10-02", "-3.75", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
-                m("2026-04-03", "-3.75", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond),
+                withheld("2026-10-02", "-3.75", bond),
+                withheld("2026-04-03", "-3.75", bond),
                 // più grande della cedola: non può essere la sua ritenuta
-                m("2026-10-01", "-50", TransactionType.INVESTMENT_TAX, false, "Ritenute", bond)));
+                withheld("2026-10-01", "-50", bond)));
 
         assertThat(movements).extracting(Movement::date).containsExactly(LocalDate.of(2026, 4, 1),
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1), LocalDate.of(2026, 4, 1),

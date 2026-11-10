@@ -204,8 +204,8 @@
             <p class="secondary note-value">
               Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese. Alcune
               banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a
-              parte, categoria "Ritenute", che qui si toglie dalla rendita dello stesso titolo;
-              altre (come Trade Republic) accreditano già il netto.
+              parte, categoria "{{ d.withholdingCategory ?? 'Ritenute' }}", che qui si toglie dalla
+              rendita dello stesso titolo; altre (come Trade Republic) accreditano già il netto.
             </p>
             @if (d.incomeByType.length > 0) {
               <h3 #typeTitle>Per tipo</h3>
@@ -308,7 +308,7 @@
               <p class="secondary note-value">
                 Non riguardano le rendite e non si tolgono dal netto: il bollo si paga sul deposito,
                 il capital gain sulle vendite in guadagno. Una ritenuta finita qui ha la categoria
-                sbagliata: dalle la categoria "Ritenute".
+                sbagliata: dalle la categoria "{{ d.withholdingCategory ?? 'Ritenute' }}".
               </p>
             }
           </section>

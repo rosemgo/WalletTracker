@@ -64,6 +64,13 @@
                 @if (category.builtin) {
                   <span class="secondary">· di partenza</span>
                 }
+                @if (category.role === 'WITHHOLDING') {
+                  <!-- Il codice la riconosce dal ruolo, non dal nome (docs/investimenti.md, parte T). -->
+                  <div class="secondary role-note">
+                    Investimenti la usa per togliere le ritenute dalle rendite: puoi rinominarla,
+                    non eliminarla.
+                  </div>
+                }
               }
             </td>
             <td data-label="Movimenti" class="amount secondary">
@@ -116,13 +123,15 @@
                   <button type="button" class="link" (click)="renaming.set(category.id)">
                     Rinomina
                   </button>
-                  <button
-                    type="button"
-                    class="link danger"
-                    (click)="confirmingDelete.set(category.id)"
-                  >
-                    Elimina
-                  </button>
+                  @if (!category.role) {
+                    <button
+                      type="button"
+                      class="link danger"
+                      (click)="confirmingDelete.set(category.id)"
+                    >
+                      Elimina
+                    </button>
+                  }
                 </div>
               }
             </td>

@@ -4,6 +4,14 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.6
+
+- **Puoi rinominare la categoria "Ritenute" senza sbagliare i conti**: prima, con un altro nome, Investimenti non
+  riconosceva più le ritenute e mostrava le rendite più alte del vero. Ora la categoria si riconosce da un segno che
+  non cambia con il nome. In Categorie lo dice una nota, e quella categoria non si può eliminare.
+
+Se l'avevi già rinominata, l'aggiornamento la ritrova da solo.
+
 ## 1.2.5
 
 (La 1.2.4 non è stata pubblicata: il rilascio si è fermato perché mancavano queste novità.)

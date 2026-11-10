@@ -13,7 +13,12 @@ import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
 import it.wallettracker.account.BalanceSource;
+import it.wallettracker.category.Category;
+import it.wallettracker.category.CategoryDtos.CategoryRequest;
+import it.wallettracker.category.CategoryKind;
 import it.wallettracker.category.CategoryRepository;
+import it.wallettracker.category.CategoryRole;
+import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
@@ -74,6 +79,9 @@ class InvestmentServiceTest {
 
     @Autowired
     CategoryRepository categoryRepository;
+
+    @Autowired
+    CategoryService categoryService;
 
     @Autowired
     ClassificationService classificationService;
@@ -218,6 +226,30 @@ class InvestmentServiceTest {
         // Il BTP è indicato solo dall'ISIN: è il suo nome in "Da dove", non "Ced.su"; e la cifra è netta.
         assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("IT0005436693")).singleElement()
                 .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("109.37"));
+    }
+
+    @Test
+    void theWithholdingIsStillTakenOffWhenItsCategoryIsRenamed() {
+        // Parte T: fino alla V36 il codice cercava il nome "Ritenute", e rinominarla dava il netto sbagliato.
+        Category withholding = categoryRepository.findByRole(CategoryRole.WITHHOLDING).orElseThrow();
+        assertThat(withholding.getName()).isEqualTo("Ritenute"); // V37 l'ha trovata dal nome di partenza
+        categoryService.update(withholding.getId(), new CategoryRequest("Withholding tax", CategoryKind.INVESTMENT));
+        try {
+            save(ing, "2026-10-01", "125", TransactionType.INVESTMENT_INCOME, "Ced.su 50.000 IT0005436693", "Cedole");
+            save(ing, "2026-10-01", "-15.63", TransactionType.INVESTMENT_TAX, "Rit.ced IT0005436693",
+                    "Withholding tax");
+            classificationService.classifyAll();
+
+            Overview o = investmentService.overview(Period.YEAR, null, TODAY);
+
+            assertThat(o.withholdingInPeriod()).isEqualByComparingTo("-15.63");
+            assertThat(o.otherTaxesInPeriod()).isEqualByComparingTo("-2"); // solo il bollo
+            assertThat(o.incomeThisYear()).isEqualByComparingTo("151.87"); // come con il nome di partenza
+            assertThat(o.withholdingCategory()).isEqualTo("Withholding tax"); // per le note della pagina
+        } finally {
+            // Il database è lo stesso per tutti i test: il nome torna com'era.
+            categoryService.update(withholding.getId(), new CategoryRequest("Ritenute", CategoryKind.INVESTMENT));
+        }
     }
 
     @Test

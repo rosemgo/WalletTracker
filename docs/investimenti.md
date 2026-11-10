@@ -843,3 +843,119 @@ con e senza l'anno, la nota; il grafico parte dal primo mese (200 €, non 600 �
 browser, con un acquisto inventato del 2025: "Quest'anno" e "12 mesi" 3.500 €, "2 anni" e "Tutto" 4.500 €; per ogni
 periodo la cifra grande uguale alla fine della linea, sul PC e sul telefono, senza errori.
 
+
+---
+
+## Parte T: la categoria delle ritenute si riconosce dal ruolo, non dal nome
+
+**Il difetto, trovato pensando all'app in inglese.** Fino alla 1.2.5 la pagina riconosceva le ritenute (parte J) così:
+
+```java
+static final String WITHHOLDING = "Ritenute";
+...
+return m.type() == TransactionType.INVESTMENT_TAX && WITHHOLDING.equalsIgnoreCase(m.category());
+```
+
+cioè dal **nome** della categoria. Ma il nome è dell'utente: la pagina Categorie lo lascia cambiare, ed è giusto così.
+Rinominando "Ritenute" in "Ritenute fiscali" (o, domani, con le categorie in inglese: "Withholding tax") il codice non
+la trovava più, e:
+
+- le ritenute finivano tra le **Altre tasse**, come il bollo;
+- il **netto** delle rendite diventava uguale al lordo, quindi troppo alto;
+- **nessun messaggio** lo diceva: le cifre sembravano giuste.
+
+Era l'unico punto del backend che dipendeva dal nome di una categoria (le altre cose usano l'id, `docs/24`).
+
+![Prima dal nome, adesso dal ruolo](img/ruolo-categoria.svg)
+
+### La teoria: dati dell'utente e chiavi del codice
+
+In un'app ci sono due tipi di valori che a prima vista si somigliano:
+
+| | Chi lo decide | Può cambiare? | Esempio |
+|---|---|---|---|
+| **un dato dell'utente** | l'utente | sì, quando vuole | il nome "Ritenute", "Spesa alimentare" |
+| **una chiave del codice** | il programmatore | mai (cambiarla vuol dire cambiare il codice) | `INVESTMENT_TAX`, `EXPENSE`, `WITHHOLDING` |
+
+Il codice deve fare i suoi controlli **solo sulle chiavi**. Un controllo su un dato dell'utente si rompe appena
+l'utente lo cambia. WalletTracker lo fa già da sempre con i tipi dei movimenti: il tipo è un `enum`
+(`TransactionType`), e la dashboard ne mostra il nome in italiano ("Tasse investimenti"). La categoria delle ritenute
+era l'eccezione.
+
+Si chiama anche **"codice stabile"** o **"identificativo naturale"**, al contrario del nome visibile (*label*). È lo
+stesso principio che serve per avere l'app in più lingue: il codice guarda `WITHHOLDING`, l'utente vede "Ritenute" o
+"Withholding tax".
+
+### La soluzione: una colonna `role`
+
+**La migrazione `V37__ruolo_delle_categorie.sql`** aggiunge alla tabella `category` una colonna:
+
+```sql
+ALTER TABLE category ADD COLUMN role VARCHAR(20) CHECK (role IN ('WITHHOLDING'));
+ALTER TABLE category ADD CONSTRAINT uq_category_role UNIQUE (role);
+```
+
+- `NULL` per quasi tutte le categorie: per il codice sono solo un nome;
+- `WITHHOLDING` per la categoria delle ritenute;
+- `CHECK`: solo i ruoli che il codice conosce;
+- `UNIQUE`: un ruolo, una categoria sola. Le righe con `NULL` non contano, perché in PostgreSQL due `NULL` non sono
+  mai "uguali" (per questo il vincolo non dà fastidio alle altre categorie).
+
+**Quale categoria riceve il ruolo.** La migrazione gira su database già pieni, anche su quelli in cui l'utente ha già
+cambiato le cose. In ordine:
+
+1. la categoria che **oggi si chiama "Ritenute"** (maiuscole e minuscole non contano). È proprio quella che il codice
+   riconosceva fino a ieri: per chi non l'ha toccata non cambia niente;
+2. se non c'è (l'utente l'ha rinominata), quella che assegnano le **regole di partenza delle ritenute** (`Rit.ced`,
+   `Rit.div`... di `V4`): è la stessa categoria con il nome nuovo;
+3. se non c'è neanche quella (l'utente l'ha eliminata), **nessuna**: come prima, nessuna tassa si toglie dalle
+   rendite.
+
+**Nel backend:**
+
+| File | Che cosa cambia |
+|---|---|
+| `CategoryRole` (nuovo) | l'`enum` dei ruoli: per ora solo `WITHHOLDING` |
+| `Category` | il campo `role`, senza un metodo per cambiarlo: la dashboard non lo può modificare |
+| `CategoryRepository` | `findByRole`: la categoria con un ruolo, se c'è |
+| `Investments.Movement` | al posto del confronto con il nome, un campo `withholdingCategory` (vero o falso) |
+| `InvestmentService` | riempie `withholdingCategory` dal ruolo della categoria del movimento; nell'API manda anche il nome di oggi della categoria (`withholdingCategory`), per le note della pagina |
+| `CategoryService.delete` | la categoria con il ruolo **non si elimina** (409, con il motivo) |
+
+**Perché non si elimina.** Un ruolo non passa con il nome: se si eliminasse "Ritenute" e se ne creasse una nuova con
+lo stesso nome, la nuova **non** avrebbe il ruolo, e le ritenute non si toglierebbero più. Rinominarla invece si può
+sempre. È la stessa scelta delle regole di partenza, che si possono modificare e disattivare ma non cancellare.
+
+**Nella dashboard:**
+
+- **Categorie**: sotto il nome della categoria delle ritenute, una nota "Investimenti la usa per togliere le ritenute
+  dalle rendite: puoi rinominarla, non eliminarla", e il pulsante **Elimina** non c'è. Sul telefono il nome e
+  "N movimenti" restano sulla stessa riga anche con la nota (`align-self: baseline`); sul PC la nota va a capo da sola
+  (`max-width`), così non allarga la colonna;
+- **Investimenti**: le due note che dicevano `categoria "Ritenute"` ora dicono il nome di oggi, per esempio
+  `categoria "Ritenute fiscali"`.
+
+### Le prove
+
+- `V37RuoloDelleCategorieTest`: un database vero alla V36, poi la V37. Il ruolo va a "Ritenute"; a "Ritenute fiscali"
+  se era stata rinominata (trovata dalle regole); il nome vince sulle regole e le maiuscole non contano; senza la
+  categoria nessuno riceve il ruolo; `UNIQUE` e `CHECK` rifiutano un secondo `WITHHOLDING` e un ruolo inventato.
+- `InvestmentsTest`: una tassa con la categoria rinominata ("Withholding tax") e il ruolo è una ritenuta; una che si
+  chiama "Ritenute" ma senza il ruolo è una tassa come le altre.
+- `InvestmentServiceTest`: con "Ritenute" rinominata il netto resta 151,87 €, come con il nome di partenza.
+- `CategoryControllerTest`: il ruolo arriva nell'API, solo per una categoria; eliminarla dà 409; rinominarla si può,
+  e il ruolo resta.
+- `categories-page.spec.ts` e `investments.spec.ts`: la nota, niente "Elimina", e le note di Investimenti con il nome
+  nuovo.
+- Nel browser, con movimenti inventati (una cedola da 125 € con la ritenuta da -15,63 €, un dividendo da 80 € con
+  -20,80 €, il bollo): "Ritenute" rinominata in "Ritenute fiscali" dalla pagina Categorie, e Investimenti mostra
+  sempre 169 € netti, con il solo bollo tra le altre tasse. Con il codice di prima le due ritenute sarebbero finite tra
+  le altre tasse, e il netto sarebbe stato 205 €. PC e telefono, tema scuro, nessun errore nella console, nessuna
+  pagina più larga dello schermo.
+
+### Un limite che resta
+
+Altri testi del backend sono **nomi di gruppi scritti in italiano**: "Altre rendite", "Senza nome del titolo",
+"Ritenute non abbinate a una rendita", "Senza categoria" (in `Investments`). Non sono un difetto oggi, perché sono solo
+etichette e il codice non ci fa dei controlli. Se un giorno l'app avrà l'inglese, diventeranno chiavi tradotte dalla
+dashboard (è il punto P2 dell'analisi sulla lingua).

@@ -470,8 +470,15 @@ export interface Category {
   name: string;
   kind: CategoryKind;
   builtin: boolean; // categoria di partenza
+  role?: CategoryRole | null; // il ruolo (V37): null per quasi tutte (docs/investimenti.md, parte T)
   uses: number; // quanti movimenti la usano
 }
+
+/**
+ * Il ruolo di una categoria: il codice la riconosce da qui, non dal nome (che l'utente può cambiare).
+ * WITHHOLDING = la categoria delle ritenute, che Investimenti toglie dalle rendite.
+ */
+export type CategoryRole = 'WITHHOLDING';
 
 /** Il corpo di POST/PUT /api/categories. */
 export interface CategoryRequest {
@@ -800,6 +807,7 @@ export interface Investments {
   transfers: Transaction[]; // i bonifici del periodo che fanno le barre, dal più recente
   onlyTransfers: string[]; // conti di investimento con bonifici ma senza nessun acquisto: l'investito non si vede
   cash: InvestmentCash[]; // il saldo di ogni conto di investimento: la liquidità, non investita in titoli
+  withholdingCategory: string | null; // il nome di oggi della categoria delle ritenute, per le note (parte T)
 }
 
 /** Il saldo di un conto di investimento (docs/saldi.md, parte D). */

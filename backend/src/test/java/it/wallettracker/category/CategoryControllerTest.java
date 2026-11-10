@@ -148,6 +148,29 @@ class CategoryControllerTest {
         assertThat(transactionRepository.findById(purchase.getId()).orElseThrow().getManualCategory()).isNull();
     }
 
+    @Test
+    void theWithholdingCategoryHasItsRoleAndCanBeRenamedButNotDeleted() {
+        Category withholding = categoryRepository.findByRole(CategoryRole.WITHHOLDING).orElseThrow();
+
+        // Il ruolo arriva alla dashboard: solo questa categoria ce l'ha.
+        assertThat(mvc.get().uri("/api/categories")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[?(@.role == 'WITHHOLDING')].name").asArray().containsExactly("Ritenute");
+            json.assertThat().extractingPath("$[?(@.role != null)]").asArray().hasSize(1);
+        });
+
+        assertThat(mvc.delete().uri("/api/categories/{id}", withholding.getId()))
+                .hasStatus(409)
+                .bodyJson().extractingPath("$.detail").isEqualTo("\"Ritenute\" serve a Investimenti per togliere le "
+                        + "ritenute dalle rendite: puoi rinominarla, non eliminarla.");
+        assertThat(categoryRepository.findById(withholding.getId())).isPresent();
+
+        // Rinominarla si può, e il ruolo resta: il codice non guarda il nome.
+        assertThat(save(withholding.getId(), "{\"name\": \"Ritenute fiscali\", \"kind\": \"INVESTMENT\"}"))
+                .hasStatusOk().bodyJson().extractingPath("$.role").isEqualTo("WITHHOLDING");
+        // Il database è lo stesso per tutti i test: il nome torna com'era.
+        save(withholding.getId(), "{\"name\": \"Ritenute\", \"kind\": \"INVESTMENT\"}");
+    }
+
     private MvcTestResult save(Long id, String json) {
         return (id == null ? mvc.post().uri("/api/categories") : mvc.put().uri("/api/categories/{id}", id))
                 .contentType(MediaType.APPLICATION_JSON).content(json).exchange();

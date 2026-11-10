@@ -31,7 +31,7 @@ public final class InvestmentDtos {
      * @param transferred        bonifici dai conti di tutti i giorni verso i conti di investimento, meno quelli tornati
      *                           indietro (può essere negativo): le barre del secondo grafico
      * @param income             cedole, dividendi e interessi incassati nel mese, lordi (come li paga la banca)
-     * @param withholding        le ritenute sulle rendite del mese (categoria "Ritenute"): di solito negativo
+     * @param withholding        le ritenute sulle rendite del mese (la categoria delle ritenute): di solito negativo
      * @param otherTaxes         le altre tasse sugli investimenti del mese (bollo, capital gain...): di solito negativo
      */
     public record Month(YearMonth month, BigDecimal bought, BigDecimal sold, BigDecimal investedCumulative,
@@ -74,6 +74,8 @@ public final class InvestmentDtos {
      * @param onlyTransfers       i conti di investimento di cui si vedono bonifici ma, in tutta la storia, nessun acquisto
      *                            né vendita: per loro l'investito non si vede
      * @param cash                la liquidità: il saldo di ogni conto di investimento nella valuta scelta (docs/saldi.md)
+     * @param withholdingCategory il nome di oggi della categoria delle ritenute (ruolo WITHHOLDING, V37), per le note
+     *                            della pagina; null se non c'è (docs/investimenti.md, parte T)
      */
     public record Overview(String currency, List<String> currencies, Period period, YearMonth from, YearMonth to,
             BigDecimal investedTotal, BigDecimal investedThisYear, BigDecimal investedThisMonth,
@@ -82,7 +84,7 @@ public final class InvestmentDtos {
             BigDecimal withholdingInPeriod, BigDecimal otherTaxesInPeriod, List<Month> months,
             List<Group> incomeByType, List<Group> incomeBySource, List<Group> otherTaxesByType,
             List<TransactionDto> trades, List<TransactionDto> transfers, List<String> onlyTransfers,
-            List<Cash> cash) {
+            List<Cash> cash, String withholdingCategory) {
     }
 
     /**

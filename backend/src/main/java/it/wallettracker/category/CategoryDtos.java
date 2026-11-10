@@ -13,9 +13,10 @@ public final class CategoryDtos {
     /**
      * Una categoria come la vede la dashboard.
      *
+     * @param role il ruolo (V37), null per quasi tutte: la dashboard dice a che cosa serve
      * @param uses quanti movimenti la usano
      */
-    public record CategoryDto(Long id, String name, CategoryKind kind, boolean builtin, long uses) {
+    public record CategoryDto(Long id, String name, CategoryKind kind, boolean builtin, CategoryRole role, long uses) {
     }
 
     /** Il corpo di POST e PUT. */

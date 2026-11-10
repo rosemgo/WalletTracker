@@ -87,6 +87,7 @@ const NO_INVESTMENTS = {
   transfers: [],
   onlyTransfers: [],
   cash: [],
+  withholdingCategory: 'Ritenute',
 } as Investments;
 
 describe('OverviewPage', () => {
