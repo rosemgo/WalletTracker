@@ -20,8 +20,11 @@ import { merchantSearch } from '../transactions/merchant-search';
 import { InvestmentMovements } from './investment-movements';
 import { TrendChart } from './trend-chart';
 
-/** La riga delle ritenute senza la loro rendita (Investments.UNMATCHED_WITHHOLDING nel backend). */
-const UNMATCHED_WITHHOLDING = 'Ritenute non abbinate a una rendita';
+/**
+ * La riga delle ritenute senza la loro rendita nel periodo (Investments.UNMATCHED_WITHHOLDING nel backend). Non ha un
+ * link: Movimenti non sa mostrare solo quelle, e un link che mostra altro inganna (docs/investimenti.md, parte U).
+ */
+const UNMATCHED_WITHHOLDING = 'Ritenute senza la loro rendita nel periodo';
 
 // Come in tutte le barre dei periodi (Analisi, il grafico di una categoria): prima "Quest'anno", poi "12 mesi".
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
@@ -71,6 +74,7 @@ export class InvestmentsPage implements OnInit {
   private readonly privacy = inject(PrivacyStore);
 
   protected readonly periods = PERIODS;
+  protected readonly unmatched = UNMATCHED_WITHHOLDING;
 
   protected readonly period = signal<InvestmentPeriod>('YEAR_TO_DATE'); // di serie: Quest'anno
   protected readonly currency = signal<string | null>(null);
@@ -283,9 +287,6 @@ export class InvestmentsPage implements OnInit {
     if (g.name === 'Altre rendite') {
       return { ...range, type: 'INVESTMENT_INCOME', uncategorized: 'true' };
     }
-    if (g.name === UNMATCHED_WITHHOLDING) {
-      return { ...range, type: 'WITHHOLDING_TAX' };
-    }
     return { ...range, type: 'INVESTMENT_INCOME', text: g.name.toLowerCase() };
   }
 
@@ -302,9 +303,6 @@ export class InvestmentsPage implements OnInit {
         query['text'] = g.search;
       }
       return query;
-    }
-    if (g.name === UNMATCHED_WITHHOLDING) {
-      return { ...range, type: 'WITHHOLDING_TAX' };
     }
     return { ...range, text: merchantSearch(g.name) };
   }

@@ -4,6 +4,24 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.7
+
+- **Cedole e dividendi davvero netti, titolo per titolo**: le ritenute di Fineco ("Rit.ced.su", "Rit.div.su") non si
+  abbinavano alla loro cedola o al loro dividendo, e finivano tutte nella riga "Ritenute non abbinate". Il totale era
+  giusto, ma le righe "Cedole", "Dividendi" e i titoli erano lordi. Ora ogni ritenuta si toglie dalla sua rendita,
+  anche quella degli interessi sulla liquidità, e l'abbinamento funziona anche con banche che scrivono i testi in altro
+  modo (con il codice ISIN del titolo).
+- **Le ritenute sui ratei sono a parte**: quelle che la banca restituisce quando compri un'obbligazione e trattiene
+  quando la vendi ("Ritenuta Fiscale … Qta/Val.nom.") non riguardano le cedole, ma il prezzo della compravendita. Ora
+  sono tra le "Altre tasse investimenti", nella categoria nuova "Ritenute sui ratei", e non toccano più il netto delle
+  rendite.
+- **Lo stesso titolo da due banche è una riga sola** in "Da dove" (per esempio "ENEL" di Fineco ed "Enel" di Trade
+  Republic).
+- La riga che resta per le ritenute senza la loro cedola nel periodo si chiama "Ritenute senza la loro rendita nel
+  periodo" e non porta più a un elenco sbagliato.
+
+L'aggiornamento sposta da solo le ritenute sui ratei che hai già, ma non quelle a cui hai scelto il tipo a mano.
+
 ## 1.2.6
 
 - **Le ritenute hanno un tipo tutto loro, "Ritenute sulle rendite"**: prima erano una tassa con la categoria

@@ -212,7 +212,8 @@
               <ul class="rows">
                 @for (g of rows('type', d.incomeByType); track g.name) {
                   <li>
-                    <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
+                    @if (g.name === unmatched) {
+                      <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
                       <span>
                         {{ g.name }}
                         <span class="secondary">{{
@@ -220,7 +221,17 @@
                         }}</span>
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
-                    </a>
+                    } @else {
+                      <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
+                        <span>
+                          {{ g.name }}
+                          <span class="secondary">{{
+                            g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                          }}</span>
+                        </span>
+                        <strong>{{ g.amount | money: d.currency }}</strong>
+                      </a>
+                    }
                   </li>
                 }
               </ul>
@@ -242,15 +253,26 @@
               <ul class="rows">
                 @for (g of rows('source', d.incomeBySource); track g.name) {
                   <li>
-                    <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
+                    @if (g.name === unmatched) {
+                      <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
                       <span>
-                        {{ g.name | readable }}
+                        {{ g.name }}
                         <span class="secondary">{{
                           g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
                         }}</span>
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
-                    </a>
+                    } @else {
+                      <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
+                        <span>
+                          {{ g.name | readable }}
+                          <span class="secondary">{{
+                            g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                          }}</span>
+                        </span>
+                        <strong>{{ g.amount | money: d.currency }}</strong>
+                      </a>
+                    }
                   </li>
                 }
               </ul>
@@ -307,8 +329,10 @@
               }
               <p class="secondary note-value">
                 Non riguardano le rendite e non si tolgono dal netto: il bollo si paga sul deposito,
-                il capital gain sulle vendite in guadagno. Una ritenuta finita qui ha il tipo
-                sbagliato: dalle il tipo "Ritenute sulle rendite".
+                il capital gain sulle vendite in guadagno, le ritenute sui ratei con le
+                compravendite di obbligazioni (in più quando compri, in meno quando vendi: vanno con
+                il rateo, che sta nel prezzo). Una ritenuta su una cedola o un dividendo finita qui
+                ha il tipo sbagliato: dalle il tipo "Ritenute sulle rendite".
               </p>
             }
           </section>

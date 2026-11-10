@@ -178,7 +178,10 @@ public class InvestmentService {
                 t.getCategory() == null ? null : t.getCategory().getName(),
                 security != null ? security : t.getAccount().label(),
                 security != null ? null : t.getAccount().getId(),
-                security != null ? null : Investments.searchWords(text));
+                security != null ? null : Investments.searchWords(text),
+                // per abbinare una ritenuta alla sua rendita (parte U): lo stesso conto, e l'ISIN se il testo lo ha
+                // (cercato in causale e controparte: per Trade Republic il nome è la controparte, l'ISIN è nella causale)
+                t.getAccount().getId(), Investments.isin(t.getDescription() + " " + t.getCounterparty()));
     }
 
     /**
