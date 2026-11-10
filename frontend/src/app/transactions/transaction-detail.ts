@@ -46,7 +46,7 @@ export const TYPE_HINTS: Record<TransactionType, string> = {
   SECURITIES_SELL: 'Investimenti: tenuto a parte',
   INVESTMENT_INCOME: 'Rendite degli investimenti: tenute a parte',
   WITHHOLDING_TAX: 'Trattenuta su una cedola o un dividendo: si toglie dalla rendita',
-  INVESTMENT_TAX: 'Bollo, capital gain, ritenute sui ratei: tenute a parte',
+  INVESTMENT_TAX: 'Bollo, capital gain, Tobin tax: tenute a parte',
   IGNORED: "Resta nell'elenco, fuori da tutti i totali",
   TO_REVIEW: 'Fuori dai totali finché non lo classifichi',
 };

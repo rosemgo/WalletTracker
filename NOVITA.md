@@ -11,10 +11,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   giusto, ma le righe "Cedole", "Dividendi" e i titoli erano lordi. Ora ogni ritenuta si toglie dalla sua rendita,
   anche quella degli interessi sulla liquidità, e l'abbinamento funziona anche con banche che scrivono i testi in altro
   modo (con il codice ISIN del titolo).
-- **Le ritenute sui ratei sono a parte**: quelle che la banca restituisce quando compri un'obbligazione e trattiene
-  quando la vendi ("Ritenuta Fiscale … Qta/Val.nom.") non riguardano le cedole, ma il prezzo della compravendita. Ora
-  sono tra le "Altre tasse investimenti", nella categoria nuova "Ritenute sui ratei", e non toccano più il netto delle
-  rendite.
+- **Il giro titoli tra i tuoi conti non è più una tassa**: le righe "Ritenuta Fiscale … Qta/Val.nom." che Fineco
+  scrive quando sposti titoli da un tuo conto a un altro (un addebito su uno, lo stesso accredito sull'altro) ora sono
+  trasferimenti interni. Non toccano più il netto delle rendite e non compaiono come costo, nemmeno quando l'app ha un
+  lato solo.
 - **Lo stesso titolo da due banche è una riga sola** in "Da dove" (per esempio "ENEL" di Fineco ed "Enel" di Trade
   Republic).
 - **La nota sotto l'investito dice che cosa contengono le vendite**: sono come le registra la banca, e il capital gain
@@ -22,7 +22,7 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 - La riga che resta per le ritenute senza la loro cedola nel periodo si chiama "Ritenute senza la loro rendita nel
   periodo" e non porta più a un elenco sbagliato.
 
-L'aggiornamento sposta da solo le ritenute sui ratei che hai già, ma non quelle a cui hai scelto il tipo a mano.
+L'aggiornamento sistema da solo le righe che hai già, ma non quelle a cui hai scelto il tipo a mano.
 
 ## 1.2.6
 

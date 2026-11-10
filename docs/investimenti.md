@@ -992,7 +992,7 @@ quella riga conteneva **tutte** le ritenute dell'anno:
 | Testo della banca | Movimenti | Totale | Che cos'è |
 |---|---|---|---|
 | `Rit.ced.su …`, `Rit.div.su …` | 11 | −724,16 € | ritenute su cedole e dividendi |
-| `Ritenuta Fiscale … Qta/Val.nom.` | 19 (6 +, 13 −) | −456,93 € | ritenute sul **rateo** di obbligazioni comprate e vendute |
+| `Ritenuta Fiscale … Qta/Val.nom.` | 19 (6 +, 13 −) | −456,93 € | il **giro titoli** tra i tuoi conti (parte W; qui si pensava al rateo) |
 | `Rit. Fisc. Interessi Portaf…` | 7 | −0,76 € | ritenute sugli interessi della liquidità |
 
 Tre problemi diversi.
@@ -1051,45 +1051,12 @@ di Trade Republic "Enel", che è già netto.
 confrontano senza badare alle maiuscole, e la riga di "Da dove" li somma (con il primo nome trovato; la pagina lo
 mostra comunque come "Enel").
 
-### 3. Le ritenute sul rateo vanno con le compravendite
+### 3. Le "Ritenuta Fiscale … Qta/Val.nom." escono dalle rendite
 
-Quando compri un'obbligazione paghi al venditore, **dentro il prezzo**, gli interessi maturati fino a quel giorno: il
-**rateo**. La banca ti restituisce la ritenuta su quel rateo (un importo **positivo**). Quando vendi succede il
-contrario: incassi il rateo dentro il prezzo e la banca trattiene la ritenuta (**negativo**). Fineco scrive "Ritenuta
-Fiscale <titolo> Qta/Val.nom. <quantità>".
-
-Un esempio (importi inventati, aliquota dei titoli di Stato 12,5%). Compri un BTP a metà periodo e paghi 400 € di
-rateo; la banca ti restituisce 50 €. Alla cedola ricevi la cedola **intera**, 1.000 € lordi, con la ritenuta
-**intera**, −125 €.
-
-| | Dove sta nell'app | Importo |
-|---|---|---|
-| cedola lorda | Rendite | 1.000 € |
-| ritenuta sulla cedola | Rendite (si toglie) | −125 € |
-| **netto della cedola** | **Rendite** | **875 €**: i soldi arrivati davvero come cedola |
-| rateo pagato al venditore | dentro l'acquisto ("Compravendita Titoli") | −400 € |
-| ritenuta sul rateo restituita | **Altre tasse investimenti** | +50 € |
-
-L'interesse guadagnato davvero è 1.000 − 400 = 600 € lordi, con 125 − 50 = 75 € di tasse: 525 € netti. Per arrivarci
-servono **tutte e due** le correzioni, il rateo e la sua ritenuta; ma il rateo è dentro l'importo dell'acquisto, e
-l'app non lo vede da solo. Mettere i +50 € nelle rendite darebbe 925 €: né i soldi arrivati come cedola (875) né
-l'interesse vero (525). Per questo la ritenuta sul rateo **non** si toglie dalle rendite: resta visibile a parte.
-
-**Il netto delle rendite resta vero**, a patto di dire che cosa misura: i soldi arrivati come cedole, dividendi e
-interessi, meno le tasse trattenute **su quei pagamenti**. Il rendimento complessivo di un'obbligazione (con il rateo e
-la differenza di prezzo) è un'altra domanda, che l'app non sa fare: servirebbero le quotazioni.
-
-**La migrazione `V38__ritenute_sui_ratei.sql`:**
-
-1. una categoria di partenza nuova, **"Ritenute sui ratei"**, tra quelle degli investimenti (se l'utente ne ha già una
-   con quel nome, si usa quella);
-2. una regola di partenza nuova: "contiene **tutte le parole**" `Ritenuta Fiscale Qta/Val.nom` → **Altre tasse
-   investimenti**, categoria "Ritenute sui ratei", **priorità 9**, così viene provata prima della regola "Ritenuta
-   fiscale" di V4 (priorità 10), che resta per gli altri testi con "Ritenuta Fiscale";
-3. i movimenti che la regola di V4 aveva classificato e che hanno "Qta/Val.nom" passano subito al tipo e alla categoria
-   nuovi. **Non** quelli con il tipo scelto a mano; una categoria scelta a mano resta.
-
-La categoria è solo l'etichetta della riga in "Altre tasse": nessun codice dipende dal suo nome (parte T).
+Queste righe non sono ritenute su una cedola o un dividendo: la V38 le toglie dalle rendite. **Che cosa siano davvero**
+l'abbiamo capito dopo, con le contabili di Fineco: non il rateo di una compravendita (che sta dentro l'importo della
+compravendita), ma il **giro titoli tra i tuoi conti**. La V38 le metteva in "Altre tasse → Ritenute sui ratei"; la
+**V39** le fa trasferimenti tra i tuoi conti. Tutta la storia, con i conti, è nella **parte W**.
 
 ### La riga dei non abbinati
 
@@ -1108,7 +1075,7 @@ Che cosa funziona da solo e che cosa fare:
 | **il totale netto** | niente, appena i tipi sono giusti | rendite meno ritenute del periodo: è sempre giusto |
 | **l'abbinamento** | niente nella maggior parte dei casi: ISIN, nome o unica rendita possibile | se la banca non scrive l'ISIN, usa nomi diversi **e** paga più rendite lo stesso giorno sullo stesso conto, la ritenuta resta in "senza la loro rendita": totale giusto, righe di quella banca lorde. Allora si aggiunge la sua etichetta in `Investments.LABEL`, come per Fineco e Trade Republic |
 | **una banca che paga già il netto** (come Trade Republic) | niente | non ci sono ritenute da abbinare |
-| **le ritenute sul rateo** | se la banca le scrive in altro modo, una regola → Altre tasse investimenti, categoria "Ritenute sui ratei" | come per Fineco |
+| **il giro titoli tra i tuoi conti** | se la banca scrive righe di ritenuta a parte, una regola per il suo testo → Trasferimento interno | i due lati si annullano; vedi la parte W |
 
 ### Le prove
 
@@ -1123,8 +1090,8 @@ Che cosa funziona da solo e che cosa fare:
   - "ENEL" ed "Enel" una riga sola.
 - `InvestmentServiceTest`: con il database vero, "Rit.ced.su" il giorno dopo la sua cedola si toglie dal titolo e
   resta nel mese della cedola.
-- `ClassificationServiceTest`: i ratei (+ e −) diventano Altre tasse investimenti con la loro categoria; le ritenute
-  su una cedola e sugli interessi restano ritenute sulle rendite.
+- `ClassificationServiceTest`: le ritenute su una cedola e sugli interessi restano ritenute sulle rendite (per le
+  "Ritenuta Fiscale … Qta/Val.nom." vedi la parte W).
 - `V38RitenuteSuiRateiTest` (database vero alla V37): la regola nuova viene prima e quella di V4 resta; i movimenti
   della regola di V4 con "Qta/Val.nom" passano, non quelli con il tipo scelto a mano né un "Ritenuta Fiscale" senza
   quantità; una categoria scelta a mano resta; una categoria con lo stesso nome si riusa.
@@ -1136,7 +1103,8 @@ Che cosa funziona da solo e che cosa fare:
   - Cedole 455 €, Dividendi 257,15 €, Interessi 0,11 €, tutti netti;
   - "Enel" una riga sola (3 movimenti);
   - nessuna riga di non abbinati;
-  - "Ritenute sui ratei" −29,78 € tra le altre tasse, con la nota sul segno;
+  - le "Ritenuta Fiscale … Qta/Val.nom." fuori dalle rendite (con la V38 in "Altre tasse"; dalla V39 trasferimenti,
+    parte W);
   - la barra di settembre è la cedola netta, anche se la ritenuta è registrata il 1° ottobre;
   - PC e telefono, tema scuro, nessun errore nella console, nessuna pagina più larga dello schermo.
 
@@ -1164,3 +1132,91 @@ registra la banca: le tasse che paga a parte (il capital gain) sono in Altre tas
 - **B.** Un tipo "Tasse sulle compravendite" per tutto quello che riguarda una compravendita (capital gain, ritenute sui
   ratei, Tobin tax), con acquisti e vendite netti; in "Altre tasse" resterebbe solo il bollo. Da decidere: la Tobin tax
   è un'uscita ma riguarda un acquisto.
+
+---
+
+## Parte W: il giro titoli tra i tuoi conti
+
+**La scoperta, con le contabili di Fineco.** Nella parte U le righe "Ritenuta Fiscale <titolo> Qta/Val.nom.
+<quantità>" erano state prese per le ritenute sul rateo di una compravendita, e la V38 le aveva messe in "Altre tasse →
+Ritenute sui ratei". Le contabili di due operazioni vere mostrano che **non è così**: Fineco mette il rateo e la sua
+ritenuta **dentro** l'importo della compravendita.
+
+**Acquisto** di 20.000 nominali di FRANCE-25MG57 4,4% (20/03/2026):
+
+| Voce | Importo |
+|---|---|
+| prezzo: 20.000 × 98,40% | 19.680,00 € |
+| + rateo lordo | 730,52 € |
+| − ritenuta sul rateo | −91,32 € |
+| − ritenuta sul disaggio di emissione | −0,44 € |
+| **totale addebitato** ("Compravendita Titoli") | **20.318,76 €** |
+
+**Vendita** di 20.000 nominali di BTP-10OT28 VALORE SU (20/03/2026):
+
+| Voce | Importo |
+|---|---|
+| prezzo: 20.000 × 103,10% | 20.620,00 € |
+| + rateo lordo | 166,28 € |
+| − ritenuta sul rateo | −20,78 € |
+| **totale accreditato** ("Compravendita Titoli") | **20.765,50 €** |
+
+**Che cosa sono allora.** Nascono quando un titolo **passa da un tuo dossier a un altro** (o cambia codice nello stesso
+dossier). La banca tassa il rateo maturato fino a quel giorno sul conto che cede, e accredita la stessa cifra sul conto
+che riceve: così, alla cedola successiva, la ritenuta intera trattenuta sul conto nuovo è compensata. Esempio dalle
+schermate (25 marzo): ROMANIA-7OT45 −60,80 € sul conto che cede, +60,80 € su quello che riceve. **Per chi è titolare
+di tutti e due il saldo è zero**: è un trasferimento tra i tuoi conti, come un giroconto.
+
+**I movimenti veri lo confermano** (20 righe in tutto):
+
+| Date | Righe | Totale | Che cos'è |
+|---|---|---|---|
+| 24 marzo | tre accrediti "VALORE SU" e tre addebiti uguali "VALSU CUM" | 0 | lo stesso BTP Valore con due codici: il vecchio si storna, il nuovo si accredita |
+| 23 e 26 ottobre | tre addebiti e, tre giorni dopo, tre accrediti uguali | 0 | giro titoli con i due lati nell'app |
+| 25 marzo e 29 aprile | sette addebiti | −456,93 € | giro titoli verso il conto …3288: **l'altro lato manca** |
+| 14 novembre 2025 | un accredito | +23,68 € | un titolo entrato nel dossier: l'altro lato manca |
+
+Perché manca l'altro lato: il conto che riceve ha movimenti nell'app **solo dal 22 luglio 2026**. Quando si collega un
+conto, la banca dà uno storico limitato (con PSD2 spesso pochi mesi); gli accrediti di marzo e aprile sono prima.
+Si possono recuperare esportando da Fineco i movimenti di quei mesi, salvandoli in CSV e caricandoli in **Importa**.
+
+**La migrazione `V39__giro_titoli.sql`:**
+
+1. la regola di partenza della V38 ("tutte le parole" `Ritenuta Fiscale Qta/Val.nom`) diventa **"Ritenuta sul rateo
+   nel giro titoli tra i tuoi conti"**, tipo **Trasferimento interno**, senza categoria (solo se è ancora com'era la
+   V38: se l'hai cambiata, resta la tua);
+2. i movimenti classificati da quella regola diventano trasferimenti interni. **Non** quelli con il tipo scelto a mano;
+   una categoria scelta a mano resta;
+3. la categoria **"Ritenute sui ratei"** si elimina, ma solo se è quella creata dalla V38, se non la usa più niente e se
+   non ha un budget.
+
+**Perché un trasferimento interno** e non una tassa che si abbina all'altro lato: un trasferimento **non conta in
+nessun totale** (né in Investimenti, né nel Riepilogo, né in Analisi). Così è giusto sia quando i due lati ci sono (si
+annullerebbero comunque), sia quando ne manca uno, come i 456,93 € di marzo e aprile: non nasce un costo che non c'è.
+Nessun abbinamento da fare, nessun caso dubbio. Il limite: se un giorno trasferissi titoli **verso un'altra banca** che
+non accredita niente, l'addebito sul conto che cede sarebbe una tassa vera. In quel caso si sistema a mano con "Conta
+come".
+
+**Il capital gain, già che ci siamo.** Le schermate mostrano anche come Fineco paga la tassa sulle plusvalenze: "Imposta
+Sostitutiva Capit.GAIN … Mese / Anno: 03/2026", addebitata il 5 maggio. È **una volta al mese, per tutte le vendite del
+mese prima**: non si può attaccare a una vendita precisa. Se un giorno si vorranno le vendite nette (parte V, strade A e
+B), andrà tolta per mese, riportandola al mese a cui si riferisce. La nota sotto "Altre tasse" ora lo dice.
+
+### Le prove
+
+- `V39GiroTitoliTest` (database vero alla V38): i due lati di un giro titoli e un lato solo diventano trasferimenti
+  interni; il tipo scelto a mano resta, e con lui la categoria; una categoria scelta a mano resta; il bollo non cambia;
+  la regola diventa trasferimento interno; la categoria della V38 si elimina se non serve, resta con un budget o se
+  l'aveva creata l'utente; una regola cambiata dall'utente resta com'è.
+- `ClassificationServiceTest`: i due lati di un giro titoli tra due tuoi conti sono trasferimenti interni senza
+  categoria; le ritenute su cedole e interessi restano ritenute sulle rendite.
+- Nel browser, la prova dell'**aggiornamento vero** V38 → V39: un database creato dal codice con la V38, con movimenti
+  come quelli veri di Fineco (importi inventati): due conti, le righe del giro titoli in "Altre tasse → Ritenute sui
+  ratei" (due addebiti di marzo senza l'altro lato, la coppia "VALORE SU"/"VALSU CUM" del 24 marzo, i due lati di
+  ottobre), il bollo e il capital gain. Dopo la V39:
+  - tutte le righe del giro titoli sono "Trasferimento interno", in Movimenti;
+  - la categoria "Ritenute sui ratei" non c'è più;
+  - in "Altre tasse" restano solo capital gain e bollo, con la nota nuova;
+  - il netto delle rendite non cambia (561 €);
+  - PC e telefono, tema scuro, nessun errore nella console, nessuna pagina più larga dello schermo.
+
