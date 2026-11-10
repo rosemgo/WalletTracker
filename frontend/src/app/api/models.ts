@@ -19,6 +19,7 @@ export type TransactionType =
   | 'SECURITIES_BUY'
   | 'SECURITIES_SELL'
   | 'INVESTMENT_INCOME'
+  | 'WITHHOLDING_TAX'
   | 'INVESTMENT_TAX'
   | 'IGNORED'
   | 'TO_REVIEW';
@@ -758,7 +759,7 @@ export interface InvestmentMonth {
   investedCumulative: number; // acquisti meno vendite dall'inizio della storia a questo mese: la linea del grafico
   transferred: number; // bonifici verso i conti di investimento, meno quelli tornati indietro: le barre
   income: number; // cedole, dividendi e interessi, lordi (come li paga la banca)
-  withholding: number; // le ritenute sulle rendite (categoria "Ritenute"), di solito negativo
+  withholding: number; // le ritenute sulle rendite (tipo WITHHOLDING_TAX), di solito negativo
   otherTaxes: number; // le altre tasse sugli investimenti (bollo, capital gain...), di solito negativo
 }
 

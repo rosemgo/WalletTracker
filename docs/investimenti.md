@@ -843,3 +843,139 @@ con e senza l'anno, la nota; il grafico parte dal primo mese (200 €, non 600 �
 browser, con un acquisto inventato del 2025: "Quest'anno" e "12 mesi" 3.500 €, "2 anni" e "Tutto" 4.500 €; per ogni
 periodo la cifra grande uguale alla fine della linea, sul PC e sul telefono, senza errori.
 
+
+---
+
+
+## Parte T: le ritenute diventano un tipo di movimento
+
+**Il difetto, trovato pensando all'app in inglese.** Fino alla 1.2.5 una ritenuta era un movimento di tipo **Tasse
+investimenti** (`INVESTMENT_TAX`) con la categoria **"Ritenute"**, e la pagina la riconosceva così:
+
+```java
+static final String WITHHOLDING = "Ritenute";
+...
+return m.type() == TransactionType.INVESTMENT_TAX && WITHHOLDING.equalsIgnoreCase(m.category());
+```
+
+cioè dal **nome** della categoria. Ma il nome è dell'utente: la pagina Categorie lo lascia cambiare, ed è giusto così.
+Rinominando "Ritenute" in "Ritenute fiscali" (o, domani, con le categorie in inglese: "Withholding tax") il codice non
+la trovava più, e:
+
+- le ritenute finivano tra le **Altre tasse**, come il bollo;
+- il **netto** delle rendite diventava uguale al lordo, quindi troppo alto;
+- **nessun messaggio** lo diceva: le cifre sembravano giuste.
+
+![Prima la categoria, adesso il tipo](img/tipo-ritenute.svg)
+
+### La teoria: il tipo decide, la categoria è un'etichetta
+
+Ogni movimento ha due informazioni (`docs/categorie-e-tipi.md`):
+
+| | Che cos'è | Chi lo sceglie | Può cambiare nome? |
+|---|---|---|---|
+| **tipo** (`TransactionType`) | *che cosa* è il movimento; decide in quali totali conta | il codice: una lista fissa | no: è una chiave del codice |
+| **categoria** | *per che cosa*, più nel dettaglio | l'utente | sì, quando vuole |
+
+Il codice deve prendere le sue decisioni **solo sulle chiavi**. Un `if` su un nome dell'utente smette di funzionare
+appena l'utente lo cambia.
+
+**Perché il problema c'era con "Ritenute" e non con "Cedole" o "Dividendi".** Una categoria è un problema solo se il
+codice la usa in una decisione:
+
+| | Tipo | Il codice li tratta in modo diverso? | La categoria decide qualcosa? |
+|---|---|---|---|
+| Cedole, Dividendi, Interessi | tutti `INVESTMENT_INCOME` | no: li somma tutti | no: è solo il nome della riga in "Per tipo" |
+| Ritenute e Bollo, Capital gain, Tobin tax | tutti `INVESTMENT_TAX` | **sì**: la ritenuta si toglie dalla rendita, il bollo no | **sì**: era l'unica cosa che le distingueva |
+
+Rinominando "Cedole" in "Coupon" cambiava solo la scritta della riga; rinominando "Ritenute" cambiavano i conti. Mancava
+un'informazione nel **tipo**, e la categoria la sostituiva.
+
+### La soluzione: il tipo `WITHHOLDING_TAX`
+
+Le tasse sugli investimenti ora sono **due tipi**:
+
+| Tipo | Nella dashboard | Che cosa fa Investimenti | Categoria |
+|---|---|---|---|
+| `WITHHOLDING_TAX` (nuovo) | **Ritenute sulle rendite** | le toglie dalle rendite: lordo + ritenute = **netto** | non serve: il tipo dice già tutto |
+| `INVESTMENT_TAX` | **Altre tasse investimenti** | elenco "Altre tasse", non toccano il netto | sì: quale tassa (Imposta di bollo, Capital gain, Tobin tax) |
+
+Così la regola dell'app vale ovunque, senza eccezioni: il **tipo** decide, la **categoria** è solo un'etichetta. Si
+può rinominare o eliminare qualunque categoria senza cambiare nessun conto.
+
+**Prima di questa scelta** c'era stata un'altra strada: una colonna `role` sulla categoria, con la categoria delle
+ritenute che non si poteva eliminare. Funzionava, ma lasciava l'eccezione: una categoria "speciale", diversa dalle
+altre. Il tipo nuovo è la soluzione coerente con il resto dell'app, e quella strada non è mai stata pubblicata.
+
+### La migrazione `V37__tipo_ritenute.sql`
+
+Le colonne dei tipi sono testo (`VARCHAR(30)`, `V4`) senza un elenco nel database: un tipo nuovo non cambia le tabelle.
+La migrazione cambia i **dati**, in cinque passi, dentro una transazione (se un passo fallisse, il database tornerebbe
+com'era):
+
+1. **Trova la categoria delle ritenute**, una volta sola: quella che si chiama "Ritenute" (maiuscole e minuscole non
+   contano) o, se è stata rinominata, quella che danno le regole di partenza `Rit.ced`, `Rit.div`... È l'ultima volta
+   che si guarda un nome. La tiene in una tabella temporanea (`CREATE TEMPORARY TABLE ... ON COMMIT DROP`: sparisce
+   da sola alla fine della transazione).
+2. **Le regole** che davano "tassa + categoria delle ritenute" (le quattro di partenza: `Rit.ced`, `Rit.div`,
+   `Ritenuta Fiscale`, `Rit. Fisc`, e quelle create dall'utente) danno il tipo nuovo, senza categoria.
+3. **Le scelte fatte a mano**: un tipo "tassa" scelto a mano su un movimento con la categoria delle ritenute voleva dire
+   "è una ritenuta": diventa il tipo nuovo.
+4. **I movimenti** già classificati come ritenute: il tipo nuovo, senza categoria. Così la pagina è giusta subito.
+5. **La categoria si elimina**. Non se c'è un budget su di lei: un budget non si perde senza che l'utente lo decida
+   (la pagina Categorie fa lo stesso). Un movimento di un altro tipo che la usasse ancora resta senza categoria
+   (`ON DELETE SET NULL` di `V13`).
+
+Il bollo, il capital gain e la Tobin tax restano `INVESTMENT_TAX`, con le loro categorie.
+
+### Nel codice
+
+| Dove | Che cosa cambia |
+|---|---|
+| `TransactionType` | il tipo `WITHHOLDING_TAX`; non è in `WITH_CATEGORY` (non serve una categoria) |
+| `Investments` | `withholding` guarda il tipo; `otherTaxes` è solo `INVESTMENT_TAX`; sparisce il nome "Ritenute" |
+| `CategoryKind`, `SummaryService`, `BankTransactionRepository` | il caso in più: gruppo "investimenti", rendite nette del Riepilogo, la query degli investimenti |
+| `labels.ts` | il nome "Ritenute sulle rendite"; "Tasse investimenti" diventa "Altre tasse investimenti" |
+| `transaction-detail.ts` | la spiegazione sotto il tipo; "Per una ritenuta non serve una categoria" (`category-groups.ts`) |
+| `investments-page` | la riga "Ritenute non abbinate a una rendita" porta a Movimenti filtrando per **tipo** (prima cercava la parola "ritenute" nella categoria); le note dicono "tipo Ritenute sulle rendite" |
+
+Il menu dei tipi (Movimenti, Regole, "Conta come") si costruisce da `TYPE_LABELS`: il tipo nuovo compare da solo. E
+siccome `TYPE_LABELS` è un `Record<TransactionType, string>`, dimenticare il suo nome avrebbe fatto fallire la
+compilazione.
+
+### Come si vedono le ritenute pagate
+
+Come prima, anzi più semplice:
+
+- **Investimenti**: la scheda delle rendite mostra lordo, **ritenute** e netto del periodo; toccando una barra, le
+  cifre del mese; "Da dove" toglie da ogni titolo le sue ritenute;
+- **Movimenti**: il filtro **Tipo → Ritenute sulle rendite** elenca tutte le ritenute, con quante sono e i totali dei
+  giorni (prima si filtrava per la categoria "Ritenute");
+- una ritenuta che le regole non riconoscono si sistema con **"Conta come" → Ritenute sulle rendite**, come si fa per
+  un acquisto di titoli.
+
+### Le prove
+
+- `V37TipoRitenuteTest`: un database vero alla V36, poi la V37. Su un database nuovo le quattro regole danno il tipo
+  nuovo e la categoria non c'è; con i dati: un movimento classificato da una regola, uno con tipo e categoria scelti a
+  mano, uno con solo il tipo scelto a mano, una regola dell'utente, il bollo (che non cambia), una spesa con la
+  categoria "Ritenute" per sbaglio (resta una spesa, senza categoria); la categoria rinominata, trovata dalle regole; la
+  categoria con un budget, che resta.
+- `InvestmentsTest`: una ritenuta resta tale qualunque categoria abbia; una tassa con una categoria che si chiama
+  "Ritenute" è una tassa come le altre.
+- `InvestmentServiceTest`, `ClassificationServiceTest` ("Rit.div" dà il tipo nuovo), `SummaryControllerTest`.
+- `category-groups.spec.ts` (il gruppo e "non serve una categoria"), `investments.spec.ts` (il link per tipo).
+- Nel browser, la prova dell'**aggiornamento vero**: un database creato dal codice della 1.2.5 (V36) con tre ritenute
+  classificate alla vecchia maniera (una scelta a mano), il bollo e due rendite; poi il codice nuovo. Dopo la V37:
+  le tre ritenute hanno il tipo nuovo, il bollo no, la categoria non c'è più; Investimenti mostra 165 € netti (205 €
+  lordi meno 40,43 € di ritenute) con il solo bollo tra le altre tasse; la riga delle ritenute non abbinate porta a
+  Movimenti con il filtro "Ritenute sulle rendite" (3 movimenti); il dettaglio dice "Per una ritenuta non serve una
+  categoria"; il tipo nuovo c'è nei menu delle Regole. PC e telefono, tema scuro, nessun errore nella console, nessuna
+  pagina più larga dello schermo.
+
+### Un limite che resta
+
+Alcuni testi del backend sono **nomi di gruppi scritti in italiano**: "Altre rendite", "Senza nome del titolo",
+"Ritenute non abbinate a una rendita", "Senza categoria" (in `Investments`). Oggi non sono un difetto: sono solo
+etichette, e il codice non ci prende decisioni (la dashboard le confronta solo per scegliere il link). Se un giorno
+l'app avrà l'inglese, diventeranno chiavi tradotte dalla dashboard (il punto P2 dell'analisi sulla lingua).

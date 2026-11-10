@@ -239,6 +239,7 @@ describe('Investments', () => {
       ...investments(period),
       incomeBySource: [
         { name: 'ROMANIA-7OT45 6,5%', amount: 455, movements: 1 },
+        { name: 'Ritenute non abbinate a una rendita', amount: -4, movements: 1 },
         {
           name: 'Trade Republic',
           amount: 6.69,
@@ -261,6 +262,8 @@ describe('Investments', () => {
     expect(href('Trade Republic')).toBe(
       `/movimenti?${period}&accountId=9&type=INVESTMENT_INCOME&text=interest%20payment%20for%20payout%20collection`,
     );
+    // Le ritenute senza la loro rendita: tutte quelle del periodo, dal tipo (parte T).
+    expect(href('Ritenute non abbinate')).toBe(`/movimenti?${period}&type=WITHHOLDING_TAX`);
     expect(href('Imposta di bollo')).toBe(
       `/movimenti?${period}&type=INVESTMENT_TAX&text=imposta%20di%20bollo`,
     );

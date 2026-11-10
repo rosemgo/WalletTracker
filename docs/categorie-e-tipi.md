@@ -27,8 +27,11 @@ La categoria serve solo dove risponde a una domanda che il tipo lascia aperta:
 |---|---|---|
 | Spesa, Entrata | per che cosa? (Spesa alimentare, Stipendio…) | sì |
 | Cedole, dividendi e interessi | quale rendita? (Cedole, Dividendi, Interessi) | sì |
-| Tasse investimenti | quale tassa? (Ritenute, Imposta di bollo…) | sì |
-| Acquisto e vendita titoli, Versamento e prelievo investimenti, Trasferimento interno, Saldo carta, Ignorato | nessuna: il tipo dice già tutto | non serve |
+| Altre tasse investimenti | quale tassa? (Imposta di bollo, Capital gain, Tobin tax) | sì |
+| Ritenute sulle rendite, Acquisto e vendita titoli, Versamento e prelievo investimenti, Trasferimento interno, Saldo carta, Ignorato | nessuna: il tipo dice già tutto | non serve |
+
+Fino alla 1.2.5 le ritenute erano una tassa con la categoria "Ritenute", e la pagina Investimenti le riconosceva dal
+nome della categoria. Dalla V37 sono un tipo (`WITHHOLDING_TAX`): `docs/investimenti.md`, parte T.
 
 ## Parte B: perché non copiare il tipo nella categoria
 

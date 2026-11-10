@@ -31,7 +31,7 @@ public final class InvestmentDtos {
      * @param transferred        bonifici dai conti di tutti i giorni verso i conti di investimento, meno quelli tornati
      *                           indietro (può essere negativo): le barre del secondo grafico
      * @param income             cedole, dividendi e interessi incassati nel mese, lordi (come li paga la banca)
-     * @param withholding        le ritenute sulle rendite del mese (categoria "Ritenute"): di solito negativo
+     * @param withholding        le ritenute sulle rendite del mese (tipo WITHHOLDING_TAX): di solito negativo
      * @param otherTaxes         le altre tasse sugli investimenti del mese (bollo, capital gain...): di solito negativo
      */
     public record Month(YearMonth month, BigDecimal bought, BigDecimal sold, BigDecimal investedCumulative,

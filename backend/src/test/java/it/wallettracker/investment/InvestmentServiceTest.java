@@ -200,9 +200,9 @@ class InvestmentServiceTest {
 
     @Test
     void theGrossIncomeTheWithholdingAndTheNetAreSeenApart() {
-        // Una cedola lorda di Fineco con la sua ritenuta a parte (categoria "Ritenute").
+        // Una cedola lorda di Fineco con la sua ritenuta a parte (tipo Ritenute, senza categoria: parte T).
         save(ing, "2026-10-01", "125", TransactionType.INVESTMENT_INCOME, "Ced.su 50.000 IT0005436693", "Cedole");
-        save(ing, "2026-10-01", "-15.63", TransactionType.INVESTMENT_TAX, "Rit.ced IT0005436693", "Ritenute");
+        save(ing, "2026-10-01", "-15.63", TransactionType.WITHHOLDING_TAX, "Rit.ced IT0005436693", null);
         classificationService.classifyAll(); // il tipo scelto a mano diventa il tipo del movimento
 
         Overview o = investmentService.overview(Period.YEAR, null, TODAY);

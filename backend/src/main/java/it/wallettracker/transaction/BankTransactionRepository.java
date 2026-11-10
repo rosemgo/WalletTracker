@@ -263,6 +263,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
                              it.wallettracker.transaction.TransactionType.SECURITIES_BUY,
                              it.wallettracker.transaction.TransactionType.SECURITIES_SELL,
                              it.wallettracker.transaction.TransactionType.INVESTMENT_INCOME,
+                             it.wallettracker.transaction.TransactionType.WITHHOLDING_TAX,
                              it.wallettracker.transaction.TransactionType.INVESTMENT_TAX)
             """)
     List<BankTransaction> findInvestmentMovements();

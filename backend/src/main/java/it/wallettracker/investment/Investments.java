@@ -111,18 +111,18 @@ public final class Investments {
         return m.type() == TransactionType.INVESTMENT_INCOME ? m.amount() : BigDecimal.ZERO;
     }
 
-    /** Tasse sugli investimenti: l'importo così com'è (negativo; positivo se una tassa viene restituita). */
+    /**
+     * Tutte le tasse sugli investimenti, ritenute comprese: l'importo così com'è (negativo; positivo se una tassa viene
+     * restituita).
+     */
     public static BigDecimal taxes(Movement m) {
-        return m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
+        return isWithholding(m) || m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
     }
 
-    /** La categoria delle ritenute sulle rendite (V12), quella che le regole di partenza danno a "Rit.ced", "Rit.div". */
-    static final String WITHHOLDING = "Ritenute";
-
     /**
-     * Le ritenute sulle rendite (docs/investimenti.md, parte J): le tasse con la categoria "Ritenute". Fineco paga la
-     * cedola lorda e trattiene la ritenuta con un movimento a parte; rendite più ritenute danno il netto. Trade Republic
-     * paga già il netto, e non c'è niente da togliere.
+     * Le ritenute sulle rendite (docs/investimenti.md, parti J e T): i movimenti di tipo WITHHOLDING_TAX. Fineco paga
+     * la cedola lorda e trattiene la ritenuta con un movimento a parte; rendite più ritenute danno il netto. Trade
+     * Republic paga già il netto, e non c'è niente da togliere.
      */
     public static BigDecimal withholding(Movement m) {
         return isWithholding(m) ? m.amount() : BigDecimal.ZERO;
@@ -130,11 +130,12 @@ public final class Investments {
 
     /** Le altre tasse sugli investimenti (bollo, capital gain, Tobin tax...): non riguardano le rendite. */
     public static BigDecimal otherTaxes(Movement m) {
-        return m.type() == TransactionType.INVESTMENT_TAX && !isWithholding(m) ? m.amount() : BigDecimal.ZERO;
+        return m.type() == TransactionType.INVESTMENT_TAX ? m.amount() : BigDecimal.ZERO;
     }
 
+    /** Una ritenuta: lo dice il tipo, non la categoria (che è un nome dell'utente, e può cambiare: parte T). */
     private static boolean isWithholding(Movement m) {
-        return m.type() == TransactionType.INVESTMENT_TAX && WITHHOLDING.equalsIgnoreCase(m.category());
+        return m.type() == TransactionType.WITHHOLDING_TAX;
     }
 
     /**

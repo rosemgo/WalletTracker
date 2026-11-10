@@ -40,7 +40,14 @@ public enum TransactionType {
     /** Rendite da investimenti: cedole, dividendi, interessi. */
     INVESTMENT_INCOME,
 
-    /** Tasse sugli investimenti: ritenute, bolli, capital gain. */
+    /**
+     * Ritenute sulle rendite (docs/investimenti.md, parte T): le tasse trattenute su una cedola, un dividendo, degli
+     * interessi. Alcune banche (Fineco) pagano il lordo e trattengono la ritenuta con un movimento a parte ("Rit.ced
+     * …"): Investimenti la toglie dalla rendita e mostra il netto. Il tipo dice già tutto: non serve una categoria.
+     */
+    WITHHOLDING_TAX,
+
+    /** Le altre tasse sugli investimenti: bollo, capital gain, Tobin tax. Non si tolgono dalle rendite. */
     INVESTMENT_TAX,
 
     /** Da ignorare (importo zero, conto escluso...). */

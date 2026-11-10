@@ -24,7 +24,8 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   SECURITIES_BUY: 'Acquisto titoli',
   SECURITIES_SELL: 'Vendita titoli',
   INVESTMENT_INCOME: 'Cedole, dividendi e interessi',
-  INVESTMENT_TAX: 'Tasse investimenti',
+  WITHHOLDING_TAX: 'Ritenute sulle rendite',
+  INVESTMENT_TAX: 'Altre tasse investimenti',
   IGNORED: 'Ignorato',
   TO_REVIEW: 'Da verificare',
 };

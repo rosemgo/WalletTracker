@@ -4,6 +4,18 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.2.6
+
+- **Le ritenute hanno un tipo tutto loro, "Ritenute sulle rendite"**: prima erano una tassa con la categoria
+  "Ritenute", e se rinominavi quella categoria Investimenti non le riconosceva più e mostrava le rendite più alte del
+  vero. Ora il conto è giusto qualunque nome abbiano le tue categorie. Le altre tasse (bollo, capital gain, Tobin tax)
+  si chiamano "Altre tasse investimenti".
+- **Per vedere le ritenute pagate**: in Investimenti come prima (lordo, ritenute, netto), e in Movimenti con il filtro
+  Tipo → "Ritenute sulle rendite".
+
+L'aggiornamento sistema da solo le ritenute che hai già, anche quelle scelte a mano, e le regole; poi la categoria
+"Ritenute" non serve più e sparisce (resta solo se ci avevi messo un budget).
+
 ## 1.2.5
 
 (La 1.2.4 non è stata pubblicata: il rilascio si è fermato perché mancavano queste novità.)
