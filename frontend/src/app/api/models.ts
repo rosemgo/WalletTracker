@@ -108,15 +108,21 @@ export interface ImportPreviewRow {
   counterparty: string | null;
 }
 
-/** La risposta di POST /api/imports/preview. */
+/** La risposta di POST /api/imports/preview (docs/importa-file.md). */
 export interface ImportPreview {
-  headers: string[];
+  headers: string[]; // la riga dell'intestazione, anche se nel file non è la prima (Fineco: sotto le note)
   sampleRows: string[][]; // le prime righe così come sono nel file
   totalRows: number;
   mapping: ImportMapping; // quella proposta dal backend, o quella mandata
-  parsedRows: ImportPreviewRow[];
+  parsedRows: ImportPreviewRow[]; // le prime righe che verranno aggiunte (o le prime del file)
   errorCount: number;
   errors: string[];
+  spreadsheet: boolean; // un file Excel: il separatore non c'entra
+  linkedAccount: boolean; // un conto collegato: si aggiungono solo le righe più vecchie della banca
+  bankFrom: string | null; // con un conto collegato, il primo giorno dei movimenti arrivati dalla banca
+  newRows: number; // le righe che verranno aggiunte
+  duplicateRows: number; // le righe già aggiunte da un'importazione precedente
+  coveredRows: number; // con un conto collegato, le righe che la banca porta da sé
 }
 
 /** La risposta di POST /api/imports. */
@@ -124,6 +130,7 @@ export interface ImportResult {
   imported: number;
   duplicates: number; // righe già importate in passato, saltate
   completed: number; // tra quelle, quante hanno avuto la descrizione completata con la seconda colonna
+  covered: number; // con un conto collegato, le righe del periodo che la banca porta da sé, saltate
 }
 
 /**

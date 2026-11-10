@@ -1173,7 +1173,7 @@ di tutti e due il saldo è zero**: è un trasferimento tra i tuoi conti, come un
 |---|---|---|---|
 | 24 marzo | tre accrediti "VALORE SU" e tre addebiti uguali "VALSU CUM" | 0 | lo stesso BTP Valore con due codici: il vecchio si storna, il nuovo si accredita |
 | 23 e 26 ottobre | tre addebiti e, tre giorni dopo, tre accrediti uguali | 0 | giro titoli con i due lati nell'app |
-| 25 marzo e 29 aprile | sette addebiti | −456,93 € | giro titoli verso il conto …3288: **l'altro lato manca** |
+| 25 marzo e 29 aprile | sette addebiti | −456,93 € | giro titoli verso il conto …0002: **l'altro lato manca** |
 | 14 novembre 2025 | un accredito | +23,68 € | un titolo entrato nel dossier: l'altro lato manca |
 
 Perché manca l'altro lato: il conto che riceve ha movimenti nell'app **solo dal 22 luglio 2026**. Quando si collega un

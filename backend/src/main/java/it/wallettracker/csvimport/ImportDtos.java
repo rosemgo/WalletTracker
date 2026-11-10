@@ -11,18 +11,26 @@ public final class ImportDtos {
     }
 
     /**
-     * L'anteprima di un file, prima di importarlo.
+     * L'anteprima di un file, prima di importarlo (docs/importa-file.md).
      *
-     * @param headers    i nomi delle colonne (la prima riga del file)
-     * @param sampleRows le prime righe così come sono nel file
-     * @param totalRows  quante righe di movimenti ha il file (intestazione esclusa)
-     * @param mapping    la mappatura usata: quella proposta, o quella mandata dall'utente
-     * @param parsedRows le prime righe lette con la mappatura: così l'utente vede se è giusta
-     * @param errorCount quante righe non si possono leggere con questa mappatura
-     * @param errors     i primi errori, con il numero di riga
+     * @param headers       i nomi delle colonne (la riga dell'intestazione, anche se non è la prima del file)
+     * @param sampleRows    le prime righe così come sono nel file
+     * @param totalRows     quante righe di movimenti ha il file (intestazione esclusa)
+     * @param mapping       la mappatura usata: quella proposta, o quella mandata dall'utente
+     * @param parsedRows    le prime righe che verranno aggiunte, lette con la mappatura (se non se ne aggiunge
+     *                      nessuna, le prime del file): così l'utente vede se è giusta
+     * @param errorCount    quante righe non si possono leggere con questa mappatura
+     * @param errors        i primi errori, con il numero di riga
+     * @param spreadsheet   true per un file Excel: il separatore non c'entra, e date e numeri hanno già un formato
+     * @param linkedAccount true se il conto è collegato a una banca: si aggiungono solo le righe più vecchie
+     * @param bankFrom      con un conto collegato, il primo giorno dei movimenti arrivati dalla banca (null se nessuno)
+     * @param newRows       le righe che verranno aggiunte
+     * @param duplicateRows le righe già aggiunte da un'importazione precedente, che si saltano
+     * @param coveredRows   con un conto collegato, le righe del periodo che la banca porta da sé, che si saltano
      */
     public record Preview(List<String> headers, List<List<String>> sampleRows, int totalRows, ImportMapping mapping,
-            List<PreviewRow> parsedRows, int errorCount, List<String> errors) {
+            List<PreviewRow> parsedRows, int errorCount, List<String> errors, boolean spreadsheet,
+            boolean linkedAccount, LocalDate bankFrom, int newRows, int duplicateRows, int coveredRows) {
     }
 
     /** Una riga letta, da mostrare nell'anteprima. */
@@ -35,8 +43,10 @@ public final class ImportDtos {
      *
      * @param imported   i movimenti nuovi salvati
      * @param duplicates le righe già importate in passato (stesso file o file che si sovrappongono), saltate
+     * @param completed  le righe già presenti a cui è stata completata la descrizione
+     * @param covered    con un conto collegato, le righe del periodo che la banca porta da sé, saltate
      */
-    public record ImportResult(int imported, int duplicates, int completed) {
+    public record ImportResult(int imported, int duplicates, int completed, int covered) {
     }
 
     /**

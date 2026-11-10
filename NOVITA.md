@@ -4,6 +4,16 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.3.0
+
+- **Importa anche i file Excel**: il file che esporta la banca (per esempio "Esporta in excel" di Fineco) si carica così
+  com'è, senza convertirlo. L'app trova da sola la tabella anche quando sopra ci sono delle righe di note.
+- **Completa lo storico dei conti collegati**: quando colleghi un conto, la banca dà i movimenti solo degli ultimi mesi.
+  Ora puoi caricare il file della banca anche in un conto collegato: l'app aggiunge **solo i movimenti più vecchi** di
+  quelli arrivati dalla banca, e salta gli altri, così non nascono doppioni. Prima si poteva solo con Trade Republic.
+- **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
+  le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
+
 ## 1.2.7
 
 - **Cedole e dividendi davvero netti, titolo per titolo**: le ritenute di Fineco ("Rit.ced.su", "Rit.div.su") non si

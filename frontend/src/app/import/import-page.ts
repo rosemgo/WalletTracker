@@ -41,7 +41,11 @@ export const DATE_FORMATS: { value: string; label: string }[] = [
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 /**
- * L'importazione dei movimenti da un file CSV, per i conti manuali (es. Trade Republic).
+ * L'importazione dei movimenti da un file, CSV o Excel (docs/importa-file.md), in qualunque conto:
+ * - un conto manuale (che Enable Banking non copre): si importano tutte le righe nuove;
+ * - un conto collegato: i movimenti li porta la banca, ma solo da quando è stato collegato (lo storico che dà). Dal
+ *   file si aggiungono solo le righe più vecchie: i mesi che la banca non ha mai dato.
+ * Il comportamento lo decide il conto scelto, e la pagina lo dice prima di caricare il file.
  *
  * Il percorso:
  * 1. scegli il conto e il file: il backend legge il file e PROPONE come interpretare le colonne;
@@ -64,9 +68,29 @@ export class ImportPage implements OnInit {
   protected readonly delimiters = DELIMITERS;
   protected readonly dateFormats = DATE_FORMATS;
 
-  protected readonly accounts = signal<Account[]>([]); // solo i conti manuali
-  /** C'è un conto Trade Republic collegato: allora la pagina indica "Completa i movimenti" (docs/31). */
-  protected readonly linkedTradeRepublic = signal(false);
+  protected readonly accounts = signal<Account[]>([]); // tutti: manuali e collegati
+  /** I conti manuali e quelli collegati, per i due gruppi del menu. */
+  protected readonly manualAccounts = computed(() =>
+    this.accounts().filter((a) => a.source === 'MANUAL'),
+  );
+  protected readonly linkedAccounts = computed(() =>
+    this.accounts().filter((a) => a.source !== 'MANUAL'),
+  );
+  /** Il conto scelto (il menu dà l'id; qui il conto intero). */
+  protected readonly selectedId = signal<number | null>(null);
+  protected readonly selected = computed(
+    () => this.accounts().find((a) => a.id === this.selectedId()) ?? null,
+  );
+  /** Il conto scelto è collegato: si aggiungono solo i mesi più vecchi della banca. */
+  protected readonly linked = computed(() => {
+    const a = this.selected();
+    return a !== null && a.source !== 'MANUAL';
+  });
+  /** Un conto Trade Republic collegato: per lui c'è anche "Completa i movimenti", che aggiunge le causali (docs/31). */
+  protected readonly selectedIsTradeRepublic = computed(() => {
+    const a = this.selected();
+    return a !== null && a.source !== 'MANUAL' && isTradeRepublic(a);
+  });
   protected readonly loading = signal(true);
   protected readonly file = signal<File | null>(null);
   protected readonly preview = signal<ImportPreview | null>(null);
@@ -88,13 +112,17 @@ export class ImportPage implements OnInit {
     })),
   );
 
-  /** Si può importare solo se ogni riga si legge con la mappatura scelta. */
+  /**
+   * Si può importare solo se ogni riga si legge con la mappatura scelta, e c'è qualcosa da fare: righe nuove, o righe
+   * già importate da completare (un conto manuale, docs/tinaba.md, parte H).
+   */
   protected readonly canImport = computed(() => {
     const preview = this.preview();
     return (
       preview !== null &&
       preview.errorCount === 0 &&
       preview.parsedRows.length > 0 &&
+      (preview.newRows > 0 || (!preview.linkedAccount && preview.duplicateRows > 0)) &&
       !this.importing()
     );
   });
@@ -159,10 +187,12 @@ export class ImportPage implements OnInit {
     this.mapping.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.requestPreview(this.mapping.getRawValue()));
-    // Cambiando conto cambia la valuta predefinita: rifacciamo l'anteprima con la stessa mappatura.
-    this.account.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.requestPreview(this.preview() ? this.mapping.getRawValue() : null));
+    // Cambiando conto cambiano la valuta predefinita e che cosa si aggiunge (conto manuale o collegato): rifacciamo
+    // l'anteprima con la stessa mappatura.
+    this.account.valueChanges.pipe(takeUntilDestroyed()).subscribe((id) => {
+      this.selectedId.set(id);
+      this.requestPreview(this.preview() ? this.mapping.getRawValue() : null);
+    });
   }
 
   ngOnInit(): void {
@@ -170,13 +200,12 @@ export class ImportPage implements OnInit {
     const fromLink = Number(this.route.snapshot.queryParamMap.get('conto'));
     this.api.accounts().subscribe({
       next: (accounts) => {
-        const manual = accounts.filter((a) => a.source === 'MANUAL');
-        this.accounts.set(manual);
-        this.linkedTradeRepublic.set(
-          accounts.some((a) => a.source !== 'MANUAL' && isTradeRepublic(a)),
-        );
-        const chosen = manual.find((a) => a.id === fromLink) ?? manual[0];
+        // Prima i conti manuali (l'uso più comune di un file), poi quelli collegati.
+        this.accounts.set(accounts);
+        const ordered = [...this.manualAccounts(), ...this.linkedAccounts()];
+        const chosen = ordered.find((a) => a.id === fromLink) ?? ordered[0];
         this.account.setValue(chosen?.id ?? null, { emitEvent: false });
+        this.selectedId.set(chosen?.id ?? null);
         this.loading.set(false);
       },
       error: () => {
@@ -213,7 +242,10 @@ export class ImportPage implements OnInit {
       next: (result) => {
         this.importing.set(false);
         this.result.set(result);
-        this.loadImportedAccount(accountId);
+        // Il saldo si scrive solo per un conto manuale: quello di un conto collegato lo dà la banca.
+        if (!this.linked()) {
+          this.loadImportedAccount(accountId);
+        }
       },
       error: (response) => {
         this.importing.set(false);
@@ -257,11 +289,21 @@ export class ImportPage implements OnInit {
     this.error.set(null);
   }
 
-  /** Il nome del conto, nel messaggio finale. */
   /** "4 movimenti importati (2 righe erano già presenti…); a 1 movimento … la descrizione." */
   protected doneMessage(done: ImportResult): string {
-    let text =
-      done.imported === 1 ? '1 movimento importato' : `${done.imported} movimenti importati`;
+    let text = this.linked()
+      ? done.imported === 1
+        ? '1 movimento aggiunto'
+        : `${done.imported} movimenti aggiunti`
+      : done.imported === 1
+        ? '1 movimento importato'
+        : `${done.imported} movimenti importati`;
+    if (done.covered > 0) {
+      text +=
+        done.covered === 1
+          ? '; 1 riga era nel periodo che porta la banca ed è stata saltata'
+          : `; ${done.covered} righe erano nel periodo che porta la banca e sono state saltate`;
+    }
     if (done.duplicates > 0) {
       text +=
         done.duplicates === 1
@@ -279,8 +321,63 @@ export class ImportPage implements OnInit {
   }
 
   protected accountName(): string {
-    const account = this.accounts().find((a) => a.id === this.account.value);
-    return account?.label ?? '';
+    return this.selected()?.label ?? '';
+  }
+
+  private readonly datePipe = new DatePipe('it-IT');
+
+  /** " (il 22 luglio 2026)": il primo giorno della banca, quando l'anteprima lo sa. */
+  protected bankFromText(): string {
+    const from = this.preview()?.bankFrom;
+    return from ? ` (il ${this.datePipe.transform(from, 'd MMMM y')})` : '';
+  }
+
+  /**
+   * Che cosa succederà, in una frase. Conto collegato: "Il file ha 75 righe: 43 movimenti più vecchi del 22 luglio 2026
+   * si aggiungono; 32 sono nel periodo che porta la banca." Conto manuale: "75 righe nuove, 3 già importate…".
+   */
+  protected summary(p: ImportPreview): string {
+    const n = (count: number, one: string, many: string) =>
+      count === 1 ? one : `${count} ${many}`;
+    if (!p.linkedAccount) {
+      let text = n(p.newRows, '1 riga nuova', 'righe nuove');
+      if (p.duplicateRows > 0) {
+        text += `, ${n(p.duplicateRows, '1 già importata, che si salta', 'già importate, che si saltano')}`;
+      }
+      return `${text}.`;
+    }
+    const from = this.datePipe.transform(p.bankFrom, 'd MMMM y');
+    const added =
+      p.newRows === 0
+        ? 'nessun movimento da aggiungere'
+        : `${n(p.newRows, '1 movimento più vecchio', 'movimenti più vecchi')} del ${from} ` +
+          (p.newRows === 1 ? 'si aggiunge' : 'si aggiungono');
+    let text = `Il file ha ${n(p.totalRows, '1 riga', 'righe')}: ${added}`;
+    if (p.coveredRows > 0) {
+      text += `; ${n(p.coveredRows, '1 è nel periodo che porta la banca', 'sono nel periodo che porta la banca')}`;
+    }
+    if (p.duplicateRows > 0) {
+      text += `; ${n(p.duplicateRows, '1 era già stata aggiunta', 'erano già state aggiunte')}`;
+    }
+    text += '.';
+    if (p.newRows === 0) {
+      text +=
+        p.duplicateRows > 0
+          ? ' I mesi più vecchi di questo file li hai già aggiunti; gli altri li porta la banca.'
+          : ` La banca ha già tutti i mesi di questo file: dal ${from} in poi li porta lei.`;
+    }
+    return text;
+  }
+
+  /** "Aggiungi 43 movimenti" (conto collegato) o "Importa 75 righe" (conto manuale). */
+  protected importLabel(p: ImportPreview): string {
+    if (p.linkedAccount) {
+      if (p.newRows === 0) {
+        return 'Niente da aggiungere';
+      }
+      return p.newRows === 1 ? 'Aggiungi 1 movimento' : `Aggiungi ${p.newRows} movimenti`;
+    }
+    return p.totalRows === 1 ? 'Importa 1 riga' : `Importa ${p.totalRows} righe`;
   }
 
   private requestPreview(mapping: ImportMapping | null): void {

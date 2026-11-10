@@ -5,7 +5,7 @@
     {{ syncing() ? 'Aggiornamento in corso...' : 'Aggiorna ora' }}
   </button>
   <a class="action" routerLink="/collega">Collega una banca</a>
-  <a class="action" routerLink="/importa">Importa CSV</a>
+  <a class="action" routerLink="/importa">Importa un file</a>
 </div>
 
 @if (message()) {
@@ -263,7 +263,7 @@
   <h2>Nuovo conto manuale</h2>
   <p class="hint">
     Per una banca o un broker che Enable Banking non copre (ad esempio Trade Republic): crei qui il
-    conto e ci carichi i movimenti esportati in un file CSV, dalla pagina Importa CSV. Un conto
+    conto e ci carichi i movimenti esportati in un file CSV o Excel, dalla pagina Importa. Un conto
     manuale non si aggiorna da solo: quando vuoi, importi il file nuovo (i movimenti già presenti
     vengono saltati).
   </p>

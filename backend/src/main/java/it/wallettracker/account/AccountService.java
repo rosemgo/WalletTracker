@@ -85,7 +85,7 @@ public class AccountService {
         Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
         if (!account.isManual()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Si possono eliminare solo i conti manuali (caricati da file CSV).");
+                    "Si possono eliminare solo i conti manuali (caricati da un file).");
         }
         transactionRepository.deleteByAccount(account);
         accountRepository.delete(account);
