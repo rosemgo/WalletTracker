@@ -51,13 +51,22 @@ public final class Investments {
      *                        quel conto, per aprirne i movimenti; altrimenti null
      * @param sourceSearch    in quel caso, le parole fisse del testo da cercare in Movimenti ("interest payment for payout
      *                        collection"): con il conto, trovano proprio quei movimenti
+     * @param accountId       il conto del movimento, per abbinare una ritenuta alla sua rendita (parte U): la banca
+     *                        trattiene la ritenuta sullo stesso conto su cui paga. Null se non si sa
+     * @param isin            il codice ISIN del titolo, se il testo ne ha uno ({@link #isin(String)}); altrimenti null
      */
     public record Movement(LocalDate date, BigDecimal amount, TransactionType type, boolean onInvestmentAccount,
-            String category, String source, Long sourceAccountId, String sourceSearch) {
+            String category, String source, Long sourceAccountId, String sourceSearch, Long accountId, String isin) {
 
         public Movement(LocalDate date, BigDecimal amount, TransactionType type, boolean onInvestmentAccount,
                 String category, String source) {
-            this(date, amount, type, onInvestmentAccount, category, source, null, null);
+            this(date, amount, type, onInvestmentAccount, category, source, null, null, null, null);
+        }
+
+        /** Lo stesso movimento con la data e il titolo della sua rendita: una ritenuta abbinata (parte U). */
+        Movement on(Movement income) {
+            return new Movement(income.date(), amount, type, onInvestmentAccount, category, income.source(),
+                    income.sourceAccountId(), income.sourceSearch(), accountId, isin);
         }
     }
 
@@ -142,7 +151,8 @@ public final class Investments {
      * Il nome del titolo di una rendita o di una ritenuta, per "Da dove" (docs/investimenti.md, parte L). Del testo della
      * banca si tolgono solo le parti che non sono il nome:
      * <ul>
-     *   <li>l'etichetta iniziale ("Ced.su", "Div.su", "Rit.ced", "Cash Dividend"...): il tipo lo dice già la categoria;</li>
+     *   <li>l'etichetta iniziale ("Ced.su", "Div.su", "Rit.ced.su", "Cash Dividend"...): il tipo lo dice già la
+     *       categoria;</li>
      *   <li>i numeri da soli, senza lettere: quantità ("16.000,000") e importi per azione;</li>
      *   <li>le date ("15/09/2032", "2026-10-31") e i codici dei pagamenti (gli UUID di Trade Republic).</li>
      * </ul>
@@ -170,10 +180,63 @@ public final class Investments {
         return result.length() > 100 ? result.substring(0, 100).strip() : result;
     }
 
-    /** Le etichette con cui iniziano le causali delle rendite e delle ritenute (le regole di V4, V25 e V26). */
+    /**
+     * Le etichette con cui iniziano le causali delle rendite e delle ritenute (le regole di V4, V25 e V26). Fineco
+     * scrive "Rit.ced.su" e "Rit.div.su", con il ".su" come in "Ced.su" e "Div.su": senza, dal nome restava un "su" di
+     * troppo, e nessuna ritenuta si abbinava alla sua cedola (parte U).
+     */
     private static final Pattern LABEL = Pattern.compile(
-            "^(?i)(ced\\.\\s*su|div\\.\\s*su|rit\\.\\s*ced|rit\\.\\s*div|rit\\.\\s*fisc\\.?|cash dividend|"
-                    + "interest payment( for( payout collection)?)?|capital distribution)\\b[\\s.:]*");
+            "^(?i)(ced\\.\\s*su|div\\.\\s*su|rit\\.\\s*ced(\\.\\s*su)?|rit\\.\\s*div(\\.\\s*su)?|rit\\.\\s*fisc\\.?|"
+                    + "cash dividend|interest payment( for( payout collection)?)?|capital distribution)\\b[\\s.:]*");
+
+    /**
+     * Un codice ISIN: due lettere (il paese), nove lettere o cifre, una cifra di controllo. "IT0003128367" (Enel),
+     * "XS2353182020". È uguale in tutte le banche: il modo più sicuro per dire che due testi parlano dello stesso titolo.
+     */
+    private static final Pattern ISIN = Pattern.compile("\\b([A-Z]{2}[A-Z0-9]{9}[0-9])\\b");
+
+    /**
+     * Il codice ISIN nel testo di un movimento, se c'è e la sua cifra di controllo torna; altrimenti null. La cifra di
+     * controllo evita di scambiare per un ISIN una parola qualsiasi di 12 caratteri.
+     */
+    public static String isin(String text) {
+        if (text == null) {
+            return null;
+        }
+        var matcher = ISIN.matcher(text.toUpperCase(Locale.ROOT));
+        while (matcher.find()) {
+            if (validIsin(matcher.group(1))) {
+                return matcher.group(1);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * La cifra di controllo di un ISIN (ISO 6166): ogni lettera diventa un numero (A = 10 ... Z = 35), poi sulle cifre
+     * si fa il controllo di Luhn, lo stesso dei numeri delle carte di credito: da destra, una cifra sì e una no si
+     * raddoppia (togliendo 9 se supera 9), e la somma di tutto deve finire con 0.
+     */
+    static boolean validIsin(String code) {
+        StringBuilder digits = new StringBuilder();
+        for (char c : code.toCharArray()) {
+            digits.append(Character.isDigit(c) ? String.valueOf(c) : String.valueOf(c - 'A' + 10));
+        }
+        int sum = 0;
+        boolean twice = false;
+        for (int i = digits.length() - 1; i >= 0; i--) {
+            int d = digits.charAt(i) - '0';
+            if (twice) {
+                d *= 2;
+                if (d > 9) {
+                    d -= 9;
+                }
+            }
+            sum += d;
+            twice = !twice;
+        }
+        return sum % 10 == 0;
+    }
 
     /** Un numero da solo (una quantità, un importo): cifre, punti e virgole, magari con il segno. */
     private static final Pattern NUMBER = Pattern.compile("[+-]?[0-9][0-9.,]*");
@@ -235,61 +298,110 @@ public final class Investments {
     static final int WITHHOLDING_DAYS_AFTER = 10;
 
     /**
-     * Ogni ritenuta prende la data della sua rendita (docs/investimenti.md, parte O): una cedola del 30 ottobre con la
-     * ritenuta registrata il 1° novembre è una cedola netta di ottobre, qualunque periodo si guardi. È la "competenza":
-     * la ritenuta è una parte della cedola, non un fatto a sé.
+     * Ogni ritenuta prende la data e il titolo della sua rendita (docs/investimenti.md, parti O e U): una cedola del 30
+     * ottobre con la ritenuta registrata il 1° novembre è una cedola netta di ottobre, qualunque periodo si guardi. È la
+     * "competenza": la ritenuta è una parte della cedola, non un fatto a sé.
      *
-     * <p>L'abbinamento si fa su tutta la storia, prima di scegliere il periodo: la rendita dello stesso titolo
-     * ({@link #securityName}), da {@link #WITHHOLDING_DAYS_BEFORE} giorni prima a {@link #WITHHOLDING_DAYS_AFTER} dopo,
-     * la più vicina, non ancora abbinata, e almeno grande quanto la ritenuta. Una ritenuta senza la sua rendita (più
-     * vecchia della storia nell'app) tiene la sua data. La lista che esce ha gli stessi movimenti, nello stesso ordine.
+     * <p>L'abbinamento si fa su tutta la storia, prima di scegliere il periodo. La rendita giusta è sullo stesso conto
+     * (la banca trattiene sul conto su cui paga), da {@link #WITHHOLDING_DAYS_BEFORE} giorni prima a
+     * {@link #WITHHOLDING_DAYS_AFTER} dopo, non ancora abbinata e almeno grande quanto la ritenuta. Tra queste si cerca
+     * in tre passate, dalla più sicura alla meno sicura, così una prova debole non "ruba" la rendita a una forte:
+     * <ol>
+     *   <li><b>lo stesso codice ISIN</b> nei due testi: uguale in tutte le banche;</li>
+     *   <li><b>lo stesso nome del titolo</b> ({@link #securityName}), senza badare alle maiuscole;</li>
+     *   <li><b>l'unica rendita possibile</b>: per le banche con testi che non conosciamo, e per gli interessi della
+     *       liquidità di Fineco ("Rit. Fisc. Interessi Portaf…" e "Interessi Portaf…", con parole diverse). Con due
+     *       rendite possibili non si sceglie a caso.</li>
+     * </ol>
+     * Nelle prime due, la più vicina nel tempo. Una ritenuta senza la sua rendita (più vecchia della storia nell'app, o
+     * un caso dubbio) tiene la sua data e il suo nome. La lista che esce ha gli stessi movimenti, nello stesso ordine.
      */
     public static List<Movement> withholdingsOnTheirIncome(List<Movement> movements) {
         List<Movement> result = new ArrayList<>(movements);
         Set<Integer> pairedIncomes = new HashSet<>();
+        Set<Integer> pairedWithholdings = new HashSet<>();
+        List<java.util.function.BiPredicate<Movement, Movement>> passes = List.of(
+                (w, income) -> w.isin() != null && w.isin().equals(income.isin()),
+                (w, income) -> w.source() != null && w.source().equalsIgnoreCase(income.source()));
+        for (var sameSecurity : passes) {
+            for (int i = 0; i < movements.size(); i++) {
+                Movement w = movements.get(i);
+                if (!isWithholding(w) || pairedWithholdings.contains(i)) {
+                    continue;
+                }
+                Integer best = null;
+                long bestDistance = Long.MAX_VALUE;
+                for (int j : candidates(movements, w, pairedIncomes)) {
+                    long distance = Math.abs(ChronoUnit.DAYS.between(movements.get(j).date(), w.date()));
+                    if (sameSecurity.test(w, movements.get(j)) && distance < bestDistance) {
+                        best = j;
+                        bestDistance = distance;
+                    }
+                }
+                if (best != null) {
+                    pair(result, movements, i, best, pairedWithholdings, pairedIncomes);
+                }
+            }
+        }
         for (int i = 0; i < movements.size(); i++) {
             Movement w = movements.get(i);
-            if (!isWithholding(w) || w.source() == null) {
+            if (!isWithholding(w) || pairedWithholdings.contains(i) || w.accountId() == null) {
                 continue;
             }
-            Integer best = null;
-            long bestDistance = Long.MAX_VALUE;
-            for (int j = 0; j < movements.size(); j++) {
-                Movement income = movements.get(j);
-                if (income.type() != TransactionType.INVESTMENT_INCOME || pairedIncomes.contains(j)
-                        || !w.source().equals(income.source())
-                        || income.amount().compareTo(w.amount().abs()) < 0) {
-                    continue;
-                }
-                long days = ChronoUnit.DAYS.between(income.date(), w.date()); // positivo: la ritenuta è dopo
-                if (days < -WITHHOLDING_DAYS_BEFORE || days > WITHHOLDING_DAYS_AFTER) {
-                    continue;
-                }
-                if (Math.abs(days) < bestDistance) {
-                    best = j;
-                    bestDistance = Math.abs(days);
-                }
-            }
-            if (best != null) {
-                pairedIncomes.add(best);
-                result.set(i, new Movement(movements.get(best).date(), w.amount(), w.type(), w.onInvestmentAccount(),
-                        w.category(), w.source(), w.sourceAccountId(), w.sourceSearch()));
+            List<Integer> possible = candidates(movements, w, pairedIncomes);
+            if (possible.size() == 1) {
+                pair(result, movements, i, possible.getFirst(), pairedWithholdings, pairedIncomes);
             }
         }
         return result;
     }
 
-    /** La riga delle ritenute che non si sa a quale rendita togliere. */
-    static final String UNMATCHED_WITHHOLDING = "Ritenute non abbinate a una rendita";
+    /**
+     * Le rendite che possono essere quella di una ritenuta: non ancora abbinate, sullo stesso conto (quando si sa), nei
+     * giorni giusti e almeno grandi quanto la ritenuta.
+     */
+    private static List<Integer> candidates(List<Movement> movements, Movement w, Set<Integer> pairedIncomes) {
+        List<Integer> found = new ArrayList<>();
+        for (int j = 0; j < movements.size(); j++) {
+            Movement income = movements.get(j);
+            if (income.type() != TransactionType.INVESTMENT_INCOME || pairedIncomes.contains(j)
+                    || (w.accountId() != null && income.accountId() != null
+                            && !w.accountId().equals(income.accountId()))
+                    || income.amount().compareTo(w.amount().abs()) < 0) {
+                continue;
+            }
+            long days = ChronoUnit.DAYS.between(income.date(), w.date()); // positivo: la ritenuta è dopo
+            if (days >= -WITHHOLDING_DAYS_BEFORE && days <= WITHHOLDING_DAYS_AFTER) {
+                found.add(j);
+            }
+        }
+        return found;
+    }
+
+    private static void pair(List<Movement> result, List<Movement> movements, int withholding, int income,
+            Set<Integer> pairedWithholdings, Set<Integer> pairedIncomes) {
+        pairedWithholdings.add(withholding);
+        pairedIncomes.add(income);
+        result.set(withholding, movements.get(withholding).on(movements.get(income)));
+    }
 
     /**
-     * Le rendite NETTE del periodo raggruppate per tipo ({@code byType}) o per titolo (docs/investimenti.md, parte M):
-     * ogni ritenuta si toglie dalla rendita dello stesso titolo ("Rit.ced … ROMANIA-7OT45 6,5%" da "Ced.su …
-     * ROMANIA-7OT45 6,5%", stesso {@link #securityName}). Una ritenuta senza la sua rendita nel periodo va in una riga a
+     * La riga delle ritenute senza la loro rendita nel periodo: di solito la cedola è nel periodo prima, o è più vecchia
+     * della storia nell'app. Così la somma dei gruppi è sempre il netto (parte U).
+     */
+    static final String UNMATCHED_WITHHOLDING = "Ritenute senza la loro rendita nel periodo";
+
+    /**
+     * Le rendite NETTE del periodo raggruppate per tipo ({@code byType}) o per titolo (docs/investimenti.md, parti M e
+     * U): ogni ritenuta si toglie dalla rendita dello stesso titolo. Quelle abbinate da
+     * {@link #withholdingsOnTheirIncome} hanno già il nome della loro rendita. I nomi si confrontano senza badare alle
+     * maiuscole: "ENEL" (Fineco) ed "Enel" (Trade Republic) sono lo stesso titolo, una riga sola, con il primo nome
+     * trovato. Una ritenuta senza una rendita dello stesso titolo e sullo stesso conto nel periodo va in una riga a
      * parte, così la somma dei gruppi è sempre il netto. I movimenti contati sono le rendite.
      */
     public static List<Group> netIncomeBy(List<Movement> movements, LocalDate from, LocalDate to, boolean byType) {
-        Map<String, String> typeOfSource = new LinkedHashMap<>();
+        Map<String, String> typeOfSource = new LinkedHashMap<>(); // titolo e conto → tipo ({@link #onAccount})
+        Map<String, String> nameOf = new LinkedHashMap<>(); // chiave → il nome da mostrare
         Map<String, BigDecimal> amounts = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
         Map<String, Long> accounts = new LinkedHashMap<>();
@@ -302,9 +414,11 @@ public final class Investments {
             if (m.type() == TransactionType.INVESTMENT_INCOME) {
                 String type = m.category() == null ? "Altre rendite" : m.category();
                 if (m.source() != null) {
-                    typeOfSource.putIfAbsent(m.source(), type);
+                    typeOfSource.putIfAbsent(onAccount(m), type);
                 }
-                String key = byType ? type : (m.source() == null ? "Senza nome del titolo" : m.source());
+                String name = byType ? type : (m.source() == null ? "Senza nome del titolo" : m.source());
+                String key = lower(name);
+                nameOf.putIfAbsent(key, name);
                 amounts.merge(key, m.amount(), BigDecimal::add);
                 counts.merge(key, 1, Integer::sum);
                 if (!byType && m.sourceAccountId() != null) {
@@ -318,16 +432,31 @@ public final class Investments {
             }
         }
         for (Movement m : withholdings) {
-            String type = m.source() == null ? null : typeOfSource.get(m.source());
-            String key = type == null ? UNMATCHED_WITHHOLDING : (byType ? type : m.source());
+            String type = m.source() == null ? null : typeOfSource.get(onAccount(m));
+            String name = type == null ? UNMATCHED_WITHHOLDING : (byType ? type : m.source());
+            String key = lower(name);
+            nameOf.putIfAbsent(key, name);
             amounts.merge(key, m.amount(), BigDecimal::add);
             counts.merge(key, type == null ? 1 : 0, Integer::sum);
         }
         return amounts.entrySet().stream()
-                .map(e -> new Group(e.getKey(), e.getValue(), counts.get(e.getKey()), accounts.get(e.getKey()),
-                        searches.get(e.getKey())))
+                .map(e -> new Group(nameOf.get(e.getKey()), e.getValue(), counts.get(e.getKey()),
+                        accounts.get(e.getKey()), searches.get(e.getKey())))
                 .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(Group::name))
                 .toList();
+    }
+
+    private static String lower(String text) {
+        return text.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Il titolo di un movimento sul suo conto: una ritenuta si toglie da un titolo solo se quel titolo ha una rendita
+     * sullo stesso conto. La ritenuta di Fineco su "ENEL" non si toglie dal dividendo di Trade Republic "Enel", che è
+     * già netto, anche se nella riga di "Da dove" i due stanno insieme.
+     */
+    private static String onAccount(Movement m) {
+        return lower(m.source()) + " | " + m.accountId();
     }
 
     /** Le altre tasse del periodo (bollo, capital gain...) per categoria, dalla più pesante. */

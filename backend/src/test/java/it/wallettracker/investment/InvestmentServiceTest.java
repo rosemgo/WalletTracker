@@ -221,6 +221,26 @@ class InvestmentServiceTest {
     }
 
     @Test
+    void theRealFinecoWithholdingIsTakenFromItsCouponEvenTheDayAfter() {
+        // Parte U: "Rit.ced.su" (il testo vero di Fineco) il giorno dopo la sua cedola. Prima non si abbinava.
+        save(ing, "2026-09-30", "520", TransactionType.INVESTMENT_INCOME, "Ced.su 16.000,000 ROMANIA-7OT45 6,5%",
+                "Cedole");
+        save(ing, "2026-10-01", "-65", TransactionType.WITHHOLDING_TAX, "Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%",
+                null);
+        classificationService.classifyAll();
+
+        Overview o = investmentService.overview(Period.YEAR, null, TODAY);
+
+        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("ROMANIA-7OT45 6,5%")).singleElement()
+                .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("455"));
+        assertThat(o.incomeByType()).extracting(Group::name)
+                .doesNotContain("Ritenute senza la loro rendita nel periodo");
+        // la ritenuta sta a settembre, con la sua cedola
+        assertThat(o.months()).filteredOn(m -> m.month().equals(YearMonth.of(2026, 9))).singleElement()
+                .satisfies(m -> assertThat(m.withholding()).isEqualByComparingTo("-65"));
+    }
+
+    @Test
     void fromWhereUsesTheWholeNameOfTheBondOrTheAccount() {
         save(ing, "2026-10-02", "520", TransactionType.INVESTMENT_INCOME, "Ced.su 16.000,000 ROMANIA-7OT45 6,5%",
                 "Cedole");

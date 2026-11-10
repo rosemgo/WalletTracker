@@ -979,3 +979,163 @@ Alcuni testi del backend sono **nomi di gruppi scritti in italiano**: "Altre ren
 "Ritenute non abbinate a una rendita", "Senza categoria" (in `Investments`). Oggi non sono un difetto: sono solo
 etichette, e il codice non ci prende decisioni (la dashboard le confronta solo per scegliere il link). Se un giorno
 l'app avrà l'inglese, diventeranno chiavi tradotte dalla dashboard (il punto P2 dell'analisi sulla lingua).
+
+---
+
+## Parte U: ogni ritenuta con la sua rendita, i ratei a parte
+
+**La segnalazione, con i movimenti veri.** Nella pagina c'era "Ritenute non abbinate a una rendita: −1.181,85 €,
+37 movimenti", due volte, in "Per tipo" e in "Da dove". Il link portava a Movimenti con tutte le ritenute, anche quelle
+sulle cedole. Un controllo sul database (le prime due parole del testo, quante sono e il totale) ha mostrato che
+quella riga conteneva **tutte** le ritenute dell'anno:
+
+| Testo della banca | Movimenti | Totale | Che cos'è |
+|---|---|---|---|
+| `Rit.ced.su …`, `Rit.div.su …` | 11 | −724,16 € | ritenute su cedole e dividendi |
+| `Ritenuta Fiscale … Qta/Val.nom.` | 19 (6 +, 13 −) | −456,93 € | ritenute sul **rateo** di obbligazioni comprate e vendute |
+| `Rit. Fisc. Interessi Portaf…` | 7 | −0,76 € | ritenute sugli interessi della liquidità |
+
+Tre problemi diversi.
+
+### 1. Fineco scrive "Rit.ced.su", non "Rit.ced"
+
+Per abbinare una ritenuta alla sua cedola, il codice ricava il **nome del titolo** dai due testi (`securityName`,
+parte L) togliendo un'etichetta iniziale che conosce. Conosceva "Rit.ced" e "Rit.div" (i test erano stati scritti
+così), ma Fineco scrive **"Rit.ced.su"** e **"Rit.div.su"**, come "Ced.su" e "Div.su":
+
+```
+Ced.su     16.000,000 ROMANIA-7OT45 6,5%   →  "ROMANIA-7OT45 6,5%"
+Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%   →  "su ROMANIA-7OT45 6,5%"     ← un "su" di troppo: nomi diversi
+```
+
+Nessuna ritenuta si abbinava. Il **totale** era giusto, perché somma tutte le rendite e tutte le ritenute; ma le righe
+"Cedole", "Dividendi" e i titoli di "Da dove" erano **lordi**, e tutte le ritenute finivano nella riga dei non abbinati.
+
+**Correzione:** l'etichetta accetta il ".su" (`rit\.\s*ced(\.\s*su)?`). I test ora usano i testi veri.
+
+### 2. Un abbinamento che non dipende dalla banca
+
+Il difetto del punto 1 mostra il limite del metodo: funziona solo con le etichette che conosciamo. Con un'altra banca
+("Coupon payment XS…" e "Withholding tax XS…") non si abbinerebbe niente. Ora la ritenuta cerca la sua rendita in **tre
+passate**, dalla prova più sicura alla meno sicura:
+
+![I tre passi dell'abbinamento](img/abbinamento-ritenute.svg)
+
+Le rendite possibili sono sempre quelle **sullo stesso conto** (la banca trattiene la ritenuta sul conto su cui paga),
+da 3 giorni prima a 10 dopo, non ancora abbinate e più grandi della ritenuta (parte O). Tra queste:
+
+1. **lo stesso codice ISIN** nei due testi. L'ISIN (*International Securities Identification Number*) è il codice di
+   un titolo, uguale in tutte le banche: due lettere per il paese, nove lettere o cifre, una **cifra di controllo**.
+   La cifra di controllo (`Investments.validIsin`) si calcola con il metodo di **Luhn**, lo stesso dei numeri delle
+   carte di credito: ogni lettera diventa un numero (A = 10 … Z = 35), poi da destra una cifra sì e una no si raddoppia
+   (togliendo 9 se supera 9) e la somma deve finire con 0. Così una parola qualsiasi di 12 caratteri non viene presa
+   per un ISIN. L'ISIN si cerca nella causale **e** nella controparte: Trade Republic mette il nome nella controparte
+   ("Enel") e l'ISIN nella causale;
+2. **lo stesso nome del titolo**, come prima, ma **senza badare alle maiuscole**;
+3. **l'unica rendita possibile**: se tra le rendite possibili ce n'è **una sola**, è quella. Serve alle banche che non
+   conosciamo e agli interessi della liquidità di Fineco ("Interessi Portaf.Remun. **Tassaz.**" e "Rit. Fisc. Interessi
+   Portaf.Remun. **rit.**": parole diverse, nessun ISIN). Con due rendite possibili **non si sceglie a caso**.
+
+Perché **tre passate** e non tre controlli per ogni ritenuta: una prova debole non deve "rubare" la rendita a una
+forte. Se la prima ritenuta trovasse la sua rendita con il passo 3 prima che un'altra la trovi con l'ISIN, la seconda
+resterebbe senza. Prima tutte le ritenute provano l'ISIN, poi tutte il nome, poi l'unica possibile.
+
+Una ritenuta abbinata prende **la data e il titolo della sua rendita** (`Movement.on`): così finisce nella riga giusta
+di "Per tipo" e di "Da dove" in qualunque dei tre modi sia stata trovata. Prima prendeva solo la data.
+
+**Lo stesso conto anche nelle righe.** In "Da dove" una ritenuta si toglie da un titolo solo se quel titolo ha una
+rendita **sullo stesso conto** (`Investments.onAccount`). La ritenuta di Fineco su "ENEL" non si toglie dal dividendo
+di Trade Republic "Enel", che è già netto.
+
+**"ENEL" ed "Enel" sono una riga sola.** Fineco scrive "Div.su 550,000 ENEL", Trade Republic "Enel": i nomi ora si
+confrontano senza badare alle maiuscole, e la riga di "Da dove" li somma (con il primo nome trovato; la pagina lo
+mostra comunque come "Enel").
+
+### 3. Le ritenute sul rateo vanno con le compravendite
+
+Quando compri un'obbligazione paghi al venditore, **dentro il prezzo**, gli interessi maturati fino a quel giorno: il
+**rateo**. La banca ti restituisce la ritenuta su quel rateo (un importo **positivo**). Quando vendi succede il
+contrario: incassi il rateo dentro il prezzo e la banca trattiene la ritenuta (**negativo**). Fineco scrive "Ritenuta
+Fiscale <titolo> Qta/Val.nom. <quantità>".
+
+Un esempio (importi inventati, aliquota dei titoli di Stato 12,5%). Compri un BTP a metà periodo e paghi 400 € di
+rateo; la banca ti restituisce 50 €. Alla cedola ricevi la cedola **intera**, 1.000 € lordi, con la ritenuta
+**intera**, −125 €.
+
+| | Dove sta nell'app | Importo |
+|---|---|---|
+| cedola lorda | Rendite | 1.000 € |
+| ritenuta sulla cedola | Rendite (si toglie) | −125 € |
+| **netto della cedola** | **Rendite** | **875 €**: i soldi arrivati davvero come cedola |
+| rateo pagato al venditore | dentro l'acquisto ("Compravendita Titoli") | −400 € |
+| ritenuta sul rateo restituita | **Altre tasse investimenti** | +50 € |
+
+L'interesse guadagnato davvero è 1.000 − 400 = 600 € lordi, con 125 − 50 = 75 € di tasse: 525 € netti. Per arrivarci
+servono **tutte e due** le correzioni, il rateo e la sua ritenuta; ma il rateo è dentro l'importo dell'acquisto, e
+l'app non lo vede da solo. Mettere i +50 € nelle rendite darebbe 925 €: né i soldi arrivati come cedola (875) né
+l'interesse vero (525). Per questo la ritenuta sul rateo **non** si toglie dalle rendite: resta visibile a parte.
+
+**Il netto delle rendite resta vero**, a patto di dire che cosa misura: i soldi arrivati come cedole, dividendi e
+interessi, meno le tasse trattenute **su quei pagamenti**. Il rendimento complessivo di un'obbligazione (con il rateo e
+la differenza di prezzo) è un'altra domanda, che l'app non sa fare: servirebbero le quotazioni.
+
+**La migrazione `V38__ritenute_sui_ratei.sql`:**
+
+1. una categoria di partenza nuova, **"Ritenute sui ratei"**, tra quelle degli investimenti (se l'utente ne ha già una
+   con quel nome, si usa quella);
+2. una regola di partenza nuova: "contiene **tutte le parole**" `Ritenuta Fiscale Qta/Val.nom` → **Altre tasse
+   investimenti**, categoria "Ritenute sui ratei", **priorità 9**, così viene provata prima della regola "Ritenuta
+   fiscale" di V4 (priorità 10), che resta per gli altri testi con "Ritenuta Fiscale";
+3. i movimenti che la regola di V4 aveva classificato e che hanno "Qta/Val.nom" passano subito al tipo e alla categoria
+   nuovi. **Non** quelli con il tipo scelto a mano; una categoria scelta a mano resta.
+
+La categoria è solo l'etichetta della riga in "Altre tasse": nessun codice dipende dal suo nome (parte T).
+
+### La riga dei non abbinati
+
+Ora si chiama **"Ritenute senza la loro rendita nel periodo"** e **non ha un link**: Movimenti non sa mostrare solo
+quelle, e un link che mostra altro inganna. Resta in tutti e due gli elenchi, perché ognuno deve dare il netto. Con i
+punti 1 e 2 dovrebbe essere vuota, o quasi: resta per i casi veri, una cedola più vecchia della storia nell'app o un
+caso dubbio del passo 3.
+
+### Se aggiungi una banca
+
+Che cosa funziona da solo e che cosa fare:
+
+| | Che cosa serve | Che cosa succede |
+|---|---|---|
+| **i tipi** | una regola nella pagina Regole per ogni testo nuovo: "contiene `Coupon payment`" → Cedole, dividendi e interessi; "contiene `Withholding tax`" → **Ritenute sulle rendite**; il bollo e simili → Altre tasse investimenti | senza regole i movimenti diventano spese ed entrate normali, e Investimenti non li vede |
+| **il totale netto** | niente, appena i tipi sono giusti | rendite meno ritenute del periodo: è sempre giusto |
+| **l'abbinamento** | niente nella maggior parte dei casi: ISIN, nome o unica rendita possibile | se la banca non scrive l'ISIN, usa nomi diversi **e** paga più rendite lo stesso giorno sullo stesso conto, la ritenuta resta in "senza la loro rendita": totale giusto, righe di quella banca lorde. Allora si aggiunge la sua etichetta in `Investments.LABEL`, come per Fineco e Trade Republic |
+| **una banca che paga già il netto** (come Trade Republic) | niente | non ci sono ritenute da abbinare |
+| **le ritenute sul rateo** | se la banca le scrive in altro modo, una regola → Altre tasse investimenti, categoria "Ritenute sui ratei" | come per Fineco |
+
+### Le prove
+
+- `InvestmentsTest`:
+  - l'etichetta "Rit.ced.su" e "Rit.div.su";
+  - l'ISIN, solo con la cifra di controllo giusta;
+  - le ritenute vere di Fineco con la loro cedola e il loro dividendo, una anche il giorno dopo (nessuna riga di non
+    abbinati);
+  - una banca sconosciuta abbinata con l'ISIN;
+  - gli interessi della liquidità, con l'unica rendita possibile;
+  - due rendite possibili o un altro conto: nessuna scelta a caso, e il dividendo di Trade Republic resta netto;
+  - "ENEL" ed "Enel" una riga sola.
+- `InvestmentServiceTest`: con il database vero, "Rit.ced.su" il giorno dopo la sua cedola si toglie dal titolo e
+  resta nel mese della cedola.
+- `ClassificationServiceTest`: i ratei (+ e −) diventano Altre tasse investimenti con la loro categoria; le ritenute
+  su una cedola e sugli interessi restano ritenute sulle rendite.
+- `V38RitenuteSuiRateiTest` (database vero alla V37): la regola nuova viene prima e quella di V4 resta; i movimenti
+  della regola di V4 con "Qta/Val.nom" passano, non quelli con il tipo scelto a mano né un "Ritenuta Fiscale" senza
+  quantità; una categoria scelta a mano resta; una categoria con lo stesso nome si riusa.
+- `investments.spec.ts`: la riga dei non abbinati non ha un link.
+- Nel browser, la prova dell'**aggiornamento vero**: un database creato dal codice della 1.2.6 (V37) con movimenti come
+  quelli di Fineco e Trade Republic, classificati come li lascia la 1.2.6 (importi inventati); poi il codice nuovo.
+  Dopo la V38:
+  - netto **712 €** (847,37 € lordi meno 135,11 € di ritenute sulle rendite);
+  - Cedole 455 €, Dividendi 257,15 €, Interessi 0,11 €, tutti netti;
+  - "Enel" una riga sola (3 movimenti);
+  - nessuna riga di non abbinati;
+  - "Ritenute sui ratei" −29,78 € tra le altre tasse, con la nota sul segno;
+  - la barra di settembre è la cedola netta, anche se la ritenuta è registrata il 1° ottobre;
+  - PC e telefono, tema scuro, nessun errore nella console, nessuna pagina più larga dello schermo.

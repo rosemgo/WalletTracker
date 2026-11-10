@@ -24,6 +24,16 @@ class InvestmentsTest {
     }
 
     /**
+     * Un movimento come lo prepara InvestmentService (parte U): il nome del titolo e l'ISIN ricavati dal testo della
+     * banca, e il conto. I testi sono quelli veri delle banche, gli importi inventati.
+     */
+    private static Movement onAccount(long account, String date, String amount, TransactionType type, String category,
+            String text) {
+        return new Movement(LocalDate.parse(date), new BigDecimal(amount), type, true, category,
+                Investments.securityName(text), null, null, account, Investments.isin(text));
+    }
+
+    /**
      * La tabella dei casi di docs/investimenti.md, parte I: un movimento per riga, con quanto aggiunge all'investito in
      * titoli e ai bonifici verso i conti di investimento. "inv" dice se il movimento è su un conto di investimento.
      */
@@ -161,6 +171,10 @@ class InvestmentsTest {
         assertThat(Investments.securityName("Ced.su BTP CUM 15/09/2032")).isEqualTo("BTP CUM");
         assertThat(Investments.securityName("Div.su 100 ENI")).isEqualTo("ENI");
         assertThat(Investments.securityName("Rit.ced 16.000,000 ROMANIA-7OT45 6,5%")).isEqualTo("ROMANIA-7OT45 6,5%");
+        // Fineco scrive "Rit.ced.su" e "Rit.div.su" (parte U): prima restava un "su" di troppo.
+        assertThat(Investments.securityName("Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%"))
+                .isEqualTo("ROMANIA-7OT45 6,5%");
+        assertThat(Investments.securityName("Rit.div.su 708,000 ENI")).isEqualTo("ENI");
         assertThat(Investments.securityName("Cash Dividend ACME")).isEqualTo("ACME");
         assertThat(Investments.securityName("Poste Italiane 0,25")).isEqualTo("Poste Italiane");
         // Niente con delle lettere: null (InvestmentService usa allora il nome del conto).
@@ -250,5 +264,120 @@ class InvestmentsTest {
                 .isEqualTo("interessi portafoglio trimestre iii ottobre");
         assertThat(Investments.searchWords("2026-10")).isNull();
         assertThat(Investments.searchWords(null)).isNull();
+    }
+
+    @Test
+    void theIsinIsFoundOnlyWhenItsCheckDigitIsRight() {
+        assertThat(Investments.isin("Cash Dividend for ISIN IT0003128367")).isEqualTo("IT0003128367");
+        assertThat(Investments.isin("Ced.su 50.000 IT0005436693")).isEqualTo("IT0005436693");
+        assertThat(Investments.isin("withholding tax us0378331005 apple")).isEqualTo("US0378331005");
+        // una cifra cambiata: la cifra di controllo non torna
+        assertThat(Investments.isin("Cash Dividend for ISIN IT0003128368")).isNull();
+        // parole di 12 caratteri che sembrano un codice, ma non lo sono
+        assertThat(Investments.isin("Ced.su 16.000,000 ROMANIA-7OT45 6,5%")).isNull();
+        assertThat(Investments.isin(null)).isNull();
+    }
+
+    @Test
+    void theRealFinecoWithholdingsGoWithTheirCouponAndDividend() {
+        // I testi veri di Fineco: "Rit.ced.su" e "Rit.div.su". Prima nessuna si abbinava, e le righe erano lorde.
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                onAccount(1, "2026-10-30", "520", TransactionType.INVESTMENT_INCOME, "Cedole",
+                        "Ced.su 16.000,000 ROMANIA-7OT45 6,5%"),
+                onAccount(1, "2026-11-02", "-65", TransactionType.WITHHOLDING_TAX, null,
+                        "Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%"),
+                onAccount(1, "2026-07-22", "143", TransactionType.INVESTMENT_INCOME, "Dividendi",
+                        "Div.su 550,000 ENEL"),
+                onAccount(1, "2026-07-22", "-37.18", TransactionType.WITHHOLDING_TAX, null,
+                        "Rit.div.su 550,000 ENEL")));
+
+        List<Group> byType = Investments.netIncomeBy(movements, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31),
+                true);
+        assertThat(byType).extracting(Group::name).containsExactly("Cedole", "Dividendi"); // nessuna non abbinata
+        assertThat(byType.get(0).amount()).isEqualByComparingTo("455");
+        assertThat(byType.get(1).amount()).isEqualByComparingTo("105.82");
+        // la ritenuta della cedola ha preso il giorno della cedola, in ottobre
+        assertThat(movements.get(1).date()).isEqualTo(LocalDate.of(2026, 10, 30));
+    }
+
+    @Test
+    void aWithholdingWithAnotherWordingIsPairedByItsIsin() {
+        // Una banca che non conosciamo: le etichette sono diverse, ma l'ISIN è lo stesso.
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                onAccount(2, "2026-06-15", "100", TransactionType.INVESTMENT_INCOME, "Dividendi",
+                        "Dividend payment ACME CORP US0378331005"),
+                onAccount(2, "2026-06-16", "-15", TransactionType.WITHHOLDING_TAX, null,
+                        "Withholding tax US0378331005")));
+
+        assertThat(movements.get(1).source()).isEqualTo(movements.get(0).source()); // il titolo della sua rendita
+        assertThat(movements.get(1).date()).isEqualTo(LocalDate.of(2026, 6, 15));
+        assertThat(Investments.netIncomeBy(movements, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), false))
+                .singleElement().satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("85"));
+    }
+
+    @Test
+    void theOnlyPossibleIncomeIsTheOneEvenWithDifferentWords() {
+        // Gli interessi della liquidità di Fineco: la rendita e la ritenuta hanno parole diverse ("Tassaz.", "rit.").
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                onAccount(1, "2026-11-02", "0.15", TransactionType.INVESTMENT_INCOME, "Interessi",
+                        "Interessi Portaf.Remun. Tassaz. 26,00 %"),
+                onAccount(1, "2026-11-02", "-0.04", TransactionType.WITHHOLDING_TAX, null,
+                        "Rit. Fisc. Interessi Portaf.Remun. rit. 26,00 %")));
+
+        assertThat(Investments.netIncomeBy(movements, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true))
+                .singleElement().satisfies(g -> {
+                    assertThat(g.name()).isEqualTo("Interessi");
+                    assertThat(g.amount()).isEqualByComparingTo("0.11");
+                });
+    }
+
+    @Test
+    void withTwoPossibleIncomesOrAnotherAccountNothingIsChosenAtRandom() {
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                // due rendite lo stesso giorno sullo stesso conto, nomi diversi dalla ritenuta: quale? non si sa
+                onAccount(1, "2026-11-02", "0.15", TransactionType.INVESTMENT_INCOME, "Interessi",
+                        "Interessi Portaf.Remun. Tassaz. 26,00 %"),
+                onAccount(1, "2026-11-02", "520", TransactionType.INVESTMENT_INCOME, "Cedole",
+                        "Ced.su 16.000,000 ROMANIA-7OT45 6,5%"),
+                onAccount(1, "2026-11-02", "-0.04", TransactionType.WITHHOLDING_TAX, null,
+                        "Rit. Fisc. Interessi Portaf.Remun. rit. 26,00 %"),
+                // lo stesso titolo, ma su un altro conto (Trade Republic paga già il netto): non è la sua rendita
+                onAccount(3, "2026-07-22", "57.72", TransactionType.INVESTMENT_INCOME, "Dividendi", "Enel"),
+                onAccount(1, "2026-07-22", "-37.18", TransactionType.WITHHOLDING_TAX, null,
+                        "Rit.div.su 550,000 ENEL")));
+
+        assertThat(movements.get(2).date()).isEqualTo(LocalDate.of(2026, 11, 2));
+        assertThat(movements.get(2).source()).isEqualTo("Interessi Portaf.Remun. rit. %"); // il suo, non abbinato
+        List<Group> bySource = Investments.netIncomeBy(movements, LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 12, 31), false);
+        // Trade Republic resta 57,72 € netti: la ritenuta di Fineco ha lo stesso nome, ma è su un altro conto. Le due
+        // ritenute senza la loro rendita vanno nella riga a parte, e la somma dei gruppi resta il netto.
+        assertThat(bySource).filteredOn(g -> g.name().equals("Enel")).singleElement()
+                .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("57.72"));
+        assertThat(bySource).filteredOn(g -> g.name().equals(Investments.UNMATCHED_WITHHOLDING)).singleElement()
+                .satisfies(g -> {
+                    assertThat(g.amount()).isEqualByComparingTo("-37.22");
+                    assertThat(g.movements()).isEqualTo(2);
+                });
+        assertThat(bySource.stream().map(Group::amount).reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo("540.65"); // 0,15 + 520 + 57,72 − 0,04 − 37,18
+    }
+
+    @Test
+    void theSameSecurityWrittenWithOtherCapitalsIsOneRow() {
+        // Fineco scrive "ENEL", Trade Republic "Enel": lo stesso titolo, una riga sola.
+        List<Movement> movements = List.of(
+                onAccount(1, "2026-01-21", "126.50", TransactionType.INVESTMENT_INCOME, "Dividendi",
+                        "Div.su 550,000 ENEL"),
+                onAccount(1, "2026-07-22", "143", TransactionType.INVESTMENT_INCOME, "Dividendi",
+                        "Div.su 550,000 ENEL"),
+                onAccount(3, "2026-07-22", "57.72", TransactionType.INVESTMENT_INCOME, "Dividendi", "Enel"));
+
+        assertThat(Investments.netIncomeBy(movements, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), false))
+                .singleElement().satisfies(g -> {
+                    assertThat(g.name()).isEqualTo("ENEL");
+                    assertThat(g.amount()).isEqualByComparingTo("327.22");
+                    assertThat(g.movements()).isEqualTo(3);
+                });
     }
 }
