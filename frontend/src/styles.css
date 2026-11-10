@@ -1025,7 +1025,8 @@ app-file-drop {
 }
 
 /* Nei moduli a griglia occupa tutta la riga: è un bersaglio grande. */
-.form-grid > app-file-drop.wide {
+.form-grid > app-file-drop.wide,
+.form-grid > .import-mode.wide {
   grid-column: 1 / -1;
 }
 
@@ -3458,6 +3459,26 @@ a.button.primary {
 
 .balance-form .hint {
   margin-top: 0;
+}
+
+/* Importa (docs/importa-file.md): che cosa farà l'importazione con il conto scelto, prima di caricare il file. */
+.import-mode {
+  padding: 12px 14px;
+  border-radius: var(--radius-s);
+  background: var(--soft);
+}
+
+.import-mode p {
+  margin: 0;
+}
+
+.import-mode p + p {
+  margin-top: 8px;
+}
+
+/* Il riepilogo prima di importare: quante righe si aggiungono, e perché le altre no. */
+.import-summary {
+  margin: 0 0 12px;
 }
 
 .balance-check {

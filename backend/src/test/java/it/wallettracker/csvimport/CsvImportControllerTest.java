@@ -288,17 +288,124 @@ class CsvImportControllerTest {
         assertThat(transactionRepository.count()).isZero();
     }
 
-    @Test
-    void aBankAccountCannotReceiveAFile() {
-        // I conti collegati si aggiornano da Enable Banking: un file creerebbe doppioni.
-        BankConnection connection = connectionRepository.save(new BankConnection("ING", "IT", "session-1",
-                Instant.now().plus(90, ChronoUnit.DAYS)));
-        Account bank = accountRepository.save(new Account(connection, "key-1", "uid-1", null, "Conto", "EUR"));
+    /** Un estratto conto come quello di Fineco, in CSV: note sopra la tabella, entrate e uscite. Dati inventati. */
+    private static final String FINECO_CSV = """
+            Conto Corrente: 0000001
+            Intestazione Conto Corrente: MARIO ROSSI
+            Periodo Dal: 01/01/2026 Al: 10/11/2026
+            Risultati Ricerca
+            Data_Operazione;Data_Valuta;Entrate;Uscite;Descrizione;Descrizione_Completa;Stato
+            01/08/2026;01/08/2026;;-20,00;Bonifico;Bonifico ad Anna Bianchi;Contabilizzato
+            22/07/2026;22/07/2026;;-10,00;Canone;Canone Mensile Conto Giugno 2026;Contabilizzato
+            20/07/2026;20/07/2026;;-7,50;Pagamento;Pagamento POS BAR CENTRALE;Contabilizzato
+            19/07/2026;20/07/2026;;-5,00;Bollo;Imposta di bollo di conto corrente;Contabilizzato
+            25/03/2026;25/03/2026;60,80;;Ritenuta Fiscale;Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000;Contabilizzato
+            """;
 
-        assertThat(importCsv(bank, ITALIAN_CSV, ITALIAN_MAPPING))
+    /** La sua mappatura, come la propone l'app. */
+    private static final String FINECO_MAPPING = """
+            {"delimiter": ";", "dateColumn": 0, "dateFormat": "dd/MM/yyyy", "amountMode": "SPLIT",
+             "incomeColumn": 2, "expenseColumn": 3, "decimalSeparator": "COMMA", "descriptionColumn": 5}
+            """;
+
+    @Test
+    void aLinkedAccountReceivesOnlyTheMonthsBeforeTheBank() {
+        // Un conto collegato: la banca ha dato i movimenti dal 22 luglio (lo storico di quando è stato collegato).
+        Account bank = linkedAccount();
+        bankMovement(bank, "bank-1", "2026-07-22", "-10.00", "Canone Mensile Conto Giugno 2026");
+        bankMovement(bank, "bank-2", "2026-07-22", "-7.50", "Pagamento POS BAR CENTRALE"); // il 20 nel file
+        bankMovement(bank, "bank-3", "2026-08-01", "-20.00", "Bonifico ad Anna Bianchi");
+
+        // L'anteprima: l'intestazione trovata sotto le note, che cosa si aggiungerebbe e perché.
+        assertThat(preview(bank, FINECO_CSV, null)).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.headers[0]").isEqualTo("Data_Operazione");
+            json.assertThat().extractingPath("$.mapping.amountMode").isEqualTo("SPLIT");
+            json.assertThat().extractingPath("$.mapping.descriptionColumn").isEqualTo(5);
+            json.assertThat().extractingPath("$.linkedAccount").isEqualTo(true);
+            json.assertThat().extractingPath("$.bankFrom").isEqualTo("2026-07-22");
+            json.assertThat().extractingPath("$.newRows").isEqualTo(2);
+            json.assertThat().extractingPath("$.coveredRows").isEqualTo(3);
+            // le righe mostrate sono quelle che si aggiungono
+            json.assertThat().extractingPath("$.parsedRows[0].date").isEqualTo("2026-07-19");
+        });
+
+        assertThat(importCsv(bank, FINECO_CSV, FINECO_MAPPING)).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.imported").isEqualTo(2);
+            json.assertThat().extractingPath("$.covered").isEqualTo(3);
+        });
+        Map<String, BankTransaction> byText = transactionRepository.findAll().stream()
+                .collect(Collectors.toMap(BankTransaction::getDescription, t -> t));
+        assertThat(byText).hasSize(5); // 3 della banca + 2 dal file, nessun doppione
+        // Il bollo del 19 luglio (prima della banca) e il giro titoli di marzo, con l'impronta dei movimenti presi da
+        // un file: la sincronizzazione li riconosce, se un giorno la banca li mandasse.
+        BankTransaction stamp = byText.get("Imposta di bollo di conto corrente");
+        assertThat(stamp.getBookingDate()).isEqualTo(LocalDate.of(2026, 7, 19));
+        assertThat(stamp.getDedupKey()).startsWith(BankTransaction.FILE_KEY_PREFIX);
+        BankTransaction transfer = byText.get("Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000");
+        assertThat(transfer.getAmount()).isEqualByComparingTo("60.80");
+        assertThat(transfer.getType()).isEqualTo(TransactionType.INTERNAL_TRANSFER); // classificato (V39)
+
+        // Lo stesso file un'altra volta: niente di nuovo.
+        assertThat(importCsv(bank, FINECO_CSV, FINECO_MAPPING)).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.imported").isEqualTo(0);
+            json.assertThat().extractingPath("$.duplicates").isEqualTo(2);
+            json.assertThat().extractingPath("$.covered").isEqualTo(3);
+        });
+        assertThat(transactionRepository.count()).isEqualTo(5);
+    }
+
+    @Test
+    void aLinkedAccountWithoutMovementsFromTheBankWaitsForThem() {
+        // Senza movimenti della banca non si sa da quale giorno li porterà: si aggiorna prima il conto.
+        Account bank = linkedAccount();
+
+        assertThat(importCsv(bank, FINECO_CSV, FINECO_MAPPING))
                 .hasStatus(400)
-                .bodyJson().extractingPath("$.detail").asString().startsWith("Puoi importare un file solo in un conto manuale");
+                .bodyJson().extractingPath("$.detail").asString().startsWith("Questo conto non ha ancora movimenti");
         assertThat(transactionRepository.count()).isZero();
+    }
+
+    @Test
+    void anExcelFileIsReadLikeACsv() {
+        // Lo stesso estratto conto, in Excel (come lo esporta Fineco), in un conto manuale: tutte le righe.
+        Account account = manualAccount();
+        byte[] excel = XlsxFixture.build(XlsxFixture.finecoLike(List.of(
+                XlsxFixture.finecoRow(LocalDate.of(2026, 11, 5), "3.95", "Sconto", "Sconto Canone Mensile Ottobre"),
+                XlsxFixture.finecoRow(LocalDate.of(2026, 11, 5), "-3.95", "Canone", "Canone Mensile Conto Ottobre"),
+                XlsxFixture.finecoRow(LocalDate.of(2026, 7, 8), "-1", "Bollo", "Addebito imposta di bollo Dossier"))));
+        MockMultipartFile file = new MockMultipartFile("file", "movimenti.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excel);
+
+        assertThat(mvc.post().uri("/api/imports/preview").multipart().file(file)
+                .param("accountId", account.getId().toString()))
+                .hasStatusOk().bodyJson().satisfies(json -> {
+                    json.assertThat().extractingPath("$.spreadsheet").isEqualTo(true);
+                    json.assertThat().extractingPath("$.linkedAccount").isEqualTo(false);
+                    json.assertThat().extractingPath("$.mapping.decimalSeparator").isEqualTo("DOT");
+                    json.assertThat().extractingPath("$.newRows").isEqualTo(3);
+                    json.assertThat().extractingPath("$.errorCount").isEqualTo(0);
+                });
+        String mapping = """
+                {"delimiter": ";", "dateColumn": 0, "dateFormat": "dd/MM/yyyy", "amountMode": "SPLIT",
+                 "incomeColumn": 2, "expenseColumn": 3, "decimalSeparator": "DOT", "descriptionColumn": 5}
+                """;
+        assertThat(mvc.post().uri("/api/imports").multipart().file(file).file(mappingPart(mapping))
+                .param("accountId", account.getId().toString()))
+                .hasStatusOk().bodyJson().extractingPath("$.imported").isEqualTo(3);
+        assertThat(transactionRepository.findAll()).extracting(BankTransaction::getAmount)
+                .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .containsExactlyInAnyOrder(new BigDecimal("3.95"), new BigDecimal("-3.95"), new BigDecimal("-1"));
+    }
+
+    @Test
+    void anOldExcelFileIsRefusedWithAHint() {
+        Account account = manualAccount();
+        MockMultipartFile file = new MockMultipartFile("file", "movimenti.xls", "application/vnd.ms-excel",
+                new byte[] {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, 0, 0, 0, 0});
+
+        assertThat(mvc.post().uri("/api/imports/preview").multipart().file(file)
+                .param("accountId", account.getId().toString()))
+                .hasStatus(400).bodyJson().extractingPath("$.detail").asString().contains("salvalo come .xlsx");
     }
 
     @Test
@@ -336,6 +443,19 @@ class CsvImportControllerTest {
     private Account manualAccount() {
         return accountRepository.save(Account.manual("Trade Republic", "Conto Trade Republic", null, "EUR",
                 AccountRole.UNASSIGNED));
+    }
+
+    /** Un conto collegato con Enable Banking (inventato). */
+    private Account linkedAccount() {
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "session-1",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        return accountRepository.save(new Account(connection, "key-1", "uid-1", null, "Conto", "EUR"));
+    }
+
+    /** Un movimento arrivato dalla banca. */
+    private void bankMovement(Account account, String key, String date, String amount, String description) {
+        transactionRepository.save(new BankTransaction(account, key, TransactionStatus.BOOKED, LocalDate.parse(date),
+                null, new BigDecimal(amount), "EUR", null, description, "{}"));
     }
 
     private MvcTestResult preview(Account account, String csv, String mapping) {

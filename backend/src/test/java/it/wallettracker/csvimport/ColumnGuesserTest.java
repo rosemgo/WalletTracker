@@ -87,4 +87,43 @@ class ColumnGuesserTest {
         assertThat(mapping.dateColumn()).isNull();
         assertThat(mapping.amountColumn()).isNull();
     }
+
+    @Test
+    void theHeaderIsFoundUnderTheNotesOfTheBank() {
+        // Fineco (dati inventati): righe di note sopra la tabella, e nomi con il trattino basso.
+        List<List<String>> rows = List.of(
+                List.of("Conto Corrente: 0000001"),
+                List.of("Periodo Dal: 01/01/2026 Al: 10/11/2026"),
+                List.of("Nota: il saldo considera solo i movimenti contabilizzati, sul conto corrente."),
+                List.of("Risultati Ricerca"),
+                List.of("Data_Operazione", "Data_Valuta", "Entrate", "Uscite", "Descrizione", "Descrizione_Completa",
+                        "Stato"),
+                List.of("05/11/2026", "31/10/2026", "3.95", "", "Sconto Canone", "Sconto Canone Mensile Ottobre", "x"));
+
+        assertThat(ColumnGuesser.headerRow(rows)).isEqualTo(4);
+        // Un file normale: l'intestazione è la prima riga. Senza un'intestazione riconoscibile, anche.
+        assertThat(ColumnGuesser.headerRow(List.of(List.of("Data", "Descrizione", "Importo"),
+                List.of("03/10/2026", "NETFLIX", "-12,99")))).isZero();
+        assertThat(ColumnGuesser.headerRow(List.of(List.of("a", "b", "c"), List.of("1", "2", "3")))).isZero();
+    }
+
+    @Test
+    void theFinecoColumnsAreProposedAndAnExcelFileHasTheDot() {
+        List<String> headers = List.of("Data_Operazione", "Data_Valuta", "Entrate", "Uscite", "Descrizione",
+                "Descrizione_Completa", "Stato");
+        // Le prime righe con importi interi: da un CSV si sceglierebbe la virgola, da un Excel sempre il punto.
+        List<List<String>> samples = List.of(List.of("08/07/2026", "30/06/2026", "", "-1", "Bollo", "Bollo dossier",
+                "Contabilizzato"));
+
+        ImportMapping mapping = ColumnGuesser.guess(";", headers, samples, true);
+
+        assertThat(mapping.dateColumn()).isZero(); // Data_Operazione, come Enable Banking, non Data_Valuta
+        assertThat(mapping.amountMode()).isEqualTo(AmountMode.SPLIT);
+        assertThat(mapping.incomeColumn()).isEqualTo(2);
+        assertThat(mapping.expenseColumn()).isEqualTo(3);
+        assertThat(mapping.descriptionColumn()).isEqualTo(5); // la descrizione completa
+        assertThat(mapping.decimalSeparator()).isEqualTo(DecimalSeparator.DOT);
+        assertThat(ColumnGuesser.guess(";", headers, samples, false).decimalSeparator())
+                .isEqualTo(DecimalSeparator.COMMA);
+    }
 }

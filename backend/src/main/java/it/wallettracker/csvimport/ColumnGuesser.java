@@ -21,7 +21,10 @@ public final class ColumnGuesser {
     private static final List<String> AMOUNT = List.of("importo", "amount", "betrag", "valore", "value");
     private static final List<String> INCOME = List.of("entrate", "avere", "accrediti", "credit", "haben", "in");
     private static final List<String> EXPENSE = List.of("uscite", "dare", "addebiti", "debit", "soll", "out");
-    private static final List<String> DESCRIPTION = List.of("descrizione", "causale", "description",
+    // "descrizione completa" prima di "descrizione": Fineco ha tutte e due, e la completa è quella che manda la banca
+    // con Enable Banking ("Ritenuta Fiscale BTP-1OT53 4,5% Qta/Val.nom. …", non solo "Ritenuta Fiscale").
+    private static final List<String> DESCRIPTION = List.of("descrizione completa", "descrizione", "causale",
+            "description",
             "verwendungszweck", "beschreibung", "dettagli", "details", "memo", "note", "type", "tipo");
     private static final List<String> COUNTERPARTY = List.of("controparte", "beneficiario", "ordinante",
             "esercente", "counterparty", "payee", "merchant", "empfänger", "partner", "name");
@@ -44,7 +47,17 @@ public final class ColumnGuesser {
     static final String TINABA_INCOME_WORDS = "ricevuto, ricevuta";
 
     public static ImportMapping guess(String delimiter, List<String> headers, List<List<String>> samples) {
-        List<String> names = headers.stream().map(h -> h.trim().toLowerCase(Locale.ROOT)).toList();
+        return guess(delimiter, headers, samples, false);
+    }
+
+    /**
+     * La proposta. Da un file Excel ({@code spreadsheet}) i numeri escono sempre con il punto (SpreadsheetReader):
+     * il separatore dei decimali non si indovina, è il punto. Indovinarlo sarebbe pericoloso: se le prime righe
+     * avessero solo importi interi ("-1"), si sceglierebbe la virgola, e "3.95" diventerebbe 395.
+     */
+    public static ImportMapping guess(String delimiter, List<String> headers, List<List<String>> samples,
+            boolean spreadsheet) {
+        List<String> names = names(headers);
         if (names.equals(TINABA_HEADERS)) {
             return tinaba(delimiter, samples);
         }
@@ -60,9 +73,41 @@ public final class ColumnGuesser {
         return new ImportMapping(delimiter, date, guessDateFormat(values(samples, date)), mode,
                 mode == AmountMode.SINGLE ? amount : null, mode == AmountMode.SPLIT ? income : null,
                 mode == AmountMode.SPLIT ? expense : null,
-                guessDecimalSeparator(values(samples, amountForSamples)), description,
+                spreadsheet ? DecimalSeparator.DOT : guessDecimalSeparator(values(samples, amountForSamples)),
+                description,
                 counterparty != null && counterparty.equals(description) ? null : counterparty, currency, null,
                 null, null);
+    }
+
+    /** Su quante righe, all'inizio del file, si cerca l'intestazione. */
+    static final int HEADER_SEARCH_ROWS = 30;
+
+    /**
+     * La riga dell'intestazione (docs/importa-file.md, parte C): la prima, tra le prime {@link #HEADER_SEARCH_ROWS},
+     * con almeno tre celle piene, una colonna della data e una dell'importo (o delle entrate e delle uscite). Alcune
+     * banche scrivono sopra la tabella delle righe di testo: Fineco ne ha dodici ("Conto Corrente: …", "Periodo Dal:
+     * …", delle note) prima di "Data_Operazione | Data_Valuta | Entrate | Uscite | …". Se non ce n'è una così, è la
+     * prima riga, come prima.
+     */
+    public static int headerRow(List<List<String>> rows) {
+        for (int i = 0; i < Math.min(rows.size(), HEADER_SEARCH_ROWS); i++) {
+            List<String> names = names(rows.get(i));
+            if (names.stream().filter(name -> !name.isEmpty()).count() < 3) {
+                continue;
+            }
+            Integer date = find(names, DATE, null);
+            boolean amount = find(names, AMOUNT, date) != null
+                    || find(names, INCOME, date) != null && find(names, EXPENSE, date) != null;
+            if (date != null && amount) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /** I nomi delle colonne come li confrontiamo: minuscoli, senza spazi ai lati, "_" come spazio (Data_Operazione). */
+    private static List<String> names(List<String> headers) {
+        return headers.stream().map(h -> h.trim().toLowerCase(Locale.ROOT).replace('_', ' ')).toList();
     }
 
     /** La mappatura del file di Tinaba: le colonne note, gli importi senza segno, le parole delle entrate. */

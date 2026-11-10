@@ -133,7 +133,7 @@ describe('CompletionPage', () => {
   it('offers only the linked Trade Republic accounts, and shows the preview', async () => {
     const { page } = await openWithFile();
 
-    // Non ING (un'altra banca), non il Trade Republic manuale (si importa da Importa CSV).
+    // Non ING (un'altra banca), non il Trade Republic manuale (si importa da Importa).
     const options = Array.from(page.querySelectorAll('select option')).map((o) => o.textContent);
     expect(options).toEqual(['Trade Republic Bank GmbH · Conto 2 (EUR)']);
     expect(previews).toEqual([2]);

@@ -16,7 +16,7 @@ import { BalanceForm } from './balance-form';
  *
  * I conti sono di due tipi: quelli collegati a una banca (Enable Banking, si aggiornano da soli) e quelli
  * "manuali", per le banche che Enable Banking non copre: li crei qui e ci carichi i movimenti da un file
- * CSV (pagina Importa CSV). Solo i conti manuali si possono eliminare da qui.
+ * CSV o Excel (pagina Importa). Solo i conti manuali si possono eliminare da qui.
  *
  * Il saldo (docs/saldi.md): per un conto collegato lo dà la banca a ogni aggiornamento; per un conto manuale, o un
  * collegato di cui la banca non lo dà, lo scrivi tu una volta, dopo aver controllato l'ultimo movimento, e poi si

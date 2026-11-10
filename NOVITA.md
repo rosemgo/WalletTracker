@@ -4,6 +4,16 @@ Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione
 descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.3.0
+
+- **Importa anche i file Excel**: il file che esporta la banca (per esempio "Esporta in excel" di Fineco) si carica così
+  com'è, senza convertirlo. L'app trova da sola la tabella anche quando sopra ci sono delle righe di note.
+- **Completa lo storico dei conti collegati**: quando colleghi un conto, la banca dà i movimenti solo degli ultimi mesi.
+  Ora puoi caricare il file della banca anche in un conto collegato: l'app aggiunge **solo i movimenti più vecchi** di
+  quelli arrivati dalla banca, e salta gli altri, così non nascono doppioni. Prima si poteva solo con Trade Republic.
+- **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
+  le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
+
 ## 1.2.7
 
 - **Cedole e dividendi davvero netti, titolo per titolo**: le ritenute di Fineco ("Rit.ced.su", "Rit.div.su") non si
@@ -11,16 +21,18 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   giusto, ma le righe "Cedole", "Dividendi" e i titoli erano lordi. Ora ogni ritenuta si toglie dalla sua rendita,
   anche quella degli interessi sulla liquidità, e l'abbinamento funziona anche con banche che scrivono i testi in altro
   modo (con il codice ISIN del titolo).
-- **Le ritenute sui ratei sono a parte**: quelle che la banca restituisce quando compri un'obbligazione e trattiene
-  quando la vendi ("Ritenuta Fiscale … Qta/Val.nom.") non riguardano le cedole, ma il prezzo della compravendita. Ora
-  sono tra le "Altre tasse investimenti", nella categoria nuova "Ritenute sui ratei", e non toccano più il netto delle
-  rendite.
+- **Il giro titoli tra i tuoi conti non è più una tassa**: le righe "Ritenuta Fiscale … Qta/Val.nom." che Fineco
+  scrive quando sposti titoli da un tuo conto a un altro (un addebito su uno, lo stesso accredito sull'altro) ora sono
+  trasferimenti interni. Non toccano più il netto delle rendite e non compaiono come costo, nemmeno quando l'app ha un
+  lato solo.
 - **Lo stesso titolo da due banche è una riga sola** in "Da dove" (per esempio "ENEL" di Fineco ed "Enel" di Trade
   Republic).
+- **La nota sotto l'investito dice che cosa contengono le vendite**: sono come le registra la banca, e il capital gain
+  che la banca paga a parte è in "Altre tasse".
 - La riga che resta per le ritenute senza la loro cedola nel periodo si chiama "Ritenute senza la loro rendita nel
   periodo" e non porta più a un elenco sbagliato.
 
-L'aggiornamento sposta da solo le ritenute sui ratei che hai già, ma non quelle a cui hai scelto il tipo a mano.
+L'aggiornamento sistema da solo le righe che hai già, ma non quelle a cui hai scelto il tipo a mano.
 
 ## 1.2.6
 

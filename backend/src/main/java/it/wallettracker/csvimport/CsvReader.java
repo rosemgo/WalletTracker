@@ -73,16 +73,21 @@ public final class CsvReader {
         return rows;
     }
 
+    /** Su quante righe, al massimo, si cerca il separatore. */
+    static final int DELIMITER_LINES = 30;
+
     /**
-     * Il separatore più probabile: quello che compare più volte nella prima riga (fuori dalle virgolette).
-     * La prima riga è di solito l'intestazione, con un separatore tra ogni nome di colonna.
+     * Il separatore più probabile: quello che, nelle prime righe, compare più volte in una stessa riga (fuori dalle
+     * virgolette). Di solito è la riga dell'intestazione, con un separatore tra ogni nome di colonna. Non basta la
+     * prima riga: alcune banche mettono sopra la tabella delle righe di testo (Fineco: "Conto Corrente: …", "Periodo
+     * Dal: …"), senza separatori o con una virgola per caso (docs/importa-file.md, parte C).
      */
     public static char detectDelimiter(String text) {
-        String firstLine = firstNonEmptyLine(text);
+        List<String> lines = nonEmptyLines(text, DELIMITER_LINES);
         char best = ',';
         int bestCount = 0;
         for (char delimiter : DELIMITERS) {
-            int count = countOutsideQuotes(firstLine, delimiter);
+            int count = lines.stream().mapToInt(line -> countOutsideQuotes(line, delimiter)).max().orElse(0);
             if (count > bestCount) {
                 best = delimiter;
                 bestCount = count;
@@ -104,12 +109,16 @@ public final class CsvReader {
         return count;
     }
 
-    private static String firstNonEmptyLine(String text) {
+    private static List<String> nonEmptyLines(String text, int max) {
+        List<String> lines = new ArrayList<>();
         for (String line : text.split("\\r?\\n")) {
             if (!line.isBlank()) {
-                return line;
+                lines.add(line);
+                if (lines.size() == max) {
+                    break;
+                }
             }
         }
-        return "";
+        return lines;
     }
 }

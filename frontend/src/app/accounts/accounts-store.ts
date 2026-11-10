@@ -51,7 +51,7 @@ export function logoUrl(account: Account): string {
 /**
  * Il nome di un conto accanto a un movimento (docs/loghi.md, parte D): il nome scelto dall'utente, se c'è; altrimenti,
  * se è l'unico conto di quella banca, solo la banca ("Revolut"); se la banca ne ha più di uno, il nome per esteso
- * ("FinecoBank ··3288"), per distinguerli.
+ * ("FinecoBank ··1234"), per distinguerli.
  */
 export function shortAccountName(account: Account, all: Account[]): string {
   if (account.displayName) {

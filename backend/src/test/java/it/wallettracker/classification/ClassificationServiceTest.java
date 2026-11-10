@@ -122,22 +122,23 @@ class ClassificationServiceTest {
     }
 
     @Test
-    void theWithholdingOnTheAccruedInterestOfATradeIsAnotherTaxNotAWithholdingOnIncome() {
-        // V38 (docs/investimenti.md, parte U): i testi di Fineco, importi inventati.
-        Account broker = account("IT00BROKER", AccountRole.INVESTMENT);
-        BankTransaction bought = transaction(broker, DAY, "16.47", null,
-                "Ritenuta Fiscale POLAND-18MZ54 5,5% Qta/Val.nom. 24000,000000");
-        BankTransaction sold = transaction(broker, DAY, "-46.25", null,
-                "Ritenuta Fiscale FRANCE-25MG57 4,4% Qta/Val.nom. 20000,000000");
-        BankTransaction coupon = transaction(broker, DAY, "-65.00", null, "Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%");
-        BankTransaction cash = transaction(broker, DAY, "-0.04", null, "Rit. Fisc. Interessi Portaf.Remun. rit. 26,00 %");
+    void theWithholdingOnTheAccruedInterestOfATransferOfSecuritiesIsATransferBetweenOwnAccounts() {
+        // V39 (docs/investimenti.md, parte W): il giro titoli tra due tuoi conti Fineco. Testi veri, importi inventati.
+        Account giving = account("IT00GIVING", AccountRole.INVESTMENT);
+        Account receiving = account("IT00RECEIVING", AccountRole.INVESTMENT);
+        BankTransaction out = transaction(giving, DAY, "-60.80", null,
+                "Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000");
+        BankTransaction in = transaction(receiving, DAY, "60.80", null,
+                "Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000");
+        BankTransaction coupon = transaction(giving, DAY, "-65.00", null, "Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%");
+        BankTransaction cash = transaction(giving, DAY, "-0.04", null, "Rit. Fisc. Interessi Portaf.Remun. rit. 26,00 %");
 
         classificationService.classifyAll();
 
-        // il rateo di un acquisto (+) e di una vendita (−): altre tasse, con la loro categoria
-        assertThat(typeOf(bought)).isEqualTo(TransactionType.INVESTMENT_TAX);
-        assertThat(reload(bought).getCategory().getId()).isEqualTo(category("Ritenute sui ratei").getId());
-        assertThat(typeOf(sold)).isEqualTo(TransactionType.INVESTMENT_TAX);
+        // i due lati: trasferimenti tra i tuoi conti, senza categoria (non contano in nessun totale)
+        assertThat(typeOf(out)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+        assertThat(reload(out).getCategory()).isNull();
         // le ritenute su una cedola e sugli interessi della liquidità restano ritenute sulle rendite
         assertThat(typeOf(coupon)).isEqualTo(TransactionType.WITHHOLDING_TAX);
         assertThat(typeOf(cash)).isEqualTo(TransactionType.WITHHOLDING_TAX);

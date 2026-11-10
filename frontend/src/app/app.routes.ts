@@ -61,7 +61,7 @@ export const routes: Routes = [
   {
     path: 'importa',
     loadComponent: () => import('./import/import-page').then((m) => m.ImportPage),
-    title: 'Importa CSV · WalletTracker',
+    title: 'Importa movimenti · WalletTracker',
   },
   {
     path: 'importa/completa',
