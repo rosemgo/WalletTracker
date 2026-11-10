@@ -71,6 +71,20 @@ describe('LinkPage', () => {
     });
   });
 
+  it('reminds to add a new account in Enable Banking first, with the steps', async () => {
+    const fixture = TestBed.createComponent(LinkPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('ol.hint')?.textContent).toContain('La prima volta per un conto');
+    const details = page.querySelector('[data-testid="linked-accounts"]') as HTMLElement;
+    expect(details.querySelector('summary')?.textContent).toContain(
+      'Prima aggiungilo in Enable Banking',
+    );
+    expect(details.querySelectorAll('ol.linked-steps li')).toHaveLength(4);
+    expect(details.textContent).toContain('Link accounts');
+  });
+
   it('filters the banks while typing', async () => {
     const fixture = TestBed.createComponent(LinkPage);
     await fixture.whenStable();

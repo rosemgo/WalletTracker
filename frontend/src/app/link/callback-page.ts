@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { LinkResult } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { LinkedAccountsSteps } from './linked-accounts-steps';
 
 /**
  * La pagina di ritorno dopo il login sulla banca: https://localhost:8443/callback?code=...&state=...
@@ -15,7 +16,7 @@ import { WalletApi } from '../api/wallet-api';
  */
 @Component({
   selector: 'app-callback-page',
-  imports: [RouterLink],
+  imports: [LinkedAccountsSteps, RouterLink],
   templateUrl: './callback-page.html',
 })
 export class CallbackPage implements OnInit {

@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BrowserLocation } from '../api/browser-location';
 import { GUIDE_URL, isDevServer, returnAddressFor } from '../api/return-address';
 import { SetupStore } from '../api/setup-store';
+import { LinkedAccountsSteps } from './linked-accounts-steps';
 import { AuthStore } from '../auth/auth-store';
 import { Bank } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -29,7 +30,7 @@ const COUNTRIES = [
  */
 @Component({
   selector: 'app-link-page',
-  imports: [RouterLink],
+  imports: [LinkedAccountsSteps, RouterLink],
   templateUrl: './link-page.html',
 })
 export class LinkPage implements OnInit {

@@ -150,6 +150,21 @@ class BankLinkServiceTest {
     }
 
     @Test
+    void withoutAccountsFromEnableBankingNoEmptyConnectionIsSaved() {
+        // Modalità ristretta (docs/modalita-ristretta.md): la banca autorizza, ma Enable Banking toglie i conti che non
+        // sono nella lista dell'applicazione. Un collegamento senza conti non serve.
+        bankLinkService.start("ING", "IT", "https://localhost:8443");
+        String state = sentAuthorization().state();
+        when(client.createSession("code-1")).thenReturn(new Session("session-1", List.of(),
+                new AspspRef("ING", "IT"), new Access(Instant.now().plus(90, ChronoUnit.DAYS))));
+
+        LinkResult result = bankLinkService.complete("code-1", state, PSU);
+
+        assertThat(result).isEqualTo(new LinkResult("ING", 0, 0, List.of()));
+        assertThat(connectionRepository.count()).isZero();
+    }
+
+    @Test
     void aStateCanBeUsedOnlyOnce() {
         bankLinkService.start("ING", "IT", "https://localhost:8443");
         String state = sentAuthorization().state();
