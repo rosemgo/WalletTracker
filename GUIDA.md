@@ -182,6 +182,18 @@ sito della banca (WalletTracker non le vede mai), dai il consenso e torni nell'a
 cominciato dal server, al ritorno il browser apre l'indirizzo di Tailscale: l'app ti chiede il PIN e poi finisce il
 collegamento da sola. Non è un errore, la pagina te lo anticipa.
 
+**Un conto nuovo, la prima volta.** La tua applicazione Enable Banking è in *modalità ristretta* (gratuita, per uso
+personale): passa all'app solo i conti della sua lista. Per questo, la prima volta che colleghi un conto (anche un conto
+aperto dopo, nella stessa banca), prima aggiungilo lì:
+
+1. apri il pannello di Enable Banking (enablebanking.com, *API applications*) e accedi;
+2. nella tua applicazione premi **Link accounts**;
+3. scegli la banca, accedi e seleziona i conti;
+4. torna in WalletTracker e collega la banca, selezionando gli stessi conti.
+
+Basta una volta per conto; i passi sono anche nella pagina **Collega una banca**. Se un conto manca, l'app te lo dice
+al ritorno dalla banca.
+
 Di solito il collegamento dura 180 giorni. Quando sta per scadere l'app ti avvisa, e per rinnovarlo basta
 **Ricollega**.
 

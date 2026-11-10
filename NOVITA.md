@@ -11,6 +11,11 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 - **Completa lo storico dei conti collegati**: quando colleghi un conto, la banca dà i movimenti solo degli ultimi mesi.
   Ora puoi caricare il file della banca anche in un conto collegato: l'app aggiunge **solo i movimenti più vecchi** di
   quelli arrivati dalla banca, e salta gli altri, così non nascono doppioni. Prima si poteva solo con Trade Republic.
+- **Collegare un conto nuovo: l'app spiega che cosa fare.** La tua applicazione Enable Banking è in modalità ristretta
+  e passa all'app solo i conti della sua lista: un conto aperto dopo va prima aggiunto lì ("Link accounts"). Ora
+  Impostazioni e "Collega una banca" lo dicono con i passi, e se al ritorno dalla banca non arriva nessun conto la pagina
+  spiega il motivo invece di scrivere "0 conti".
+- **Due conti diversi non vengono mai confusi** al collegamento, anche se Enable Banking desse loro la stessa impronta.
 - **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
   le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
 

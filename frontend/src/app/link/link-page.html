@@ -1,10 +1,20 @@
 <h1>Collega una banca</h1>
 
 <ol class="hint">
+  <li>
+    <strong>La prima volta per un conto:</strong> aggiungilo alla tua applicazione Enable Banking
+    (passi qui sotto). Poi non serve più.
+  </li>
   <li>Scegli la tua banca e premi <strong>Collega</strong>.</li>
   <li>Verrai portato sul sito della banca: accedi e autorizza la lettura dei conti.</li>
   <li>Alla fine tornerai qui, e i movimenti verranno importati in automatico.</li>
 </ol>
+
+<!-- La modalità ristretta di Enable Banking (docs/modalita-ristretta.md): un conto nuovo va prima aggiunto alla lista. -->
+<details class="card linked-accounts" data-testid="linked-accounts">
+  <summary>Un conto nuovo? Prima aggiungilo in Enable Banking</summary>
+  <app-linked-accounts-steps />
+</details>
 
 @if (renewing()) {
   <p class="message">

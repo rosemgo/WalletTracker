@@ -80,6 +80,10 @@ per **collegare i conti** (*link accounts*):
 L'applicazione diventa attiva in **modalità ristretta**: gratuita, ma può leggere solo i conti che
 hai collegato tu. È esattamente quello che ci serve.
 
+> **Ogni conto che vuoi leggere va in questa lista**, anche quelli aperti dopo: un conto autorizzato in banca ma non
+> collegato qui viene tolto da Enable Banking prima di arrivare all'app (che mostra "nessun conto passato"). Come
+> aggiungerlo, e perché: `docs/modalita-ristretta.md`.
+
 > Se Revolut non compare tra le banche italiane, prova con la Lituania (LT): Revolut Bank UAB
 > è una banca lituana.
 

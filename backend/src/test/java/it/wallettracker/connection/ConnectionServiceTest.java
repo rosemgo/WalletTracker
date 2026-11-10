@@ -108,6 +108,51 @@ class ConnectionServiceTest {
         assertThat(ConnectionService.externalKeyOf("ING", account)).isEqualTo("hash-123");
     }
 
+    @Test
+    void twoAccountsWithTheSameFingerprintButDifferentIbansAreNeverMerged() {
+        // docs/modalita-ristretta.md, parte D: se Enable Banking desse la stessa impronta a due conti diversi, prima il
+        // secondo veniva preso per il primo (e ne sovrascriveva l'uid). Ora decide l'IBAN.
+        Session session = new Session("session-1", List.of(
+                new EnableBankingApi.Account("uid-main", new AccountId("IT00X0000000000000000000001"), "Mario Rossi",
+                        "EUR", "stessa-impronta"),
+                new EnableBankingApi.Account("uid-lombard", new AccountId("IT00X0000000000000000000002"), "Mario Rossi",
+                        "EUR", "stessa-impronta")),
+                new AspspRef("Banca Alfa", "IT"), new Access(IN_90_DAYS));
+
+        BankConnection connection = connectionService.saveSession(session, IN_90_DAYS);
+
+        assertThat(connectionService.accountsOf(connection)).extracting(Account::getProviderUid)
+                .containsExactlyInAnyOrder("uid-main", "uid-lombard");
+    }
+
+    @Test
+    void aSavedAccountIsNotTakenOverByAnotherIbanWithItsFingerprint() {
+        connectionService.saveSession(new Session("session-1", List.of(new EnableBankingApi.Account("uid-1",
+                new AccountId("IT00X0000000000000000000001"), "Conto", "EUR", "impronta")),
+                new AspspRef("Banca Alfa", "IT"), new Access(IN_90_DAYS)), IN_90_DAYS);
+
+        // Un'altra sessione: lo stesso codice di impronta, ma un IBAN diverso. Non è lo stesso conto.
+        connectionService.saveSession(new Session("session-2", List.of(new EnableBankingApi.Account("uid-2",
+                new AccountId("IT00X0000000000000000000002"), "Conto", "EUR", "impronta")),
+                new AspspRef("Banca Alfa", "IT"), new Access(IN_90_DAYS)), IN_90_DAYS);
+
+        assertThat(accountRepository.findAll()).extracting(Account::getProviderUid)
+                .containsExactlyInAnyOrder("uid-1", "uid-2");
+        // e il primo conto resta com'era
+        assertThat(accountRepository.findByExternalKey("impronta")).get()
+                .extracting(Account::getProviderUid).isEqualTo("uid-1");
+    }
+
+    @Test
+    void theLogShowsOnlyTheLastDigits() {
+        assertThat(ConnectionService.describe(List.of(
+                new EnableBankingApi.Account("u", new AccountId("IT00 X000 0000 0000 0000 0003 288"), "n", "EUR", "h"),
+                new EnableBankingApi.Account("u", null, "carta", "EUR", null))))
+                .isEqualTo(": ··3288 EUR (impronta), senza IBAN EUR (senza impronta)");
+        assertThat(ConnectionService.differentIban("IT00 x01", "IT00X01")).isFalse();
+        assertThat(ConnectionService.differentIban(null, "IT00X01")).isFalse();
+    }
+
     /** Una sessione ING finta con un conto corrente e un conto deposito. */
     private static Session ingSession(String sessionId, String currentAccountUid, String savingsAccountUid) {
         return new Session(sessionId,

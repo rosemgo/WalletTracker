@@ -24,6 +24,8 @@ import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.logo.LogoService;
 import it.wallettracker.sync.SyncService;
 import it.wallettracker.sync.SyncService.AccountSync;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -47,6 +49,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class BankLinkService {
 
+    private static final Logger log = LoggerFactory.getLogger(BankLinkService.class);
+
     /** Durata massima di un consenso PSD2 per la lettura dei conti. */
     static final Duration MAX_CONSENT = Duration.ofDays(180);
 
@@ -60,7 +64,9 @@ public class BankLinkService {
     /**
      * Il risultato di un collegamento completato.
      *
-     * @param accounts quanti conti sono stati autorizzati
+     * @param accounts quanti conti ha passato Enable Banking (e sono stati salvati): 0 vuol dire che non ne ha
+     *                 passato nessuno, di solito perché l'applicazione è in modalità ristretta e i conti non sono nella
+     *                 sua lista (docs/modalita-ristretta.md)
      * @param imported quanti movimenti nuovi sono stati importati
      * @param errors   gli errori di importazione, conto per conto (il collegamento è comunque salvato)
      */
@@ -147,6 +153,14 @@ public class BankLinkService {
         }
 
         Session session = client.createSession(code);
+        // Nessun conto: la banca ha autorizzato, ma Enable Banking non ne ha passato nessuno. Succede con
+        // un'applicazione in modalità ristretta, quando i conti non sono nella sua lista (docs/modalita-ristretta.md).
+        // Un collegamento senza conti non serve: non lo salviamo, e la pagina di ritorno spiega che cosa fare.
+        if (session.accounts() == null || session.accounts().isEmpty()) {
+            log.warn("{}: Enable Banking non ha passato nessun conto (applicazione in modalità ristretta?)",
+                    session.aspsp().name());
+            return new LinkResult(session.aspsp().name(), 0, 0, List.of());
+        }
         BankConnection connection = connectionService.saveSession(session, started.validUntil());
 
         List<Account> accounts = connectionService.accountsOf(connection);

@@ -248,7 +248,7 @@ export interface Bank {
 /** Il risultato di un collegamento completato (POST /api/connections/complete). */
 export interface LinkResult {
   bank: string;
-  accounts: number; // quanti conti sono stati autorizzati
+  accounts: number; // quanti conti ha passato Enable Banking: 0 = nessuno nella lista dell'applicazione
   imported: number; // quanti movimenti nuovi sono stati importati
   errors: string[]; // gli errori di importazione, conto per conto
 }

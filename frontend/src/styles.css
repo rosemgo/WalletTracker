@@ -3846,6 +3846,27 @@ details.why-rules li + li {
   margin-top: 6px;
 }
 
+/* Collega una banca e la pagina di ritorno (docs/modalita-ristretta.md): come aggiungere un conto in Enable Banking. */
+details.linked-accounts summary {
+  width: fit-content;
+  color: var(--acc);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+details.linked-accounts[open] summary {
+  margin-bottom: 10px;
+}
+
+.linked-steps {
+  margin: 0 0 8px;
+  padding-left: 1.25rem;
+}
+
+.linked-steps li + li {
+  margin-top: 6px;
+}
+
 /* Le regole di partenza: una sezione da aprire, sotto le regole dell'utente. */
 details.builtin-rules {
   margin-top: 1.5rem;
