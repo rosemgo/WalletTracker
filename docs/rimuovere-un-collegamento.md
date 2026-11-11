@@ -45,9 +45,16 @@ perché è un'operazione senza ritorno.
 
 ## Parte C: che cosa fa "Rimuovi collegamento"
 
-Nella pagina **Conti** c'è la sezione **"Collegamenti alle banche"**: ogni collegamento, con quanti conti ha e il suo
-stato ("valido fino al…", "consenso scaduto il…", "rimosso il…: i conti restano come storia"). Accanto a ognuno,
-**"Rimuovi collegamento"**, con una conferma che dice che cosa succederà:
+Nella pagina **Conti**, sotto la tabella, c'è la sezione **"Collegamenti alle banche"**. È **chiusa di serie** (serve di
+rado, e la pagina resta quella dei conti): il titolo dice quanti collegamenti ci sono, e si apre con un clic. Aperta,
+per ogni collegamento mostra:
+
+- lo stato: "valido fino al…", "consenso scaduto il…", "rimosso il…: i conti restano come storia";
+- **i suoi conti, con le ultime quattro cifre dell'IBAN** ("Credit Lombard ··0033"; una carta senza IBAN, solo il
+  nome), per capire subito quale collegamento è quale anche quando una banca ne ha più di uno;
+- se non ha conti, il perché: Enable Banking non ne ha passato nessuno, perché la banca non era nella lista
+  dell'applicazione (`docs/modalita-ristretta.md`);
+- **"Rimuovi collegamento"**, sotto i conti, con una conferma che dice che cosa succederà:
 
 > L'app smetterà di leggere il conto di Banca Alfa (**Conto corrente**) e chiuderà il consenso su Enable Banking.
 > **Il conto e i movimenti restano** come storia. Se un giorno ricolleghi la banca, tornano gli stessi, senza doppioni.
@@ -55,7 +62,7 @@ stato ("valido fino al…", "consenso scaduto il…", "rimosso il…: i conti re
 **Si rimuove il collegamento, non il singolo conto.** Un collegamento è il consenso dato a una banca, e può avere più
 conti (il conto corrente e il deposito di ING, le valute di Revolut): anche il consenso su Enable Banking è uno solo
 per tutti, quindi non si chiude per un conto e non per gli altri. Per questo la conferma **elenca i conti** coinvolti
-(`ConnectionDto.accountNames`) e, se sono più di uno, ricorda l'alternativa per un conto solo: il ruolo **Escluso**,
+(`ConnectionDto.accountList`: nome e ultime cifre dell'IBAN) e, se sono più di uno, ricorda l'alternativa per un conto solo: il ruolo **Escluso**,
 che smette di aggiornarlo e di contarlo, tiene i suoi movimenti, e lascia gli altri conti come sono. Lo spiega anche
 una riga in cima alla pagina Conti.
 

@@ -50,11 +50,20 @@ public class ConnectionRemovalService {
     /**
      * Un collegamento, come lo mostra la pagina Conti.
      *
-     * @param accountNames i nomi dei suoi conti (quello scelto dall'utente, se c'è): la conferma della rimozione li
-     *                     elenca, perché si rimuovono tutti insieme
+     * @param accountList i suoi conti, con il nome e le ultime cifre dell'IBAN: la pagina li mostra sotto la banca, e la
+     *                    conferma della rimozione li elenca, perché si rimuovono tutti insieme
      */
     public record ConnectionDto(Long id, String bank, String country, Instant validUntil, Instant removedAt,
-            int accounts, List<String> accountNames) {
+            int accounts, List<LinkedAccount> accountList) {
+    }
+
+    /**
+     * Un conto di un collegamento.
+     *
+     * @param name    il nome scelto dall'utente, se c'è, altrimenti quello della banca
+     * @param ibanEnd le ultime quattro cifre dell'IBAN ("3288"); null se il conto non ha IBAN (una carta)
+     */
+    public record LinkedAccount(String name, String ibanEnd) {
     }
 
     /**
@@ -73,10 +82,19 @@ public class ConnectionRemovalService {
                 .map(c -> {
                     List<Account> accounts = accountRepository.findByConnectionOrderByName(c);
                     return new ConnectionDto(c.getId(), c.getAspspName(), c.getAspspCountry(), c.getValidUntil(),
-                            c.getRemovedAt(), accounts.size(), accounts.stream().map(
-                                    ConnectionRemovalService::nameOf).toList());
+                            c.getRemovedAt(), accounts.size(), accounts.stream()
+                                    .map(a -> new LinkedAccount(nameOf(a), ibanEnd(a.getIban()))).toList());
                 })
                 .toList());
+    }
+
+    /** Le ultime quattro cifre dell'IBAN, senza spazi; null se manca. */
+    static String ibanEnd(String iban) {
+        if (iban == null || iban.isBlank()) {
+            return null;
+        }
+        String clean = iban.replaceAll("\\s", "");
+        return clean.substring(Math.max(0, clean.length() - 4));
     }
 
     /** Il nome di un conto in un elenco della stessa banca: quello scelto dall'utente, o quello della banca. */

@@ -827,7 +827,13 @@ export interface BankConnection {
   validUntil: string; // data e ora ISO della scadenza del consenso
   removedAt: string | null; // rimosso dall'utente: i conti restano come storia
   accounts: number;
-  accountNames: string[]; // i nomi dei conti: si rimuovono tutti insieme
+  accountList: LinkedAccount[]; // i conti del collegamento: si rimuovono tutti insieme
+}
+
+/** Un conto di un collegamento: il nome e le ultime quattro cifre dell'IBAN (null per una carta senza IBAN). */
+export interface LinkedAccount {
+  name: string;
+  ibanEnd: string | null;
 }
 
 /** L'esito di DELETE /api/connections/{id}. */
