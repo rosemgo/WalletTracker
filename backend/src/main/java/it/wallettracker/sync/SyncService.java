@@ -187,6 +187,9 @@ public class SyncService {
         List<AccountOutcome> outcomes = new ArrayList<>();
 
         for (BankConnection connection : connectionService.allConnections()) {
+            if (connection.isRemoved()) {
+                continue; // rimosso dall'utente: i conti restano come storia, non si leggono più
+            }
             for (Account account : connectionService.accountsOf(connection)) {
                 if (account.getRole() == AccountRole.EXCLUDED) {
                     continue;

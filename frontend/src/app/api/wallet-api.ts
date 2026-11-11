@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  BankConnection,
+  ConnectionRemoval,
   Account,
   AiCloudProvider,
   AuthStatus,
@@ -242,6 +244,16 @@ export class WalletApi {
   /** POST /api/connections: avvia il collegamento e restituisce l'indirizzo del login sulla banca. */
   startLink(bank: string, country: string): Observable<{ url: string }> {
     return this.http.post<{ url: string }>('/api/connections', { bank, country });
+  }
+
+  /** GET /api/connections: i collegamenti alle banche, anche scaduti, rimossi o senza conti. */
+  connections(): Observable<BankConnection[]> {
+    return this.http.get<BankConnection[]>('/api/connections');
+  }
+
+  /** DELETE /api/connections/{id}: rimuove un collegamento, tenendo i conti come storia. */
+  removeConnection(id: number): Observable<ConnectionRemoval> {
+    return this.http.delete<ConnectionRemoval>(`/api/connections/${id}`);
   }
 
   /** POST /api/connections/complete: completa il collegamento con i parametri ricevuti dalla banca. */

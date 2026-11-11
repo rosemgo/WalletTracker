@@ -153,6 +153,11 @@ public class PocRunner implements CommandLineRunner {
         AuthorizationResult authorization = authorize(bank);
         Session session = client.createSession(authorization.code());
         System.out.println("Collegamento riuscito! Conti autorizzati: " + session.accounts().size());
+        if (session.accounts().isEmpty()) {
+            // Come la dashboard (BankLinkService.complete): un collegamento senza conti non si salva.
+            throw new IllegalStateException("Enable Banking non ha passato nessun conto. In modalità ristretta ogni "
+                    + "banca va prima collegata dal suo pannello, con \"Link accounts\" (docs/modalita-ristretta.md).");
+        }
 
         BankConnection connection = connectionService.saveSession(session, authorization.validUntil());
         System.out.println("Collegamento e conti salvati nel database.");

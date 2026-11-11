@@ -35,6 +35,11 @@
   verso un conto "Investimenti" sono versamenti, quelli verso una "Carta di credito" sono saldi
   della carta. Cambiando un ruolo, tutti i movimenti vengono riclassificati.
 </p>
+<p class="hint" data-testid="excluded-role-hint">
+  <strong>Escluso</strong>: l'app smette di aggiornare quel conto e non lo conta nei totali, ma i
+  suoi movimenti restano. Serve per mettere da parte un solo conto di una banca: gli altri
+  continuano ad aggiornarsi. Per togliere tutta la banca, c'è "Rimuovi collegamento" più sotto.
+</p>
 
 @if (loading()) {
   <p>Caricamento...</p>
@@ -224,7 +229,12 @@
               </td>
             } @else {
               <td data-label="Consenso fino al">
-                {{ account.consentValidUntil | date: 'dd/MM/yyyy' }}
+                @if (account.connectionRemovedAt) {
+                  <!-- docs/rimuovere-un-collegamento.md: resta come storia, non si aggiorna più. -->
+                  <span class="secondary">collegamento rimosso: storico conservato</span>
+                } @else {
+                  {{ account.consentValidUntil | date: 'dd/MM/yyyy' }}
+                }
               </td>
               <td data-label="Aggiornato">
                 @if (account.lastSyncAt) {
@@ -258,6 +268,8 @@
     </table>
   </div>
 }
+
+<app-connections-section (changed)="reload()" />
 
 <form class="card" [formGroup]="form" (ngSubmit)="addManual()">
   <h2>Nuovo conto manuale</h2>

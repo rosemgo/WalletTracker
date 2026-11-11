@@ -16,7 +16,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 public interface BankConnectionRepository extends JpaRepository<BankConnection, Long> {
 
-    List<BankConnection> findByValidUntilAfterOrderByAspspName(Instant instant);
+    /** I collegamenti con il consenso valido e non rimossi. */
+    List<BankConnection> findByRemovedAtIsNullAndValidUntilAfterOrderByAspspName(Instant instant);
+
+    List<BankConnection> findAllByOrderByAspspNameAscCreatedAtAsc();
 
     List<BankConnection> findByAspspNameAndAspspCountry(String aspspName, String aspspCountry);
 }

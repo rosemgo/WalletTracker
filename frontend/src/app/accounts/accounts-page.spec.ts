@@ -5,7 +5,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Account, AccountRole, ManualAccountRequest, SyncRound, Transaction } from '../api/models';
+import {
+  Account,
+  AccountRole,
+  BankConnection,
+  ConnectionRemoval,
+  ManualAccountRequest,
+  SyncRound,
+  Transaction,
+} from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { AccountsPage, outcomeLine } from './accounts-page';
 import { parseBalance } from './balance-form';
@@ -21,6 +29,7 @@ const CARD: Account = {
   role: 'SPENDING',
   source: 'ENABLE_BANKING',
   consentValidUntil: '2027-01-05T14:35:51Z',
+  connectionRemovedAt: null,
   lastSyncAt: null,
   lastSyncError: 'HTTP 429 troppe letture',
   balance: null,
@@ -40,6 +49,7 @@ const BROKER: Account = {
   role: 'INVESTMENT',
   source: 'MANUAL',
   consentValidUntil: null,
+  connectionRemovedAt: null,
   lastSyncAt: null,
   lastSyncError: null,
   balance: null,
@@ -62,8 +72,12 @@ describe('AccountsPage', () => {
   let syncCalls = 0;
   let round: SyncRound;
   let accounts: Account[];
+  let connections: BankConnection[];
+  const removedConnections: number[] = [];
 
   beforeEach(() => {
+    removedConnections.length = 0;
+    connections = [];
     changedRoles.length = 0;
     created.length = 0;
     deleted.length = 0;
@@ -75,6 +89,20 @@ describe('AccountsPage', () => {
     accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of(accounts),
+      connections: () => of(connections),
+      removeConnection: (id: number) => {
+        removedConnections.push(id);
+        const removed = connections.find((c) => c.id === id)!;
+        connections = connections.map((c) =>
+          c.id === id ? { ...c, removedAt: '2026-11-11T10:00:00Z' } : c,
+        );
+        accounts = accounts.map((a) => ({ ...a, connectionRemovedAt: '2026-11-11T10:00:00Z' }));
+        return of<ConnectionRemoval>({
+          bank: removed.bank,
+          accountsKept: removed.accounts,
+          revoked: true,
+        });
+      },
       createManualAccount: (request: ManualAccountRequest) => {
         created.push(request);
         return of({
@@ -142,6 +170,86 @@ describe('AccountsPage', () => {
       imports: [AccountsPage],
       providers: [{ provide: WalletApi, useValue: fakeApi }, provideRouter([])],
     });
+  });
+
+  it('a connection is removed keeping its accounts, after a confirmation that says so', async () => {
+    // docs/rimuovere-un-collegamento.md, con dati inventati.
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    connections = [
+      {
+        id: 1,
+        bank: 'Banca Alfa',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 1,
+        accountNames: ['Conto corrente'],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const section = page.querySelector('app-connections-section') as HTMLElement;
+    const text = () => section.textContent?.replace(/\s+/g, ' ') ?? '';
+    const button = (label: string) =>
+      Array.from(section.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === label,
+      ) as HTMLButtonElement;
+
+    expect(text()).toContain('Banca Alfa · 1 conto · valido fino al 10/05/2027');
+    button('Rimuovi collegamento').click();
+    await fixture.whenStable();
+    expect(text()).toContain('il conto di Banca Alfa (Conto corrente)');
+    expect(text()).toContain('Il conto e i movimenti restano come storia');
+    expect(section.querySelector('[data-testid="exclude-hint"]')).toBeNull(); // un conto solo
+    expect(removedConnections).toEqual([]); // prima della conferma non parte niente
+
+    button('Rimuovi').click();
+    await fixture.whenStable();
+
+    expect(removedConnections).toEqual([1]);
+    expect(text()).toContain(
+      'Banca Alfa: collegamento rimosso. Il conto resta con i suoi movimenti.',
+    );
+    expect(text()).toContain('rimosso il 11/11/2026: il conto resta come storia');
+    expect(section.querySelector('[data-testid="consent-not-closed"]')).toBeNull(); // revocato: niente avviso
+    expect(button('Rimuovi collegamento')).toBeUndefined();
+    // Il conto, ricaricato, lo dice anche nella tabella.
+    expect(page.querySelector('table')?.textContent).toContain(
+      'collegamento rimosso: storico conservato',
+    );
+  });
+
+  it('with more accounts, the confirmation lists them all and points to the Excluded role', async () => {
+    connections = [
+      {
+        id: 2,
+        bank: 'Banca Alfa',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 2,
+        accountNames: ['Conto corrente', 'Conto deposito'],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[data-testid="excluded-role-hint"]')?.textContent).toContain(
+      'gli altri continuano ad aggiornarsi',
+    );
+    const section = page.querySelector('app-connections-section') as HTMLElement;
+    (
+      Array.from(section.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Rimuovi collegamento',
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+
+    const text = section.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('tutti i conti di Banca Alfa (Conto corrente, Conto deposito)');
+    expect(section.querySelector('[data-testid="exclude-hint"]')?.textContent).toContain('Escluso');
   });
 
   it('shows the balance of the bank, and lets you write the one of a manual account', async () => {

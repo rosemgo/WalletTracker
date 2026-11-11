@@ -109,7 +109,7 @@ public class ConnectionService {
     /** I collegamenti con il consenso ancora valido. */
     @Transactional(readOnly = true)
     public List<BankConnection> validConnections() {
-        return connectionRepository.findByValidUntilAfterOrderByAspspName(Instant.now());
+        return connectionRepository.findByRemovedAtIsNullAndValidUntilAfterOrderByAspspName(Instant.now());
     }
 
     /** Tutti i collegamenti, anche quelli con il consenso scaduto. */

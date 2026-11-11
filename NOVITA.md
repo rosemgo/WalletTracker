@@ -16,6 +16,11 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   Impostazioni e "Collega una banca" lo dicono con i passi, e se al ritorno dalla banca non arriva nessun conto la pagina
   spiega il motivo invece di scrivere "0 conti".
 - **Due conti diversi non vengono mai confusi** al collegamento, anche se Enable Banking desse loro la stessa impronta.
+- **Rimuovere un collegamento senza perdere la storia**: in Conti, la sezione "Collegamenti alle banche" mostra ogni
+  banca collegata, anche quelle con il consenso scaduto o senza conti, con "Rimuovi collegamento". L'app chiude il
+  consenso su Enable Banking e smette di leggere quei conti, ma **i conti e i movimenti restano**. Se un giorno ricolleghi
+  la banca, ritrovi gli stessi conti, senza movimenti doppi. I collegamenti senza conti (i tentativi con una banca non
+  ancora nella lista di Enable Banking) invece si cancellano.
 - **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
   le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
 

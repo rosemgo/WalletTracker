@@ -23,6 +23,8 @@ import java.time.LocalDate;
  * @param bank              il nome della banca (es. "ING") o, per un conto manuale, dell'istituto
  * @param source            da dove arrivano i movimenti: Enable Banking o file CSV (conto manuale)
  * @param consentValidUntil fino a quando vale il consenso dato alla banca; null per un conto manuale
+ * @param connectionRemovedAt quando l'utente ha rimosso il collegamento (docs/rimuovere-un-collegamento.md): il conto
+ *                    resta come storia, ma non si aggiorna più; null se non è stato rimosso
  * @param lastSyncError     il motivo dell'ultimo errore di importazione, null se è andata bene
  * @param balance           il saldo (docs/saldi.md): dalla banca, o scritto dall'utente per un conto manuale; null se
  *                          non si sa
@@ -42,6 +44,7 @@ public record AccountDto(
         AccountRole role,
         AccountSource source,
         Instant consentValidUntil,
+        Instant connectionRemovedAt,
         Instant lastSyncAt,
         String lastSyncError,
         CurrentBalance balance,
@@ -65,6 +68,7 @@ public record AccountDto(
                 account.getRole(),
                 account.getSource(),
                 account.getConnection() != null ? account.getConnection().getValidUntil() : null,
+                account.getConnection() != null ? account.getConnection().getRemovedAt() : null,
                 account.getLastSyncAt(),
                 account.getLastSyncError(),
                 balance,

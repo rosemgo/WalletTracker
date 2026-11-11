@@ -23,6 +23,7 @@ function account(id: number, source: Account['source'], bank: string): Account {
     role: 'UNASSIGNED',
     source,
     consentValidUntil: null,
+    connectionRemovedAt: null,
     lastSyncAt: null,
     lastSyncError: null,
     balance: null,

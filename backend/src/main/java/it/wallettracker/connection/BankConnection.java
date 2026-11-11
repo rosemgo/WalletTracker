@@ -42,6 +42,10 @@ public class BankConnection {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /** Quando l'utente ha rimosso il collegamento (V40); null se non l'ha rimosso. */
+    @Column(name = "removed_at")
+    private Instant removedAt;
+
     /** Richiesto da JPA: Hibernate crea l'oggetto vuoto e poi lo riempie con i dati della riga. */
     protected BankConnection() {
     }
@@ -54,8 +58,23 @@ public class BankConnection {
         this.createdAt = Instant.now();
     }
 
+    /** Si può usare per leggere i conti: non rimosso, e con il consenso non ancora scaduto. */
     public boolean isValid() {
-        return validUntil.isAfter(Instant.now());
+        return removedAt == null && validUntil.isAfter(Instant.now());
+    }
+
+    /** Rimosso dall'utente (docs/rimuovere-un-collegamento.md): i conti restano come storia, ma non si leggono più. */
+    public boolean isRemoved() {
+        return removedAt != null;
+    }
+
+    /** Segna il collegamento come rimosso. */
+    public void markRemoved(Instant now) {
+        this.removedAt = now;
+    }
+
+    public Instant getRemovedAt() {
+        return removedAt;
     }
 
     public Long getId() {

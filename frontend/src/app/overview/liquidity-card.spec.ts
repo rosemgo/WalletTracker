@@ -30,6 +30,7 @@ function account(
     role,
     source: 'MANUAL',
     consentValidUntil: null,
+    connectionRemovedAt: null,
     lastSyncAt: null,
     lastSyncError: null,
     balance:
