@@ -224,7 +224,12 @@
               </td>
             } @else {
               <td data-label="Consenso fino al">
-                {{ account.consentValidUntil | date: 'dd/MM/yyyy' }}
+                @if (account.connectionRemovedAt) {
+                  <!-- docs/rimuovere-un-collegamento.md: resta come storia, non si aggiorna più. -->
+                  <span class="secondary">collegamento rimosso: storico conservato</span>
+                } @else {
+                  {{ account.consentValidUntil | date: 'dd/MM/yyyy' }}
+                }
               </td>
               <td data-label="Aggiornato">
                 @if (account.lastSyncAt) {
@@ -258,6 +263,8 @@
     </table>
   </div>
 }
+
+<app-connections-section (changed)="reload()" />
 
 <form class="card" [formGroup]="form" (ngSubmit)="addManual()">
   <h2>Nuovo conto manuale</h2>

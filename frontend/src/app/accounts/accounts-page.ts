@@ -10,6 +10,7 @@ import { isTradeRepublic } from '../import/completion-page';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { AccountsStore, logoUrl } from './accounts-store';
 import { BalanceForm } from './balance-form';
+import { ConnectionsSection } from './connections-section';
 
 /**
  * La pagina dei conti: elenco dei conti, con il ruolo modificabile da un menu a tendina.
@@ -27,7 +28,7 @@ import { BalanceForm } from './balance-form';
  */
 @Component({
   selector: 'app-accounts-page',
-  imports: [BalanceForm, DatePipe, MoneyPipe, ReactiveFormsModule, RouterLink],
+  imports: [BalanceForm, ConnectionsSection, DatePipe, MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './accounts-page.html',
 })
 export class AccountsPage implements OnInit {
@@ -106,6 +107,11 @@ export class AccountsPage implements OnInit {
         this.error.set("L'aggiornamento non è riuscito: il backend è avviato?");
       },
     });
+  }
+
+  /** Dopo la rimozione di un collegamento: lo stato dei conti cambia ("collegamento rimosso"). */
+  protected reload(): void {
+    this.loadAccounts();
   }
 
   private loadAccounts(): void {

@@ -79,6 +79,8 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 > Sempre fuori dalla numerazione: [Enable Banking in modalità ristretta: un conto nuovo va prima nella lista](docs/modalita-ristretta.md).
 
+> Sempre fuori dalla numerazione: [Rimuovere un collegamento, tenendo la storia](docs/rimuovere-un-collegamento.md).
+
 > Sempre fuori dalla numerazione: [I loghi delle banche accanto ai movimenti](docs/loghi.md).
 
 > Sempre fuori dalla numerazione: [Il nuovo logo, il tema Blu oceano e i colori dei grafici](docs/tema-blu-oceano.md).

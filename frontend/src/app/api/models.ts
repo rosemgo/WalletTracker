@@ -39,6 +39,7 @@ export interface Account {
   role: AccountRole;
   source: AccountSource;
   consentValidUntil: string | null; // data e ora ISO, es. "2027-01-05T14:35:51Z"; null nei conti manuali
+  connectionRemovedAt: string | null; // collegamento rimosso: il conto resta come storia (docs/rimuovere-un-collegamento.md)
   lastSyncAt: string | null;
   lastSyncError: string | null;
   balance: CurrentBalance | null; // il saldo (docs/saldi.md); null se la banca non lo dà e non l'hai scritto
@@ -816,4 +817,21 @@ export interface InvestmentCash {
   account: string;
   manual: boolean;
   balance: CurrentBalance | null;
+}
+
+/** Un collegamento a una banca, nella pagina Conti (GET /api/connections, docs/rimuovere-un-collegamento.md). */
+export interface BankConnection {
+  id: number;
+  bank: string;
+  country: string;
+  validUntil: string; // data e ora ISO della scadenza del consenso
+  removedAt: string | null; // rimosso dall'utente: i conti restano come storia
+  accounts: number;
+}
+
+/** L'esito di DELETE /api/connections/{id}. */
+export interface ConnectionRemoval {
+  bank: string;
+  accountsKept: number; // 0: il collegamento era vuoto ed è stato cancellato
+  revoked: boolean; // false: il consenso su Enable Banking va chiuso dal pannello
 }

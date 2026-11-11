@@ -70,6 +70,41 @@ class ConnectionControllerTest {
     }
 
     @Test
+    void theConnectionsAreListedAndOneCanBeRemovedKeepingItsAccounts() {
+        // docs/rimuovere-un-collegamento.md, con dati inventati.
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "session-1",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        accountRepository.save(new Account(connection, "Banca Alfa|IT00X01|EUR", "uid-1", "IT00X01", "Conto corrente",
+                "EUR"));
+
+        assertThat(mvc.get().uri("/api/connections"))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$[0].bank").isEqualTo("Banca Alfa");
+                    json.assertThat().extractingPath("$[0].accounts").isEqualTo(1);
+                    json.assertThat().extractingPath("$[0].removedAt").isNull();
+                });
+
+        assertThat(mvc.delete().uri("/api/connections/{id}", connection.getId()))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.accountsKept").isEqualTo(1);
+                    json.assertThat().extractingPath("$.revoked").isEqualTo(true);
+                });
+        verify(client).deleteSession("session-1");
+        assertThat(accountRepository.count()).isEqualTo(1);
+        // Il conto dice che il suo collegamento è stato rimosso.
+        assertThat(mvc.get().uri("/api/accounts"))
+                .hasStatusOk()
+                .bodyJson()
+                .extractingPath("$[0].connectionRemovedAt")
+                .isNotNull();
+        assertThat(mvc.delete().uri("/api/connections/{id}", 999_999)).hasStatus(404);
+    }
+
+        @Test
     void listsTheBanksOfACountryWithTheConsentDurationInDays() {
         when(client.listAspsps("IT")).thenReturn(List.of(
                 new Aspsp("ING", "IT", List.of(), Duration.ofDays(90).toSeconds(), List.of())));
