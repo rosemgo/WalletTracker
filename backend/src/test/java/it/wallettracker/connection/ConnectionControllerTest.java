@@ -83,7 +83,8 @@ class ConnectionControllerTest {
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$[0].bank").isEqualTo("Banca Alfa");
                     json.assertThat().extractingPath("$[0].accounts").isEqualTo(1);
-                    json.assertThat().extractingPath("$[0].accountNames[0]").isEqualTo("Conto corrente");
+                    json.assertThat().extractingPath("$[0].accountList[0].name").isEqualTo("Conto corrente");
+                    json.assertThat().extractingPath("$[0].accountList[0].ibanEnd").isEqualTo("0X01");
                     json.assertThat().extractingPath("$[0].removedAt").isNull();
                 });
 

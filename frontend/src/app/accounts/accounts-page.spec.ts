@@ -184,7 +184,7 @@ describe('AccountsPage', () => {
         validUntil: '2027-05-10T10:00:00Z',
         removedAt: null,
         accounts: 1,
-        accountNames: ['Conto corrente'],
+        accountList: [{ name: 'Conto corrente', ibanEnd: '0001' }],
       },
     ];
     const fixture = TestBed.createComponent(AccountsPage);
@@ -197,10 +197,18 @@ describe('AccountsPage', () => {
         (b) => b.textContent?.trim() === label,
       ) as HTMLButtonElement;
 
-    expect(text()).toContain('Banca Alfa · 1 conto · valido fino al 10/05/2027');
+    // Chiusa di serie: il titolo dice quanti collegamenti ci sono; si apre con un clic.
+    const details = section.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(section.querySelector('summary')?.textContent).toContain('1 collegamento');
+    (section.querySelector('summary') as HTMLElement).click();
+    await fixture.whenStable();
+    expect(details.open).toBe(true);
+    expect(text()).toContain('Banca Alfa · valido fino al 10/05/2027');
+    expect(text()).toContain('Conto corrente ··0001'); // i conti del collegamento, con le ultime cifre
     button('Rimuovi collegamento').click();
     await fixture.whenStable();
-    expect(text()).toContain('il conto di Banca Alfa (Conto corrente)');
+    expect(text()).toContain('il conto di Banca Alfa (Conto corrente ··0001)');
     expect(text()).toContain('Il conto e i movimenti restano come storia');
     expect(section.querySelector('[data-testid="exclude-hint"]')).toBeNull(); // un conto solo
     expect(removedConnections).toEqual([]); // prima della conferma non parte niente
@@ -221,6 +229,28 @@ describe('AccountsPage', () => {
     );
   });
 
+  it('a connection without accounts says why, and can be removed', async () => {
+    connections = [
+      {
+        id: 3,
+        bank: 'Banca Beta',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 0,
+        accountList: [],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const section = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-connections-section',
+    ) as HTMLElement;
+    expect(section.querySelector('[data-testid="no-accounts"]')?.textContent).toContain(
+      'non era nella lista',
+    );
+  });
+
   it('with more accounts, the confirmation lists them all and points to the Excluded role', async () => {
     connections = [
       {
@@ -230,7 +260,10 @@ describe('AccountsPage', () => {
         validUntil: '2027-05-10T10:00:00Z',
         removedAt: null,
         accounts: 2,
-        accountNames: ['Conto corrente', 'Conto deposito'],
+        accountList: [
+          { name: 'Conto corrente', ibanEnd: '0001' },
+          { name: 'Carta', ibanEnd: null },
+        ],
       },
     ];
     const fixture = TestBed.createComponent(AccountsPage);
@@ -248,7 +281,7 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
 
     const text = section.textContent?.replace(/\s+/g, ' ') ?? '';
-    expect(text).toContain('tutti i conti di Banca Alfa (Conto corrente, Conto deposito)');
+    expect(text).toContain('tutti i conti di Banca Alfa (Conto corrente ··0001, Carta)');
     expect(section.querySelector('[data-testid="exclude-hint"]')?.textContent).toContain('Escluso');
   });
 
