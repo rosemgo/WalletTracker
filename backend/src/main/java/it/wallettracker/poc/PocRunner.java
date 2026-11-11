@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -116,6 +117,9 @@ public class PocRunner implements CommandLineRunner {
             System.out.println("Vedi 'Problemi comuni' in docs/02-fase-0-collegamento-banca.md");
         } catch (IllegalStateException e) {
             System.out.println("Errore: " + e.getMessage());
+        } catch (ResponseStatusException e) {
+            // Per esempio Enable Banking non configurato: il messaggio è già scritto per l'utente.
+            System.out.println("Errore: " + e.getReason());
         }
     }
 

@@ -7,6 +7,7 @@ import java.util.Map;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -39,7 +40,12 @@ import org.springframework.security.web.context.SecurityContextRepository;
 @Configuration
 public class SecurityConfig {
 
+    /**
+     * Solo con il server web: il programma della Fase 0 (profilo "poc", docs/02) parte senza
+     * ({@code web-application-type: none}), quindi senza {@link HttpSecurity}, e senza richieste da proteggere.
+     */
     @Bean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository,
             PinService pins) throws Exception {
         http
