@@ -827,6 +827,7 @@ export interface BankConnection {
   validUntil: string; // data e ora ISO della scadenza del consenso
   removedAt: string | null; // rimosso dall'utente: i conti restano come storia
   accounts: number;
+  accountNames: string[]; // i nomi dei conti: si rimuovono tutti insieme
 }
 
 /** L'esito di DELETE /api/connections/{id}. */

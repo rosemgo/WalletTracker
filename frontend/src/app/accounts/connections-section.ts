@@ -43,8 +43,10 @@ import { WalletApi } from '../api/wallet-api';
                   <div class="confirm" data-testid="confirm-removal">
                     <p>
                       @if (c.accounts > 0) {
-                        L'app smetterà di leggere {{ c.accounts === 1 ? 'il conto' : 'i conti' }} di
-                        {{ c.bank }} e chiuderà il consenso su Enable Banking.
+                        L'app smetterà di leggere
+                        {{ c.accounts === 1 ? 'il conto' : 'tutti i conti' }} di
+                        {{ c.bank }} (<strong>{{ c.accountNames.join(', ') }}</strong
+                        >) e chiuderà il consenso su Enable Banking.
                         <strong
                           >{{ c.accounts === 1 ? 'Il conto' : 'I conti' }} e i movimenti
                           restano</strong
@@ -56,6 +58,12 @@ import { WalletApi } from '../api/wallet-api';
                         si chiude.
                       }
                     </p>
+                    @if (c.accounts > 1) {
+                      <p class="hint" data-testid="exclude-hint">
+                        Vuoi smettere di leggere un solo conto? Non serve rimuovere il collegamento:
+                        dagli il ruolo <strong>Escluso</strong> nella tabella qui sopra.
+                      </p>
+                    }
                     <button
                       type="button"
                       class="danger"

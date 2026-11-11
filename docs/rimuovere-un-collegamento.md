@@ -49,8 +49,15 @@ Nella pagina **Conti** c'è la sezione **"Collegamenti alle banche"**: ogni coll
 stato ("valido fino al…", "consenso scaduto il…", "rimosso il…: i conti restano come storia"). Accanto a ognuno,
 **"Rimuovi collegamento"**, con una conferma che dice che cosa succederà:
 
-> L'app smetterà di leggere il conto di Banca Alfa e chiuderà il consenso su Enable Banking. **Il conto e i movimenti
-> restano** come storia. Se un giorno ricolleghi la banca, tornano gli stessi, senza doppioni.
+> L'app smetterà di leggere il conto di Banca Alfa (**Conto corrente**) e chiuderà il consenso su Enable Banking.
+> **Il conto e i movimenti restano** come storia. Se un giorno ricolleghi la banca, tornano gli stessi, senza doppioni.
+
+**Si rimuove il collegamento, non il singolo conto.** Un collegamento è il consenso dato a una banca, e può avere più
+conti (il conto corrente e il deposito di ING, le valute di Revolut): anche il consenso su Enable Banking è uno solo
+per tutti, quindi non si chiude per un conto e non per gli altri. Per questo la conferma **elenca i conti** coinvolti
+(`ConnectionDto.accountNames`) e, se sono più di uno, ricorda l'alternativa per un conto solo: il ruolo **Escluso**,
+che smette di aggiornarlo e di contarlo, tiene i suoi movimenti, e lascia gli altri conti come sono. Lo spiega anche
+una riga in cima alla pagina Conti.
 
 Dopo la rimozione:
 

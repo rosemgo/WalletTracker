@@ -35,6 +35,11 @@
   verso un conto "Investimenti" sono versamenti, quelli verso una "Carta di credito" sono saldi
   della carta. Cambiando un ruolo, tutti i movimenti vengono riclassificati.
 </p>
+<p class="hint" data-testid="excluded-role-hint">
+  <strong>Escluso</strong>: l'app smette di aggiornare quel conto e non lo conta nei totali, ma i suoi
+  movimenti restano. Serve per mettere da parte un solo conto di una banca: gli altri continuano ad
+  aggiornarsi. Per togliere tutta la banca, c'è "Rimuovi collegamento" più sotto.
+</p>
 
 @if (loading()) {
   <p>Caricamento...</p>

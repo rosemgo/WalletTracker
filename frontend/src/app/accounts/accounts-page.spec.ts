@@ -184,6 +184,7 @@ describe('AccountsPage', () => {
         validUntil: '2027-05-10T10:00:00Z',
         removedAt: null,
         accounts: 1,
+        accountNames: ['Conto corrente'],
       },
     ];
     const fixture = TestBed.createComponent(AccountsPage);
@@ -199,7 +200,9 @@ describe('AccountsPage', () => {
     expect(text()).toContain('Banca Alfa · 1 conto · valido fino al 10/05/2027');
     button('Rimuovi collegamento').click();
     await fixture.whenStable();
+    expect(text()).toContain('il conto di Banca Alfa (Conto corrente)');
     expect(text()).toContain('Il conto e i movimenti restano come storia');
+    expect(section.querySelector('[data-testid="exclude-hint"]')).toBeNull(); // un conto solo
     expect(removedConnections).toEqual([]); // prima della conferma non parte niente
 
     button('Rimuovi').click();
@@ -216,6 +219,37 @@ describe('AccountsPage', () => {
     expect(page.querySelector('table')?.textContent).toContain(
       'collegamento rimosso: storico conservato',
     );
+  });
+
+  it('with more accounts, the confirmation lists them all and points to the Excluded role', async () => {
+    connections = [
+      {
+        id: 2,
+        bank: 'Banca Alfa',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 2,
+        accountNames: ['Conto corrente', 'Conto deposito'],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[data-testid="excluded-role-hint"]')?.textContent).toContain(
+      'gli altri continuano ad aggiornarsi',
+    );
+    const section = page.querySelector('app-connections-section') as HTMLElement;
+    (
+      Array.from(section.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Rimuovi collegamento',
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+
+    const text = section.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('tutti i conti di Banca Alfa (Conto corrente, Conto deposito)');
+    expect(section.querySelector('[data-testid="exclude-hint"]')?.textContent).toContain('Escluso');
   });
 
   it('shows the balance of the bank, and lets you write the one of a manual account', async () => {

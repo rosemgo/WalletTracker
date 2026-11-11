@@ -3,6 +3,7 @@ package it.wallettracker.connection;
 import java.time.Instant;
 import java.util.List;
 
+import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import org.slf4j.Logger;
@@ -46,9 +47,14 @@ public class ConnectionRemovalService {
         this.transaction = transaction;
     }
 
-    /** Un collegamento, come lo mostra la pagina Conti. */
+    /**
+     * Un collegamento, come lo mostra la pagina Conti.
+     *
+     * @param accountNames i nomi dei suoi conti (quello scelto dall'utente, se c'è): la conferma della rimozione li
+     *                     elenca, perché si rimuovono tutti insieme
+     */
     public record ConnectionDto(Long id, String bank, String country, Instant validUntil, Instant removedAt,
-            int accounts) {
+            int accounts, List<String> accountNames) {
     }
 
     /**
@@ -64,9 +70,21 @@ public class ConnectionRemovalService {
     /** Tutti i collegamenti, per banca e dal più vecchio, con quanti conti hanno. */
     public List<ConnectionDto> connections() {
         return transaction.execute(status -> connectionRepository.findAllByOrderByAspspNameAscCreatedAtAsc().stream()
-                .map(c -> new ConnectionDto(c.getId(), c.getAspspName(), c.getAspspCountry(), c.getValidUntil(),
-                        c.getRemovedAt(), accountRepository.findByConnectionOrderByName(c).size()))
+                .map(c -> {
+                    List<Account> accounts = accountRepository.findByConnectionOrderByName(c);
+                    return new ConnectionDto(c.getId(), c.getAspspName(), c.getAspspCountry(), c.getValidUntil(),
+                            c.getRemovedAt(), accounts.size(), accounts.stream().map(
+                                    ConnectionRemovalService::nameOf).toList());
+                })
                 .toList());
+    }
+
+    /** Il nome di un conto in un elenco della stessa banca: quello scelto dall'utente, o quello della banca. */
+    private static String nameOf(Account account) {
+        if (account.getDisplayName() != null) {
+            return account.getDisplayName();
+        }
+        return account.getName() != null ? account.getName() : account.label();
     }
 
     /**
