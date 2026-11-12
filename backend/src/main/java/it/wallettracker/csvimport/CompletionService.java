@@ -104,14 +104,18 @@ public class CompletionService {
      * @param toAdd          le righe più vecchie dello storico della banca, da aggiungere, con la loro impronta
      * @param withoutMovement le righe senza movimento che non si aggiungono (recenti, o nel periodo della banca)
      */
-    private record Plan(Account account, TradeRepublicCsv.Reading reading, LocalDate from, LocalDate to,
+    record Plan(Account account, TradeRepublicCsv.Reading reading, LocalDate from, LocalDate to,
             LocalDate bankFrom, Map<Long, BankTransaction> movements, Matching matching, int alreadyAdded,
             Map<TradeRepublicCsv.Row, String> toAdd, List<TradeRepublicCsv.Row> withoutMovement) {
     }
 
     @Transactional(readOnly = true)
     public CompletionPreview preview(byte[] content, Long accountId) {
-        Plan plan = plan(content, accountId);
+        return preview(plan(content, accountId));
+    }
+
+    /** L'anteprima di un piano già fatto (anche dalla pagina Importa: CsvImportService). */
+    CompletionPreview preview(Plan plan) {
         List<Completion> toComplete = new ArrayList<>();
         int alreadyComplete = plan.alreadyAdded();
         for (Map.Entry<TradeRepublicCsv.Row, Long> pair : plan.matching().pairs().entrySet()) {
@@ -148,7 +152,11 @@ public class CompletionService {
      */
     @Transactional
     public CompletionResult complete(byte[] content, Long accountId) {
-        Plan plan = plan(content, accountId);
+        return complete(plan(content, accountId));
+    }
+
+    /** Esegue un piano già fatto (anche dalla pagina Importa: CsvImportService), dentro la sua transazione. */
+    CompletionResult complete(Plan plan) {
         int completed = 0;
         int alreadyComplete = plan.alreadyAdded();
         for (Map.Entry<TradeRepublicCsv.Row, Long> pair : plan.matching().pairs().entrySet()) {
@@ -188,7 +196,15 @@ public class CompletionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Questa pagina è per i conti Trade Republic: "
                     + "è l'unica banca che manda i movimenti senza causale, e il file che legge è il suo.");
         }
-        TradeRepublicCsv.Reading reading = read(content);
+        return plan(account, read(content));
+    }
+
+    /**
+     * Il piano per un conto collegato e un file già letto, senza altri controlli: lo usa anche la pagina Importa
+     * (CsvImportService), che il file di Trade Republic lo riconosce dalle colonne, anche in Excel. Il file deve avere
+     * almeno una riga di denaro.
+     */
+    Plan plan(Account account, TradeRepublicCsv.Reading reading) {
         LocalDate from = reading.rows().stream().map(TradeRepublicCsv.Row::date).min(LocalDate::compareTo).orElseThrow();
         LocalDate to = reading.rows().stream().map(TradeRepublicCsv.Row::date).max(LocalDate::compareTo).orElseThrow();
 

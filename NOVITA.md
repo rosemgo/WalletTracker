@@ -25,6 +25,8 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   transazioni di Trade Republic e la legge da sola, senza scegliere le colonne. Le operazioni sui titoli (azioni
   trasferite, diritti di un aumento di capitale), che non muovono denaro, si saltano invece di dare "manca l'importo";
   gli importi sono quelli che vedi sul conto, con tasse e commissioni (gli interessi netti, il bollo con il suo importo).
+  In un conto Trade Republic **collegato** completa anche controparte e causale dei movimenti arrivati dalla banca
+  senza testo, come "Completa i movimenti": basta un caricamento.
 - **Gli avvisi si chiudono**: ogni avviso (Riepilogo, Investimenti, strisce in cima) ha una crocetta. Chiuso, resta
   chiuso su quel dispositivo finché la situazione non cambia: un budget superato in più, un altro conto, un altro
   problema dei backup lo fanno ricomparire.

@@ -212,6 +212,7 @@ collegato:
 - l'impronta usa il `transaction_id` di Trade Republic: `csv:tr:<id>` in un conto manuale, `trcsv:<id>` in un conto
   collegato. Quest'ultima è la stessa di "Completa i movimenti" (`CompletionService.fileKeys`): caricare il file da una
   pagina e poi dall'altra non fa doppioni;
+- in un conto collegato fa anche quello che fa "Completa i movimenti": parte I;
 - gli errori riportano la riga del file, come prima;
 - una data `01/07/2026` si legge anche: è come la scrive `SpreadsheetReader` se il CSV è stato aperto con Excel e
   salvato come `.xlsx`.
@@ -228,3 +229,40 @@ nel repository): 85 movimenti, 7 operazioni sui titoli saltate, nessun errore.
 
 **Il limite.** Le operazioni sui titoli non diventano movimenti: non muovono denaro, e i movimenti del conto sono
 solo denaro.
+
+## Parte I: il file di Trade Republic in un conto collegato completa anche le causali
+
+**La domanda vera.** Caricato in Importa il file di Trade Republic su un conto collegato, in Movimenti restavano
+movimenti "(nessuna descrizione)". Erano quelli arrivati dalla banca: Trade Republic, con Enable Banking, manda solo
+data e importo. Importa aggiungeva solo i mesi più vecchi della banca e **saltava** le righe del periodo della banca,
+senza toccare i movimenti corrispondenti. Per dar loro causale e controparte bisognava caricare lo stesso file anche in
+"Completa i movimenti" (`docs/31`). Due pagine per lo stesso file, con risultati diversi.
+
+**La soluzione.** Con il file di Trade Republic in un conto **collegato**, `CsvImportService` usa il piano di
+`CompletionService`, lo stesso di "Completa i movimenti":
+
+- le righe che corrispondono a un movimento della banca (stesso importo e valuta, al massimo 3 giorni) gli danno
+  **controparte e causale**; data, importo e i testi che la banca avesse già mandato non cambiano;
+- le righe più vecchie della banca (con il margine dei 3 giorni) diventano movimenti, con l'impronta
+  `trcsv:<transaction_id>`;
+- le righe già fatte (aggiunte o completate prima) si contano e basta;
+- le righe del periodo della banca senza un movimento non si aggiungono: si dice quante sono.
+
+`CompletionService` ora ha `plan(Account, TradeRepublicCsv.Reading)`, `preview(Plan)` e `complete(Plan)`, usati dalle
+due pagine. La pagina "Completa i movimenti" resta: mostra anche le anomalie (righe senza movimento, movimenti senza
+riga) una per una. Un conto collegato senza movimenti della banca aspetta, come per gli altri file.
+
+**L'anteprima** ha un campo in più, `completeRows` (i movimenti che ricevono i testi). Il riepilogo: "Il file ha 92
+righe: nessun movimento più vecchio del 9 luglio 2026 da aggiungere; 4 movimenti arrivati dalla banca ricevono
+controparte e causale; 81 erano già fatte; 7 sono operazioni sui titoli senza denaro, che si saltano." Il pulsante dice
+"Completa 4 movimenti" (o "Aggiungi 3 e completa 4 movimenti"), le righe mostrate sono quelle che cambiano.
+
+**Le prove.** `CsvImportControllerTest`: un conto collegato con un movimento della banca senza testo; l'anteprima conta
+righe aggiunte, completate e senza movimento; l'importazione completa il movimento (importo invariato) e aggiunge le
+righe vecchie; ricaricando, tutto già fatto; senza movimenti della banca si aspetta. `import-page.spec.ts`: riepilogo,
+pulsante e messaggio finale. Il file vero (92 righe) con un conto simulato come quello reale (banca dal 9 luglio, tutto
+completato tranne gli ultimi 4 movimenti): 4 da completare, 81 già fatte, nessuna da aggiungere, come "Completa i
+movimenti".
+
+**Il limite che resta.** Ogni movimento nuovo di Trade Republic arriva dalla banca senza testo: per completarlo va
+ricaricato il file, da Importa o da Completa.

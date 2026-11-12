@@ -30,11 +30,15 @@ public final class ImportDtos {
      * @param tradeRepublic true se il file è l'esportazione delle transazioni di Trade Republic: si legge da solo,
      *                      senza mappatura, con gli importi netti
      * @param skippedRows   le righe che non muovono denaro (operazioni sui titoli di Trade Republic), che si saltano
+     * @param completeRows  il file di Trade Republic in un conto collegato: i movimenti arrivati dalla banca senza
+     *                      testo che ricevono controparte e causale (come "Completa i movimenti", docs/31). Con un
+     *                      conto collegato e quel file, duplicateRows sono le righe già fatte e coveredRows quelle del
+     *                      periodo della banca senza un movimento
      */
     public record Preview(List<String> headers, List<List<String>> sampleRows, int totalRows, ImportMapping mapping,
             List<PreviewRow> parsedRows, int errorCount, List<String> errors, boolean spreadsheet,
             boolean linkedAccount, LocalDate bankFrom, int newRows, int duplicateRows, int coveredRows,
-            boolean tradeRepublic, int skippedRows) {
+            boolean tradeRepublic, int skippedRows, int completeRows) {
     }
 
     /** Una riga letta, da mostrare nell'anteprima. */
