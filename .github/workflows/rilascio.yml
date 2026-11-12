@@ -96,7 +96,7 @@ jobs:
 
       # buildx: il costruttore di Docker che sa fare immagini per più processori in una volta.
       - name: Costruttore di immagini
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Accesso a GitHub Container Registry
         if: steps.versione.outputs.pubblica == 'true'
