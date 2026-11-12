@@ -406,6 +406,36 @@ describe('Investments', () => {
     expect(warning?.querySelector('a')?.getAttribute('href')).toBe('/importa');
   });
 
+  it('the warning about the accounts with only transfers can be closed, until another account appears', async () => {
+    answer = (period) => ({ ...investments(period), onlyTransfers: ['Fondo Beta · PAC'] });
+    const first = await page();
+    (first.page.querySelector('.only-transfers button') as HTMLButtonElement).click();
+    await first.fixture.whenStable();
+    expect(first.page.querySelector('.only-transfers')).toBeNull();
+
+    // Riaperta la pagina, resta chiuso (lo ricorda il browser).
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: WalletApi,
+          useValue: { accounts: () => of([]), investments: (p: InvestmentPeriod) => of(answer(p)) },
+        },
+        { provide: LOCALE_ID, useValue: 'it-IT' },
+      ],
+    });
+    expect((await page()).page.querySelector('.only-transfers')).toBeNull();
+
+    // Un conto in più: è un avviso nuovo, e ricompare.
+    answer = (period) => ({
+      ...investments(period),
+      onlyTransfers: ['Broker Gamma', 'Fondo Beta · PAC'],
+    });
+    const again = await page();
+    expect(again.page.querySelector('.only-transfers')?.textContent).toContain('Broker Gamma');
+  });
+
   it('the period buttons ask again; scrolling the line shows that month', async () => {
     const { fixture, page: p } = await page();
     const button = (label: string) =>

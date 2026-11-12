@@ -25,6 +25,12 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   transazioni di Trade Republic e la legge da sola, senza scegliere le colonne. Le operazioni sui titoli (azioni
   trasferite, diritti di un aumento di capitale), che non muovono denaro, si saltano invece di dare "manca l'importo";
   gli importi sono quelli che vedi sul conto, con tasse e commissioni (gli interessi netti, il bollo con il suo importo).
+- **Gli avvisi si chiudono**: ogni avviso (Riepilogo, Investimenti, strisce in cima) ha una crocetta. Chiuso, resta
+  chiuso su quel dispositivo finché la situazione non cambia: un budget superato in più, un altro conto, un altro
+  problema dei backup lo fanno ricomparire.
+- **Niente più avviso "si vedono solo i bonifici" per un dossier che riceve cedole o dividendi**: succedeva con un conto
+  titoli in cui i titoli sono arrivati da un altro tuo conto, senza acquisti propri. Ora l'avviso compare solo per un
+  conto di cui si vedono davvero soltanto i bonifici.
 - **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
   le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
 

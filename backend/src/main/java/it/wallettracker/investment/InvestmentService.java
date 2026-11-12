@@ -144,13 +144,19 @@ public class InvestmentService {
     }
 
     /**
-     * I conti di investimento con dei bonifici (versamenti o prelievi) ma, in tutta la storia, nessun acquisto né
-     * vendita di titoli: per loro l'investito non si vede, e la pagina lo dice. Succede con un broker di cui si è
-     * creato il conto ma non si importano i movimenti. In ordine di nome.
+     * I conti di investimento con dei bonifici (versamenti o prelievi) e, in tutta la storia, <b>niente che riguardi
+     * dei titoli</b>: né acquisti o vendite, né rendite, ritenute o tasse sugli investimenti. Per loro l'investito non
+     * si vede, e la pagina lo dice. Succede con un broker di cui si è creato il conto (per riconoscere i bonifici) ma
+     * non si importano i movimenti. In ordine di nome.
+     *
+     * <p>Rendite e tasse contano come segno che i movimenti del conto ci sono: un dossier che riceve i titoli da un
+     * altro tuo conto (il giro titoli, docs/investimenti.md parte W) non ha mai acquisti, ma ha cedole, dividendi e
+     * bollo. I titoli li hai comprati sull'altro conto, e sono già nell'investito: l'avviso sarebbe falso
+     * (docs/investimenti.md, parte X).
      */
     static List<String> onlyTransfers(List<BankTransaction> transactions) {
         Map<Long, String> withTransfers = new TreeMap<>();
-        Set<Long> withTrades = new HashSet<>();
+        Set<Long> withSecurities = new HashSet<>();
         for (BankTransaction t : transactions) {
             if (t.getAccount().getRole() != AccountRole.INVESTMENT) {
                 continue;
@@ -158,13 +164,14 @@ public class InvestmentService {
             switch (t.getType()) {
                 case INVESTMENT_DEPOSIT, INVESTMENT_WITHDRAWAL -> withTransfers.put(t.getAccount().getId(),
                         t.getAccount().label());
-                case SECURITIES_BUY, SECURITIES_SELL -> withTrades.add(t.getAccount().getId());
+                case SECURITIES_BUY, SECURITIES_SELL, INVESTMENT_INCOME, WITHHOLDING_TAX, INVESTMENT_TAX ->
+                        withSecurities.add(t.getAccount().getId());
                 default -> {
-                    // rendite e tasse: non dicono niente sugli acquisti
+                    // spese, entrate, trasferimenti interni: non dicono niente sui titoli
                 }
             }
         }
-        withTrades.forEach(withTransfers::remove);
+        withSecurities.forEach(withTransfers::remove);
         return withTransfers.values().stream().sorted().toList();
     }
 

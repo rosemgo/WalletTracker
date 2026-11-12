@@ -17,6 +17,8 @@ import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { ReadablePipe } from '../text/readable';
 import { merchantSearch } from '../transactions/merchant-search';
+import { CloseButton } from '../ui/close-button';
+import { DismissedNotices } from '../ui/dismissed-notices';
 import { InvestmentMovements } from './investment-movements';
 import { TrendChart } from './trend-chart';
 
@@ -49,6 +51,11 @@ const PERIODS: { value: InvestmentPeriod; label: string }[] = [
 /** Gli elenchi della colonna "Cedole, dividendi e interessi" e della liquidità (docs/investimenti.md, parte I). */
 export type RowList = 'type' | 'source' | 'taxes' | 'cash';
 
+/** La chiave dell'avviso "si vedono solo i bonifici", per ricordarlo chiuso (DismissedNotices). */
+export function onlyTransfersKey(accounts: string[]): string {
+  return `only-transfers:${[...accounts].sort().join('|')}`;
+}
+
 /** Quante righe si vedono di un elenco lungo, prima di "Mostra tutti". */
 export const FIRST_ROWS = 5;
 
@@ -59,6 +66,7 @@ export const SHORTEN_FROM = 8;
   selector: 'app-investments-page',
   imports: [
     BarChart,
+    CloseButton,
     DatePipe,
     InvestmentMovements,
     MoneyPipe,
@@ -72,6 +80,7 @@ export class InvestmentsPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly locale = inject(LOCALE_ID);
   private readonly privacy = inject(PrivacyStore);
+  private readonly dismissed = inject(DismissedNotices);
 
   protected readonly periods = PERIODS;
   protected readonly unmatched = UNMATCHED_WITHHOLDING;
@@ -94,6 +103,21 @@ export class InvestmentsPage implements OnInit {
   });
 
   private lastRequest = 0;
+
+  /**
+   * I conti di cui si vedono solo i bonifici (parte I), se l'avviso non è stato chiuso. La chiave dell'avviso sono i
+   * nomi dei conti: chiuso per un conto, ricompare se se ne aggiunge un altro.
+   */
+  protected readonly onlyTransfers = computed(() => {
+    const accounts = this.data()?.onlyTransfers ?? [];
+    return accounts.length > 0 && !this.dismissed.isDismissed(onlyTransfersKey(accounts))
+      ? accounts
+      : [];
+  });
+
+  protected closeOnlyTransfers(): void {
+    this.dismissed.dismiss(onlyTransfersKey(this.data()?.onlyTransfers ?? []));
+  }
 
   /** Niente di niente in tutta la storia: né acquisti, né bonifici, né rendite. La pagina spiega come farli riconoscere. */
   protected readonly empty = computed(() => {

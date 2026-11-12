@@ -1220,3 +1220,35 @@ B), andrà tolta per mese, riportandola al mese a cui si riferisce. La nota sott
   - il netto delle rendite non cambia (561 €);
   - PC e telefono, tema scuro, nessun errore nella console, nessuna pagina più larga dello schermo.
 
+
+---
+
+## Parte X: l'avviso "si vedono solo i bonifici" su un dossier che ha ricevuto i titoli
+
+**Il caso vero.** In Investimenti compariva "Per FinecoBank ··3288 si vedono solo i bonifici, nessun acquisto", anche
+dopo aver importato tutti i movimenti del conto. L'esportazione di Fineco lo conferma: due anni di movimenti, dal 25
+marzo 2026 (il primo giorno del conto), e **nessuna "Compravendita Titoli"**. Ci sono invece:
+
+- sei accrediti "Ritenuta Fiscale … Qta/Val.nom." il 25 marzo: i titoli **arrivati dall'altro conto Fineco** con il giro
+  titoli (parte W), trasferimenti interni;
+- cedole, dividendi e interessi con le loro ritenute, e il bollo del dossier;
+- bonifici "Trasferimento a mio conto" verso il conto corrente: da un conto di investimento a uno che non lo è, quindi
+  **prelievi** (`ClassificationService.transferType`).
+
+I titoli sono stati comprati sull'altro conto, e quegli acquisti sono già nell'investito. L'avviso (parte I) guardava
+solo bonifici e acquisti: prelievi sì, acquisti no, quindi avviso. Era falso.
+
+**La correzione** (`InvestmentService.onlyTransfers`). L'avviso serve per un broker di cui hai creato il conto ma non
+importi i movimenti: di quel conto si vedono **solo** i bonifici, nient'altro. Ora un conto esce dall'avviso con
+qualunque movimento che riguarda dei titoli: acquisti e vendite, ma anche **rendite** (`INVESTMENT_INCOME`),
+**ritenute** (`WITHHOLDING_TAX`) e **tasse sugli investimenti** (`INVESTMENT_TAX`, come il bollo del dossier). Se un
+conto riceve cedole o paga il bollo, i suoi movimenti ci sono.
+
+**Il limite.** Un broker di cui importi solo cedole e bonifici, senza gli acquisti, non ha più l'avviso. È un caso
+strano (chi importa i movimenti di solito li importa tutti), e l'investito mancante si vede comunque: "Acquistato" non
+comprende quel conto.
+
+**L'avviso ora si chiude**, come gli altri: `docs/avvisi-chiudibili.md`.
+
+**Le prove.** `InvestmentServiceTest`: un dossier come il ··3288 (giro titoli, cedola, ritenuta, prelievo) e uno con
+solo bollo e prelievo non hanno l'avviso; il fondo con il solo versamento sì.

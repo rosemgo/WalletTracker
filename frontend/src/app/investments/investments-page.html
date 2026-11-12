@@ -54,14 +54,18 @@
         }
       </div>
 
-      @if (d.onlyTransfers.length > 0) {
-        <!-- Conti di cui si vedono i bonifici ma nessun acquisto: il loro investito manca (parte I). -->
-        <section class="card warning only-transfers">
+      @if (onlyTransfers().length > 0) {
+        <!-- Conti di cui si vedono i bonifici ma nessun acquisto: il loro investito manca (parte I). Si chiude. -->
+        <section class="card warning only-transfers dismissible">
           <p>
-            Per <strong>{{ d.onlyTransfers.join(', ') }}</strong> si vedono solo i bonifici, nessun
+            Per <strong>{{ onlyTransfers().join(', ') }}</strong> si vedono solo i bonifici, nessun
             acquisto: quello che hai comprato lì non è nell'investito. Importa i movimenti del conto
             in <a routerLink="/importa">Importa</a> per vederlo.
           </p>
+          <app-close-button
+            label="Chiudi l'avviso sui conti senza acquisti"
+            (closed)="closeOnlyTransfers()"
+          />
         </section>
       }
 
