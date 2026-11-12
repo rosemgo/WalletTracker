@@ -100,7 +100,7 @@ jobs:
 
       - name: Accesso a GitHub Container Registry
         if: steps.versione.outputs.pubblica == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
