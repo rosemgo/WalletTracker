@@ -397,6 +397,82 @@ class CsvImportControllerTest {
                 .containsExactlyInAnyOrder(new BigDecimal("3.95"), new BigDecimal("-3.95"), new BigDecimal("-1"));
     }
 
+    /**
+     * Una mappatura qualsiasi, come quella che il browser rimanda: con il file di Trade Republic non conta. Letta con
+     * questa, la riga dell'operazione sui titoli (importo vuoto) sarebbe un errore.
+     */
+    private static final String TRADE_REPUBLIC_MAPPING = """
+            {"delimiter": ",", "dateColumn": 1, "dateFormat": "yyyy-MM-dd", "amountMode": "SINGLE",
+             "amountColumn": 10, "decimalSeparator": "DOT", "descriptionColumn": 17}
+            """;
+
+    @Test
+    void theTradeRepublicFileIsRecognizedAndReadWithNetAmounts() {
+        Account account = manualAccount();
+
+        assertThat(preview(account, TradeRepublicCsvTest.CSV, null))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.tradeRepublic").isEqualTo(true);
+                    json.assertThat().extractingPath("$.errorCount").isEqualTo(0);
+                    json.assertThat().extractingPath("$.skippedRows").isEqualTo(1); // l'operazione sui titoli
+                    json.assertThat().extractingPath("$.newRows").isEqualTo(5);
+                    json.assertThat().extractingPath("$.parsedRows[0].amount").isEqualTo(7.40); // 10,00 - 2,60
+                    json.assertThat().extractingPath("$.parsedRows[2].amount").isEqualTo(-34.20); // il bollo
+                    json.assertThat().extractingPath("$.parsedRows[1].counterparty").isEqualTo("Mario Rossi");
+                });
+
+        assertThat(importCsv(account, TradeRepublicCsvTest.CSV, TRADE_REPUBLIC_MAPPING))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.imported").isEqualTo(5);
+        Map<String, BankTransaction> saved = transactionRepository.findAll().stream()
+                .collect(Collectors.toMap(BankTransaction::getDedupKey, t -> t));
+        assertThat(saved).containsOnlyKeys("csv:tr:id-1", "csv:tr:id-2", "csv:tr:id-3", "csv:tr:id-4", "csv:tr:id-5");
+        BankTransaction dividend = saved.get("csv:tr:id-4");
+        assertThat(dividend.getAmount()).isEqualByComparingTo("148.00");
+        assertThat(dividend.getCounterparty()).isEqualTo("Alfa SpA");
+        assertThat(dividend.getDescription()).isEqualTo("Cash Dividend for ISIN IT0000000001");
+        assertThat(dividend.getRawJson()).contains("\"tax\": \"-52.00\"").contains("\"symbol\": \"IT0000000001\"");
+
+        // Ricaricando lo stesso file non si aggiunge niente.
+        assertThat(importCsv(account, TradeRepublicCsvTest.CSV, TRADE_REPUBLIC_MAPPING))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.imported").isEqualTo(0);
+                    json.assertThat().extractingPath("$.duplicates").isEqualTo(5);
+                });
+    }
+
+    @Test
+    void theTradeRepublicFileInALinkedAccountHasTheKeysOfCompleteTheMovements() {
+        // La banca porta i movimenti dal 1° luglio: dal file si aggiungono i quattro di maggio e giugno, con
+        // l'impronta trcsv:<transaction_id>, la stessa di "Completa i movimenti".
+        Account bank = linkedAccount();
+        bankMovement(bank, "bank-1", "2026-07-01", "7.40", null);
+
+        assertThat(importCsv(bank, TradeRepublicCsvTest.LONG_CSV, TRADE_REPUBLIC_MAPPING))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.imported").isEqualTo(4);
+                    json.assertThat().extractingPath("$.covered").isEqualTo(5);
+                });
+        assertThat(transactionRepository.findAll()).extracting(BankTransaction::getDedupKey)
+                .containsExactlyInAnyOrder("bank-1", "trcsv:id-10", "trcsv:id-11", "trcsv:id-12", "trcsv:id-13");
+    }
+
+    @Test
+    void wrongCellsOfTheTradeRepublicFileAreReportedWithTheirLine() {
+        String broken = TradeRepublicCsvTest.CSV.replace("\"10.000000\"", "\"dieci\"");
+
+        assertThat(importCsv(manualAccount(), broken, TRADE_REPUBLIC_MAPPING))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.errors[0]").isEqualTo("Riga 2: amount \"dieci\" non è un numero.");
+        assertThat(transactionRepository.count()).isZero();
+    }
+
     @Test
     void anOldExcelFileIsRefusedWithAHint() {
         Account account = manualAccount();

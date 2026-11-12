@@ -21,6 +21,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   consenso su Enable Banking e smette di leggere quei conti, ma **i conti e i movimenti restano**. Se un giorno ricolleghi
   la banca, ritrovi gli stessi conti, senza movimenti doppi. I collegamenti senza conti (i tentativi con una banca non
   ancora nella lista di Enable Banking) invece si cancellano.
+- **Il file di Trade Republic si importa in qualunque conto**: la pagina Importa riconosce l'esportazione delle
+  transazioni di Trade Republic e la legge da sola, senza scegliere le colonne. Le operazioni sui titoli (azioni
+  trasferite, diritti di un aumento di capitale), che non muovono denaro, si saltano invece di dare "manca l'importo";
+  gli importi sono quelli che vedi sul conto, con tasse e commissioni (gli interessi netti, il bollo con il suo importo).
 - **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
   le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
 

@@ -50,6 +50,10 @@ import tools.jackson.databind.json.JsonMapper;
  *       farebbe doppioni.</li>
  * </ul>
  * Il file non viene conservato sul server: il browser lo rimanda nella seconda richiesta.
+ *
+ * <p><b>Il file di Trade Republic</b> (l'esportazione delle transazioni) si riconosce dalle colonne e si legge con
+ * {@link TradeRepublicCsv}, non con la mappatura: le righe dei titoli senza denaro si saltano e l'importo è quello
+ * netto ({@code amount + fee + tax}), come sul conto (docs/importa-file.md, parte H).
  */
 @Service
 public class CsvImportService {
@@ -79,9 +83,10 @@ public class CsvImportService {
      *
      * @param headerLine  il numero della riga dell'intestazione nel file (1 = la prima): per i messaggi d'errore
      * @param spreadsheet true per un file Excel (le date e i numeri hanno già un formato fisso)
+     * @param tradeRepublic true per l'esportazione delle transazioni di Trade Republic: si legge senza mappatura
      */
     private record CsvFile(char delimiter, List<String> headers, List<List<String>> rows, int headerLine,
-            boolean spreadsheet) {
+            boolean spreadsheet, boolean tradeRepublic) {
     }
 
     /**
@@ -97,8 +102,15 @@ public class CsvImportService {
             Map<String, ParsedRow> toComplete) {
     }
 
-    /** Il risultato della lettura di tutte le righe con una mappatura. */
-    private record Reading(List<ParsedRow> parsed, List<List<String>> rawRows, int errorCount, List<String> errors) {
+    /**
+     * Il risultato della lettura di tutte le righe.
+     *
+     * @param fileIds per ogni riga letta, l'identificativo dell'operazione nel file (il {@code transaction_id} di
+     *                Trade Republic), o null: se c'è, l'impronta si fa con quello (vedi {@link #keyFor})
+     * @param skipped le righe saltate perché non muovono denaro (le operazioni sui titoli di Trade Republic)
+     */
+    private record Reading(List<ParsedRow> parsed, List<List<String>> rawRows, int errorCount, List<String> errors,
+            List<String> fileIds, int skipped) {
     }
 
     /** L'anteprima, per il conto scelto. Senza mappatura ne propone una (ColumnGuesser). */
@@ -119,7 +131,7 @@ public class CsvImportService {
             reading = readRows(file, used, account.getCurrency());
         } catch (ResponseStatusException e) {
             return new Preview(file.headers(), samples, file.rows().size(), used, List.of(), file.rows().size(),
-                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0);
+                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0);
         }
         // Le righe mostrate: quelle che si aggiungerebbero (le prime). Se non se ne aggiunge nessuna (o il file ha
         // errori), le prime del file, così si vede almeno come si leggono.
@@ -141,7 +153,8 @@ public class CsvImportService {
                 .map(r -> new PreviewRow(r.date(), r.amount(), r.currency(), r.fullDescription(), r.counterparty()))
                 .toList();
         return new Preview(file.headers(), samples, file.rows().size(), used, parsedRows, reading.errorCount(),
-                reading.errors(), file.spreadsheet(), linked, bankFrom, toAdd, duplicates, covered);
+                reading.errors(), file.spreadsheet(), linked, bankFrom, toAdd, duplicates, covered,
+                file.tradeRepublic(), reading.skipped());
     }
 
     /**
@@ -226,7 +239,7 @@ public class CsvImportService {
         int covered = 0;
         for (int i = 0; i < reading.parsed().size(); i++) {
             ParsedRow row = reading.parsed().get(i);
-            String key = linked ? fileKey(row, occurrences) : dedupKey(row, occurrences);
+            String key = keyFor(row, reading.fileIds().get(i), linked, occurrences);
             if (existing.contains(key)) {
                 duplicates++;
                 if (row.detail() != null) {
@@ -300,7 +313,9 @@ public class CsvImportService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Il file ha troppe righe: al massimo " + MAX_ROWS + ".");
         }
-        return new CsvFile(delimiter, all.get(header), all.subList(header + 1, all.size()), header + 1, spreadsheet);
+        List<String> headers = all.get(header);
+        return new CsvFile(delimiter, headers, all.subList(header + 1, all.size()), header + 1, spreadsheet,
+                TradeRepublicCsv.recognizes(headers));
     }
 
     /**
@@ -308,15 +323,20 @@ public class CsvImportService {
      * quelle non vuote). Per un file Excel è la riga del foglio se non ci sono righe vuote in mezzo.
      */
     private static Reading readRows(CsvFile file, ImportMapping mapping, String currency) {
+        if (file.tradeRepublic()) {
+            return readTradeRepublic(file);
+        }
         checkColumns(mapping, file.headers().size());
         List<ParsedRow> parsed = new ArrayList<>();
         List<List<String>> rawRows = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+        List<String> fileIds = new ArrayList<>();
         int errorCount = 0;
         for (int i = 0; i < file.rows().size(); i++) {
             try {
                 parsed.add(RowReader.read(file.rows().get(i), mapping, currency));
                 rawRows.add(file.rows().get(i));
+                fileIds.add(null);
             } catch (RowException e) {
                 errorCount++;
                 if (errors.size() < MAX_ERRORS) {
@@ -324,7 +344,27 @@ public class CsvImportService {
                 }
             }
         }
-        return new Reading(parsed, rawRows, errorCount, errors);
+        return new Reading(parsed, rawRows, errorCount, errors, fileIds, 0);
+    }
+
+    /**
+     * Il file di Trade Republic, senza mappatura (TradeRepublicCsv): solo le righe che muovono denaro, con l'importo
+     * netto, la causale ({@code description}) e la controparte (chi manda o riceve il bonifico; per dividendi e
+     * acquisti, il titolo). Le operazioni sui titoli senza denaro (azioni trasferite, diritti) si contano e si saltano.
+     */
+    private static Reading readTradeRepublic(CsvFile file) {
+        TradeRepublicCsv.Reading read = TradeRepublicCsv.read(file.headers(), file.rows(), file.headerLine());
+        List<ParsedRow> parsed = new ArrayList<>();
+        List<List<String>> rawRows = new ArrayList<>();
+        List<String> fileIds = new ArrayList<>();
+        for (TradeRepublicCsv.Row row : read.rows()) {
+            parsed.add(new ParsedRow(row.date(), row.amount(), row.currency(), row.description(), row.counterparty(),
+                    null));
+            rawRows.add(file.rows().get(row.line() - file.headerLine() - 1));
+            fileIds.add(row.transactionId());
+        }
+        List<String> errors = read.errors().subList(0, Math.min(read.errors().size(), MAX_ERRORS));
+        return new Reading(parsed, rawRows, read.errors().size(), errors, fileIds, read.skipped());
     }
 
     /** Le colonne indispensabili devono essere indicate, e ogni colonna indicata deve esistere nel file. */
@@ -369,6 +409,23 @@ public class CsvImportService {
             }
         }
     }
+
+    /**
+     * L'impronta di una riga. Se il file dà un identificativo dell'operazione (il {@code transaction_id} di Trade
+     * Republic, unico per ogni operazione) si usa quello: in un conto collegato {@code trcsv:<id>}, la stessa impronta
+     * che dà "Completa i movimenti" (CompletionService.fileKeys), così caricare il file da una pagina o dall'altra
+     * non fa doppioni; in un conto manuale {@code csv:tr:<id>}. Senza identificativo, {@link #fileKey} o
+     * {@link #dedupKey}.
+     */
+    static String keyFor(ParsedRow row, String fileId, boolean linked, Map<String, Integer> occurrences) {
+        if (fileId != null) {
+            return (linked ? BankTransaction.FILE_KEY_PREFIX : MANUAL_TRADE_REPUBLIC_PREFIX) + fileId;
+        }
+        return linked ? fileKey(row, occurrences) : dedupKey(row, occurrences);
+    }
+
+    /** Il prefisso dell'impronta di una riga di Trade Republic importata in un conto manuale. */
+    static final String MANUAL_TRADE_REPUBLIC_PREFIX = "csv:tr:";
 
     /**
      * L'impronta di una riga, per non importarla due volte. È un hash SHA-256 di data, importo, valuta, testi

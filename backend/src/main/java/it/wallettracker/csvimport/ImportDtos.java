@@ -27,10 +27,14 @@ public final class ImportDtos {
      * @param newRows       le righe che verranno aggiunte
      * @param duplicateRows le righe già aggiunte da un'importazione precedente, che si saltano
      * @param coveredRows   con un conto collegato, le righe del periodo che la banca porta da sé, che si saltano
+     * @param tradeRepublic true se il file è l'esportazione delle transazioni di Trade Republic: si legge da solo,
+     *                      senza mappatura, con gli importi netti
+     * @param skippedRows   le righe che non muovono denaro (operazioni sui titoli di Trade Republic), che si saltano
      */
     public record Preview(List<String> headers, List<List<String>> sampleRows, int totalRows, ImportMapping mapping,
             List<PreviewRow> parsedRows, int errorCount, List<String> errors, boolean spreadsheet,
-            boolean linkedAccount, LocalDate bankFrom, int newRows, int duplicateRows, int coveredRows) {
+            boolean linkedAccount, LocalDate bankFrom, int newRows, int duplicateRows, int coveredRows,
+            boolean tradeRepublic, int skippedRows) {
     }
 
     /** Una riga letta, da mostrare nell'anteprima. */
