@@ -6,6 +6,34 @@
   correggi. Che cosa viene aggiunto dipende dal conto che scegli: lo vedi qui sotto prima di
   caricare il file.
 </p>
+<!-- Trade Republic: come esportare il file e che cosa succede (docs/importa-file.md, parte J). Prima era la pagina
+     "Completa i movimenti". -->
+<details class="hint" data-testid="trade-republic-guide">
+  <summary>Trade Republic: esportazione delle transazioni</summary>
+  <p>
+    L'esportazione delle transazioni di Trade Republic viene riconosciuta automaticamente: non
+    occorre impostare le colonne.
+  </p>
+  <ul>
+    <li>
+      <strong>In ogni caso</strong> vengono caricati i movimenti non ancora presenti: in un conto
+      manuale tutti, in un conto collegato quelli precedenti allo storico trasmesso dalla banca.
+    </li>
+    <li>
+      <strong>Se il conto è collegato</strong>, i movimenti già ricevuti dalla banca vengono
+      completati con causale e controparte: tramite il collegamento Trade Republic trasmette
+      soltanto data e importo.
+    </li>
+  </ul>
+  <p>Per ottenere il file:</p>
+  <ol>
+    <li>
+      nell'app di Trade Republic (o su app.traderepublic.com) apri il profilo, poi i documenti;
+    </li>
+    <li>scegli «Esportazione transazioni», il periodo e il formato CSV;</li>
+    <li>carica il file così com'è, senza modificarlo.</li>
+  </ol>
+</details>
 
 @if (error()) {
   <p class="error">{{ error() }}</p>
@@ -87,7 +115,25 @@
       </label>
       <!-- Che cosa farà l'importazione con questo conto: si legge prima di scegliere il file. -->
       <div class="import-mode wide" data-testid="import-mode">
-        @if (linked()) {
+        @if (selectedIsTradeRepublic()) {
+          <!-- Un conto Trade Republic collegato: il suo file completa i movimenti e carica quelli più vecchi. -->
+          <p data-testid="trade-republic-hint">
+            <strong>Conto Trade Republic collegato.</strong> Tramite il collegamento Trade Republic
+            trasmette soltanto data e importo dei movimenti. Caricando l'esportazione delle
+            transazioni:
+          </p>
+          <ul data-testid="trade-republic-linked">
+            <li>
+              i movimenti già ricevuti dalla banca vengono <strong>completati</strong> con causale e
+              controparte;
+            </li>
+            <li>
+              i movimenti precedenti al primo ricevuto dalla banca{{ bankFromText() }} vengono
+              <strong>caricati</strong>.
+            </li>
+          </ul>
+          <p>Date e importi trasmessi dalla banca non vengono modificati.</p>
+        } @else if (linked()) {
           <p>
             <strong>Completa lo storico di un conto collegato.</strong> I movimenti di questo conto
             arrivano dalla banca, ma solo da quando l'hai collegato: la banca dà uno storico
@@ -95,13 +141,6 @@
             arrivato dalla banca{{ bankFromText() }}; gli altri li porta la banca, e aggiungerli
             farebbe doppioni.
           </p>
-          @if (selectedIsTradeRepublic()) {
-            <p data-testid="trade-republic-hint">
-              Con il file di Trade Republic aggiungo anche controparte e causale ai movimenti
-              arrivati dalla banca senza testo, come
-              <a routerLink="/importa/completa">Completa i movimenti</a>.
-            </p>
-          }
         } @else {
           <p>
             <strong>Importa i movimenti di un conto manuale</strong>, uno che Enable Banking non
@@ -124,32 +163,43 @@
     @if (p.tradeRepublic) {
       <!-- Il file di Trade Republic si legge da solo: niente mappatura (docs/importa-file.md, parte H). -->
       <div class="card" data-testid="trade-republic-file">
-        <h2>2. File di Trade Republic</h2>
+        <h2>2. Esportazione Trade Republic riconosciuta</h2>
         <p>
-          È l'<strong>esportazione delle transazioni</strong> di Trade Republic: le colonne le leggo
-          da solo, non c'è niente da scegliere.
+          Il file è l'<strong>esportazione delle transazioni</strong> di Trade Republic: le colonne
+          vengono lette automaticamente, senza impostazioni.
         </p>
         <ul>
+          @if (p.linkedAccount) {
+            <li data-testid="trade-republic-complete">
+              <strong>Completamento:</strong> i movimenti già ricevuti dalla banca ricevono causale
+              e controparte dal file. Data e importo restano quelli trasmessi dalla banca.
+            </li>
+            <li>
+              <strong>Caricamento:</strong> vengono aggiunti i movimenti precedenti al primo
+              ricevuto dalla banca{{
+                p.bankFrom ? ' (' + (p.bankFrom | date: 'd MMMM y') + ')' : ''
+              }}.
+            </li>
+          } @else {
+            <li>
+              <strong>Caricamento:</strong> vengono aggiunti tutti i movimenti del file; quelli già
+              importati in precedenza sono riconosciuti e non vengono duplicati.
+            </li>
+          }
           <li>
-            L'importo è <strong>quello che vedi sul conto</strong>: per interessi e dividendi già
-            tolte le tasse, per gli acquisti con commissione e tassa, e l'imposta di bollo con il
-            suo importo vero.
+            <strong>Importi netti:</strong> viene registrato l'importo effettivamente accreditato o
+            addebitato: interessi e dividendi al netto delle ritenute, acquisti comprensivi di
+            commissioni e imposte, imposta di bollo per il suo importo effettivo.
           </li>
           @if (p.skippedRows > 0) {
             <li>
+              <strong>Operazioni su titoli senza movimento di denaro</strong> (trasferimenti di
+              azioni, diritti di opzione):
               {{
                 p.skippedRows === 1
-                  ? "1 riga è un'operazione sui titoli (azioni trasferite, diritti) e non muove denaro: la salto."
-                  : p.skippedRows +
-                    ' righe sono operazioni sui titoli (azioni trasferite, diritti) e non muovono denaro: le salto.'
+                  ? '1 riga, non registrata tra i movimenti.'
+                  : p.skippedRows + ' righe, non registrate tra i movimenti.'
               }}
-            </li>
-          }
-          @if (p.linkedAccount) {
-            <li data-testid="trade-republic-complete">
-              Come <a routerLink="/importa/completa">Completa i movimenti</a>: i movimenti arrivati
-              dalla banca senza testo ricevono <strong>controparte e causale</strong> dal file, e
-              quelli più vecchi della banca si aggiungono. Data e importo della banca non cambiano.
             </li>
           }
         </ul>
@@ -367,6 +417,67 @@
             </tbody>
           </table>
         </div>
+      }
+
+      @if (p.rowsWithoutMovement.length > 0 || p.movementsWithoutRow.length > 0) {
+        <!-- Trade Republic in un conto collegato: le anomalie, una per una (prima nella pagina "Completa i movimenti"). -->
+        <section class="import-anomalies" data-testid="import-anomalies">
+          <h3>Da verificare</h3>
+          @if (p.rowsWithoutMovement.length > 0) {
+            <h4>Righe del file senza un movimento della banca</h4>
+            <p class="secondary">
+              Rientrano nel periodo coperto dalla banca, ma la banca non ha trasmesso un movimento
+              dello stesso importo entro 3 giorni. Non vengono aggiunte, per evitare duplicati: le
+              più recenti arriveranno con il prossimo aggiornamento del conto; per le altre verifica
+              l'estratto conto di Trade Republic.
+            </p>
+            <div class="table-scroll">
+              <table data-testid="rows-without-movement">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Descrizione</th>
+                    <th class="amount">Importo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of p.rowsWithoutMovement; track r.line) {
+                    <tr>
+                      <td>{{ r.date | date: 'dd/MM/yyyy' }}</td>
+                      <td>{{ r.description ?? '—' }}</td>
+                      <td class="amount">{{ r.amount | money: r.currency }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          @if (p.movementsWithoutRow.length > 0) {
+            <h4>Movimenti della banca assenti dal file</h4>
+            <p class="secondary">
+              Movimenti ricevuti dalla banca nel periodo del file che il file non contiene: restano
+              invariati, senza causale.
+            </p>
+            <div class="table-scroll">
+              <table data-testid="movements-without-row">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th class="amount">Importo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of p.movementsWithoutRow; track m.id) {
+                    <tr>
+                      <td>{{ m.date | date: 'dd/MM/yyyy' }}</td>
+                      <td class="amount">{{ m.amount | money: m.currency }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
       }
 
       <p class="secondary">Il file, così com'è (prime righe):</p>

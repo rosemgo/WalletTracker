@@ -13,14 +13,12 @@ import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import it.wallettracker.account.Account;
-import it.wallettracker.account.AccountRepository;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.csvimport.ImportDtos.Completion;
 import it.wallettracker.csvimport.ImportDtos.CompletionPreview;
@@ -31,18 +29,14 @@ import it.wallettracker.csvimport.ImportDtos.NewMovement;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
-import it.wallettracker.web.NotFoundException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Completa un conto Trade Republic <b>collegato</b> con il file della banca (docs/31). Solo Trade Republic: è l'unica
- * banca che, con Enable Banking, manda i movimenti senza causale, e ogni banca ha un file diverso. Trade Republic
- * manda solo data e importo, e uno storico corto; il suo file di esportazione ha controparte e causale, e può partire
- * da molto prima. Qui:
+ * Il completamento di un conto <b>collegato</b> con il file di Trade Republic (docs/31). Trade Republic, con Enable
+ * Banking, manda solo data e importo, e uno storico corto; il suo file di esportazione ha controparte e causale, e può
+ * partire da molto prima. Lo usa la pagina Importa (CsvImportService), quando riconosce quel file in un conto
+ * collegato (docs/importa-file.md, parte J: prima c'era una pagina a parte, "Completa i movimenti"). Qui:
  * <ul>
  *   <li>le righe che corrispondono a un movimento già arrivato gli danno <b>controparte e causale</b>;</li>
  *   <li>le righe <b>più vecchie</b> del primo movimento arrivato dalla banca diventano <b>movimenti nuovi</b>: quei
@@ -52,8 +46,8 @@ import tools.jackson.databind.json.JsonMapper;
  * I movimenti aggiunti hanno l'impronta {@code trcsv:<transaction_id di Trade Republic>}: ricaricando lo stesso
  * file non si duplicano, e la sincronizzazione li riconosce (TransactionImportService.fileMovementFor).
  *
- * <p>Come per l'importazione, in due tempi: {@link #preview} mostra che cosa succederebbe, {@link #complete} lo fa,
- * tutto o niente. Il file non viene conservato.
+ * <p>In due tempi, come l'importazione: {@link #plan} confronta il file con il conto, {@link #preview} dice che cosa
+ * succederebbe (anomalie comprese), {@link #complete} lo fa.
  */
 @Service
 public class CompletionService {
@@ -83,14 +77,12 @@ public class CompletionService {
             List<Long> unusedIds) {
     }
 
-    private final AccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
     private final JsonMapper jsonMapper;
 
-    public CompletionService(AccountRepository accountRepository, BankTransactionRepository transactionRepository,
+    public CompletionService(BankTransactionRepository transactionRepository,
             ClassificationService classificationService, JsonMapper jsonMapper) {
-        this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
         this.jsonMapper = jsonMapper;
@@ -109,12 +101,7 @@ public class CompletionService {
             Map<TradeRepublicCsv.Row, String> toAdd, List<TradeRepublicCsv.Row> withoutMovement) {
     }
 
-    @Transactional(readOnly = true)
-    public CompletionPreview preview(byte[] content, Long accountId) {
-        return preview(plan(content, accountId));
-    }
-
-    /** L'anteprima di un piano già fatto (anche dalla pagina Importa: CsvImportService). */
+    /** L'anteprima di un piano: che cosa si completa, che cosa si aggiunge, le anomalie. Non cambia niente. */
     CompletionPreview preview(Plan plan) {
         List<Completion> toComplete = new ArrayList<>();
         int alreadyComplete = plan.alreadyAdded();
@@ -147,15 +134,10 @@ public class CompletionService {
     }
 
     /**
-     * Completa i movimenti abbinati e aggiunge quelli più vecchi dello storico della banca, poi riclassifica: con il
-     * testo, regole e suggerimenti possono lavorare.
+     * Esegue un piano, dentro la transazione dell'importazione (CsvImportService.importFile): completa i movimenti
+     * abbinati, aggiunge le righe più vecchie della banca, poi riclassifica (con il testo regole e suggerimenti
+     * possono lavorare).
      */
-    @Transactional
-    public CompletionResult complete(byte[] content, Long accountId) {
-        return complete(plan(content, accountId));
-    }
-
-    /** Esegue un piano già fatto (anche dalla pagina Importa: CsvImportService), dentro la sua transazione. */
     CompletionResult complete(Plan plan) {
         int completed = 0;
         int alreadyComplete = plan.alreadyAdded();
@@ -185,24 +167,9 @@ public class CompletionService {
                 || (t.getDescription() == null && row.description() != null);
     }
 
-    private Plan plan(byte[] content, Long accountId) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Conto", accountId));
-        if (account.isManual()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Questo è un conto manuale: i suoi movimenti si caricano con \"Importa\".");
-        }
-        if (!isTradeRepublic(account.getBankName())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Questa pagina è per i conti Trade Republic: "
-                    + "è l'unica banca che manda i movimenti senza causale, e il file che legge è il suo.");
-        }
-        return plan(account, read(content));
-    }
-
     /**
-     * Il piano per un conto collegato e un file già letto, senza altri controlli: lo usa anche la pagina Importa
-     * (CsvImportService), che il file di Trade Republic lo riconosce dalle colonne, anche in Excel. Il file deve avere
-     * almeno una riga di denaro.
+     * Il piano per un conto collegato e il file di Trade Republic già letto (CsvImportService lo riconosce dalle colonne,
+     * anche in Excel). Il file deve avere almeno una riga di denaro.
      */
     Plan plan(Account account, TradeRepublicCsv.Reading reading) {
         LocalDate from = reading.rows().stream().map(TradeRepublicCsv.Row::date).min(LocalDate::compareTo).orElseThrow();
@@ -246,46 +213,6 @@ public class CompletionService {
         }
         return new Plan(account, reading, from, to, bankFrom, movements, matching,
                 reading.rows().size() - fresh.size(), toAdd, withoutMovement);
-    }
-
-    /**
-     * Il conto è di Trade Republic? Il nome della banca viene da Enable Banking, e può essere scritto in modi diversi
-     * ("Trade Republic", "Trade Republic Bank GmbH", "TradeRepublic"): confrontiamo solo le lettere, in minuscolo.
-     * Lo stesso controllo è nella pagina (completion-page.ts).
-     */
-    static boolean isTradeRepublic(String bankName) {
-        return bankName != null && bankName.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "")
-                .contains("traderepublic");
-    }
-
-    /** Legge il file, con i controlli: è di Trade Republic, non è troppo grande, ogni riga si legge. */
-    private static TradeRepublicCsv.Reading read(byte[] content) {
-        String text = TextDecoder.decode(content);
-        List<List<String>> all;
-        try {
-            all = CsvReader.read(text, CsvReader.detectDelimiter(text));
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-        }
-        if (all.isEmpty() || !TradeRepublicCsv.recognizes(all.getFirst())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il file non è un'esportazione delle "
-                    + "transazioni di Trade Republic (mancano le sue colonne, come \"date\", \"amount\", \"tax\"). "
-                    + "Nell'app: Profilo → Documenti → Esportazione transazioni, formato CSV.");
-        }
-        if (all.size() - 1 > CsvImportService.MAX_ROWS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il file ha troppe righe: al massimo " + CsvImportService.MAX_ROWS + ".");
-        }
-        TradeRepublicCsv.Reading reading = TradeRepublicCsv.read(all.getFirst(), all.subList(1, all.size()));
-        if (!reading.errors().isEmpty()) {
-            throw new ImportRejectedException(reading.errors().size() + " righe non si possono leggere: il file "
-                    + "è stato modificato? Non è stato cambiato niente.",
-                    reading.errors().subList(0, Math.min(reading.errors().size(), CsvImportService.MAX_ERRORS)));
-        }
-        if (reading.rows().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il file non ha movimenti di denaro.");
-        }
-        return reading;
     }
 
     /**

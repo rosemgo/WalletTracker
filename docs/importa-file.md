@@ -266,3 +266,45 @@ movimenti".
 
 **Il limite che resta.** Ogni movimento nuovo di Trade Republic arriva dalla banca senza testo: per completarlo va
 ricaricato il file, da Importa o da Completa.
+
+## Parte J: una pagina sola, "Completa i movimenti" unita a Importa
+
+**Perché.** Dopo la parte I le due pagine, con il file di Trade Republic in un conto collegato, facevano la stessa cosa
+con lo stesso motore. Restava solo da capire quale usare, e un caricamento poteva sembrare "non aver importato niente"
+quando in realtà aveva completato i movimenti. Una pagina sola è più semplice: chi ha un file lo carica in Importa, e
+l'app riconosce il caso.
+
+**Che cosa resta, e dove.**
+
+| Prima, in "Completa i movimenti" | Ora, in Importa |
+|---|---|
+| la spiegazione e "Come esportare il file da Trade Republic" | il riquadro apribile "Trade Republic: esportazione delle transazioni", sotto il titolo |
+| il riepilogo e le tabelle dei movimenti da completare e da aggiungere | il riepilogo e le righe che cambiano (le prime 10) |
+| le righe del file senza movimento, una per una | la sezione "Da verificare" → "Righe del file senza un movimento della banca" |
+| i movimenti della banca senza riga (solo contati) | "Da verificare" → "Movimenti della banca assenti dal file", uno per uno |
+| il link "Completa con il file" nella pagina Conti | lo stesso link, che apre Importa con il conto già scelto |
+| l'indirizzo `/importa/completa` | porta a Importa (con `?conto=` se c'era) |
+
+**I testi**, con il tono di un intermediario, dicono le due cose che fa il file di Trade Republic:
+
+- **in ogni caso carica** i movimenti non ancora presenti: in un conto manuale tutti, in un conto collegato quelli
+  precedenti allo storico trasmesso dalla banca;
+- **se il conto è collegato, completa** con causale e controparte i movimenti già ricevuti dalla banca, che tramite il
+  collegamento arrivano con soli data e importo. Date e importi della banca non cambiano.
+
+Lo dicono il riquadro del conto (prima di caricare il file), il riquadro "2. Esportazione Trade Republic riconosciuta",
+il riepilogo ("Il file contiene 92 righe: 4 movimenti ricevuti dalla banca verranno completati con causale e
+controparte; nessun movimento precedente al 9 luglio 2026 da caricare; 81 righe sono già presenti; 7 operazioni su
+titoli senza movimento di denaro non vengono registrate.") e il messaggio finale ("4 movimenti completati con causale e
+controparte; nessun movimento caricato; 81 righe erano già presenti.").
+
+**Il backend.** Le API `POST /api/imports/completion/preview` e `POST /api/imports/completion` non ci sono più. L'anteprima
+di Importa ha due campi in più, `rowsWithoutMovement` e `movementsWithoutRow` (vuoti negli altri casi). `CompletionService`
+resta come motore, senza più il controllo sul nome della banca: decide l'utente scegliendo il conto, come per ogni file.
+I test della vecchia pagina sono diventati `TradeRepublicCompletionTest`, sull'API di Importa, con gli stessi casi.
+
+**Le prove.** `TradeRepublicCompletionTest` (8 casi: anteprima con le anomalie, completamento e riclassificazione, righe
+più vecchie, data spostata, conto senza movimenti della banca, testi della banca mai sovrascritti, file con errori, API
+vecchie sparite); `import-page.spec.ts` (i testi prima e dopo il file, il riepilogo, il pulsante, il messaggio finale,
+le due liste delle anomalie); `app.routes.spec.ts` (il vecchio indirizzo porta a Importa con il conto). Nel browser, con
+dati finti come il caso vero: PC e telefono, tema scuro, nessuna pagina più larga dello schermo.

@@ -115,7 +115,6 @@ describe('App', () => {
 
     for (const [url, current] of [
       ['/regole', true],
-      ['/importa/completa', true],
       ['/altro', true],
       ['/movimenti', false],
       ['/riepilogo', false],

@@ -63,11 +63,9 @@ export const routes: Routes = [
     loadComponent: () => import('./import/import-page').then((m) => m.ImportPage),
     title: 'Importa movimenti · WalletTracker',
   },
-  {
-    path: 'importa/completa',
-    loadComponent: () => import('./import/completion-page').then((m) => m.CompletionPage),
-    title: 'Completa i movimenti · WalletTracker',
-  },
+  // "Completa i movimenti" è stata unita a Importa (docs/importa-file.md, parte J): il vecchio indirizzo, per esempio
+  // da un segnalibro, porta lì (con ?conto=... se c'era).
+  { path: 'importa/completa', redirectTo: 'importa' },
   {
     path: 'regole',
     loadComponent: () => import('./rules/rules-page').then((m) => m.RulesPage),

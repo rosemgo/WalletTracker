@@ -17,7 +17,7 @@ import { BalanceForm } from '../accounts/balance-form';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { FileDrop } from '../ui/file-drop';
-import { isTradeRepublic } from './completion-page';
+import { isTradeRepublic } from './trade-republic';
 
 /** I separatori che il backend accetta, con un nome leggibile. */
 export const DELIMITERS: { value: string; label: string }[] = [
@@ -89,7 +89,10 @@ export class ImportPage implements OnInit {
     const a = this.selected();
     return a !== null && a.source !== 'MANUAL';
   });
-  /** Un conto Trade Republic collegato: per lui c'è anche "Completa i movimenti", che aggiunge le causali (docs/31). */
+  /**
+   * Un conto Trade Republic collegato: il suo file completa i movimenti arrivati dalla banca e carica quelli più vecchi
+   * (docs/importa-file.md, parti I e J). La pagina lo dice prima di caricare il file.
+   */
   protected readonly selectedIsTradeRepublic = computed(() => {
     const a = this.selected();
     return a !== null && a.source !== 'MANUAL' && isTradeRepublic(a);
@@ -296,6 +299,9 @@ export class ImportPage implements OnInit {
 
   /** "4 movimenti importati (2 righe erano già presenti…); a 1 movimento … la descrizione." */
   protected doneMessage(done: ImportResult): string {
+    if (this.linked() && this.preview()?.tradeRepublic) {
+      return this.tradeRepublicDoneMessage(done);
+    }
     let text = this.linked()
       ? done.imported === 1
         ? '1 movimento aggiunto'
@@ -325,6 +331,29 @@ export class ImportPage implements OnInit {
     return `${text}.`;
   }
 
+  /**
+   * Il file di Trade Republic in un conto collegato: "4 movimenti completati con causale e controparte; nessun
+   * movimento caricato; 81 righe erano già presenti."
+   */
+  private tradeRepublicDoneMessage(done: ImportResult): string {
+    const n = (count: number, one: string, many: string) =>
+      count === 1 ? one : `${count} ${many}`;
+    const parts = [
+      done.completed === 0
+        ? 'nessun movimento da completare'
+        : n(done.completed, '1 movimento completato', 'movimenti completati') +
+          ' con causale e controparte',
+      done.imported === 0
+        ? 'nessun movimento caricato'
+        : n(done.imported, '1 movimento caricato', 'movimenti caricati'),
+    ];
+    if (done.duplicates > 0) {
+      parts.push(n(done.duplicates, '1 riga era già presente', 'righe erano già presenti'));
+    }
+    const text = parts.join('; ');
+    return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
+  }
+
   protected accountName(): string {
     return this.selected()?.label ?? '';
   }
@@ -349,8 +378,8 @@ export class ImportPage implements OnInit {
       p.skippedRows > 0
         ? `; ${n(
             p.skippedRows,
-            "1 è un'operazione sui titoli senza denaro, che si salta",
-            'sono operazioni sui titoli senza denaro, che si saltano',
+            '1 operazione su titoli senza movimento di denaro non viene registrata',
+            'operazioni su titoli senza movimento di denaro non vengono registrate',
           )}`
         : '';
     if (!p.linkedAccount) {
@@ -362,7 +391,7 @@ export class ImportPage implements OnInit {
     }
     const from = this.datePipe.transform(p.bankFrom, 'd MMMM y');
     if (p.tradeRepublic) {
-      return this.tradeRepublicSummary(p, from ?? '', skipped);
+      return this.tradeRepublicSummary(p, from ?? '');
     }
     const added =
       p.newRows === 0
@@ -387,39 +416,57 @@ export class ImportPage implements OnInit {
   }
 
   /**
-   * Il file di Trade Republic in un conto collegato, che fa come "Completa i movimenti" (docs/importa-file.md, parte I):
-   * "Il file ha 92 righe: nessun movimento più vecchio del 9 luglio 2026 da aggiungere; 4 movimenti arrivati dalla banca
-   * ricevono controparte e causale; 81 erano già fatte; 7 sono operazioni sui titoli senza denaro, che si saltano."
+   * Il file di Trade Republic in un conto collegato, che completa e carica (docs/importa-file.md, parti I e J): "Il file
+   * contiene 92 righe: 4 movimenti ricevuti dalla banca verranno completati con causale e controparte; nessun movimento
+   * precedente al 9 luglio 2026 da caricare; 81 righe sono già presenti; 7 operazioni su titoli senza movimento di
+   * denaro non vengono registrate."
    */
-  private tradeRepublicSummary(p: ImportPreview, from: string, skipped: string): string {
+  private tradeRepublicSummary(p: ImportPreview, from: string): string {
     const n = (count: number, one: string, many: string) =>
       count === 1 ? one : `${count} ${many}`;
-    let text = `Il file ha ${n(p.totalRows, '1 riga', 'righe')}: `;
-    text +=
-      p.newRows === 0
-        ? `nessun movimento più vecchio del ${from} da aggiungere`
-        : `${n(p.newRows, '1 movimento più vecchio', 'movimenti più vecchi')} del ${from} ` +
-          (p.newRows === 1 ? 'si aggiunge' : 'si aggiungono');
+    const parts: string[] = [];
     if (p.completeRows > 0) {
-      text += `; ${n(
-        p.completeRows,
-        '1 movimento arrivato dalla banca riceve',
-        'movimenti arrivati dalla banca ricevono',
-      )} controparte e causale`;
+      parts.push(
+        n(
+          p.completeRows,
+          '1 movimento ricevuto dalla banca verrà completato',
+          'movimenti ricevuti dalla banca verranno completati',
+        ) + ' con causale e controparte',
+      );
     }
+    parts.push(
+      p.newRows === 0
+        ? `nessun movimento precedente al ${from} da caricare`
+        : n(
+            p.newRows,
+            `1 movimento precedente al ${from} verrà caricato`,
+            `movimenti precedenti al ${from} verranno caricati`,
+          ),
+    );
     if (p.duplicateRows > 0) {
-      text += `; ${n(p.duplicateRows, '1 era già fatta', 'erano già fatte')}`;
+      parts.push(n(p.duplicateRows, '1 riga è già presente', 'righe sono già presenti'));
     }
     if (p.coveredRows > 0) {
-      text += `; ${n(
-        p.coveredRows,
-        '1 è nel periodo della banca ma senza un movimento (forse arriverà con il prossimo aggiornamento)',
-        'sono nel periodo della banca ma senza un movimento (forse arriveranno con il prossimo aggiornamento)',
-      )}`;
+      parts.push(
+        n(
+          p.coveredRows,
+          '1 riga non trova un movimento della banca (vedi «Da verificare»)',
+          'righe non trovano un movimento della banca (vedi «Da verificare»)',
+        ),
+      );
     }
-    text += `${skipped}.`;
+    if (p.skippedRows > 0) {
+      parts.push(
+        n(
+          p.skippedRows,
+          '1 operazione su titoli senza movimento di denaro non viene registrata',
+          'operazioni su titoli senza movimento di denaro non vengono registrate',
+        ),
+      );
+    }
+    let text = `Il file contiene ${n(p.totalRows, '1 riga', 'righe')}: ${parts.join('; ')}.`;
     if (p.newRows === 0 && p.completeRows === 0) {
-      text += " Questo file è già tutto nell'app.";
+      text += " Il contenuto del file è già tutto presente nell'app.";
     }
     return text;
   }

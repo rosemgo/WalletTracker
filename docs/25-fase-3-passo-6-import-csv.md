@@ -415,4 +415,4 @@ Trade Republic si collega con Enable Banking, ma i suoi movimenti arrivano **sen
 controparte**: restano "Da verificare" (salvo i trasferimenti, che si abbinano anche senza testo). Ora il
 file "Esportazione transazioni" di Trade Republic si carica anche nel conto **collegato**, non per
 aggiungere movimenti (sarebbero doppioni) ma per **completare** quelli già arrivati con causale e
-controparte: pagina "Completa i movimenti", spiegata in `docs/31`.
+controparte: spiegato in `docs/31`. Dalla 1.3.0 lo fa la pagina **Importa** (`docs/importa-file.md`, parte J).

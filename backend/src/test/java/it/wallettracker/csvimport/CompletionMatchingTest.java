@@ -66,13 +66,4 @@ class CompletionMatchingTest {
         assertThat(m.unmatchedRows()).hasSize(2);
         assertThat(m.unusedIds()).containsExactly(30L, 31L);
     }
-
-    @Test
-    void tradeRepublicIsRecognizedHoweverItsNameIsWritten() {
-        assertThat(CompletionService.isTradeRepublic("Trade Republic")).isTrue();
-        assertThat(CompletionService.isTradeRepublic("Trade Republic Bank GmbH")).isTrue();
-        assertThat(CompletionService.isTradeRepublic("TradeRepublic")).isTrue();
-        assertThat(CompletionService.isTradeRepublic("ING")).isFalse();
-        assertThat(CompletionService.isTradeRepublic(null)).isFalse();
-    }
 }

@@ -54,10 +54,9 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p><b>Il file di Trade Republic</b> (l'esportazione delle transazioni) si riconosce dalle colonne e si legge con
  * {@link TradeRepublicCsv}, non con la mappatura: le righe dei titoli senza denaro si saltano e l'importo è quello
- * netto ({@code amount + fee + tax}), come sul conto (docs/importa-file.md, parte H). In un conto <b>collegato</b> fa
- * quello che fa "Completa i movimenti" ({@link CompletionService}): aggiunge le righe più vecchie della banca e dà
- * controparte e causale ai movimenti arrivati dalla banca senza testo (parte I). Le due pagine danno lo stesso
- * risultato.
+ * netto ({@code amount + fee + tax}), come sul conto (docs/importa-file.md, parte H). In un conto <b>collegato</b> lo
+ * completa con {@link CompletionService}: aggiunge le righe più vecchie della banca e dà controparte e causale ai
+ * movimenti arrivati dalla banca senza testo (parti I e J).
  */
 @Service
 public class CsvImportService {
@@ -147,7 +146,7 @@ public class CsvImportService {
             reading = readRows(file, used, account.getCurrency());
         } catch (ResponseStatusException e) {
             return new Preview(file.headers(), samples, file.rows().size(), used, List.of(), file.rows().size(),
-                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0, 0);
+                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0, 0, List.of(), List.of());
         }
         if (linked && reading.completable()) {
             return completionPreview(file, samples, used, completionPlan(account, reading), reading.skipped());
@@ -173,10 +172,10 @@ public class CsvImportService {
                 .toList();
         return new Preview(file.headers(), samples, file.rows().size(), used, parsedRows, reading.errorCount(),
                 reading.errors(), file.spreadsheet(), linked, bankFrom, toAdd, duplicates, covered,
-                file.tradeRepublic(), reading.skipped(), 0);
+                file.tradeRepublic(), reading.skipped(), 0, List.of(), List.of());
     }
 
-    /** Il piano di "Completa i movimenti" per il file di Trade Republic in un conto collegato. */
+    /** Il piano del completamento (CompletionService) per il file di Trade Republic in un conto collegato. */
     private CompletionService.Plan completionPlan(Account account, Reading reading) {
         CompletionService.Plan plan = completionService.plan(account, reading.tradeRepublic());
         if (plan.bankFrom() == null) {
@@ -186,9 +185,10 @@ public class CsvImportService {
     }
 
     /**
-     * L'anteprima del file di Trade Republic in un conto collegato, con i numeri di "Completa i movimenti": le righe
+     * L'anteprima del file di Trade Republic in un conto collegato, con i numeri del completamento: le righe
      * che si aggiungono (più vecchie della banca), i movimenti che ricevono i testi, quelle già fatte, quelle senza
-     * movimento (del periodo della banca). Le righe mostrate sono quelle che cambiano qualcosa, per data.
+     * movimento (del periodo della banca), e le due anomalie una per una. Le righe mostrate sono quelle che cambiano
+     * qualcosa, per data.
      */
     private Preview completionPreview(CsvFile file, List<List<String>> samples, ImportMapping used,
             CompletionService.Plan plan, int skipped) {
@@ -202,7 +202,7 @@ public class CsvImportService {
         return new Preview(file.headers(), samples, file.rows().size(), used,
                 changing.stream().limit(PREVIEW_ROWS).toList(), 0, List.of(), file.spreadsheet(), true,
                 plan.bankFrom(), c.toAdd().size(), c.alreadyComplete(), c.rowsWithoutMovement().size(), true, skipped,
-                c.toComplete().size());
+                c.toComplete().size(), c.rowsWithoutMovement(), c.movementsWithoutRow());
     }
 
     /**
@@ -221,7 +221,7 @@ public class CsvImportService {
                     + "mappatura o il file. Non è stato importato niente.", reading.errors());
         }
         if (!account.isManual() && reading.completable()) {
-            // Il file di Trade Republic in un conto collegato: come "Completa i movimenti" (parte I).
+            // Il file di Trade Republic in un conto collegato: si completa (parti I e J).
             CompletionService.Plan completion = completionPlan(account, reading);
             int withoutMovement = completion.withoutMovement().size();
             ImportDtos.CompletionResult done = completionService.complete(completion);
@@ -466,8 +466,8 @@ public class CsvImportService {
     /**
      * L'impronta di una riga. Se il file dà un identificativo dell'operazione (il {@code transaction_id} di Trade
      * Republic, unico per ogni operazione) si usa quello: in un conto collegato {@code trcsv:<id>}, la stessa impronta
-     * che dà "Completa i movimenti" (CompletionService.fileKeys), così caricare il file da una pagina o dall'altra
-     * non fa doppioni; in un conto manuale {@code csv:tr:<id>}. Senza identificativo, {@link #fileKey} o
+     * del completamento (CompletionService.fileKeys) e quella che la sincronizzazione riconosce; in un conto manuale
+     * {@code csv:tr:<id>}. Senza identificativo, {@link #fileKey} o
      * {@link #dedupKey}.
      */
     static String keyFor(ParsedRow row, String fileId, boolean linked, Map<String, Integer> occurrences) {

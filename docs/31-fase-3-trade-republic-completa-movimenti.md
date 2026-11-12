@@ -1,7 +1,10 @@
 # 31. Fase 3: completare i movimenti di Trade Republic con il suo file
 
-> Dalla 1.3.0 la pagina Importa aggiunge i mesi più vecchi a **qualunque** conto collegato, anche da un file Excel:
-> `docs/importa-file.md`. Questa pagina resta per Trade Republic, perché in più completa le causali.
+> **Dalla 1.3.0 la pagina "Completa i movimenti" non c'è più**: è stata unita a **Importa**, che riconosce il file di
+> Trade Republic e, in un conto collegato, completa le causali e carica i movimenti più vecchi con lo stesso motore
+> (`CompletionService`), anomalie comprese (`docs/importa-file.md`, parti H, I e J). Il vecchio indirizzo
+> `/importa/completa` porta a Importa. Questa pagina resta per spiegare il motore: abbinamento, che cosa si scrive,
+> le regole di partenza.
 
 **Obiettivo:** Trade Republic è collegato con Enable Banking, ma i suoi movimenti arrivano **senza causale né
 controparte**: solo data e importo. Senza testo, regole, suggerimenti e IA non hanno niente su cui lavorare, e

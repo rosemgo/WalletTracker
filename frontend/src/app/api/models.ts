@@ -127,6 +127,8 @@ export interface ImportPreview {
   tradeRepublic: boolean; // il file di Trade Republic: si legge da solo, senza mappatura, con gli importi netti
   skippedRows: number; // le righe che non muovono denaro (operazioni sui titoli), che si saltano
   completeRows: number; // Trade Republic in un conto collegato: i movimenti della banca che ricevono i testi
+  rowsWithoutMovement: ImportFileRow[]; // lo stesso caso: righe del periodo della banca senza movimento
+  movementsWithoutRow: ImportBankMovement[]; // lo stesso caso: movimenti della banca che nel file non ci sono
 }
 
 /** La risposta di POST /api/imports. */
@@ -137,64 +139,21 @@ export interface ImportResult {
   covered: number; // con un conto collegato, le righe del periodo che la banca porta da sé, saltate
 }
 
-/**
- * L'anteprima di POST /api/imports/completion/preview: che cosa cambierebbe completando i movimenti di un conto
- * collegato con il file di Trade Republic (docs/31).
- */
-export interface CompletionPreview {
-  from: string; // il primo giorno del file, "2026-07-01"
-  to: string;
-  bankFrom: string | null; // il primo giorno dei movimenti arrivati dalla banca
-  fileRows: number; // le righe che muovono denaro
-  skippedRows: number; // le operazioni sui titoli, senza denaro
-  toComplete: Completion[];
-  toAdd: CompletionNewMovement[]; // le righe più vecchie dello storico della banca, che diventano movimenti
-  alreadyComplete: number; // righe già fatte: movimenti con i testi, o aggiunti da un file caricato prima
-  rowsWithoutMovement: CompletionFileRow[];
-  movementsWithoutRow: CompletionMovement[];
-}
-
-/** Un movimento da completare, con i testi che riceve. */
-export interface Completion {
-  transactionId: number;
-  date: string;
-  amount: number;
-  currency: string;
-  counterparty: string | null;
-  description: string | null;
-}
-
-/** Una riga del file che diventerà un movimento. */
-export interface CompletionNewMovement {
-  date: string;
-  amount: number;
-  currency: string;
-  counterparty: string | null;
-  description: string | null;
-}
-
-/** Una riga del file senza un movimento. */
-export interface CompletionFileRow {
-  line: number;
+/** Il file di Trade Republic in un conto collegato: una riga del periodo della banca senza un movimento. */
+export interface ImportFileRow {
+  line: number; // la riga del file (l'intestazione è la riga 1)
   date: string;
   amount: number;
   currency: string;
   description: string | null;
 }
 
-/** Un movimento del conto che nel file non c'è. */
-export interface CompletionMovement {
+/** Il file di Trade Republic in un conto collegato: un movimento della banca che nel file non c'è. */
+export interface ImportBankMovement {
   id: number;
   date: string;
   amount: number;
   currency: string;
-}
-
-/** La risposta di POST /api/imports/completion. */
-export interface CompletionResult {
-  completed: number;
-  added: number;
-  alreadyComplete: number;
 }
 
 /** Un movimento, come lo restituisce GET /api/transactions. */

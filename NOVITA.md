@@ -27,6 +27,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   gli importi sono quelli che vedi sul conto, con tasse e commissioni (gli interessi netti, il bollo con il suo importo).
   In un conto Trade Republic **collegato** completa anche controparte e causale dei movimenti arrivati dalla banca
   senza testo, come "Completa i movimenti": basta un caricamento.
+- **Una pagina sola per i file: "Completa i movimenti" è dentro Importa.** Con l'esportazione di Trade Republic, Importa
+  carica i movimenti non ancora presenti e, se il conto è collegato, completa con causale e controparte quelli ricevuti
+  dalla banca. Le righe che non trovano corrispondenza sono elencate in "Da verificare". Il vecchio indirizzo porta a
+  Importa.
 - **Nessun movimento perso appena prima dello storico della banca**: con il file di Trade Republic, una riga dei 3 giorni
   prima del primo movimento arrivato dalla banca non si aggiungeva, anche quando la banca non l'aveva. Ora si aggiunge,
   e la stessa operazione con la data spostata si riconosce come prima, senza doppioni.
