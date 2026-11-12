@@ -92,7 +92,7 @@ jobs:
       # l'utente, installare OpenSSL). La compilazione invece no: nei Dockerfile gira sul processore della macchina
       # ($BUILDPLATFORM), e il risultato è lo stesso per tutti.
       - name: Emulatore per arm64
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       # buildx: il costruttore di Docker che sa fare immagini per più processori in una volta.
       - name: Costruttore di immagini
