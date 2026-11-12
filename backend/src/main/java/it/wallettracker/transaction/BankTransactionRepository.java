@@ -1,6 +1,7 @@
 package it.wallettracker.transaction;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -11,14 +12,24 @@ import it.wallettracker.account.Account;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/** Accesso alla tabella {@code bank_transaction}. */
-public interface BankTransactionRepository extends JpaRepository<BankTransaction, Long> {
+/**
+ * Accesso alla tabella {@code bank_transaction}.
+ *
+ * <p>{@link JpaSpecificationExecutor} aggiunge {@code findAll(Specification, Pageable)}: l'elenco dei movimenti con i
+ * filtri e la ricerca, costruiti in Java da {@link TransactionSearch} (docs/32, parte G).
+ */
+public interface BankTransactionRepository extends JpaRepository<BankTransaction, Long>,
+        JpaSpecificationExecutor<BankTransaction> {
 
     boolean existsByAccountAndDedupKey(Account account, String dedupKey);
+
+    /** I movimenti di un conto con queste impronte (CsvImportService: le righe già importate da completare). */
+    List<BankTransaction> findByAccountAndDedupKeyIn(Account account, Collection<String> dedupKeys);
 
     /** Le impronte di tutti i movimenti di un conto, in una query (per l'importazione CSV). */
     @Query("SELECT t.dedupKey FROM BankTransaction t WHERE t.account = :account")
@@ -47,6 +58,30 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             TransactionStatus status);
 
     List<BankTransaction> findTop15ByAccountOrderByBookingDateDescIdDesc(Account account);
+
+    /**
+     * Il primo giorno dei movimenti di un conto arrivati dalla <b>banca</b>, cioè senza quelli aggiunti da un file
+     * (impronta che inizia con {@code filePrefix}). Prima di quel giorno la banca non ha dato niente (docs/31).
+     */
+    @Query("SELECT MIN(t.bookingDate) FROM BankTransaction t WHERE t.account = :account AND t.status = :status"
+            + " AND t.dedupKey NOT LIKE :filePrefix")
+    LocalDate findFirstBankDate(@Param("account") Account account, @Param("status") TransactionStatus status,
+            @Param("filePrefix") String filePrefix);
+
+    /**
+     * I movimenti aggiunti da un file (impronta che inizia con {@code filePrefix}) con questo importo e valuta, in un
+     * periodo: per riconoscerli quando la banca li manda (TransactionImportService, docs/31).
+     */
+    @Query("SELECT t FROM BankTransaction t WHERE t.account = :account AND t.dedupKey LIKE :filePrefix"
+            + " AND t.amount = :amount AND t.currency = :currency AND t.bookingDate BETWEEN :from AND :to"
+            + " ORDER BY t.id")
+    List<BankTransaction> findFileMovements(@Param("account") Account account, @Param("filePrefix") String filePrefix,
+            @Param("amount") BigDecimal amount, @Param("currency") String currency, @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    /** I movimenti di un conto in uno stato e in un periodo, in ordine (per completarli da un file, docs/31). */
+    List<BankTransaction> findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(Account account,
+            TransactionStatus status, LocalDate from, LocalDate to);
 
     /** I movimenti di un tipo da una certa data in poi (per cercare gli abbonamenti tra le spese). */
     List<BankTransaction> findByTypeAndBookingDateGreaterThanEqual(TransactionType type, LocalDate from);
@@ -78,48 +113,6 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
         long getUses();
     }
 
-    /**
-     * I movimenti dal più recente, con due filtri facoltativi.
-     *
-     * <p>Il trucco {@code (:accountId IS NULL OR ...)}: se il parametro è null la condizione è sempre vera,
-     * cioè il filtro è "spento". Così una sola query copre tutte le combinazioni di filtri.
-     *
-     * <p>Il parametro {@link Pageable} fa aggiungere a Spring Data {@code LIMIT} e {@code OFFSET}, e la
-     * query di conteggio per il totale. La {@code """...""" } è un "text block" di Java: una stringa su
-     * più righe.
-     *
-     * <p>{@code LEFT JOIN FETCH}: carica le categorie insieme ai movimenti, nella stessa query, perché la
-     * dashboard ne mostra il nome. Senza, Hibernate farebbe una query in più per ogni categoria (il problema
-     * N+1, docs/09).
-     *
-     * <p>{@code cast(:fromDate as LocalDate)}: con una data nulla, PostgreSQL non saprebbe di che tipo è il
-     * parametro di {@code ? IS NULL} ("could not determine data type of parameter"); il cast glielo dice.
-     *
-     * <p>La query di conteggio delle pagine ({@code countQuery}) Spring Data saprebbe ricavarla
-     * da sola, ma la scriviamo noi: per contare i movimenti le categorie non servono, quindi niente join.
-     */
-    @Query(value = """
-            SELECT t FROM BankTransaction t
-            LEFT JOIN FETCH t.category
-            LEFT JOIN FETCH t.manualCategory
-            WHERE (:accountId IS NULL OR t.account.id = :accountId)
-              AND (:type IS NULL OR t.type = :type)
-              AND (:uncategorized = false OR t.category IS NULL)
-              AND (cast(:fromDate as LocalDate) IS NULL OR t.bookingDate >= :fromDate)
-              AND (cast(:toDate as LocalDate) IS NULL OR t.bookingDate <= :toDate)
-            ORDER BY t.bookingDate DESC, t.id DESC
-            """,
-            countQuery = """
-            SELECT COUNT(t) FROM BankTransaction t
-            WHERE (:accountId IS NULL OR t.account.id = :accountId)
-              AND (:type IS NULL OR t.type = :type)
-              AND (:uncategorized = false OR t.category IS NULL)
-              AND (cast(:fromDate as LocalDate) IS NULL OR t.bookingDate >= :fromDate)
-              AND (cast(:toDate as LocalDate) IS NULL OR t.bookingDate <= :toDate)
-            """)
-    Page<BankTransaction> search(@Param("accountId") Long accountId, @Param("type") TransactionType type,
-            @Param("uncategorized") boolean uncategorized, @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate, Pageable pageable);
 
     /**
      * I totali dei movimenti di un periodo, raggruppati per mese, valuta e tipo: una riga per ogni
@@ -195,4 +188,103 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
         long getMovements();
     }
+
+    /**
+     * Le spese e le entrate di un periodo, giorno per giorno: una riga per giorno, valuta, tipo e categoria (es.
+     * "5 ottobre 2026, EUR, EXPENSE, Spesa alimentare, -120.00, 2 movimenti"). Il Riepilogo (docs/36) ne ricava la
+     * curva del mese e quella del "mese tipico". Anche qui somma il database: per sette mesi sono poche centinaia di
+     * righe, qualunque sia il numero di movimenti. Il periodo va da {@code from} (incluso) a {@code to} (escluso).
+     */
+    @Query("""
+            SELECT t.bookingDate AS day, t.currency AS currency, t.type AS type,
+                   c.id AS categoryId, c.name AS category, SUM(t.amount) AS total, COUNT(t) AS movements
+            FROM BankTransaction t LEFT JOIN t.category c
+            WHERE t.type IN (it.wallettracker.transaction.TransactionType.EXPENSE,
+                             it.wallettracker.transaction.TransactionType.INCOME)
+              AND t.bookingDate >= :from AND t.bookingDate < :to
+            GROUP BY t.bookingDate, t.currency, t.type, c.id, c.name
+            """)
+    List<DailyTotal> sumByDay(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** Una riga di {@link #sumByDay}. */
+    interface DailyTotal {
+        LocalDate getDay();
+
+        String getCurrency();
+
+        TransactionType getType();
+
+        Long getCategoryId(); // null per le spese senza categoria
+
+        String getCategory();
+
+        BigDecimal getTotal();
+
+        long getMovements();
+    }
+
+    /** Il giorno del movimento più vecchio in una valuta: da lì comincia la storia che conosciamo. */
+    @Query("SELECT MIN(t.bookingDate) FROM BankTransaction t WHERE t.currency = :currency")
+    LocalDate findFirstDate(@Param("currency") String currency);
+
+    /**
+     * Quanti movimenti sono da verificare: quelli di tipo TO_REVIEW e quelli non ancora classificati (tipo null).
+     * Spring Data ricava la query dal nome del metodo: "count", "by type", "or type is null".
+     */
+    long countByTypeOrTypeIsNull(TransactionType type);
+
+    /**
+     * I movimenti da un giorno in poi, con la categoria già caricata (un JOIN FETCH, niente query per ognuno): il
+     * dettaglio di un movimento ci cerca gli altri movimenti dello stesso esercente (docs/37).
+     */
+    @Query("SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category WHERE t.bookingDate >= :from")
+    List<BankTransaction> findSinceWithCategory(@Param("from") LocalDate from);
+
+    /**
+     * Le spese e le entrate di un periodo (giorni inclusi), con categoria e conto già caricati: Analisi (docs/38) le
+     * raggruppa per categoria, esercente o conto. JOIN FETCH: niente query per ogni movimento.
+     */
+    @Query("""
+            SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category JOIN FETCH t.account
+            WHERE t.bookingDate >= :from AND t.bookingDate <= :to
+              AND t.type IN (it.wallettracker.transaction.TransactionType.EXPENSE,
+                             it.wallettracker.transaction.TransactionType.INCOME)
+            """)
+    List<BankTransaction> findMovementsBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * I movimenti degli investimenti, di tutta la storia (sono pochi: uno o due al mese), con conto e categoria già
+     * caricati: versamenti e prelievi, acquisti e vendite di titoli, rendite e tasse (docs/investimenti.md).
+     */
+    @Query("""
+            SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category JOIN FETCH t.account
+            WHERE t.type IN (it.wallettracker.transaction.TransactionType.INVESTMENT_DEPOSIT,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_WITHDRAWAL,
+                             it.wallettracker.transaction.TransactionType.SECURITIES_BUY,
+                             it.wallettracker.transaction.TransactionType.SECURITIES_SELL,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_INCOME,
+                             it.wallettracker.transaction.TransactionType.WITHHOLDING_TAX,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_TAX)
+            """)
+    List<BankTransaction> findInvestmentMovements();
+
+    /**
+     * Per il saldo di un conto manuale (V34, docs/saldi.md): la somma dei movimenti contabilizzati arrivati dopo il
+     * saldo scritto dall'utente. "Dopo" vuol dire con una data successiva al giorno del saldo, oppure con lo stesso
+     * giorno ma importati dopo che l'utente l'ha scritto (quelli di prima li aveva già davanti).
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.bookingDate > :date OR (t.bookingDate = :date AND t.importedAt > :at))
+            """)
+    BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
+
+    /** Il giorno dell'ultimo movimento contabilizzato di un conto, o null se non ne ha. */
+    @Query("""
+            SELECT MAX(t.bookingDate) FROM BankTransaction t
+            WHERE t.account.id = :accountId AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+            """)
+    LocalDate lastBookingDate(@Param("accountId") Long accountId);
 }

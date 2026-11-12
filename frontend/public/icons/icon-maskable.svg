@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- La versione "maskable": il fondo arriva ai bordi e il disegno sta nel cerchio centrale (l'80%), perché il telefono
+       ritaglia l'icona con la sua forma (cerchio, goccia, quadrato arrotondato). Lo stesso disegno di icon.svg, più piccolo. -->
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1b3d" />
+      <stop offset="1" stop-color="#050b1c" />
+    </linearGradient>
+    <linearGradient id="w" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6" />
+      <stop offset="1" stop-color="#0ea5c6" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#fondo)" />
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)">
+    <path d="M120 150 188 380 256 220 324 380 392 150" fill="none" stroke="url(#w)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M150 132H362M256 132V300" fill="none" stroke="#0a1633" stroke-width="64" stroke-linecap="round" />
+    <path d="M150 132H362M256 132V300" fill="none" stroke="#fff" stroke-width="36" stroke-linecap="round" />
+  </g>
+</svg>

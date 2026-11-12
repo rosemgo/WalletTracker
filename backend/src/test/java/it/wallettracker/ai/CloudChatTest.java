@@ -24,7 +24,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 
 /**
- * Mistral e Gemini con le <b>librerie vere</b> (quelle di Spring AI e di Google) e un servizio <b>finto</b>: un
+ * Gemini con le <b>librerie vere</b> (quelle di Spring AI e di Google) e un servizio <b>finto</b>: un
  * piccolo server HTTP del JDK, come in ModelDownloadTest. Così vediamo che cosa parte davvero verso i servizi
  * (indirizzo, chiave, modello, schema della risposta) senza chiavi vere e senza internet, e proviamo i loro errori.
  */
@@ -73,10 +73,9 @@ class CloudChatTest {
         settings = mock(AiSettings.class);
         AiSettingsRepository repository = mock(AiSettingsRepository.class);
         when(repository.findById(AiSettings.ID)).thenReturn(Optional.of(settings));
-        saveKey(AiProvider.MISTRAL, "mistral-key-123456");
         saveKey(AiProvider.GEMINI, "gemini-key-654321");
 
-        chatClients = new AiChatClients(ChatClient.builder(mock(ChatModel.class)), repository, cipher, url, url,
+        chatClients = new AiChatClients(ChatClient.builder(mock(ChatModel.class)), repository, cipher, url,
                 Duration.ofMillis(10)); // tra un tentativo e l'altro, nei test, non aspettiamo 5 secondi
         categoryModel = new CategoryModel(chatClients);
     }
@@ -90,22 +89,13 @@ class CloudChatTest {
         when(settings.encryptedApiKey(provider)).thenReturn(cipher.encrypt(key, AiChatClients.keyPurpose(provider)));
     }
 
-    /** La risposta di Mistral (la stessa forma di quella di OpenAI): il testo del modello è in message.content. */
-    static String mistralAnswer(String content) {
-        return """
-                {"id": "cmpl-1", "object": "chat.completion", "created": 1792600000, "model": "mistral-small-latest",
-                 "choices": [{"index": 0, "finish_reason": "stop",
-                              "message": {"role": "assistant", "content": %s}}],
-                 "usage": {"prompt_tokens": 120, "completion_tokens": 8, "total_tokens": 128}}
-                """.formatted(quoted(content));
-    }
-
     /** La risposta di Gemini: il testo del modello è in candidates[0].content.parts[0].text. */
     static String geminiAnswer(String content) {
         return """
                 {"candidates": [{"content": {"role": "model", "parts": [{"text": %s}]}, "finishReason": "STOP"}],
-                 "usageMetadata": {"promptTokenCount": 120, "candidatesTokenCount": 8, "totalTokenCount": 128},
-                 "modelVersion": "gemini-flash-latest"}
+                 "usageMetadata": {"promptTokenCount": 120, "candidatesTokenCount": 8, "totalTokenCount": 140,
+                                   "thoughtsTokenCount": 12},
+                 "modelVersion": "gemini-3.8-flash"}
                 """.formatted(quoted(content));
     }
 
@@ -114,28 +104,14 @@ class CloudChatTest {
     }
 
     @Test
-    void mistralGetsTheKeyTheModelAndTheSchema() {
-        reply = mistralAnswer("{\"categoryId\": 12}");
-
-        Optional<Long> answer = categoryModel.suggest(QUESTION, new AiTarget(AiProvider.MISTRAL, "mistral-small-latest"));
-
-        assertThat(answer).contains(12L);
-        Received request = received.getFirst();
-        System.out.println("MISTRAL " + request.path() + "\n" + request.body());
-        assertThat(request.method()).isEqualTo("POST");
-        assertThat(request.path()).isEqualTo("/v1/chat/completions");
-        assertThat(request.authorization()).isEqualTo("Bearer mistral-key-123456"); // la chiave decifrata
-        assertThat(request.body()).contains("\"model\":\"mistral-small-latest\"", "\"temperature\":0.0",
-                "\"categoryId\"", "Merchant: ESSELUNGA MILANO");
-    }
-
-    @Test
     void geminiGetsTheKeyTheModelAndTheSchema() {
         reply = geminiAnswer("{\"categoryId\": 12}");
 
-        Optional<Long> answer = categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"));
+        CategoryModel.Reply answer = categoryModel.ask(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"));
 
-        assertThat(answer).contains(12L);
+        assertThat(answer.categoryId()).contains(12L);
+        assertThat(answer.model()).isEqualTo("gemini-3.8-flash"); // il modello vero dietro l'alias
+        assertThat(answer.thinkingTokens()).isEqualTo(12);
         Received request = received.getFirst();
         System.out.println("GEMINI " + request.path() + "\n" + request.body());
         assertThat(request.method()).isEqualTo("POST");
@@ -146,63 +122,60 @@ class CloudChatTest {
 
     @Test
     void aWrongKeyGivesAMessageThatSaysWhatToDo() {
-        status = 401;
-        reply = "{\"message\": \"Unauthorized\", \"request_id\": \"abc\"}";
-
-        assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.MISTRAL, "mistral-small-latest")))
-                .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.MISTRAL))
-                        .startsWith("La chiave di Mistral AI non è valida"));
-        assertThat(received).hasSize(1); // una chiave sbagliata non si riprova
-
         // Google, con una chiave sbagliata, risponde 400 (non 401): la risposta vera, vista provando dal vivo.
         status = 400;
         reply = """
                 {"error": {"code": 400, "message": "API key not valid. Please pass a valid API key.",
                  "status": "INVALID_ARGUMENT", "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo",
                  "reason": "API_KEY_INVALID", "domain": "googleapis.com"}]}}""";
+
         assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest")))
                 .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.GEMINI))
                         .startsWith("La chiave di Google Gemini non è valida"));
+        assertThat(received).hasSize(1); // una chiave sbagliata non si riprova
     }
 
     @Test
     void tooManyRequestsIsRetriedAndThenExplained() {
         status = 429;
-        reply = "{\"message\": \"Requests rate limit exceeded\"}";
+        reply = """
+                {"error": {"code": 429, "message": "Resource has been exhausted (e.g. check quota).",
+                 "status": "RESOURCE_EXHAUSTED"}}""";
 
-        assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.MISTRAL, "mistral-small-latest")))
-                .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.MISTRAL)).contains("troppe richieste"));
-        assertThat(received).hasSize(3); // la prima volta e due nuovi tentativi
+        assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest")))
+                .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.GEMINI)).contains("troppe richieste"));
+        // La prima volta e due nuovi tentativi, nostri: quelli della libreria di Google sono spenti. Prima di
+        // spegnerli le richieste erano 5 (solo Google), e il test durava 17 secondi.
+        assertThat(received).hasSize(3);
     }
 
     @Test
-    void afterATooManyRequestsTheNextTryCanWork() {
-        // Il limite al minuto passa: al secondo tentativo il servizio risponde.
-        status = 429;
-        reply = "{\"message\": \"Requests rate limit exceeded\"}";
-        server.createContext("/v1/chat/completions", exchange -> {
-            received.add(new Received("POST", "/v1/chat/completions", null, null, ""));
+    void afterAnOverloadTheNextTryCanWork() {
+        // 503 "sovraccarico" la prima volta, poi la risposta.
+        server.removeContext("/");
+        server.createContext("/", exchange -> {
+            received.add(new Received("POST", exchange.getRequestURI().toString(), null, null, ""));
             boolean first = received.size() == 1;
-            byte[] bytes = (first ? reply : mistralAnswer("{\"categoryId\": 12}")).getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = (first ? "{\"error\": {\"code\": 503, \"message\": \"The model is overloaded.\"}}"
+                    : geminiAnswer("{\"categoryId\": 12}")).getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(first ? 429 : 200, bytes.length);
+            exchange.sendResponseHeaders(first ? 503 : 200, bytes.length);
             exchange.getResponseBody().write(bytes);
             exchange.close();
         });
 
-        assertThat(categoryModel.suggest(QUESTION, new AiTarget(AiProvider.MISTRAL, "mistral-small-latest"))).contains(12L);
+        assertThat(categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"))).contains(12L);
         assertThat(received).hasSize(2);
     }
 
     @Test
     void aNewKeyIsUsedRightAway() {
-        reply = mistralAnswer("{\"categoryId\": 15}");
-        categoryModel.suggest(QUESTION, new AiTarget(AiProvider.MISTRAL, "mistral-small-latest"));
+        reply = geminiAnswer("{\"categoryId\": 15}");
+        categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"));
 
-        saveKey(AiProvider.MISTRAL, "mistral-key-NEW-999");
-        categoryModel.suggest(QUESTION, new AiTarget(AiProvider.MISTRAL, "mistral-small-latest"));
+        saveKey(AiProvider.GEMINI, "gemini-key-NEW-999");
+        categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest"));
 
-        assertThat(received).extracting(Received::authorization)
-                .containsExactly("Bearer mistral-key-123456", "Bearer mistral-key-NEW-999");
+        assertThat(received).extracting(Received::googleKey).containsExactly("gemini-key-654321", "gemini-key-NEW-999");
     }
 }

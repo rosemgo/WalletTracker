@@ -35,12 +35,19 @@ public final class EnableBankingApi {
      * <ul>
      *   <li>{@code maximumConsentValidity}: durata massima del consenso, in secondi;</li>
      *   <li>{@code requiredPsuHeaders}: gli header da inviare per dire alla banca che l'utente è
-     *       presente (vedi {@link PsuHeaders}).</li>
+     *       presente (vedi {@link PsuHeaders});</li>
+     *   <li>{@code logo}: l'indirizzo del logo della banca (docs/loghi.md), che l'app scarica una volta.</li>
      * </ul>
      */
     @JsonNaming(SnakeCaseStrategy.class)
     public record Aspsp(String name, String country, List<String> psuTypes, Long maximumConsentValidity,
-            List<String> requiredPsuHeaders) {
+            List<String> requiredPsuHeaders, String logo) {
+
+        /** Una banca senza logo (i test, e le risposte che non lo hanno). */
+        public Aspsp(String name, String country, List<String> psuTypes, Long maximumConsentValidity,
+                List<String> requiredPsuHeaders) {
+            this(name, country, psuTypes, maximumConsentValidity, requiredPsuHeaders, null);
+        }
     }
 
     /** Risposta di GET /aspsps. Ottengo la lista delle banche che ho linkato in EnableBanking*/

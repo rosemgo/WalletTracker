@@ -28,7 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
  * banche, guarda solo il <b>tipo</b> di ogni movimento (già corretto a mano, se l'utente l'ha fatto).
  * <ul>
  *   <li>INCOME → entrate; EXPENSE → spese;</li>
- *   <li>INVESTMENT_INCOME e INVESTMENT_TAX → rendite nette degli investimenti, tenute a parte;</li>
+ *   <li>INVESTMENT_INCOME, WITHHOLDING_TAX e INVESTMENT_TAX → rendite nette degli investimenti, tenute a parte;</li>
  *   <li>TO_REVIEW (o non ancora classificato) → contato, perché i numeri di quel mese sono incompleti;</li>
  *   <li>tutto il resto (trasferimenti tra conti propri, saldo carta, compravendita titoli, ignorati) → non
  *       conta: sono soldi che si spostano, non che entrano o escono.</li>
@@ -115,7 +115,8 @@ public class SummaryService {
                 // Le spese sono importi negativi: negate() le rende positive. Un'eventuale "spesa" positiva
                 // (un rimborso) diventa negativa e quindi riduce le spese del mese, che è quello che vogliamo.
                 case EXPENSE -> expenses = expenses.add(row.getTotal().negate());
-                case INVESTMENT_INCOME, INVESTMENT_TAX -> investmentNet = investmentNet.add(row.getTotal());
+                case INVESTMENT_INCOME, WITHHOLDING_TAX, INVESTMENT_TAX ->
+                        investmentNet = investmentNet.add(row.getTotal());
                 default -> {
                     // Trasferimenti, saldo carta, titoli, ignorati: non sono né entrate né spese.
                 }

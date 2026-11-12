@@ -3,6 +3,7 @@ package it.wallettracker.transaction;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 
 import it.wallettracker.account.Account;
 import it.wallettracker.category.Category;
@@ -111,6 +112,10 @@ public class BankTransaction {
     @JoinColumn(name = "manual_category_id")
     private Category manualCategory;
 
+    /** La nota scritta dall'utente (V27): solo sua, la banca e la classificazione non la toccano. */
+    @Column(name = "note")
+    private String note;
+
     protected BankTransaction() {
     }
 
@@ -141,6 +146,54 @@ public class BankTransaction {
         this.transferPeerId = transferPeerId;
     }
 
+    /**
+     * Completa controparte e causale con quelle di un file della banca (docs/31: Trade Republic le manda senza).
+     * Riempie solo i campi vuoti: quello che è arrivato dalla banca non si sovrascrive mai.
+     *
+     * @return true se ha cambiato qualcosa
+     */
+    public boolean completeDetails(String newCounterparty, String newDescription) {
+        boolean changed = false;
+        if (counterparty == null && newCounterparty != null) {
+            counterparty = newCounterparty;
+            changed = true;
+        }
+        if (description == null && newDescription != null) {
+            description = newDescription;
+            changed = true;
+        }
+        return changed;
+    }
+
+    /**
+     * Un movimento importato da un file prima che si leggesse la seconda colonna della causale (docs/tinaba.md,
+     * parte H): reimportando il file, la causale si completa. Cambia solo se è ancora quella di allora, così una
+     * causale diversa non si sovrascrive mai.
+     *
+     * @return true se ha cambiato qualcosa
+     */
+    public boolean extendDescription(String expected, String extended) {
+        if (extended == null || extended.equals(description) || !Objects.equals(description, expected)) {
+            return false;
+        }
+        description = extended;
+        return true;
+    }
+
+    /**
+     * Il prefisso dell'impronta dei movimenti aggiunti dal file di Trade Republic (docs/31), seguito dal suo
+     * {@code transaction_id}.
+     */
+    public static final String FILE_KEY_PREFIX = "trcsv:";
+
+    /**
+     * Un movimento aggiunto da un file è arrivato anche dalla banca (docs/31): da ora ha l'impronta della banca, così
+     * le prossime sincronizzazioni lo riconoscono subito. Testi, categoria e correzioni restano.
+     */
+    public void adoptBankKey(String bankDedupKey) {
+        this.dedupKey = bankDedupKey;
+    }
+
     /** Correzione manuale (dalla dashboard): {@code null} la toglie. */
     public void setManualType(TransactionType manualType) {
         this.manualType = manualType;
@@ -169,6 +222,15 @@ public class BankTransaction {
     /** Categoria scelta a mano (dalla dashboard): {@code null} la toglie. */
     public void setManualCategory(Category manualCategory) {
         this.manualCategory = manualCategory;
+    }
+
+    /** La nota, già ripulita da TransactionService (null = nessuna nota). */
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public String getNote() {
+        return note;
     }
 
     public Category getManualCategory() {

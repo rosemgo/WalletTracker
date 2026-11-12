@@ -1,10 +1,22 @@
+import { registerLocaleData } from '@angular/common';
+import localeIt from '@angular/common/locales/it';
+import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Account, AccountRole, ManualAccountRequest, SyncRound } from '../api/models';
+import {
+  Account,
+  AccountRole,
+  BankConnection,
+  ConnectionRemoval,
+  ManualAccountRequest,
+  SyncRound,
+  Transaction,
+} from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { AccountsPage } from './accounts-page';
+import { AccountsPage, outcomeLine } from './accounts-page';
+import { parseBalance } from './balance-form';
 
 const CARD: Account = {
   id: 3,
@@ -17,8 +29,12 @@ const CARD: Account = {
   role: 'SPENDING',
   source: 'ENABLE_BANKING',
   consentValidUntil: '2027-01-05T14:35:51Z',
+  connectionRemovedAt: null,
   lastSyncAt: null,
   lastSyncError: 'HTTP 429 troppe letture',
+  balance: null,
+  availableCredit: null,
+  logoVersion: null,
 };
 
 /** Un conto manuale: i movimenti arrivano da file CSV. */
@@ -33,8 +49,12 @@ const BROKER: Account = {
   role: 'INVESTMENT',
   source: 'MANUAL',
   consentValidUntil: null,
+  connectionRemovedAt: null,
   lastSyncAt: null,
   lastSyncError: null,
+  balance: null,
+  availableCredit: null,
+  logoVersion: null,
 };
 
 /**
@@ -47,18 +67,42 @@ describe('AccountsPage', () => {
   const created: ManualAccountRequest[] = [];
   const deleted: number[] = [];
   const renamed: [number, string][] = [];
+  const balances: [number, number | null][] = [];
+  const logos: [number, string][] = [];
   let syncCalls = 0;
+  let round: SyncRound;
   let accounts: Account[];
+  let connections: BankConnection[];
+  const removedConnections: number[] = [];
 
   beforeEach(() => {
+    removedConnections.length = 0;
+    connections = [];
     changedRoles.length = 0;
     created.length = 0;
     deleted.length = 0;
     renamed.length = 0;
+    balances.length = 0;
+    logos.length = 0;
     syncCalls = 0;
+    round = { updated: 0, failed: 0, notDue: 0, accounts: [] };
     accounts = [CARD];
     const fakeApi: Partial<WalletApi> = {
       accounts: () => of(accounts),
+      connections: () => of(connections),
+      removeConnection: (id: number) => {
+        removedConnections.push(id);
+        const removed = connections.find((c) => c.id === id)!;
+        connections = connections.map((c) =>
+          c.id === id ? { ...c, removedAt: '2026-11-11T10:00:00Z' } : c,
+        );
+        accounts = accounts.map((a) => ({ ...a, connectionRemovedAt: '2026-11-11T10:00:00Z' }));
+        return of<ConnectionRemoval>({
+          bank: removed.bank,
+          accountsKept: removed.accounts,
+          revoked: true,
+        });
+      },
       createManualAccount: (request: ManualAccountRequest) => {
         created.push(request);
         return of({
@@ -84,15 +128,280 @@ describe('AccountsPage', () => {
         changedRoles.push([id, role]);
         return of({ ...CARD, role });
       },
+      uploadAccountLogo: (id: number, file: File) => {
+        logos.push([id, file.name]);
+        accounts = accounts.map((a) => (a.id === id ? { ...a, logoVersion: 2 } : a));
+        return of(undefined);
+      },
+      changeBalance: (id: number, balance: number | null) => {
+        balances.push([id, balance]);
+        return of({
+          ...BROKER,
+          balance: {
+            amount: balance!,
+            date: '2026-10-28',
+            source: 'MANUAL',
+            startDate: '2026-10-28',
+          },
+        } as Account);
+      },
+      transactions: () =>
+        of({
+          items: [
+            {
+              id: 9,
+              bookingDate: '2026-10-28',
+              amount: 200,
+              currency: 'EUR',
+              description: 'Ricevuto da Mario Rossi',
+            } as unknown as Transaction,
+          ],
+          page: 0,
+          size: 1,
+          totalItems: 1,
+          totalPages: 1,
+        }),
       syncNow: () => {
         syncCalls++;
-        return of<SyncRound>({ updated: 2, failed: 1, notDue: 0 });
+        return of<SyncRound>(round);
       },
     };
     TestBed.configureTestingModule({
       imports: [AccountsPage],
       providers: [{ provide: WalletApi, useValue: fakeApi }, provideRouter([])],
     });
+  });
+
+  it('a connection is removed keeping its accounts, after a confirmation that says so', async () => {
+    // docs/rimuovere-un-collegamento.md, con dati inventati.
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    connections = [
+      {
+        id: 1,
+        bank: 'Banca Alfa',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 1,
+        accountList: [{ name: 'Conto corrente', ibanEnd: '0001' }],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const section = page.querySelector('app-connections-section') as HTMLElement;
+    const text = () => section.textContent?.replace(/\s+/g, ' ') ?? '';
+    const button = (label: string) =>
+      Array.from(section.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === label,
+      ) as HTMLButtonElement;
+
+    // Chiusa di serie: il titolo dice quanti collegamenti ci sono; si apre con un clic.
+    const details = section.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(section.querySelector('summary')?.textContent).toContain('1 collegamento');
+    (section.querySelector('summary') as HTMLElement).click();
+    await fixture.whenStable();
+    expect(details.open).toBe(true);
+    expect(text()).toContain('Banca Alfa · valido fino al 10/05/2027');
+    expect(text()).toContain('Conto corrente ··0001'); // i conti del collegamento, con le ultime cifre
+    button('Rimuovi collegamento').click();
+    await fixture.whenStable();
+    expect(text()).toContain('il conto di Banca Alfa (Conto corrente ··0001)');
+    expect(text()).toContain('Il conto e i movimenti restano come storia');
+    expect(section.querySelector('[data-testid="exclude-hint"]')).toBeNull(); // un conto solo
+    expect(removedConnections).toEqual([]); // prima della conferma non parte niente
+
+    button('Rimuovi').click();
+    await fixture.whenStable();
+
+    expect(removedConnections).toEqual([1]);
+    expect(text()).toContain(
+      'Banca Alfa: collegamento rimosso. Il conto resta con i suoi movimenti.',
+    );
+    expect(text()).toContain('rimosso il 11/11/2026: il conto resta come storia');
+    expect(section.querySelector('[data-testid="consent-not-closed"]')).toBeNull(); // revocato: niente avviso
+    expect(button('Rimuovi collegamento')).toBeUndefined();
+    // Il conto, ricaricato, lo dice anche nella tabella.
+    expect(page.querySelector('table')?.textContent).toContain(
+      'collegamento rimosso: storico conservato',
+    );
+  });
+
+  it('a connection without accounts says why, and can be removed', async () => {
+    connections = [
+      {
+        id: 3,
+        bank: 'Banca Beta',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 0,
+        accountList: [],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const section = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-connections-section',
+    ) as HTMLElement;
+    expect(section.querySelector('[data-testid="no-accounts"]')?.textContent).toContain(
+      'non era nella lista',
+    );
+  });
+
+  it('with more accounts, the confirmation lists them all and points to the Excluded role', async () => {
+    connections = [
+      {
+        id: 2,
+        bank: 'Banca Alfa',
+        country: 'IT',
+        validUntil: '2027-05-10T10:00:00Z',
+        removedAt: null,
+        accounts: 2,
+        accountList: [
+          { name: 'Conto corrente', ibanEnd: '0001' },
+          { name: 'Carta', ibanEnd: null },
+        ],
+      },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[data-testid="excluded-role-hint"]')?.textContent).toContain(
+      'gli altri continuano ad aggiornarsi',
+    );
+    const section = page.querySelector('app-connections-section') as HTMLElement;
+    (
+      Array.from(section.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Rimuovi collegamento',
+      ) as HTMLButtonElement
+    ).click();
+    await fixture.whenStable();
+
+    const text = section.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('tutti i conti di Banca Alfa (Conto corrente ··0001, Carta)');
+    expect(section.querySelector('[data-testid="exclude-hint"]')?.textContent).toContain('Escluso');
+  });
+
+  it('shows the balance of the bank, and lets you write the one of a manual account', async () => {
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    accounts = [
+      {
+        ...CARD,
+        balance: { amount: 1234.56, date: '2026-10-31', source: 'BANK', startDate: null },
+      },
+      BROKER,
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const cells = Array.from(page.querySelectorAll('td.balance-cell')) as HTMLElement[];
+    const text = (cell: HTMLElement) => cell.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    expect(text(cells[0])).toMatch(/1\.234,56\s€ al 31 ott 2026 · dalla banca/);
+    expect(cells[0].querySelector('button')).toBeNull(); // il saldo della banca non si scrive a mano
+    expect(text(cells[1])).toContain('Non ancora scritto');
+
+    (cells[1].querySelector('button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    // L'ultimo movimento importato, da cercare nell'app della banca.
+    expect(text(cells[1])).toContain('28 ottobre 2026 · Ricevuto da Mario Rossi');
+    const input = cells[1].querySelector('input') as HTMLInputElement;
+    input.value = 'dodici';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await fixture.whenStable();
+    expect(text(cells[1])).toContain('Scrivi un importo');
+    expect(balances).toEqual([]);
+
+    input.value = '350,00';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await fixture.whenStable();
+    expect(balances).toEqual([[8, 350]]);
+    expect(text(page.querySelectorAll('td.balance-cell')[1] as HTMLElement)).toMatch(
+      /350,00\s€ al 28 ott 2026 · scritto da te/,
+    );
+  });
+
+  it('a credit card shows only the available credit: it has no balance to write', async () => {
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    accounts = [
+      {
+        ...CARD,
+        role: 'CREDIT_CARD',
+        lastSyncAt: '2026-11-02T16:57:00Z',
+        availableCredit: { amount: 2500, date: '2026-11-02' },
+      },
+      { ...CARD, id: 4, role: 'CREDIT_CARD', lastSyncAt: '2026-11-02T16:57:00Z' },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const cells = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('td.balance-cell'),
+    ) as HTMLElement[];
+    const text = (cell: HTMLElement) => cell.textContent?.replace(/\s+/g, ' ') ?? '';
+
+    expect(cells[0].getAttribute('data-label')).toBe('Plafond');
+    expect(text(cells[0])).toMatch(
+      /Plafond disponibile\s*2\.500,00\s€\s*al 2 nov 2026 · dalla banca/,
+    );
+    expect(text(cells[0])).not.toContain('saldo');
+    expect(cells[0].querySelector('button')).toBeNull();
+    expect(text(cells[1])).toContain('Plafond non ancora letto: premi «Aggiorna ora»');
+    expect(cells[1].querySelector('button')).toBeNull();
+  });
+
+  it('a manual account gets the logo chosen by the user, and shows it next to its name', async () => {
+    accounts = [BROKER];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const input = page.querySelector('.logo-upload input') as HTMLInputElement;
+    expect(page.querySelector('.logo-upload')?.textContent).toContain('Carica il logo');
+
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'tr.png', {
+      type: 'image/png',
+    });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(logos).toEqual([[8, 'tr.png']]);
+    expect(page.querySelector('img.account-logo')?.getAttribute('src')).toBe(
+      '/api/accounts/8/logo?v=2',
+    );
+    expect(page.querySelector('.logo-upload')?.textContent).toContain('Cambia il logo');
+  });
+
+  it('a logo too big is refused before sending it', async () => {
+    accounts = [BROKER];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const input = page.querySelector('.logo-upload input') as HTMLInputElement;
+
+    const big = new File([new Uint8Array(300 * 1024)], 'grande.png', { type: 'image/png' });
+    Object.defineProperty(input, 'files', { value: [big] });
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(logos).toEqual([]);
+    expect(page.textContent).toContain('Il logo è troppo grande');
+  });
+
+  it('reads the amounts written the Italian or the English way', () => {
+    expect(parseBalance('1.234,56')).toBe(1234.56);
+    expect(parseBalance('1234,5')).toBe(1234.5);
+    expect(parseBalance('1234.56')).toBe(1234.56);
+    expect(parseBalance('1.234')).toBe(1234);
+    expect(parseBalance('-12,30 €')).toBe(-12.3);
+    expect(parseBalance('0')).toBe(0);
+    expect(parseBalance('12,345')).toBeNull();
+    expect(parseBalance('')).toBeNull();
+    expect(parseBalance('dodici')).toBeNull();
   });
 
   it('shows the accounts with their role and the last sync error', async () => {
@@ -102,6 +411,11 @@ describe('AccountsPage', () => {
 
     expect(page.textContent).toContain('Carta di credito');
     expect(page.textContent).toContain('HTTP 429 troppe letture');
+    // Ogni conto porta ai suoi movimenti.
+    const link = Array.from(page.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Vedi i movimenti'),
+    );
+    expect(link?.getAttribute('href')).toBe('/movimenti?accountId=3');
     const select = page.querySelector('select') as HTMLSelectElement;
     expect(select.selectedOptions[0].textContent?.trim()).toBe('Conto spese');
   });
@@ -125,6 +439,16 @@ describe('AccountsPage', () => {
   });
 
   it('"Aggiorna ora" updates the accounts and shows the summary', async () => {
+    accounts = [CARD, BROKER];
+    round = {
+      updated: 1,
+      failed: 1,
+      notDue: 0,
+      accounts: [
+        { accountId: 3, inserted: 2, pending: 1, error: null },
+        { accountId: 8, inserted: 0, pending: 0, error: 'troppe richieste alla banca' },
+      ],
+    };
     const fixture = TestBed.createComponent(AccountsPage);
     await fixture.whenStable();
     const button = (fixture.nativeElement as HTMLElement).querySelector(
@@ -135,8 +459,47 @@ describe('AccountsPage', () => {
     await fixture.whenStable();
 
     expect(syncCalls).toBe(1);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'Aggiornati 2 conti, 1 con errori',
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('Aggiornato 1 conto, 1 con errori');
+    const lines = Array.from(page.querySelectorAll('.sync-outcomes li')).map((li) =>
+      li.textContent?.trim(),
+    );
+    expect(lines).toEqual([
+      'ING · Carta di credito: 2 movimenti nuovi, 1 in attesa',
+      'Trade Republic · Conto titoli: non aggiornato (troppe richieste alla banca)',
+    ]);
+    expect(page.textContent).not.toContain('La banca non ha mandato niente di nuovo');
+  });
+
+  it('"Aggiorna ora" says when the bank sent nothing new, and why today\'s card payments may be missing', async () => {
+    accounts = [CARD];
+    round = {
+      updated: 1,
+      failed: 0,
+      notDue: 0,
+      accounts: [{ accountId: 3, inserted: 0, pending: 0, error: null }],
+    };
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    (page.querySelector('.toolbar button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(page.querySelector('.sync-outcomes')?.textContent).toContain(
+      'ING · Carta di credito: nessun movimento nuovo',
+    );
+    expect(page.textContent).toContain('La banca non ha mandato niente di nuovo');
+    expect(page.textContent).toContain('1–2 giorni lavorativi');
+  });
+
+  it('puts the outcome of an account into words', () => {
+    const ok = { accountId: 1, error: null };
+    expect(outcomeLine({ ...ok, inserted: 1, pending: 0 }, 'Conto')).toBe(
+      'Conto: 1 movimento nuovo',
+    );
+    expect(outcomeLine({ ...ok, inserted: 0, pending: 3 }, 'Conto')).toBe('Conto: 3 in attesa');
+    expect(outcomeLine({ ...ok, inserted: 0, pending: 0 }, 'Conto')).toBe(
+      'Conto: nessun movimento nuovo',
     );
   });
 
@@ -147,14 +510,24 @@ describe('AccountsPage', () => {
     const page = fixture.nativeElement as HTMLElement;
     const row = page.querySelectorAll('tbody tr')[1] as HTMLElement;
 
-    expect(row.textContent).toContain('conto manuale');
-    const link = row.querySelector('a') as HTMLAnchorElement;
+    expect(row.textContent).toContain('Conto manuale');
+    const link = Array.from(row.querySelectorAll('a')).find((a) =>
+      a.textContent?.includes('Importa un file'),
+    ) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/importa?conto=8');
+    // Le azioni: una per riga, in quest'ordine, e "Elimina" in fondo, in rosso.
+    const actions = Array.from(row.querySelectorAll('ul.account-actions > li')).map((li) =>
+      li.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Importa un file', 'Carica il logo', 'Elimina']);
+    expect(row.querySelector('ul.account-actions > li:last-child button')?.classList).toContain(
+      'danger',
+    );
 
     // "elimina" chiede conferma; solo "Elimina" cancella davvero.
     (
       Array.from(row.querySelectorAll('button')).find(
-        (b) => b.textContent?.trim() === 'elimina',
+        (b) => b.textContent?.trim() === 'Elimina',
       ) as HTMLButtonElement
     ).click();
     await fixture.whenStable();
@@ -179,8 +552,9 @@ describe('AccountsPage', () => {
     const row = (fixture.nativeElement as HTMLElement).querySelector('tbody tr') as HTMLElement;
 
     const buttons = Array.from(row.querySelectorAll('button')).map((b) => b.textContent?.trim());
-    expect(buttons).not.toContain('elimina');
-    expect(buttons).toEqual(['rinomina']); // il nome si può scegliere per ogni conto
+    expect(buttons).not.toContain('Elimina');
+    // il nome si può scegliere per ogni conto; il saldo si scrive se la banca non lo dà (docs/saldi.md, parte E)
+    expect(buttons).toEqual(['Rinomina', 'Scrivi il saldo']);
   });
 
   it('creates a manual account from the form', async () => {
@@ -240,7 +614,7 @@ describe('AccountsPage', () => {
         (b) => b.textContent?.trim() === text,
       ) as HTMLButtonElement;
 
-    button('rinomina').click();
+    button('Rinomina').click();
     await fixture.whenStable();
     const input = row().querySelector('input') as HTMLInputElement;
     input.value = '  Carta Visa ';
@@ -251,7 +625,7 @@ describe('AccountsPage', () => {
     expect(row().textContent).toContain('Carta Visa');
     expect(page.textContent).toContain('Conto rinominato in "Carta Visa"');
 
-    button('rinomina').click();
+    button('Rinomina').click();
     await fixture.whenStable();
     const again = row().querySelector('input') as HTMLInputElement;
     again.value = '';

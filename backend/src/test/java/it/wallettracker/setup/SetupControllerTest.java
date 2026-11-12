@@ -73,6 +73,8 @@ class SetupControllerTest {
                     json.assertThat().extractingPath("$.source").isEqualTo("ENV");
                     json.assertThat().extractingPath("$.applicationId").isEqualTo(TestKeys.APPLICATION_ID);
                     json.assertThat().extractingPath("$.redirectUrl").isEqualTo("https://localhost:8443/callback");
+                    json.assertThat().extractingPath("$.redirectUrls").asArray()
+                            .containsExactly("https://localhost:8443/callback");
                     json.assertThat().doesNotHavePath("$.privateKeyPem"); // la chiave non esce mai
                 });
     }

@@ -74,6 +74,10 @@ cloud, e le abitudini si prendono adesso):
 `MerchantKey.displayName` (che toglie le parole con cifre: date, carte, IBAN, codici). Lo prova un test
 (`EvaluationCasesTest.neverSendsTheOwnerNameNorNumbers`).
 
+> Correzione (`docs/40`, parte F): negli addebiti diretti (SDD) la causale finisce con "Debitore NOME COGNOME", e
+> il nome del titolare arrivava al modello. Ora di quella causale parte solo il nome del creditore
+> (`EvaluationCasesTest.ofADirectDebitOnlyTheCreditorIsSentNotTheDebtor`).
+
 ---
 
 ## Parte B: la domanda a mano, con `curl`

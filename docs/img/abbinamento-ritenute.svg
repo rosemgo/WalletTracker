@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker>
+</defs>
+<rect width="1200" height="700" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Come una ritenuta trova la sua rendita</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">tra le rendite sullo stesso conto, da 3 giorni prima a 10 dopo, non ancora abbinate e più grandi della ritenuta</text>
+
+<!-- la ritenuta -->
+<rect x="40" y="100" width="300" height="96" rx="14" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+<text x="190" y="128" text-anchor="middle" font-size="17" font-weight="700" fill="#b45309">Una ritenuta</text>
+<text x="190" y="154" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">Rit.ced.su 16.000,000</text>
+<text x="190" y="174" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">ROMANIA-7OT45 6,5%   -65 €</text>
+
+<path d="M190,196 L190,236" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+
+<!-- passo 1 -->
+<rect x="40" y="240" width="760" height="100" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="62" y="270" font-size="17" font-weight="700" fill="#1d4ed8">1. Lo stesso codice ISIN</text>
+<text x="62" y="296" font-size="14" fill="#0f172a">"Cash Dividend for ISIN IT0003128367" e "Withholding tax IT0003128367"</text>
+<text x="62" y="320" font-size="13" fill="#475569">il più sicuro: l'ISIN è uguale in tutte le banche (e ha una cifra di controllo)</text>
+
+<!-- passo 2 -->
+<rect x="40" y="360" width="760" height="100" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="62" y="390" font-size="17" font-weight="700" fill="#1d4ed8">2. Lo stesso nome del titolo (senza badare alle maiuscole)</text>
+<text x="62" y="416" font-size="14" fill="#0f172a">"Ced.su … ROMANIA-7OT45 6,5%" e "Rit.ced.su … ROMANIA-7OT45 6,5%" → "ROMANIA-7OT45 6,5%"</text>
+<text x="62" y="440" font-size="13" fill="#475569">si tolgono le etichette che conosciamo, i numeri e le date: resta il nome</text>
+
+<!-- passo 3 -->
+<rect x="40" y="480" width="760" height="100" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="62" y="510" font-size="17" font-weight="700" fill="#1d4ed8">3. L'unica rendita possibile</text>
+<text x="62" y="536" font-size="14" fill="#0f172a">"Interessi Portaf.Remun. Tassaz." e "Rit. Fisc. Interessi Portaf.Remun. rit."</text>
+<text x="62" y="560" font-size="13" fill="#475569">parole diverse, ma una sola rendita sul conto in quei giorni; con due, non sceglie a caso</text>
+
+<!-- "se no": da un passo al successivo -->
+<path d="M120,340 L120,358" stroke="#b45309" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="132" y="354" font-size="12" fill="#b45309">se no</text>
+<path d="M120,460 L120,478" stroke="#b45309" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="132" y="474" font-size="12" fill="#b45309">se no</text>
+<text x="432" y="602" font-size="12" fill="#b45309">se no</text>
+
+<!-- frecce verso l'esito -->
+<path d="M800,290 L900,290" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<path d="M800,410 L900,410" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<path d="M800,530 L900,530" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="850" y="280" text-anchor="middle" font-size="12" fill="#15803d">trovata</text>
+<text x="850" y="400" text-anchor="middle" font-size="12" fill="#15803d">trovata</text>
+<text x="850" y="520" text-anchor="middle" font-size="12" fill="#15803d">trovata</text>
+<path d="M420,580 L420,610" stroke="#b45309" stroke-width="2.5" marker-end="url(#ar)"/>
+
+<rect x="905" y="240" width="255" height="340" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="1032" y="272" text-anchor="middle" font-size="17" font-weight="700" fill="#15803d">Abbinata</text>
+<text x="925" y="304" font-size="14" fill="#0f172a">prende la data e il titolo</text>
+<text x="925" y="324" font-size="14" fill="#0f172a">della sua rendita:</text>
+<text x="925" y="356" font-size="14" fill="#0f172a">cedola</text><text x="1140" y="356" text-anchor="end" font-size="14" fill="#0f172a">520,00 €</text>
+<text x="925" y="380" font-size="14" fill="#0f172a">ritenuta</text><text x="1140" y="380" text-anchor="end" font-size="14" fill="#0f172a">-65,00 €</text>
+<text x="925" y="404" font-size="14" font-weight="700" fill="#15803d">netto</text><text x="1140" y="404" text-anchor="end" font-size="14" font-weight="700" fill="#15803d">455,00 €</text>
+<text x="925" y="440" font-size="13" fill="#475569">nelle righe "Per tipo" e</text>
+<text x="925" y="460" font-size="13" fill="#475569">"Da dove", e nel mese</text>
+<text x="925" y="480" font-size="13" fill="#475569">della cedola anche se è</text>
+<text x="925" y="500" font-size="13" fill="#475569">registrata il giorno dopo</text>
+
+<rect x="40" y="614" width="760" height="70" rx="12" fill="#fff7ed" stroke="#b45309" stroke-width="2"/>
+<text x="62" y="642" font-size="16" font-weight="700" fill="#b45309">Non trovata: "Ritenute senza la loro rendita nel periodo"</text>
+<text x="62" y="666" font-size="13" fill="#475569">una riga a parte, senza link: il totale netto resta giusto, manca solo il dettaglio</text>
+</svg>

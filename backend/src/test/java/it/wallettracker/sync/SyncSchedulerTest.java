@@ -5,8 +5,11 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.sync.SyncService.Round;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -30,7 +33,7 @@ class SyncSchedulerTest {
 
     @Test
     void theSchedulerChecksForAccountsToUpdateAtRegularIntervals() {
-        when(syncService.syncAllInBackground()).thenReturn(new Round(0, 0, 0));
+        when(syncService.syncAllInBackground()).thenReturn(new Round(0, 0, 0, List.of()));
 
         // timeout(6000): aspetta fino a 6 secondi che la chiamata avvenga (almeno 2 volte).
         verify(syncService, timeout(6000).atLeast(2)).syncAllInBackground();

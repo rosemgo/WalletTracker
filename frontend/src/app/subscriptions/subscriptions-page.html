@@ -8,23 +8,18 @@
 }
 
 @if (overview(); as o) {
-  <!-- Il totale: quanto costano tutti gli abbonamenti attivi. -->
+  <!-- Il totale: quanto costano tutti gli abbonamenti attivi. Una cifra grande (al mese), l'anno sotto. -->
   @for (total of o.totals; track total.currency) {
-    <div class="tiles">
-      <div class="tile">
-        <div class="tile-label">Al mese</div>
-        <div class="tile-value">{{ total.monthly | currency: total.currency }}</div>
-      </div>
-      <div class="tile">
-        <div class="tile-label">All'anno</div>
-        <div class="tile-value">{{ total.yearly | currency: total.currency }}</div>
-      </div>
-    </div>
+    <section class="card hero">
+      <span class="secondary">Gli abbonamenti costano, al mese</span>
+      <span class="big-figure tile-value">{{ total.monthly | money: total.currency }}</span>
+      <p class="comparison">{{ total.yearly | money: total.currency }} all'anno</p>
+    </section>
   }
 
   @if (o.subscriptions.length > 0) {
     <div class="table-scroll">
-      <table>
+      <table class="cards">
         <thead>
           <tr>
             <th>Abbonamento</th>
@@ -38,12 +33,15 @@
         <tbody>
           @for (s of o.subscriptions; track s.id) {
             <tr [class.disabled]="s.late">
-              <td>
-                {{ s.name }}
+              <td class="card-title">
+                <!-- Il nome porta ai pagamenti di questo abbonamento, in Movimenti. -->
+                <a routerLink="/movimenti" [queryParams]="{ text: search(s.merchantKey) }">{{
+                  s.name | readable
+                }}</a>
                 @if (s.priceChanged) {
                   <div class="secondary">
                     <!-- Un rincaro si nota: era l'importo al momento della conferma. -->
-                    prezzo cambiato: prima {{ s.expectedAmount | currency: s.currency }}
+                    prezzo cambiato: prima {{ s.expectedAmount | money: s.currency }}
                   </div>
                 }
                 @if (s.late) {
@@ -52,20 +50,26 @@
                   </div>
                 }
               </td>
-              <td class="amount">
-                {{ s.lastAmount ?? s.expectedAmount | currency: s.currency }}
+              <td data-label="Importo" class="amount">
+                {{ s.lastAmount ?? s.expectedAmount | money: s.currency }}
                 {{ frequencyLabels[s.frequency] }}
               </td>
-              <td class="amount">{{ s.monthlyCost | currency: s.currency }}</td>
-              <td>{{ s.lastDate ? (s.lastDate | date: 'dd/MM/yyyy') : '—' }}</td>
-              <td>{{ s.nextDate && !s.late ? (s.nextDate | date: 'dd/MM/yyyy') : '—' }}</td>
-              <td>
+              <td data-label="Al mese" class="amount">
+                {{ s.monthlyCost | money: s.currency }}
+              </td>
+              <td data-label="Pagato il">
+                {{ s.lastDate ? (s.lastDate | date: 'dd/MM/yyyy') : '—' }}
+              </td>
+              <td data-label="Prossimo">
+                {{ s.nextDate && !s.late ? (s.nextDate | date: 'dd/MM/yyyy') : '—' }}
+              </td>
+              <td data-label="">
                 <button
                   type="button"
                   class="link"
                   (click)="remove(s.id, s.name + ' tolto dagli abbonamenti')"
                 >
-                  togli
+                  Togli
                 </button>
               </td>
             </tr>
@@ -92,24 +96,22 @@
         Nome
         <input
           #nameInput
-          [value]="suggestion.name"
+          [value]="suggestion.name | readable"
           maxlength="100"
-          [attr.aria-label]="'Nome di ' + suggestion.name"
+          [attr.aria-label]="'Nome di ' + (suggestion.name | readable)"
         />
       </label>
       <div>
-        <strong>{{ suggestion.typicalAmount | currency: suggestion.currency }}</strong>
+        <strong>{{ suggestion.typicalAmount | money: suggestion.currency }}</strong>
         {{ frequencyLabels[suggestion.frequency] }} · {{ suggestion.occurrences }} pagamenti ·
         ultimo il
         {{ suggestion.lastDate | date: 'dd/MM/yyyy' }}
       </div>
       <div class="suggestion-actions">
-        <button type="button" (click)="confirm(suggestion, nameInput.value)">
+        <button type="button" class="primary" (click)="confirm(suggestion, nameInput.value)">
           È un abbonamento
         </button>
-        <button type="button" class="link" (click)="dismiss(suggestion)">
-          no, non suggerirlo più
-        </button>
+        <button type="button" (click)="dismiss(suggestion)">No, non suggerirlo più</button>
       </div>
     </div>
   } @empty {
@@ -124,7 +126,7 @@
           <li>
             {{ d.merchantKey }} ·
             @if (d.amount !== null) {
-              circa {{ d.amount | currency: d.currency }}
+              circa {{ d.amount | money: d.currency }}
             } @else {
               tutti gli importi ({{ d.currency }})
             }
@@ -134,7 +136,7 @@
               class="link"
               (click)="remove(d.id, d.merchantKey + ' potrà essere suggerito di nuovo')"
             >
-              suggeriscilo di nuovo
+              Suggeriscilo di nuovo
             </button>
           </li>
         }

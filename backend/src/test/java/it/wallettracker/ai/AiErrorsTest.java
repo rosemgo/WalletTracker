@@ -14,7 +14,7 @@ class AiErrorsTest {
     @Test
     void theHttpCodeSaysWhatHappened() {
         assertThat(AiErrors.describe(new NonTransientAiException("HTTP 401 - {\"message\":\"Unauthorized\"}"),
-                AiProvider.MISTRAL)).startsWith("La chiave di Mistral AI non è valida");
+                AiProvider.GEMINI)).startsWith("La chiave di Google Gemini non è valida");
         assertThat(AiErrors.describe(new RuntimeException("404 Not Found. models/gemini-9 is not found"),
                 AiProvider.GEMINI)).startsWith("Il modello non esiste per Google Gemini");
         assertThat(AiErrors.describe(new RuntimeException("429 Too Many Requests"), AiProvider.GEMINI))
@@ -39,14 +39,14 @@ class AiErrorsTest {
     @Test
     void numbersThatAreNotHttpCodesAreIgnored() {
         // 4290 non è 429, e un id che contiene 401 nemmeno.
-        assertThat(AiErrors.describe(new RuntimeException("request 14012 failed after 4290 ms"), AiProvider.MISTRAL))
-                .startsWith("Mistral AI non ha risposto: request 14012");
+        assertThat(AiErrors.describe(new RuntimeException("request 14012 failed after 4290 ms"), AiProvider.GEMINI))
+                .startsWith("Google Gemini non ha risposto: request 14012");
     }
 
     @Test
     void noNetworkIsSaidClearly() {
         assertThat(AiErrors.describe(new ResourceAccessException("I/O error", new ConnectException("refused")),
-                AiProvider.MISTRAL)).isEqualTo("Non riesco a raggiungere Mistral AI: controlla la connessione a internet.");
+                AiProvider.GEMINI)).isEqualTo("Non riesco a raggiungere Google Gemini: controlla la connessione a internet.");
         assertThat(AiErrors.describe(new ResourceAccessException("I/O error"), AiProvider.OLLAMA))
                 .endsWith("(o se Ollama è avviato).");
     }

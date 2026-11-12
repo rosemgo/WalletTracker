@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="830" viewBox="0 0 1200 830" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect width="1200" height="830" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Cinque casi: che fine fanno il cassetto e il cartellino</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">il cassetto = la sessione (Tomcat); il cartellino = il contesto (Spring Security); a fine richiesta il thread lascia SEMPRE la presa</text>
+
+<!-- headers -->
+<text x="180" y="108" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">Situazione</text>
+<text x="525" y="108" text-anchor="middle" font-size="15" font-weight="700" fill="#c2410c">Cassetto (sessione)</text>
+<text x="860" y="108" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">Cartellino (contesto)</text>
+<text x="1080" y="108" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">Risultato</text>
+
+<!-- row 1 -->
+<rect x="20" y="122" width="1160" height="120" rx="12" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="40" y="152" font-size="16" font-weight="700" fill="#15803d">① Entri con il PIN</text>
+<text x="40" y="176" font-size="13" fill="#334155">POST /api/auth/login, PIN giusto</text>
+<text x="40" y="198" font-size="12" fill="#475569">AuthController.openSession</text>
+<rect x="355" y="137" width="340" height="90" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="525" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">CREATO da Tomcat</text>
+<text x="525" y="184" text-anchor="middle" font-size="12" fill="#334155">saveContext → request.getSession(true)</text>
+<text x="525" y="206" text-anchor="middle" font-size="12" fill="#334155">risposta: Set-Cookie: WALLETTRACKER_SESSION</text>
+<rect x="710" y="137" width="300" height="90" rx="10" fill="#ffffff" stroke="#1d4ed8"/>
+<text x="860" y="162" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">CREATO (createEmptyContext)</text>
+<text x="860" y="184" text-anchor="middle" font-size="12" fill="#334155">e messo nel cassetto:</text>
+<text x="860" y="206" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#334155">"SPRING_SECURITY_CONTEXT"</text>
+<text x="1095" y="180" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">dentro</text>
+
+<!-- row 2 -->
+<rect x="20" y="252" width="1160" height="120" rx="12" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="40" y="282" font-size="16" font-weight="700" fill="#15803d">② Le richieste dopo</text>
+<text x="40" y="306" font-size="13" fill="#334155">GET /api/accounts</text>
+<text x="40" y="328" font-size="12" fill="#475569">con Cookie: WALLETTRACKER_SESSION</text>
+<rect x="355" y="267" width="340" height="90" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="525" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">LO STESSO</text>
+<text x="525" y="314" text-anchor="middle" font-size="12" fill="#334155">Tomcat lo ritrova dal numero del cookie</text>
+<text x="525" y="336" text-anchor="middle" font-size="12" fill="#334155">(dura fino a 12 ore senza richieste)</text>
+<rect x="710" y="267" width="300" height="90" rx="10" fill="#ffffff" stroke="#1d4ed8"/>
+<text x="860" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">LO STESSO OGGETTO</text>
+<text x="860" y="314" text-anchor="middle" font-size="12" fill="#334155">ripreso dal cassetto con</text>
+<text x="860" y="336" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#334155">getAttribute(...)</text>
+<text x="1095" y="310" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">dentro</text>
+
+<!-- row 3 -->
+<rect x="20" y="382" width="1160" height="120" rx="12" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+<text x="40" y="412" font-size="16" font-weight="700" fill="#b91c1c">③ La sessione finisce</text>
+<text x="40" y="436" font-size="13" fill="#334155">"Esci", 12 ore, riavvio,</text>
+<text x="40" y="458" font-size="13" fill="#334155">PIN cambiato (generazione)</text>
+<rect x="355" y="397" width="340" height="90" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="525" y="422" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">BUTTATO o SPARITO</text>
+<text x="525" y="444" text-anchor="middle" font-size="12" fill="#334155">session.invalidate(), scadenza o memoria azzerata;</text>
+<text x="525" y="466" text-anchor="middle" font-size="12" fill="#334155">il cookie resta nel browser, ma non apre più niente</text>
+<rect x="710" y="397" width="300" height="90" rx="10" fill="#ffffff" stroke="#1d4ed8"/>
+<text x="860" y="422" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">SPARISCE CON IL CASSETTO</text>
+<text x="860" y="444" text-anchor="middle" font-size="12" fill="#334155">era dentro: va via insieme</text>
+<text x="860" y="466" text-anchor="middle" font-size="12" fill="#334155">a tutto il contenuto</text>
+<text x="1095" y="440" text-anchor="middle" font-size="14" font-weight="700" fill="#b91c1c">fuori</text>
+
+<!-- row 4 -->
+<rect x="20" y="512" width="1160" height="140" rx="12" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+<text x="40" y="542" font-size="16" font-weight="700" fill="#b91c1c">④ Nessun cassetto valido</text>
+<text x="40" y="566" font-size="13" fill="#334155">a) nessun cookie: primo avvio,</text>
+<text x="58" y="586" font-size="13" fill="#334155">altro browser, finestra anonima, curl</text>
+<text x="40" y="610" font-size="13" fill="#334155">b) cookie sì, cassetto no:</text>
+<text x="58" y="630" font-size="13" fill="#334155">dopo il caso ③</text>
+<rect x="355" y="527" width="340" height="110" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="525" y="555" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">NESSUNO</text>
+<text x="525" y="579" text-anchor="middle" font-size="12" fill="#334155">getSession(false) → null</text>
+<text x="525" y="601" text-anchor="middle" font-size="12" fill="#334155">(nessuno chiama getSession(true):</text>
+<text x="525" y="621" text-anchor="middle" font-size="12" fill="#334155">nessuna sessione nuova)</text>
+<rect x="710" y="527" width="300" height="110" rx="10" fill="#ffffff" stroke="#1d4ed8"/>
+<text x="860" y="555" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">UNO VUOTO, NUOVO</text>
+<text x="860" y="579" text-anchor="middle" font-size="12" fill="#334155">SupplierDeferredSecurityContext.init()</text>
+<text x="860" y="601" text-anchor="middle" font-size="12" fill="#334155">→ createEmptyContext()</text>
+<text x="860" y="621" text-anchor="middle" font-size="12" fill="#334155">solo per questa richiesta</text>
+<text x="1095" y="578" text-anchor="middle" font-size="14" font-weight="700" fill="#b91c1c">401</text>
+<text x="1095" y="600" text-anchor="middle" font-size="12" fill="#475569">→ pagina del PIN</text>
+
+<!-- row 5 -->
+<rect x="20" y="662" width="1160" height="140" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="40" y="692" font-size="16" font-weight="700" fill="#1d4ed8">⑤ "Senza PIN", dal PC</text>
+<text x="40" y="716" font-size="13" fill="#334155">ogni richiesta dalla porta 8000</text>
+<text x="40" y="738" font-size="13" fill="#334155">(header local)</text>
+<rect x="355" y="677" width="340" height="110" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="525" y="705" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">NESSUNO, MAI</text>
+<text x="525" y="729" text-anchor="middle" font-size="12" fill="#334155">nessun saveContext → nessun getSession(true)</text>
+<text x="525" y="751" text-anchor="middle" font-size="12" fill="#334155">niente cookie: niente da rubare</text>
+<text x="525" y="773" text-anchor="middle" font-size="12" fill="#475569">(lo prova SessionCookieTest)</text>
+<rect x="710" y="677" width="300" height="110" rx="10" fill="#ffffff" stroke="#1d4ed8"/>
+<text x="860" y="705" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">UNO NUOVO A OGNI RICHIESTA</text>
+<text x="860" y="729" text-anchor="middle" font-size="12" fill="#334155">PinAccessFilter, righe 60-62:</text>
+<text x="860" y="751" text-anchor="middle" font-size="12" fill="#334155">"proprietario-dal-pc", solo sul thread</text>
+<text x="860" y="773" text-anchor="middle" font-size="12" fill="#334155">mai salvato</text>
+<text x="1095" y="730" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">dentro</text>
+<text x="1095" y="752" text-anchor="middle" font-size="12" fill="#475569">(solo dal PC)</text>
+</svg>

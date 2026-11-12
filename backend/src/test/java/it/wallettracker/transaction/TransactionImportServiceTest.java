@@ -230,6 +230,29 @@ class TransactionImportServiceTest {
         assertThat(second.fromReason()).startsWith("ultimo movimento salvato (2026-09-10)");
     }
 
+    @Test
+    void aMovementAlreadyTakenFromTheFileIsNotSavedTwice() {
+        // Un mese preso dal file di Trade Republic (docs/31): il movimento c'è, con l'impronta del file e i testi.
+        BankTransaction fromFile = transactionRepository.save(new BankTransaction(account,
+                BankTransaction.FILE_KEY_PREFIX + "id-1", TransactionStatus.BOOKED, LocalDate.parse("2026-03-01"),
+                null, new BigDecimal("13.73"), "EUR", null, "Interest payment", "{}"));
+        // Dopo un nuovo collegamento la banca dà uno storico più lungo: lo stesso movimento, un giorno dopo, più un
+        // movimento nuovo con lo stesso importo ma lontano un mese.
+        bankReturns(json("b1", "BOOK", "2026-03-02", "13.73", "CRDT", null),
+                json("b2", "BOOK", "2026-04-01", "13.73", "CRDT", null));
+
+        var result = importService.importAccount(account, null);
+
+        assertThat(result.inserted()).isEqualTo(1);       // solo quello di aprile
+        assertThat(result.alreadyPresent()).isEqualTo(1); // marzo c'era già, dal file
+        BankTransaction march = transactionRepository.findById(fromFile.getId()).orElseThrow();
+        assertThat(march.getDedupKey()).isEqualTo("ref:b1");            // ha preso l'impronta della banca
+        assertThat(march.getDescription()).isEqualTo("Interest payment"); // e ha tenuto il testo
+        // La sincronizzazione dopo lo riconosce dall'impronta, come ogni altro movimento.
+        assertThat(importService.importAccount(account, null).inserted()).isZero();
+        assertThat(transactionRepository.count()).isEqualTo(2);
+    }
+
     /** Dice al client finto di restituire questi movimenti, qualunque siano conto e date richiesti. */
     private void bankReturns(String... jsons) {
         List<RawTransaction> transactions = Arrays.stream(jsons)

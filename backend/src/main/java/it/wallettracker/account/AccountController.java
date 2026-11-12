@@ -1,8 +1,11 @@
 package it.wallettracker.account;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -106,5 +109,19 @@ public class AccountController {
             @Pattern(regexp = "^$|^[A-Za-z]{2}[0-9A-Za-z ]{13,40}$") String iban,
             @NotNull @Pattern(regexp = "[A-Z]{3}") String currency,
             AccountRole role) {
+    }
+
+    /**
+     * {@code PUT /api/accounts/{id}/balance} con corpo {@code {"balance": 1234.56}}: il saldo di un conto manuale,
+     * quello che la banca mostra dopo l'ultimo movimento importato (docs/saldi.md). {@code null} lo toglie. Per un
+     * conto collegato risponde 409: il saldo lo dà la banca.
+     */
+    @PutMapping("/{id}/balance")
+    public AccountDto changeBalance(@PathVariable Long id, @Valid @RequestBody BalanceChange change) {
+        return accountService.changeBalance(id, change.balance(), Instant.now());
+    }
+
+    /** Il corpo della richiesta: al massimo due decimali, e un numero che stia nella colonna (NUMERIC 19,2). */
+    public record BalanceChange(@Digits(integer = 17, fraction = 2) BigDecimal balance) {
     }
 }

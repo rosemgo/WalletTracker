@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="860" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">nginx e Tomcat: due server web, uno dietro l'altro</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">nginx sta davanti e riceve il browser; Tomcat sta dentro il backend e riceve solo nginx</text>
+
+<!-- Browser -->
+<rect x="30" y="110" width="220" height="110" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="140" y="145" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">Browser</text>
+<text x="140" y="170" text-anchor="middle" font-size="13" fill="#334155">oggi: http://localhost:8000</text>
+<text x="140" y="192" text-anchor="middle" font-size="13" fill="#334155">passo 4: https://… (Tailscale)</text>
+
+<line x1="250" y1="165" x2="335" y2="165" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="292" y="152" text-anchor="middle" font-size="12" fill="#1d4ed8">http o https</text>
+
+<!-- nginx -->
+<rect x="340" y="95" width="300" height="300" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2.5"/>
+<text x="490" y="125" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">container web: nginx</text>
+<text x="490" y="148" text-anchor="middle" font-size="13" fill="#334155">il "portiere"</text>
+<rect x="360" y="162" width="260" height="62" rx="8" fill="#ffffff" stroke="#15803d"/>
+<text x="490" y="186" text-anchor="middle" font-size="14" fill="#0f172a">/, /movimenti, .js, .css …</text>
+<text x="490" y="208" text-anchor="middle" font-size="13" fill="#334155">risponde lui, con i file di Angular</text>
+<rect x="360" y="236" width="260" height="140" rx="8" fill="#ffffff" stroke="#15803d"/>
+<text x="490" y="260" text-anchor="middle" font-size="14" fill="#0f172a">/api/… → la rifà al backend</text>
+<text x="490" y="282" text-anchor="middle" font-size="13" fill="#334155">e aggiunge dei "biglietti":</text>
+<text x="490" y="308" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#15803d">X-Forwarded-Proto: $scheme</text>
+<text x="490" y="330" text-anchor="middle" font-size="12" fill="#334155">($scheme = come è arrivato A NGINX:</text>
+<text x="490" y="348" text-anchor="middle" font-size="12" fill="#334155">"http" o "https")</text>
+
+<line x1="640" y1="300" x2="735" y2="300" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="688" y="286" text-anchor="middle" font-size="12" fill="#15803d">sempre http</text>
+<text x="688" y="320" text-anchor="middle" font-size="11" fill="#475569">rete di Docker</text>
+<text x="688" y="335" text-anchor="middle" font-size="11" fill="#475569">172.18.x.x</text>
+
+<!-- backend -->
+<rect x="740" y="95" width="430" height="400" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="955" y="125" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">container backend: il .jar di Spring Boot</text>
+<text x="955" y="148" text-anchor="middle" font-size="13" fill="#334155">un solo programma Java, fatto a strati</text>
+
+<rect x="765" y="165" width="380" height="120" rx="10" fill="#ffedd5" stroke="#c2410c"/>
+<text x="955" y="192" text-anchor="middle" font-size="16" font-weight="700" fill="#9a3412">Tomcat (incorporato)</text>
+<text x="955" y="214" text-anchor="middle" font-size="13" fill="#334155">ascolta sulla porta 8080, legge l'HTTP,</text>
+<text x="955" y="234" text-anchor="middle" font-size="13" fill="#334155">gestisce le sessioni e scrive Set-Cookie.</text>
+<text x="955" y="258" text-anchor="middle" font-size="13" fill="#334155">Con forward-headers-strategy: native</text>
+<text x="955" y="276" text-anchor="middle" font-size="13" fill="#334155">legge anche X-Forwarded-Proto (vedi sotto)</text>
+
+<rect x="765" y="295" width="380" height="80" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="955" y="322" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">Spring (Security, MVC)</text>
+<text x="955" y="346" text-anchor="middle" font-size="13" fill="#334155">la catena di filtri, i @RestController</text>
+
+<rect x="765" y="385" width="380" height="90" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="955" y="412" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">il nostro codice</text>
+<text x="955" y="436" text-anchor="middle" font-size="13" fill="#334155">AuthController, PinService, …</text>
+<text x="955" y="458" text-anchor="middle" font-size="12" fill="#475569">(senza Tomcat non riceverebbe nessuna richiesta)</text>
+
+<!-- bottom panel -->
+<rect x="30" y="525" width="1140" height="310" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="55" y="557" font-size="18" font-weight="700" fill="#334155">Come decide Tomcat se il cookie di sessione è Secure</text>
+
+<rect x="55" y="575" width="250" height="100" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="180" y="602" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">1. Da chi arriva?</text>
+<text x="180" y="626" text-anchor="middle" font-size="13" fill="#334155">indirizzo interno (172.x,</text>
+<text x="180" y="646" text-anchor="middle" font-size="13" fill="#334155">10.x, 192.168.x, 127.x)?</text>
+
+<line x1="305" y1="625" x2="365" y2="625" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="335" y="613" text-anchor="middle" font-size="12" fill="#15803d">sì</text>
+<line x1="180" y1="675" x2="180" y2="730" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="195" y="707" font-size="12" fill="#b91c1c">no</text>
+<rect x="55" y="735" width="250" height="80" rx="10" fill="#fef2f2" stroke="#b91c1c"/>
+<text x="180" y="765" text-anchor="middle" font-size="13" fill="#7f1d1d">X-Forwarded-Proto ignorato:</text>
+<text x="180" y="787" text-anchor="middle" font-size="13" fill="#7f1d1d">un estraneo non lo può falsificare</text>
+
+<rect x="370" y="575" width="250" height="100" rx="10" fill="#ffffff" stroke="#c2410c"/>
+<text x="495" y="602" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">2. Ci credo:</text>
+<text x="495" y="626" text-anchor="middle" font-size="13" fill="#334155">X-Forwarded-Proto dice</text>
+<text x="495" y="646" text-anchor="middle" font-size="13" fill="#334155">"https"?</text>
+
+<line x1="620" y1="625" x2="680" y2="625" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+<text x="650" y="613" text-anchor="middle" font-size="12" fill="#15803d">sì</text>
+<line x1="495" y1="675" x2="495" y2="730" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="510" y="707" font-size="12" fill="#b91c1c">no ("http")</text>
+<rect x="370" y="735" width="250" height="80" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="495" y="765" text-anchor="middle" font-size="13" fill="#334155">Set-Cookie senza Secure</text>
+<text x="495" y="787" text-anchor="middle" font-size="13" fill="#334155">(oggi, su http://localhost)</text>
+
+<rect x="685" y="575" width="460" height="100" rx="10" fill="#f0fdf4" stroke="#15803d"/>
+<text x="915" y="602" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">3. request.isSecure() = true</text>
+<text x="915" y="626" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">Set-Cookie: WALLETTRACKER_SESSION=…;</text>
+<text x="915" y="648" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">HttpOnly; SameSite=Strict; Secure</text>
+
+<rect x="685" y="700" width="460" height="115" rx="10" fill="#fffbeb" stroke="#b45309"/>
+<text x="915" y="726" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">Attenzione, passo 4</text>
+<text x="915" y="750" text-anchor="middle" font-size="13" fill="#334155">Tailscale toglie l'https PRIMA di nginx (→ 127.0.0.1:8001):</text>
+<text x="915" y="770" text-anchor="middle" font-size="13" fill="#334155">nginx vede http e scrive "http". Al passo 4 la porta 8081</text>
+<text x="915" y="790" text-anchor="middle" font-size="13" fill="#334155">dovrà scrivere "https": si sistema lì, e si prova.</text>
+</svg>

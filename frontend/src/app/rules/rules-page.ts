@@ -1,5 +1,5 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
+import { Component, DOCUMENT, OnInit, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -20,8 +20,10 @@ import {
   RulePreview,
   RuleRequest,
   TransactionType,
+  RuleBlocker,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 
 /** I valori del modulo per una regola nuova. */
 const NEW_RULE: RuleRequest = {
@@ -44,12 +46,13 @@ const NEW_RULE: RuleRequest = {
  */
 @Component({
   selector: 'app-rules-page',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
+  imports: [DatePipe, MoneyPipe, NgTemplateOutlet, ReactiveFormsModule],
   templateUrl: './rules-page.html',
 })
 export class RulesPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly document = inject(DOCUMENT);
 
   /**
    * Il "costruttore di moduli". NonNullable: con reset() i campi tornano al valore iniziale, non a null,
@@ -65,8 +68,21 @@ export class RulesPage implements OnInit {
   protected readonly amountSignLabels = AMOUNT_SIGN_LABELS;
 
   protected readonly rules = signal<Rule[]>([]);
+  /** Le regole create dall'utente, e quelle che vengono con l'app (in una sezione da aprire). */
+  protected readonly ownRules = computed(() => this.rules().filter((r) => !r.builtin));
+  protected readonly builtinRules = computed(() => this.rules().filter((r) => r.builtin));
+
+  /**
+   * La variabile di un ng-template (let-list) per TypeScript non ha un tipo: passando di qui torna un elenco di regole,
+   * e il template controlla di nuovo i nomi dei campi.
+   */
+  protected asRules(list: Rule[]): Rule[] {
+    return list;
+  }
   protected readonly editing = signal<Rule | null>(null); // la regola in modifica; null = regola nuova
   protected readonly preview = signal<RulePreview | null>(null);
+  /** Dopo "Salva": chi vince al posto della regola appena salvata, su alcuni movimenti (null = nessuno). */
+  protected readonly savedBlockers = signal<{ rule: string; blockers: RuleBlocker[] } | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
   /** L'elenco delle categorie, per il menu "Categoria". */
@@ -134,17 +150,22 @@ export class RulesPage implements OnInit {
       ...(this.amountSigns.includes(amountSign) ? { amountSign } : {}),
       ...(Number.isInteger(categoryId) && categoryId > 0 ? { categoryId } : {}),
     });
+    // Dalla scheda di un movimento: dopo una correzione (con la categoria scelta) o da "crea una regola" in un
+    // movimento ancora senza categoria, che allora va scelta qui.
     this.message.set(
-      'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.',
+      Number.isInteger(categoryId) && categoryId > 0
+        ? 'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.'
+        : 'Modulo compilato dal movimento: scegli la categoria, accorcia il testo da cercare se serve, controlla la prova e salva.',
     );
     this.tryRule();
   }
 
-  /** "Modifica": carica la regola nel modulo. */
+  /** "Modifica": carica la regola nel modulo, e porta il modulo in vista (è in cima alla pagina). */
   edit(rule: Rule): void {
     this.editing.set(rule);
     this.preview.set(null);
     this.message.set(null);
+    this.savedBlockers.set(null);
     // setValue vuole TUTTI i campi del modulo.
     this.form.setValue({
       name: rule.name,
@@ -156,6 +177,10 @@ export class RulesPage implements OnInit {
       priority: rule.priority,
       enabled: rule.enabled,
     });
+    // Con molte regole il pulsante è in fondo e il modulo in cima: senza, la modifica non si vedrebbe.
+    this.document
+      .getElementById('rule-form')
+      ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   }
 
   /** Torna al modulo vuoto, per una regola nuova. */
@@ -171,7 +196,7 @@ export class RulesPage implements OnInit {
       this.form.markAllAsTouched(); // mostra gli errori di tutti i campi
       return;
     }
-    this.api.previewRule(this.form.getRawValue()).subscribe({
+    this.api.previewRule(this.form.getRawValue(), this.editing()?.id ?? null).subscribe({
       next: (preview) => this.preview.set(preview),
       error: (response) => this.error.set(response.error?.detail ?? 'Prova non riuscita.'),
     });
@@ -190,11 +215,19 @@ export class RulesPage implements OnInit {
       : this.api.createRule(request);
 
     this.error.set(null);
+    this.savedBlockers.set(null);
     saved$.subscribe({
       next: (rule) => {
         this.message.set(`Regola "${rule.name}" salvata: ora classifica ${rule.uses} movimenti.`);
         this.cancel();
         this.loadRules();
+        // La prova, rifatta da sola: se su qualche movimento vince un'altra regola, lo diciamo subito.
+        this.api.previewRule(request, rule.id).subscribe({
+          next: (preview) =>
+            this.savedBlockers.set(
+              preview.blockers.length > 0 ? { rule: rule.name, blockers: preview.blockers } : null,
+            ),
+        });
       },
       error: (response) =>
         this.error.set(response.error?.detail ?? 'La regola non è stata salvata.'),
@@ -220,6 +253,11 @@ export class RulesPage implements OnInit {
       error: (response) =>
         this.error.set(response.error?.detail ?? 'La regola non è stata cancellata.'),
     });
+  }
+
+  /** Il tipo dell'elenco passato al template "blockersList" (let-list è senza tipo: vedi asRules). */
+  protected asBlockers(list: RuleBlocker[]): RuleBlocker[] {
+    return list;
   }
 
   /** Il campo ha un errore da mostrare? Solo dopo che l'utente ci è passato (touched). */

@@ -1,0 +1,354 @@
+<h1>Investimenti</h1>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (data(); as d) {
+  <div class="investments" [class.loading]="loading()">
+    @if (d.currencies.length > 1) {
+      <label class="currency-choice">
+        Valuta
+        <select (change)="onCurrency($event)">
+          @for (c of d.currencies; track c) {
+            <option [value]="c" [selected]="c === d.currency">{{ c }}</option>
+          }
+        </select>
+      </label>
+    }
+
+    @if (empty()) {
+      <!-- Niente da mostrare: come farli riconoscere (docs/investimenti.md, parti A e I). -->
+      <section class="card soft">
+        <h2>Ancora nessun investimento</h2>
+        <p>
+          Qui compaiono i titoli che compri e vendi, i bonifici che fai verso i conti di
+          investimento e le cedole, i dividendi e gli interessi che incassi. L'app li riconosce dal
+          <strong>tipo</strong> dei movimenti:
+        </p>
+        <ul class="steps">
+          <li>
+            un acquisto deve avere il tipo <strong>Acquisto titoli</strong> (una vendita,
+            <strong>Vendita titoli</strong>): per Trade Republic, Tinaba e il deposito titoli della
+            banca ci sono già le <a routerLink="/regole">regole</a>; per gli altri, una regola nuova
+            o, per un movimento solo, <strong>Conta come</strong> nella sua scheda;
+          </li>
+          <li>
+            un bonifico verso il broker diventa <strong>Versamento investimenti</strong> da solo se
+            in <a routerLink="/conti">Conti</a> il conto del broker ha il ruolo
+            <strong>Investimenti</strong> (anche un conto manuale, con il suo IBAN, se la banca non
+            si può collegare).
+          </li>
+        </ul>
+      </section>
+    } @else {
+      <div class="segmented" role="group" aria-label="Periodo">
+        @for (p of periods; track p.value) {
+          <button
+            type="button"
+            [attr.aria-pressed]="period() === p.value"
+            (click)="choosePeriod(p.value)"
+          >
+            {{ p.label }}
+          </button>
+        }
+      </div>
+
+      @if (d.onlyTransfers.length > 0) {
+        <!-- Conti di cui si vedono i bonifici ma nessun acquisto: il loro investito manca (parte I). -->
+        <section class="card warning only-transfers">
+          <p>
+            Per <strong>{{ d.onlyTransfers.join(', ') }}</strong> si vedono solo i bonifici, nessun
+            acquisto: quello che hai comprato lì non è nell'investito. Importa i movimenti del conto
+            in <a routerLink="/importa">Importa</a> per vederlo.
+          </p>
+        </section>
+      }
+
+      <div class="investments-grid">
+        <div>
+          <section class="card hero">
+            <span class="secondary">{{ figure()?.label }}</span>
+            <span class="big-figure">{{
+              figure()?.value ?? investedInPeriod() | money: d.currency : 'symbol' : '1.0-0'
+            }}</span>
+            <p class="comparison">{{ comparison() }}</p>
+            <app-trend-chart
+              [values]="invested()"
+              [labels]="monthLabels()"
+              [names]="monthNames()"
+              [description]="lineDescription()"
+              [currency]="d.currency"
+              (scrubbed)="scrubIndex.set($event)"
+            />
+            <div class="trade-figures">
+              <div>
+                <span class="secondary">Acquistato · {{ periodLabel(d.period) }}</span>
+                <strong>{{ d.boughtInPeriod | money: d.currency : 'symbol' : '1.0-0' }}</strong>
+              </div>
+              <div>
+                <span class="secondary">Rientrato dalle vendite</span>
+                <strong>{{ d.soldInPeriod | money: d.currency : 'symbol' : '1.0-0' }}</strong>
+              </div>
+            </div>
+            <p class="secondary note-value">
+              Acquisti di titoli meno vendite, da tutti i conti, nel periodo scelto. Non è quanto
+              valgono oggi: per quello servirebbero le quotazioni. Contano i movimenti che
+              WalletTracker conosce: se lo storico della banca è più corto, i più vecchi non ci
+              sono. Le vendite sono come le registra la banca: le tasse che paga a parte (il capital
+              gain) sono in Altre tasse.
+            </p>
+          </section>
+
+          <section class="card transfers-card">
+            <span class="secondary"
+              >Bonifici verso i conti di investimento · {{ periodLabel(d.period) }}</span
+            >
+            <span class="mid-figure">{{
+              d.transferredInPeriod | money: d.currency : 'symbol' : '1.0-0'
+            }}</span>
+            <p class="bar-pick">{{ transferBarText() }}</p>
+            <!-- Il colore di sempre, non il verde e rosso del "netto" di Analisi (diverging): qui non c'è un "sopra
+                 o sotto" da giudicare. Un mese con più soldi tornati indietro resta una barra verso il basso. -->
+            <app-bar-chart
+              [values]="transferred()"
+              [labels]="barLabels()"
+              [names]="transferBarNames()"
+              [selected]="transferBar()"
+              [average]="transferAverage()"
+              [averageLabel]="transferAverageLabel()"
+              [interactive]="true"
+              [description]="transferDescription()"
+              (picked)="transferPick.set($event)"
+            />
+            <p class="secondary note-value">
+              Soldi spostati dai conti di tutti i giorni verso broker e wallet, meno quelli tornati
+              indietro. Non dicono quanti ne hai investiti: quello è l'investito in titoli.
+            </p>
+          </section>
+
+          <!-- Sotto i bonifici: quanto hai mandato ai conti di investimento, e quanto ci è ancora fermo. Qui, e non
+               nella colonna di destra, perché le due colonne finiscano alla stessa altezza. -->
+          @if (d.cash.length > 0) {
+            <!-- La liquidità (docs/saldi.md, parte D): il saldo di ogni conto di investimento. -->
+            <section class="card cash-card">
+              <span class="secondary" #cashTitle>Liquidità sui conti di investimento</span>
+              <span class="mid-figure">{{
+                cashTotal() | money: d.currency : 'symbol' : '1.0-0'
+              }}</span>
+              <ul class="rows">
+                @for (c of rows('cash', d.cash); track c.accountId) {
+                  <li>
+                    <span>
+                      {{ c.account }}
+                      <span class="secondary">
+                        @if (c.balance; as b) {
+                          Al {{ b.date | date: 'd MMM y' }} ·
+                          {{ b.source === 'BANK' ? 'dalla banca' : 'dal saldo che hai scritto' }}
+                        } @else if (c.manual) {
+                          Saldo non scritto: <a routerLink="/conti">scrivilo in Conti</a>
+                        } @else {
+                          La banca non dà il saldo: <a routerLink="/conti">scrivilo in Conti</a>
+                        }
+                      </span>
+                    </span>
+                    @if (c.balance; as b) {
+                      <strong>{{ b.amount | money: d.currency }}</strong>
+                    } @else {
+                      <strong class="secondary">—</strong>
+                    }
+                  </li>
+                }
+              </ul>
+              @if (shortened(d.cash)) {
+                <button
+                  type="button"
+                  class="link show-all"
+                  [attr.aria-expanded]="openLists().has('cash')"
+                  (click)="toggle('cash', cashTitle)"
+                >
+                  {{
+                    openLists().has('cash') ? 'Mostra meno' : 'Mostra tutti (' + d.cash.length + ')'
+                  }}
+                </button>
+              }
+              <p class="secondary note-value">
+                I soldi sui conti di investimento non (ancora) investiti in titoli: il saldo che dà
+                la banca, o quello che hai scritto per un conto manuale. Non si calcola dai
+                movimenti, che nell'app non sono mai tutti.
+              </p>
+            </section>
+          }
+        </div>
+
+        <div>
+          <section class="card">
+            <span class="secondary"
+              >Cedole, dividendi e interessi · {{ periodLabel(d.period) }}</span
+            >
+            <span class="mid-figure">{{
+              netIncome() | money: d.currency : 'symbol' : '1.0-0'
+            }}</span>
+            <span class="secondary">Netti: quello che è arrivato sul conto</span>
+            <p class="bar-pick">{{ incomeBarText() }}</p>
+            <app-bar-chart
+              [values]="income()"
+              [labels]="barLabels()"
+              [names]="incomeBarNames()"
+              [selected]="incomeBar()"
+              [average]="incomeAverage()"
+              [averageLabel]="incomeAverageLabel()"
+              [interactive]="true"
+              [description]="incomeDescription()"
+              (picked)="incomePick.set($event)"
+            />
+            <p class="secondary note-value">
+              Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese. Alcune
+              banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a
+              parte (tipo "Ritenute sulle rendite"), che qui si toglie dalla rendita dello stesso
+              titolo; altre (come Trade Republic) accreditano già il netto.
+            </p>
+            @if (d.incomeByType.length > 0) {
+              <h3 #typeTitle>Per tipo</h3>
+              <ul class="rows">
+                @for (g of rows('type', d.incomeByType); track g.name) {
+                  <li>
+                    @if (g.name === unmatched) {
+                      <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
+                      <span>
+                        {{ g.name }}
+                        <span class="secondary">{{
+                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                        }}</span>
+                      </span>
+                      <strong>{{ g.amount | money: d.currency }}</strong>
+                    } @else {
+                      <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
+                        <span>
+                          {{ g.name }}
+                          <span class="secondary">{{
+                            g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                          }}</span>
+                        </span>
+                        <strong>{{ g.amount | money: d.currency }}</strong>
+                      </a>
+                    }
+                  </li>
+                }
+              </ul>
+              @if (shortened(d.incomeByType)) {
+                <button
+                  type="button"
+                  class="link show-all"
+                  [attr.aria-expanded]="openLists().has('type')"
+                  (click)="toggle('type', typeTitle)"
+                >
+                  {{
+                    openLists().has('type')
+                      ? 'Mostra meno'
+                      : 'Mostra tutti (' + d.incomeByType.length + ')'
+                  }}
+                </button>
+              }
+              <h3 #sourceTitle>Da dove</h3>
+              <ul class="rows">
+                @for (g of rows('source', d.incomeBySource); track g.name) {
+                  <li>
+                    @if (g.name === unmatched) {
+                      <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
+                      <span>
+                        {{ g.name }}
+                        <span class="secondary">{{
+                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                        }}</span>
+                      </span>
+                      <strong>{{ g.amount | money: d.currency }}</strong>
+                    } @else {
+                      <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
+                        <span>
+                          {{ g.name | readable }}
+                          <span class="secondary">{{
+                            g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                          }}</span>
+                        </span>
+                        <strong>{{ g.amount | money: d.currency }}</strong>
+                      </a>
+                    }
+                  </li>
+                }
+              </ul>
+              @if (shortened(d.incomeBySource)) {
+                <button
+                  type="button"
+                  class="link show-all"
+                  [attr.aria-expanded]="openLists().has('source')"
+                  (click)="toggle('source', sourceTitle)"
+                >
+                  {{
+                    openLists().has('source')
+                      ? 'Mostra meno'
+                      : 'Mostra tutti (' + d.incomeBySource.length + ')'
+                  }}
+                </button>
+              }
+            } @else {
+              <p class="secondary">Nessuna rendita in questo periodo.</p>
+            }
+            <p class="secondary note-value">
+              Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito.
+            </p>
+            @if (d.otherTaxesByType.length > 0) {
+              <h3 #taxesTitle>Altre tasse sugli investimenti</h3>
+              <ul class="rows">
+                @for (g of rows('taxes', d.otherTaxesByType); track g.name) {
+                  <li>
+                    <a routerLink="/movimenti" [queryParams]="taxQuery(d, g)">
+                      <span>
+                        {{ g.name }}
+                        <span class="secondary">{{
+                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
+                        }}</span>
+                      </span>
+                      <strong>{{ g.amount | money: d.currency }}</strong>
+                    </a>
+                  </li>
+                }
+              </ul>
+              @if (shortened(d.otherTaxesByType)) {
+                <button
+                  type="button"
+                  class="link show-all"
+                  [attr.aria-expanded]="openLists().has('taxes')"
+                  (click)="toggle('taxes', taxesTitle)"
+                >
+                  {{
+                    openLists().has('taxes')
+                      ? 'Mostra meno'
+                      : 'Mostra tutti (' + d.otherTaxesByType.length + ')'
+                  }}
+                </button>
+              }
+              <p class="secondary note-value">
+                Non riguardano le rendite e non si tolgono dal netto: il bollo si paga sul deposito,
+                il capital gain sulle vendite in guadagno (Fineco lo addebita una volta al mese, per
+                le vendite del mese prima). Una ritenuta su una cedola o un dividendo finita qui ha
+                il tipo sbagliato: dalle il tipo "Ritenute sulle rendite".
+              </p>
+            }
+          </section>
+        </div>
+      </div>
+
+      <app-investment-movements
+        [title]="'Acquisti e vendite · ' + periodLabel(d.period)"
+        [movements]="d.trades"
+      />
+      <app-investment-movements
+        [title]="'Bonifici verso i conti di investimento · ' + periodLabel(d.period)"
+        [movements]="d.transfers"
+      />
+    }
+  </div>
+} @else if (loading()) {
+  <p>Caricamento...</p>
+}

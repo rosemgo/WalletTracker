@@ -76,8 +76,9 @@ public class ModelDownload {
             return; // ce n'è già uno: non ne facciamo partire un secondo
         }
         state.set(new State(model, true, "avvio", null, null, null));
+        //programmazione reattiva (durante lo scaricamento del modello ollama vengono inviati uno stream di dati (Flux) per l'avanzamento: Spring AI gestisce questo stream) -> OllamaApi.pullModel() di Spring AI restituisce un Flux<ProgressResponse>, non un metodo bloccante. Ollama manda l’avanzamento come stream, e Spring AI lo legge con WebClient (Netty).
         ollamaApi.pullModel(new PullModelRequest(model))
-                .publishOn(Schedulers.boundedElastic()) // vedi la descrizione della classe
+                .publishOn(Schedulers.boundedElastic()) // Esegue le lambda del subscribe in background (l'aggiornamento dello stato) su un thread di background per non impegnare il thread di rete (Netty) che riceve i dati.
                 .subscribe(
                 progress -> state.set(progressOf(model, progress)),
                 error -> {

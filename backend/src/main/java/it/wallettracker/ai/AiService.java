@@ -2,7 +2,6 @@ package it.wallettracker.ai;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import it.wallettracker.account.AccountRepository;
@@ -20,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Le impostazioni dell'IA e lo stato di Ollama e dei servizi cloud (passo 7c: Mistral e Gemini, docs/30).
+ * Le impostazioni dell'IA e lo stato di Ollama e dei servizi cloud (passo 7c: Google Gemini, docs/30).
  *
  * <p>{@link OllamaApi} è il "client" di Ollama che Spring AI crea da solo (configurazione automatica), con
  * l'indirizzo scritto in {@code spring.ai.ollama.base-url}. Qui lo usiamo solo per chiedere quali modelli
@@ -34,19 +33,18 @@ public class AiService {
     /**
      * Le impostazioni e lo stato, per la pagina Impostazioni.
      *
-     * @param provider        la scelta dell'utente: spento, Ollama, Mistral o Gemini
+     * @param provider        la scelta dell'utente: spento, Ollama o Gemini
      * @param ollamaModel     il modello scelto per Ollama
      * @param ollamaReachable se Ollama risponde
      * @param installedModels i modelli già scaricati in Ollama
      * @param modelInstalled  se il modello scelto è tra quelli scaricati
      * @param download        lo scaricamento in corso o l'ultimo fatto, o null
      * @param evaluation      la misura della precisione in corso o l'ultima fatta, o null
-     * @param mistral         Mistral AI: modello, chiave, consenso
      * @param gemini          Google Gemini: modello, chiave, consenso
      */
     public record Status(AiProvider provider, String ollamaModel, boolean ollamaReachable, List<String> installedModels,
             boolean modelInstalled, ModelDownload.State download, ModelEvaluation.State evaluation,
-            CloudStatus mistral, CloudStatus gemini) {
+            CloudStatus gemini) {
     }
 
     /**
@@ -60,8 +58,14 @@ public class AiService {
     public record CloudStatus(String model, boolean keySet, String keyHint, boolean consent) {
     }
 
-    /** Il risultato di "Prova la connessione": che cosa ha risposto, in quanto tempo, o perché no. */
-    public record ConnectionTest(boolean ok, String answer, double seconds, String error) {
+    /**
+     * Il risultato di "Prova la connessione": che cosa ha risposto, in quanto tempo, o perché no.
+     *
+     * @param model          il modello che ha risposto davvero (con un alias, quello scelto dal fornitore), o null
+     * @param thinkingTokens i token di "ragionamento" usati (solo Gemini), o null
+     */
+    public record ConnectionTest(boolean ok, String answer, double seconds, String error, String model,
+            Integer thinkingTokens) {
     }
 
     private final AiSettingsRepository settingsRepository;
@@ -97,7 +101,7 @@ public class AiService {
         List<String> models = reachable ? installed : List.of();
         return new Status(settings.getProvider(), settings.getOllamaModel(), reachable, models,
                 isInstalled(models, settings.getOllamaModel()), modelDownload.state(), modelEvaluation.state(),
-                cloudStatus(settings, AiProvider.MISTRAL), cloudStatus(settings, AiProvider.GEMINI));
+                cloudStatus(settings, AiProvider.GEMINI));
     }
 
     private CloudStatus cloudStatus(AiSettings settings, AiProvider cloud) {
@@ -120,11 +124,9 @@ public class AiService {
      * resta salvato. Un modello null vuol dire "lascia quello di prima".
      */
     @Transactional
-    public Status change(AiProvider provider, String ollamaModel, String mistralModel, String geminiModel,
-            boolean consent) {
+    public Status change(AiProvider provider, String ollamaModel, String geminiModel, boolean consent) {
         AiSettings settings = settings();
         settings.changeModels(ollamaModel.trim(),
-                mistralModel != null ? mistralModel.trim() : settings.model(AiProvider.MISTRAL),
                 geminiModel != null ? geminiModel.trim() : settings.model(AiProvider.GEMINI));
         if (provider.cloud()) {
             if (settings.encryptedApiKey(provider) == null) {
@@ -183,7 +185,7 @@ public class AiService {
                             "Il modello " + target.model() + " non è scaricato: scaricalo in Impostazioni.");
                 }
             }
-            case MISTRAL, GEMINI -> {
+            case GEMINI -> {
                 if (settings.encryptedApiKey(target.provider()) == null) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Manca la chiave di " + target.provider().label + ": inseriscila in Impostazioni.");
@@ -208,13 +210,17 @@ public class AiService {
                 EvaluationCases.options(categoryRepository.findAll(), CategoryKind.EXPENSE), List.of());
         long start = System.nanoTime();
         try {
-            Optional<Long> answer = categoryModel.suggest(question, target);
-            String name = answer.flatMap(id -> question.categories().stream().filter(o -> o.id().equals(id)).findFirst())
+            CategoryModel.Reply reply = categoryModel.ask(question, target);
+            String name = reply.categoryId()
+                    .flatMap(id -> question.categories().stream().filter(o -> o.id().equals(id)).findFirst())
                     .map(CategoryQuestion.Option::name).orElse("non so");
-            return new ConnectionTest(true, name, seconds(start), null);
+            double seconds = seconds(start);
+            log.info("Prova della connessione a {}: {} in {} s (modello {}, token di ragionamento {})", provider.label,
+                    name, String.format("%.1f", seconds), reply.model(), reply.thinkingTokens());
+            return new ConnectionTest(true, name, seconds, null, reply.model(), reply.thinkingTokens());
         } catch (RuntimeException e) {
             log.warn("Prova della connessione a {} non riuscita: {}", provider.label, e.getMessage());
-            return new ConnectionTest(false, null, seconds(start), AiErrors.describe(e, provider));
+            return new ConnectionTest(false, null, seconds(start), AiErrors.describe(e, provider), null, null);
         }
     }
 

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { SetupStatus } from '../api/models';
+import { SetupStatus, UpdateStatus } from '../api/models';
 import { SetupStore } from '../api/setup-store';
 import { WalletApi } from '../api/wallet-api';
 import { SettingsPage } from './settings-page';
@@ -12,6 +12,7 @@ const NOT_CONFIGURED: SetupStatus = {
   source: null,
   applicationId: null,
   redirectUrl: 'https://localhost:8443/callback',
+  redirectUrls: ['https://localhost:8443/callback'],
 };
 const APP_ID = 'cf589be3-3755-465b-a8df-a90a16a31403';
 const PEM = '-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n';
@@ -19,6 +20,7 @@ const PEM = '-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n';
 describe('SettingsPage', () => {
   const saved: [string, string][] = [];
   let rejected = false;
+  let update: UpdateStatus | null = null;
 
   beforeEach(() => {
     saved.length = 0;
@@ -34,8 +36,40 @@ describe('SettingsPage', () => {
           modelInstalled: false,
           download: null,
           evaluation: null,
-          mistral: { model: 'mistral-small-latest', keySet: false, keyHint: null, consent: false },
           gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
+        }),
+      version: () => of({ version: '1.0.0' }),
+      // Le versioni nuove (docs/50, parte J): di serie il controllo è spento.
+      updateStatus: () =>
+        of<UpdateStatus>(
+          update ?? {
+            currentVersion: '1.0.0',
+            checkEnabled: false,
+            available: false,
+            latestVersion: null,
+            releaseUrl: null,
+            notes: null,
+            checkedAt: null,
+          },
+        ),
+      // La sezione Backup (backup-section.spec.ts): qui come in sviluppo, senza Docker.
+      backupStatus: () =>
+        of({
+          available: false,
+          serviceRunning: false,
+          automaticEnabled: false,
+          backupTime: null,
+          keep: 0,
+          keepManual: 10,
+          keepBefore: 3,
+          inProgress: false,
+          lastErrorAt: null,
+          lastError: null,
+          lastSuccessAt: null,
+          attention: false,
+          backups: [],
+          canDownload: false,
+          serverDirectory: null,
         }),
       saveEnableBanking: (applicationId: string, pem: string) => {
         saved.push([applicationId, pem]);
@@ -70,6 +104,72 @@ describe('SettingsPage', () => {
     await new Promise((resolve) => setTimeout(resolve, 10)); // il tempo di leggere il file
   }
 
+  it('shows the installed version at the bottom', async () => {
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="version"]')?.textContent,
+    ).toContain('versione 1.0.0');
+  });
+
+  it('a new version: its notes, its page and the command to update on the server', async () => {
+    update = {
+      currentVersion: '1.0.0',
+      checkEnabled: true,
+      available: true,
+      latestVersion: '1.1.0',
+      releaseUrl: 'https://github.com/rosemgo/WalletTracker/releases/tag/v1.1.0',
+      notes: '- prima novità\n- seconda <b>novità</b>',
+      checkedAt: '2026-11-05T10:00:00Z',
+    };
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const box = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="update-available"]',
+    ) as HTMLElement;
+
+    expect(box.textContent).toContain('È disponibile la versione 1.1.0');
+    // Le novità sono testo: niente HTML che arrivi da fuori.
+    expect(box.querySelector('[data-testid="update-notes"]')?.textContent).toBe(
+      '- prima novità\n- seconda <b>novità</b>',
+    );
+    expect(box.querySelector('b')).toBeNull();
+    expect(box.querySelector('a')?.getAttribute('href')).toBe(
+      'https://github.com/rosemgo/WalletTracker/releases/tag/v1.1.0',
+    );
+    expect(box.querySelector('a')?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(box.textContent).toContain('installa.ps1 -Aggiorna');
+    expect(box.textContent).toContain('./installa.sh --aggiorna');
+    update = null;
+  });
+
+  it('the latest version, or the check switched off, is said in a line', async () => {
+    update = {
+      currentVersion: '1.1.0',
+      checkEnabled: true,
+      available: false,
+      latestVersion: '1.1.0',
+      releaseUrl: null,
+      notes: null,
+      checkedAt: '2026-11-05T10:00:00Z',
+    };
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[data-testid="update-latest"]')?.textContent).toContain(
+      "È l'ultima versione pubblicata",
+    );
+    expect(page.querySelector('[data-testid="update-available"]')).toBeNull();
+    update = null;
+
+    const off = TestBed.createComponent(SettingsPage);
+    await off.whenStable();
+    expect((off.nativeElement as HTMLElement).textContent).toContain(
+      'Il controllo delle versioni nuove è spento',
+    );
+  });
+
   it('shows the redirect URL to register on Enable Banking', async () => {
     const fixture = TestBed.createComponent(SettingsPage);
     await fixture.whenStable();
@@ -79,6 +179,26 @@ describe('SettingsPage', () => {
     expect(text).toContain('https://localhost:8443/callback');
   });
 
+  it('with more redirect URLs (PC and Tailscale) shows them all, each with its own copy button', async () => {
+    const two = ['http://localhost:8000/callback', 'https://pc-casa.tail0000.ts.net/callback'];
+    TestBed.inject(SetupStore).status.set({
+      ...NOT_CONFIGURED,
+      redirectUrl: two[0],
+      redirectUrls: two,
+    });
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.textContent).toContain('inseriscili tutti');
+    const rows = [...page.querySelectorAll('.redirect-url')];
+    expect(rows.map((row) => row.querySelector('code')?.textContent)).toEqual(two);
+    expect(rows.map((row) => row.querySelector('button')?.textContent?.trim())).toEqual([
+      'Copia',
+      'Copia',
+    ]);
+  });
+
   it('fills the Application ID from the file name and saves the key', async () => {
     const fixture = TestBed.createComponent(SettingsPage);
     await fixture.whenStable();
@@ -86,7 +206,7 @@ describe('SettingsPage', () => {
 
     await chooseFile(page, `${APP_ID}.pem`, PEM);
     await fixture.whenStable();
-    expect((page.querySelectorAll('input')[1] as HTMLInputElement).value).toBe(APP_ID);
+    expect(applicationIdField(page).value).toBe(APP_ID);
 
     (
       Array.from(page.querySelectorAll('button')).find((b) =>
@@ -101,9 +221,9 @@ describe('SettingsPage', () => {
     expect(TestBed.inject(SetupStore).status()?.configured).toBe(true); // lo stato condiviso è aggiornato
   });
 
-  /** Il valore del campo "Application ID" (il secondo <input> della pagina). */
+  /** Il campo "Application ID", riconosciuto dal suo esempio (non dalla posizione: la pagina ha altri campi). */
   function applicationIdField(page: HTMLElement): HTMLInputElement {
-    return page.querySelectorAll('input')[1] as HTMLInputElement;
+    return page.querySelector('input[placeholder^="es. cf589be3"]') as HTMLInputElement;
   }
 
   it('replaces the Application ID when a different file is chosen', async () => {
@@ -177,5 +297,23 @@ describe('SettingsPage', () => {
 
     expect(saved).toEqual([]);
     expect(page.textContent).toContain('scegli il file .pem');
+  });
+
+  it('without return addresses it says to prepare Tailscale first, instead of an address to register', async () => {
+    TestBed.inject(SetupStore).status.set({
+      configured: false,
+      source: null,
+      applicationId: null,
+      redirectUrl: null,
+      redirectUrls: [],
+    } as unknown as SetupStatus);
+    const fixture = TestBed.createComponent(SettingsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('[data-testid="needs-tailscale"]')?.textContent).toContain(
+      'Prima prepara Tailscale',
+    );
+    expect(page.querySelectorAll('.redirect-url').length).toBe(0);
   });
 });

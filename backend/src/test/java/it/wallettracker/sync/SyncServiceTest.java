@@ -9,9 +9,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -19,11 +21,16 @@ import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.account.BalanceSource;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Amount;
+import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.RawTransaction;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Transaction;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
+import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
+import it.wallettracker.sync.SyncService.AccountOutcome;
 import it.wallettracker.sync.SyncService.Round;
 import it.wallettracker.transaction.BankTransactionRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -84,7 +91,7 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(1, 0, 0));
+        assertThat(counts(round)).containsExactly(1, 0, 0);
         // In background gli header PSU NON vengono mandati (null): l'utente non è presente.
         verify(client).getTransactions(eq("uid-a"), any(), any(), isNull());
         Account reloaded = reload(account);
@@ -104,10 +111,37 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(1, 1, 0));
-        assertThat(reload(failing).getLastSyncError()).startsWith("HTTP 429");
+        assertThat(counts(round)).containsExactly(1, 1, 0);
+        assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
         assertThat(reload(working).getLastSyncError()).isNull();
         assertThat(reload(working).getLastSyncAt()).isNotNull();
+    }
+
+    @Test
+    void aRoundSaysHowManyMovementsEveryAccountGotOrWhyItFailed() {
+        BankConnection connection = validConnection();
+        Account failing = account(connection, "uid-a");
+        Account working = account(connection, "uid-b");
+        when(client.getTransactions(eq("uid-a"), any(), any(), any())).thenThrow(tooManyRequests());
+        when(client.getTransactions(eq("uid-b"), any(), any(), any())).thenReturn(List.of(
+                raw("{\"transaction_amount\":{\"amount\":\"12.50\",\"currency\":\"EUR\"},"
+                        + "\"credit_debit_indicator\":\"DBIT\",\"status\":\"BOOK\",\"booking_date\":\"2026-10-01\","
+                        + "\"remittance_information\":[\"SUPERMERCATO\"]}"),
+                raw("{\"transaction_amount\":{\"amount\":\"4.20\",\"currency\":\"EUR\"},"
+                        + "\"credit_debit_indicator\":\"DBIT\",\"status\":\"PDNG\",\"transaction_date\":\"2026-10-02\","
+                        + "\"remittance_information\":[\"BAR CENTRALE\"]}")));
+
+        Round round = syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+
+        assertThat(round.accounts()).containsExactlyInAnyOrder(
+                new AccountOutcome(failing.getId(), 0, 0, reload(failing).getLastSyncError()),
+                new AccountOutcome(working.getId(), 1, 1, null));
+        assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
+
+        // Un secondo giro subito dopo: niente di nuovo, e lo stesso movimento ancora in attesa.
+        when(client.getTransactions(eq("uid-a"), any(), any(), any())).thenReturn(List.of());
+        Round second = syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(second.accounts()).contains(new AccountOutcome(working.getId(), 0, 1, null));
     }
 
     @Test
@@ -119,7 +153,7 @@ class SyncServiceTest {
         Round second = syncService.syncAllInBackground();
 
         // Riprovare subito dopo un 429 servirebbe solo a prenderne un altro: il secondo giro non chiama la banca.
-        assertThat(second).isEqualTo(new Round(0, 0, 1));
+        assertThat(counts(second)).containsExactly(0, 0, 1);
         verify(client, times(1)).getTransactions(eq("uid-a"), any(), any(), any());
     }
 
@@ -134,7 +168,7 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(1, 0, 1));
+        assertThat(counts(round)).containsExactly(1, 0, 1);
         verify(client, never()).getTransactions(eq("uid-a"), any(), any(), any());
         verify(client).getTransactions(eq("uid-b"), any(), any(), any());
     }
@@ -150,12 +184,124 @@ class SyncServiceTest {
 
         Round round = syncService.syncAllInBackground();
 
-        assertThat(round).isEqualTo(new Round(0, 1, 0));
+        assertThat(counts(round)).containsExactly(0, 1, 0);
         verify(client, never()).getTransactions(any(), any(), any(), any());
         assertThat(reload(excluded).getLastSyncAt()).isNull();
         assertThat(reload(withExpiredConsent).getLastSyncError())
                 .startsWith("consenso scaduto")
                 .endsWith("ricollega Banca Scaduta");
+    }
+
+    @Test
+    void afterTheMovementsTheBankBalanceIsSavedAndInBackgroundReadOnceADay() {
+        Account account = account(validConnection(), "uid-a");
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Disponibile", new Amount(new BigDecimal("2500.00"), "EUR"), "ITAV", null),
+                new Balance("Contabile", new Amount(new BigDecimal("1234.56"), "EUR"), "CLBD",
+                        LocalDate.of(2026, 10, 31))));
+
+        syncService.syncAllInBackground();
+
+        Account reloaded = reload(account);
+        assertThat(reloaded.getBalance()).isEqualByComparingTo("1234.56");
+        assertThat(reloaded.getBalanceDate()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(reloaded.getBalanceSource()).isEqualTo(BalanceSource.BANK);
+
+        // Un altro giro in background poco dopo (movimenti scaduti di nuovo): il saldo non si rilegge.
+        accountRepository.recordSync(account.getId(), Instant.now().minus(properties.interval()).minusSeconds(60),
+                null);
+        syncService.syncAllInBackground();
+        verify(client, times(2)).getTransactions(eq("uid-a"), any(), any(), any());
+        verify(client, times(1)).getBalances(eq("uid-a"), any());
+
+        // Con l'utente presente ("Aggiorna ora") si rilegge sempre.
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        verify(client, times(2)).getBalances(eq("uid-a"), any());
+    }
+
+    @Test
+    void aBalanceThatDoesNotArriveNeverFailsTheSync() {
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("99.00"), LocalDate.of(2026, 10, 1),
+                BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        when(client.getBalances(eq("uid-a"), any())).thenThrow(tooManyRequests());
+
+        Round round = syncService.syncAllInBackground();
+
+        // I movimenti sono andati: la sincronizzazione è riuscita, e il saldo di prima resta.
+        assertThat(counts(round)).containsExactly(1, 0, 0);
+        assertThat(reload(account).getLastSyncError()).isNull();
+        assertThat(reload(account).getBalance()).isEqualByComparingTo("99.00");
+    }
+
+    @Test
+    void aBankThatGivesNoBalanceLeavesTheAccountWithout() {
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("99.00"), LocalDate.of(2026, 10, 1),
+                BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        // Il client finto, senza istruzioni, risponde con una lista vuota.
+
+        syncService.syncAllInBackground();
+
+        assertThat(reload(account).getBalance()).isNull();
+        assertThat(reload(account).getBalanceSource()).isNull();
+    }
+
+    @Test
+    void aBalanceWrittenByTheUserIsKeptAndTheBankOneReplacesIt() {
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("500.00"), LocalDate.of(2026, 10, 1),
+                BalanceSource.MANUAL, Instant.now().minus(2, ChronoUnit.DAYS));
+
+        // In background non si chiede il saldo: l'utente l'ha scritto perché la banca non lo dava.
+        syncService.syncAllInBackground();
+        verify(client, never()).getBalances(eq("uid-a"), any());
+        assertThat(reload(account).getBalance()).isEqualByComparingTo("500.00");
+
+        // "Aggiorna ora" lo chiede: una risposta vuota non tocca il saldo scritto...
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(reload(account).getBalanceSource()).isEqualTo(BalanceSource.MANUAL);
+
+        // ...uno della banca lo sostituisce.
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Contabile", new Amount(new BigDecimal("512.00"), "EUR"), "CLBD", null)));
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(reload(account).getBalance()).isEqualByComparingTo("512.00");
+        assertThat(reload(account).getBalanceSource()).isEqualTo(BalanceSource.BANK);
+    }
+
+    @Test
+    void aCreditCardDoesNotShowItsAvailableCreditAsBalance() {
+        Account card = account(validConnection(), "uid-c");
+        card.changeRole(AccountRole.CREDIT_CARD);
+        accountRepository.save(card);
+        // Il saldo sbagliato salvato prima della correzione: al prossimo aggiornamento sparisce.
+        accountRepository.recordBalance(card.getId(), new BigDecimal("2500.00"), LocalDate.of(2026, 11, 1),
+                BalanceSource.BANK, Instant.now().minus(2, ChronoUnit.DAYS));
+        // Anche se la banca mandasse un contabile, per una carta non c'è un saldo: solo il plafond (parte J).
+        when(client.getBalances(eq("uid-c"), any())).thenReturn(List.of(
+                new Balance("Disponibile", new Amount(new BigDecimal("2500.00"), "EUR"), "ITAV", null),
+                new Balance("Contabile", new Amount(new BigDecimal("-312.40"), "EUR"), "CLBD", null)));
+
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+
+        assertThat(reload(card).getBalance()).isNull();
+        // Il disponibile non è il saldo, ma il plafond che resta: si salva a parte (parte I).
+        assertThat(reload(card).getAvailableCredit()).isEqualByComparingTo("2500.00");
+        assertThat(reload(card).getAvailableCreditDate()).isNotNull();
+        // In background, lo stesso giorno, il plafond non si rilegge (i movimenti sì: il conto è scaduto).
+        accountRepository.recordSync(card.getId(), Instant.now().minus(properties.interval()).minusSeconds(60), null);
+        syncService.syncAllInBackground();
+        verify(client, times(2)).getTransactions(eq("uid-c"), any(), any(), any());
+        verify(client, times(1)).getBalances(eq("uid-c"), any());
+
+        // Un conto che non è una carta il plafond non lo ha.
+        Account current = account(validConnection(), "uid-d");
+        when(client.getBalances(eq("uid-d"), any())).thenReturn(List.of(
+                new Balance("Disponibile", new Amount(new BigDecimal("70.30"), "EUR"), "ITAV", null)));
+        syncService.syncAllNow(new PsuHeaders("192.0.2.1", "Prova"));
+        assertThat(reload(current).getAvailableCredit()).isNull();
+        assertThat(reload(current).getBalance()).isEqualByComparingTo("70.30");
     }
 
     private BankConnection validConnection() {
@@ -180,5 +326,10 @@ class SyncServiceTest {
     private static HttpClientErrorException tooManyRequests() {
         return HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", HttpHeaders.EMPTY,
                 "{\"error\":\"ASPSP_RATE_LIMIT_EXCEEDED\"}".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    /** I tre conteggi di un giro: aggiornati, con errori, non ancora da leggere. */
+    private static List<Integer> counts(Round round) {
+        return List.of(round.updated(), round.failed(), round.notDue());
     }
 }

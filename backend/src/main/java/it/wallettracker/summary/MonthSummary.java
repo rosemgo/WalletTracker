@@ -11,7 +11,7 @@ import java.time.YearMonth;
  * @param income        le entrate vere (tipo INCOME)
  * @param expenses      le spese vere (tipo EXPENSE); un rimborso classificato come spesa le riduce
  * @param savings       entrate meno spese: quanto hai messo da parte (negativo = hai speso più di quanto è entrato)
- * @param investmentNet rendite meno tasse degli investimenti (INVESTMENT_INCOME + INVESTMENT_TAX); tenute a parte
+ * @param investmentNet rendite meno tasse degli investimenti (INVESTMENT_INCOME + WITHHOLDING_TAX + INVESTMENT_TAX); tenute a parte
  * @param toReview      quanti movimenti sono ancora da verificare: finché ci sono, i numeri del mese sono incompleti
  */
 public record MonthSummary(YearMonth month, BigDecimal income, BigDecimal expenses, BigDecimal savings,

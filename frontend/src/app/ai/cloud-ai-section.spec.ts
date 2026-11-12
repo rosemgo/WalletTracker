@@ -6,13 +6,13 @@ import { WalletApi } from '../api/wallet-api';
 import { CloudAiSection } from './cloud-ai-section';
 
 const NO_KEY: AiCloudStatus = {
-  model: 'mistral-small-latest',
+  model: 'gemini-flash-latest',
   keySet: false,
   keyHint: null,
   consent: false,
 };
 const READY: AiCloudStatus = {
-  model: 'mistral-small-latest',
+  model: 'gemini-flash-latest',
   keySet: true,
   keyHint: '…XYZ9',
   consent: true,
@@ -28,8 +28,15 @@ describe('CloudAiSection', () => {
   beforeEach(() => {
     savedKeys = [];
     deleted = [];
-    saveResponse = () => of({ mistral: READY } as AiStatus);
-    testResponse = of({ ok: true, answer: 'Spesa alimentare', seconds: 1.234, error: null });
+    saveResponse = () => of({ gemini: READY } as AiStatus);
+    testResponse = of({
+      ok: true,
+      answer: 'Spesa alimentare',
+      seconds: 1.234,
+      error: null,
+      model: 'gemini-3.8-flash',
+      thinkingTokens: 246,
+    });
     const fakeApi: Partial<WalletApi> = {
       saveAiKey: (provider: AiCloudProvider, apiKey: string) => {
         savedKeys.push([provider, apiKey]);
@@ -37,7 +44,7 @@ describe('CloudAiSection', () => {
       },
       deleteAiKey: (provider: AiCloudProvider) => {
         deleted.push(provider);
-        return of({ mistral: NO_KEY } as AiStatus);
+        return of({ gemini: NO_KEY } as AiStatus);
       },
       testAiConnection: () => testResponse,
     };
@@ -47,7 +54,7 @@ describe('CloudAiSection', () => {
     });
   });
 
-  async function render(cloud: AiCloudStatus, provider: AiCloudProvider = 'MISTRAL') {
+  async function render(cloud: AiCloudStatus, provider: AiCloudProvider = 'GEMINI') {
     const fixture = TestBed.createComponent(CloudAiSection);
     fixture.componentRef.setInput('provider', provider);
     fixture.componentRef.setInput('cloud', cloud);
@@ -66,13 +73,13 @@ describe('CloudAiSection', () => {
     const { page } = await render(NO_KEY);
     const text = page.textContent!.replace(/\s+/g, ' ');
 
-    expect(text).toContain('Come avere la chiave di Mistral AI');
-    expect(page.querySelector('a')?.getAttribute('href')).toBe('https://console.mistral.ai');
+    expect(text).toContain('Come avere la chiave di Google Gemini');
+    expect(page.querySelector('a')?.getAttribute('href')).toBe('https://aistudio.google.com');
     expect(text).toContain('Non vengono inviati importi, date, IBAN, numeri di carta, il tuo nome');
   });
 
   it('Gemini warns about the free plan', async () => {
-    const { page } = await render({ ...NO_KEY, model: 'gemini-flash-latest' }, 'GEMINI');
+    const { page } = await render(NO_KEY);
 
     expect(page.textContent).toContain('con il piano gratuito Google può usare i dati inviati');
   });
@@ -90,7 +97,7 @@ describe('CloudAiSection', () => {
     button(page, 'Salva la chiave').click();
     await fixture.whenStable();
 
-    expect(savedKeys).toEqual([['MISTRAL', 'my-secret-key-123']]);
+    expect(savedKeys).toEqual([['GEMINI', 'my-secret-key-123']]);
     expect(emitted.length).toBe(1);
     expect(field.value).toBe(''); // la chiave non resta nella pagina
   });
@@ -100,9 +107,9 @@ describe('CloudAiSection', () => {
 
     expect(page.textContent).toContain('✓ Chiave salvata (…XYZ9)');
     expect(page.querySelector('input[type="password"]')).toBeNull();
-    button(page, 'togli').click();
+    button(page, 'Togli').click();
     await fixture.whenStable();
-    expect(deleted).toEqual(['MISTRAL']);
+    expect(deleted).toEqual(['GEMINI']);
   });
 
   it('a key with wrong characters is explained', async () => {
@@ -131,25 +138,44 @@ describe('CloudAiSection', () => {
     expect(fixture.componentInstance.consent()).toBe(true);
   });
 
+  it('suggests the models: a click puts the name in the field', async () => {
+    const { fixture, page } = await render(READY);
+    const text = page.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('gemini-flash-lite-latest: veloce');
+    expect(text).toContain('gemini-flash-latest: ragiona prima di rispondere');
+
+    button(page, 'gemini-flash-lite-latest').click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.aiModel()).toBe('gemini-flash-lite-latest');
+    expect((page.querySelector('input:not([type])') as HTMLInputElement).value).toBe(
+      'gemini-flash-lite-latest',
+    );
+  });
+
   it('the connection test shows the answer, or why it failed', async () => {
     const { fixture, page } = await render(READY);
 
     button(page, 'Prova la connessione').click();
     await fixture.whenStable();
     expect(page.textContent).toContain(
-      '✓ Mistral AI risponde: ESSELUNGA → Spesa alimentare (1,2 s)',
+      '✓ Google Gemini risponde: ESSELUNGA → Spesa alimentare (1,2 s)',
+    );
+    expect(page.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Ha risposto il modello gemini-3.8-flash. Prima di rispondere ha "ragionato" con 246 token.',
     );
 
     testResponse = of({
       ok: false,
       answer: null,
       seconds: 0.3,
-      error: 'La chiave di Mistral AI non è valida.',
+      error: 'La chiave di Google Gemini non è valida.',
+      model: null,
+      thinkingTokens: null,
     });
     button(page, 'Prova la connessione').click();
     await fixture.whenStable();
     expect(page.querySelector('.error')?.textContent).toContain(
-      'La chiave di Mistral AI non è valida',
+      'La chiave di Google Gemini non è valida',
     );
   });
 });
