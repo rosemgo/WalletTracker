@@ -1,17 +1,43 @@
 # Dependabot: ogni settimana controlla se le librerie usate hanno versioni nuove o vulnerabilità note
 # e, se sì, apre una pull request con l'aggiornamento. La pipeline CI verifica che tutto funzioni ancora.
 # Spiegazione in docs/17-sicurezza.md.
+#
+# I "groups" riuniscono più aggiornamenti in UNA sola pull request: meno PR da guardare e, soprattutto,
+# i pacchetti di Angular arrivano insieme. Vanno aggiornati tutti alla stessa versione: una PR per
+# pacchetto fallirebbe sempre in CI ("npm ci" rifiuta versioni di Angular mescolate).
+# Le versioni MAGGIORI (es. 6 -> 7) restano in PR separate, perché possono richiedere modifiche al codice
+# (tranne Angular, che deve comunque viaggiare compatto).
 version: 2
 updates:
   - package-ecosystem: maven        # le dipendenze del backend (backend/pom.xml)
     directory: /backend
     schedule:
       interval: weekly
+    groups:
+      backend:                       # tutte le correzioni e le versioni minori in una PR
+        patterns: ["*"]
+        update-types: [minor, patch]
+
   - package-ecosystem: npm          # le dipendenze del frontend (frontend/package.json)
     directory: /frontend
     schedule:
       interval: weekly
+    groups:
+      angular:                       # tutti i pacchetti @angular/* sempre insieme, anche le maggiori
+        patterns: ["@angular/*"]
+      frontend:                      # le altre librerie: correzioni e versioni minori in una PR
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript deve stare nell'intervallo supportato da Angular: una versione maggiore nuova
+      # si adotta insieme al passaggio ad Angular successivo (ng update), non da sola.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions   # le action usate in .github/workflows
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions:                       # tutti gli aggiornamenti delle action in una PR
+        patterns: ["*"]
