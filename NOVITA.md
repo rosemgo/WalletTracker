@@ -27,6 +27,9 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   gli importi sono quelli che vedi sul conto, con tasse e commissioni (gli interessi netti, il bollo con il suo importo).
   In un conto Trade Republic **collegato** completa anche controparte e causale dei movimenti arrivati dalla banca
   senza testo, come "Completa i movimenti": basta un caricamento.
+- **Nessun movimento perso appena prima dello storico della banca**: con il file di Trade Republic, una riga dei 3 giorni
+  prima del primo movimento arrivato dalla banca non si aggiungeva, anche quando la banca non l'aveva. Ora si aggiunge,
+  e la stessa operazione con la data spostata si riconosce come prima, senza doppioni.
 - **Gli avvisi si chiudono**: ogni avviso (Riepilogo, Investimenti, strisce in cima) ha una crocetta. Chiuso, resta
   chiuso su quel dispositivo finché la situazione non cambia: un budget superato in più, un altro conto, un altro
   problema dei backup lo fanno ricomparire.

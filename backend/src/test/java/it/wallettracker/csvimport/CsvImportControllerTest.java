@@ -448,9 +448,9 @@ class CsvImportControllerTest {
     @Test
     void theTradeRepublicFileInALinkedAccountAlsoCompletesTheMovementsOfTheBank() {
         // Come "Completa i movimenti" (docs/importa-file.md, parte I). La banca porta i movimenti dal 1° luglio, senza
-        // testo: quello del 1° luglio riceve causale e controparte dal file; le righe più vecchie di tre giorni prima
-        // si aggiungono con l'impronta trcsv:<transaction_id>; le altre (il 29 giugno, a due giorni dalla banca, e
-        // quelle di luglio senza un movimento) no.
+        // testo: quello del 1° luglio riceve causale e controparte dal file; le righe più vecchie del 1° luglio si
+        // aggiungono con l'impronta trcsv:<transaction_id>, anche quella del 29 giugno (nessun movimento della banca
+        // ha quell'importo: docs/31, parte M); quelle di luglio senza un movimento no.
         Account bank = linkedAccount();
         bankMovement(bank, "bank-1", "2026-07-01", "7.40", null);
 
@@ -459,14 +459,14 @@ class CsvImportControllerTest {
                 .bodyJson()
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$.tradeRepublic").isEqualTo(true);
-                    json.assertThat().extractingPath("$.newRows").isEqualTo(3);
+                    json.assertThat().extractingPath("$.newRows").isEqualTo(4);
                     json.assertThat().extractingPath("$.completeRows").isEqualTo(1);
-                    json.assertThat().extractingPath("$.coveredRows").isEqualTo(5);
+                    json.assertThat().extractingPath("$.coveredRows").isEqualTo(4);
                     json.assertThat().extractingPath("$.duplicateRows").isEqualTo(0);
                     json.assertThat().extractingPath("$.bankFrom").isEqualTo("2026-07-01");
-                    // Le righe che cambiano qualcosa, per data: le tre aggiunte e il movimento completato.
-                    json.assertThat().extractingPath("$.parsedRows").asArray().hasSize(4);
-                    json.assertThat().extractingPath("$.parsedRows[3].description")
+                    // Le righe che cambiano qualcosa, per data: le quattro aggiunte e il movimento completato.
+                    json.assertThat().extractingPath("$.parsedRows").asArray().hasSize(5);
+                    json.assertThat().extractingPath("$.parsedRows[4].description")
                             .isEqualTo("Interest payment for payout collection aaaa-1111");
                 });
         assertThat(transactionRepository.count()).isEqualTo(1); // l'anteprima non cambia niente
@@ -475,13 +475,13 @@ class CsvImportControllerTest {
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
-                    json.assertThat().extractingPath("$.imported").isEqualTo(3);
+                    json.assertThat().extractingPath("$.imported").isEqualTo(4);
                     json.assertThat().extractingPath("$.completed").isEqualTo(1);
-                    json.assertThat().extractingPath("$.covered").isEqualTo(5);
+                    json.assertThat().extractingPath("$.covered").isEqualTo(4);
                 });
         Map<String, BankTransaction> saved = transactionRepository.findAll().stream()
                 .collect(Collectors.toMap(BankTransaction::getDedupKey, t -> t));
-        assertThat(saved).containsOnlyKeys("bank-1", "trcsv:id-10", "trcsv:id-11", "trcsv:id-12");
+        assertThat(saved).containsOnlyKeys("bank-1", "trcsv:id-10", "trcsv:id-11", "trcsv:id-12", "trcsv:id-13");
         assertThat(saved.get("bank-1").getDescription()).isEqualTo("Interest payment for payout collection aaaa-1111");
         assertThat(saved.get("bank-1").getAmount()).isEqualByComparingTo("7.40"); // l'importo della banca non cambia
 
@@ -492,7 +492,7 @@ class CsvImportControllerTest {
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$.imported").isEqualTo(0);
                     json.assertThat().extractingPath("$.completed").isEqualTo(0);
-                    json.assertThat().extractingPath("$.duplicates").isEqualTo(4);
+                    json.assertThat().extractingPath("$.duplicates").isEqualTo(5);
                 });
     }
 

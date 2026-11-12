@@ -428,8 +428,8 @@ righe senza movimento? Dipende da **dove** sono:
 | nel periodo della banca | importo o data diversi, o un movimento che la banca non ha dato | **no, si mostrano**: è un'anomalia da guardare, non da aggiustare in silenzio |
 
 "Il primo movimento della banca" è `findFirstBankDate`: il giorno più vecchio tra i movimenti contabilizzati del
-conto, **esclusi** quelli aggiunti da un file. Si aggiungono le righe di almeno 3 giorni prima (la tolleranza
-della Parte C2): una riga di due giorni prima potrebbe essere il primo movimento della banca con la data spostata.
+conto, **esclusi** quelli aggiunti da un file. Si aggiungono le righe senza abbinamento più vecchie di quel giorno.
+(Fino alla Parte M si aggiungevano solo quelle di almeno 3 giorni prima: era un errore, vedi lì.)
 Se il conto non ha ancora movimenti dalla banca non si aggiunge niente: non sapremmo dove inizia il suo storico.
 
 I movimenti aggiunti:
@@ -478,7 +478,7 @@ aggiungine 63". Ricaricando lo stesso file: "Non c'è niente da fare".
 | Test | Che cosa prova |
 |---|---|
 | `TradeRepublicCsvTest.buyingSecuritiesMovesMoneyToo` | gli acquisti si leggono, con commissione e tassa nel netto |
-| `CompletionControllerTest.rowsOlderThanTheBankHistoryBecomeMovements` | le righe più vecchie si aggiungono (impronta, raw_json, regole V26), quella a due giorni dallo storico no; ricaricando niente di doppio |
+| `CompletionControllerTest.rowsOlderThanTheBankHistoryBecomeMovements` | le righe più vecchie si aggiungono (impronta, raw_json, regole V26), anche quella a due giorni dallo storico senza un movimento dello stesso importo (Parte M); ricaricando niente di doppio |
 | `CompletionControllerTest.withoutMovementsFromTheBankNothingIsAdded` | senza movimenti della banca non si aggiunge niente |
 | `TransactionImportServiceTest.aMovementAlreadyTakenFromTheFileIsNotSavedTwice` | la regola 5 |
 | `completion-page.spec.ts` | la sezione dei movimenti da aggiungere, il pulsante, il messaggio finale |
@@ -487,3 +487,32 @@ Nel browser: un conto con i movimenti della banca dal 1° luglio e il file di pr
 movimenti da completare e 3 da aggiungere (acquisto, distribuzione di capitale, bonifico), la riga del 29 giugno
 mostrata e non aggiunta; dopo "Completa", l'acquisto è "Acquisto titoli" e la distribuzione "Dividendi";
 ricaricando, "8 righe erano già fatte".
+
+---
+
+## Parte M: correzione, le righe appena prima della banca non si perdono più
+
+**L'errore.** Le righe senza abbinamento si aggiungevano solo se erano di **almeno 3 giorni prima** del primo
+movimento della banca. L'idea: una riga di due giorni prima poteva essere il primo movimento della banca con la data
+spostata, e aggiungerla avrebbe fatto un doppione. Ma quella riga, se era davvero lo stesso movimento, l'aveva già
+**abbinata** `match()`: l'abbinamento cerca un movimento con lo stesso importo e la stessa valuta fino a 3 giorni di
+distanza, anche a cavallo del primo giorno della banca. Una riga che arriva alla fine senza abbinamento vuol dire che
+nessun movimento della banca ha quell'importo lì vicino: è un movimento che la banca non ha mai dato. Scartarla lo
+**perdeva**: restava solo un numero tra le "righe senza movimento".
+
+Il caso: un bonifico fatto il 7 luglio, e la banca che dà i movimenti dal 9 luglio. Nel file c'è, nella banca no,
+nessun movimento della banca ha quell'importo: prima non si aggiungeva, ora sì.
+
+**La correzione** (`CompletionService.plan`): si aggiungono le righe senza abbinamento **più vecchie del primo giorno
+della banca**, senza margine. Vale per "Completa i movimenti" e per la pagina Importa con il file di Trade Republic in un
+conto collegato, che usano lo stesso piano (`docs/importa-file.md`, parte I).
+
+**Perché non nascono doppioni.**
+
+- la stessa operazione con la data spostata si abbina e si completa, non si aggiunge (prova:
+  `aRowJustBeforeTheBankWithTheSameAmountIsTheSameMovementWithAShiftedDate`);
+- se un giorno la banca mandasse uno storico più lungo, la sincronizzazione riconosce i movimenti aggiunti da un file
+  (impronta `trcsv:`, stesso importo, data entro 3 giorni) invece di raddoppiarli (Parte L).
+
+Il rischio che resta è piccolo: la stessa operazione con un importo diverso tra file e banca. Con Trade Republic non
+succede: il file dà il netto (`amount + fee + tax`), come la banca.

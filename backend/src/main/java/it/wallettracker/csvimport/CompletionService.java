@@ -228,14 +228,17 @@ public class CompletionService {
                 .toList();
         Matching matching = match(fresh, candidates);
 
-        // Le righe senza movimento: si aggiungono solo quelle più vecchie dello storico della banca (con il margine
-        // della tolleranza: una riga di 2 giorni prima potrebbe essere il primo movimento, con la data spostata).
+        // Le righe senza movimento: si aggiungono quelle più vecchie del primo giorno della banca. Niente margine: una
+        // riga di 2 giorni prima che fosse lo stesso movimento della banca con la data spostata l'ha già abbinata
+        // match(), che cerca fino a DAYS_TOLERANCE giorni anche a cavallo del primo giorno. Una riga che arriva qui
+        // non ha nessun movimento della banca con quell'importo vicino: è un movimento che la banca non ha mai dato, e
+        // scartarla lo perderebbe (docs/31, parte M).
         LocalDate bankFrom = transactionRepository.findFirstBankDate(account, TransactionStatus.BOOKED,
                 FILE_KEY_PREFIX + "%");
         Map<TradeRepublicCsv.Row, String> toAdd = new LinkedHashMap<>();
         List<TradeRepublicCsv.Row> withoutMovement = new ArrayList<>();
         for (TradeRepublicCsv.Row row : matching.unmatchedRows()) {
-            if (bankFrom != null && row.date().isBefore(bankFrom.minusDays(DAYS_TOLERANCE))) {
+            if (bankFrom != null && row.date().isBefore(bankFrom)) {
                 toAdd.put(row, keys.get(row));
             } else {
                 withoutMovement.add(row);

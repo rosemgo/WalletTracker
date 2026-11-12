@@ -243,8 +243,8 @@ senza toccare i movimenti corrispondenti. Per dar loro causale e controparte bis
 
 - le righe che corrispondono a un movimento della banca (stesso importo e valuta, al massimo 3 giorni) gli danno
   **controparte e causale**; data, importo e i testi che la banca avesse già mandato non cambiano;
-- le righe più vecchie della banca (con il margine dei 3 giorni) diventano movimenti, con l'impronta
-  `trcsv:<transaction_id>`;
+- le righe senza abbinamento più vecchie del primo giorno della banca diventano movimenti, con l'impronta
+  `trcsv:<transaction_id>` (senza margine: `docs/31`, parte M);
 - le righe già fatte (aggiunte o completate prima) si contano e basta;
 - le righe del periodo della banca senza un movimento non si aggiungono: si dice quante sono.
 
