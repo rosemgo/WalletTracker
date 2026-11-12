@@ -2,23 +2,17 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { SetupStatus } from './api/models';
+import { AuthStatus, BackupStatus, SetupStatus, UpdateStatus } from './api/models';
 import { WalletApi } from './api/wallet-api';
 import { App } from './app';
 
 describe('App', () => {
   let configured = true;
-
-  beforeEach(() => {
-    const fakeApi: Partial<WalletApi> = {
-      setupStatus: () =>
-        of<SetupStatus>({
-          configured,
-          source: configured ? 'ENV' : null,
-          applicationId: null,
-          redirectUrl: '',
-        }),
-    };
+  let authenticated = true;
+  let backup: Partial<BackupStatus> = {};
+  let update: Partial<UpdateStatus> = {};
+  let fakeApi: Partial<WalletApi>;
+  const configure = () =>
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
@@ -26,6 +20,65 @@ describe('App', () => {
         { provide: WalletApi, useValue: fakeApi },
       ],
     });
+
+  beforeEach(() => {
+    fakeApi = {
+      // Il PIN è già stato inserito: si vede l'app (la pagina del PIN ha i suoi test, pin-page.spec.ts).
+      authStatus: () =>
+        of<AuthStatus>({ pinSet: true, withoutPin: false, authenticated, local: true }),
+      setupStatus: () =>
+        of<SetupStatus>({
+          configured,
+          source: configured ? 'ENV' : null,
+          applicationId: null,
+          redirectUrl: '',
+          redirectUrls: [],
+        }),
+      // I backup (docs/48, parte Q): di serie va tutto bene, niente avviso.
+      backupStatus: () =>
+        of<BackupStatus>({
+          available: true,
+          serviceRunning: true,
+          automaticEnabled: true,
+          backupTime: '03:15',
+          keep: 14,
+          keepManual: 10,
+          keepBefore: 3,
+          inProgress: false,
+          lastErrorAt: null,
+          lastError: null,
+          lastSuccessAt: '2026-10-31T02:15:00Z',
+          attention: false,
+          backups: [],
+          canDownload: true,
+          serverDirectory: null,
+          ...backup,
+        }),
+      // Le versioni nuove (docs/50, parte J): di serie è l'ultima, niente avviso.
+      updateStatus: () =>
+        of<UpdateStatus>({
+          currentVersion: '1.0.0',
+          checkEnabled: true,
+          available: false,
+          latestVersion: '1.0.0',
+          releaseUrl: null,
+          notes: null,
+          checkedAt: '2026-11-05T10:00:00Z',
+          ...update,
+        }),
+    };
+    configure();
+  });
+
+  it('without the PIN shows only the PIN page, not the app', async () => {
+    authenticated = false;
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.querySelector('h1')?.textContent).toBe('Inserisci il PIN');
+    expect(page.querySelector('nav')).toBeNull();
+    authenticated = true;
   });
 
   it('shows the main sections, "Altro" and, for the PC column, the service pages', async () => {
@@ -40,6 +93,7 @@ describe('App', () => {
     expect(texts('a.section')).toEqual(['Riepilogo', 'Movimenti', 'Analisi', 'Budget', 'Altro']);
     expect(texts('.more-pages a')).toEqual([
       'Abbonamenti',
+      'Investimenti',
       'Conti',
       'Collega una banca',
       'Importa',
@@ -83,6 +137,31 @@ describe('App', () => {
     );
   });
 
+  it('warns about the backups only when something needs fixing, and says what', async () => {
+    configured = true;
+    const banners = async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.banner')).map(
+        (banner) => banner.textContent ?? '',
+      );
+    };
+
+    backup = {};
+    expect(await banners()).toEqual([]);
+
+    backup = { attention: true, automaticEnabled: false };
+    expect((await banners())[0]).toContain('il backup automatico è spento');
+
+    backup = { attention: true, serviceRunning: false };
+    expect((await banners())[0]).toContain('non risponde');
+
+    // In sviluppo, senza Docker, niente avvisi sui backup.
+    backup = { available: false, attention: true };
+    expect(await banners()).toEqual([]);
+    backup = {};
+  });
+
   it('the eye switches the discreet mode, and says whether it is on', async () => {
     localStorage.clear();
     const fixture = TestBed.createComponent(App);
@@ -103,5 +182,30 @@ describe('App', () => {
     expect(navEye?.getAttribute('aria-checked')).toBe('true');
     eye.click(); // spenta di nuovo: il prossimo test parte da zero
     localStorage.clear();
+  });
+
+  it('announces a new published version; the banner closes, and comes back at the next entry', async () => {
+    update = { available: true, latestVersion: '1.1.0' };
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const banner = () => page.querySelector('[data-testid="release-banner"]');
+
+    expect(banner()?.textContent).toContain('È disponibile WalletTracker 1.1.0');
+    expect(banner()?.querySelector('a')?.getAttribute('href')).toBe('/impostazioni#informazioni');
+
+    (banner()?.querySelector('button.close') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(banner()).toBeNull();
+
+    // Un nuovo ingresso nell'app (la pagina riaperta): l'avviso c'è di nuovo, finché non si aggiorna.
+    TestBed.resetTestingModule();
+    configure();
+    const again = TestBed.createComponent(App);
+    await again.whenStable();
+    expect(
+      (again.nativeElement as HTMLElement).querySelector('[data-testid="release-banner"]'),
+    ).not.toBeNull();
+    update = {};
   });
 });

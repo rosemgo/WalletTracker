@@ -1,0 +1,145 @@
+# Pubblicare una versione di WalletTracker (Fase 4, passo 6: docs/50, parte D).
+#
+# Si pubblica creando un "tag" con il numero della versione, per esempio:
+#   git tag -a v1.0.0 -m "WalletTracker 1.0.0"   e poi   git push origin v1.0.0
+# Allora, in ordine:
+#   1. la CI completa (ci.yml): se un test fallisce, non si pubblica niente;
+#   2. le tre immagini (backend, web, backup), per i PC (amd64) e per i Mac con chip Apple (arm64), pubblicate su
+#      GitHub Container Registry: ghcr.io/rosemgo/wallettracker-<nome>:<versione> (e :latest);
+#   3. la release su GitHub: lo ZIP per chi installa, la sua impronta (SHA256SUMS) e le novità (da NOVITA.md).
+#
+# Quando cambia un Dockerfile (o questo file), le immagini si COSTRUISCONO anche senza tag, per provarle, ma non si
+# pubblicano.
+
+name: Rilascio
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+    branches: ['**']
+    paths:
+      - 'backend/Dockerfile'
+      - 'frontend/Dockerfile'
+      - 'docker/backup/**'
+      - '.github/workflows/rilascio.yml'
+
+# Di serie si legge soltanto; i job che pubblicano chiedono qualcosa in più, solo per sé.
+permissions:
+  contents: read
+
+jobs:
+  # 1. Tutti i test, come a ogni push: ci.yml si può "chiamare" da qui (workflow_call). Solo per i tag.
+  ci:
+    name: CI completa
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/ci.yml
+
+  # 1b. Le novità ci sono? Ogni versione ha la sua sezione "## X.Y.Z" in NOVITA.md, che diventa la descrizione della
+  #     release. Si controlla PRIMA di pubblicare le immagini: con la 1.2.4 il controllo era solo alla fine (in
+  #     prepara-zip.sh), e le immagini erano già su GitHub Container Registry quando la release si è fermata.
+  novita:
+    name: Le novità della versione
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      - name: NOVITA.md ha la sezione di questa versione
+        run: |
+          versione="${GITHUB_REF_NAME#v}"
+          grep -qx "## $versione" NOVITA.md || {
+            echo "::error::In NOVITA.md manca la sezione \"## $versione\": scrivi le novità, fai il merge, poi rimetti il tag (docs/50, parte S)."
+            exit 1
+          }
+
+  # 2. Le immagini. Una "matrix": lo stesso job tre volte, una per immagine, in parallelo.
+  immagini:
+    name: Immagine ${{ matrix.nome }}
+    needs: [ci, novita]
+    # Senza tag i job "ci" e "novita" vengono saltati: si va avanti lo stesso (si costruisce e basta). Con il tag,
+    # solo se sono passati tutti e due.
+    if: >-
+      always() && (needs.ci.result == 'success' || needs.ci.result == 'skipped')
+      && (needs.novita.result == 'success' || needs.novita.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # pubblicare su GitHub Container Registry
+    strategy:
+      matrix:
+        include:
+          - { nome: backend, cartella: backend }
+          - { nome: web, cartella: frontend }
+          - { nome: backup, cartella: docker/backup }
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      # Dal tag "v1.0.0" la versione "1.0.0". Senza tag: "prova", e niente pubblicazione.
+      - name: La versione
+        id: versione
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "versione=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "pubblica=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "versione=prova" >> "$GITHUB_OUTPUT"
+            echo "pubblica=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # QEMU emula un processore arm64 sulla macchina della CI (amd64): serve per i RUN dell'immagine finale (creare
+      # l'utente, installare OpenSSL). La compilazione invece no: nei Dockerfile gira sul processore della macchina
+      # ($BUILDPLATFORM), e il risultato è lo stesso per tutti.
+      - name: Emulatore per arm64
+        uses: docker/setup-qemu-action@v4
+
+      # buildx: il costruttore di Docker che sa fare immagini per più processori in una volta.
+      - name: Costruttore di immagini
+        uses: docker/setup-buildx-action@v4
+
+      - name: Accesso a GitHub Container Registry
+        if: steps.versione.outputs.pubblica == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Costruisci (e, con il tag, pubblica)
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.cartella }}
+          platforms: linux/amd64,linux/arm64
+          build-args: WALLETTRACKER_VERSION=${{ steps.versione.outputs.versione }}
+          push: ${{ steps.versione.outputs.pubblica == 'true' }}
+          tags: |
+            ghcr.io/rosemgo/wallettracker-${{ matrix.nome }}:${{ steps.versione.outputs.versione }}
+            ghcr.io/rosemgo/wallettracker-${{ matrix.nome }}:latest
+          # La cache della CI di GitHub: la seconda volta le dipendenze (Maven, npm) non si riscaricano.
+          cache-from: type=gha,scope=${{ matrix.nome }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.nome }}
+
+  # 3. La release, solo con il tag e solo se le tre immagini sono state pubblicate.
+  release:
+    name: Release su GitHub
+    needs: [immagini]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # creare la release
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      - name: Prepara lo ZIP
+        run: .github/ci/prepara-zip.sh "${GITHUB_REF_NAME#v}" .
+
+      # gh è il programma di GitHub da riga di comando, già installato sulle macchine della CI.
+      - name: Crea la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          versione="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" "WalletTracker-$versione.zip" SHA256SUMS \
+            --title "WalletTracker $versione" --notes-file "novita-$versione.md"

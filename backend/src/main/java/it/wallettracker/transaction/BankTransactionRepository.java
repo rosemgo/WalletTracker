@@ -1,6 +1,7 @@
 package it.wallettracker.transaction;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +27,9 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
         JpaSpecificationExecutor<BankTransaction> {
 
     boolean existsByAccountAndDedupKey(Account account, String dedupKey);
+
+    /** I movimenti di un conto con queste impronte (CsvImportService: le righe già importate da completare). */
+    List<BankTransaction> findByAccountAndDedupKeyIn(Account account, Collection<String> dedupKeys);
 
     /** Le impronte di tutti i movimenti di un conto, in una query (per l'importazione CSV). */
     @Query("SELECT t.dedupKey FROM BankTransaction t WHERE t.account = :account")
@@ -247,4 +251,40 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
                              it.wallettracker.transaction.TransactionType.INCOME)
             """)
     List<BankTransaction> findMovementsBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * I movimenti degli investimenti, di tutta la storia (sono pochi: uno o due al mese), con conto e categoria già
+     * caricati: versamenti e prelievi, acquisti e vendite di titoli, rendite e tasse (docs/investimenti.md).
+     */
+    @Query("""
+            SELECT t FROM BankTransaction t LEFT JOIN FETCH t.category JOIN FETCH t.account
+            WHERE t.type IN (it.wallettracker.transaction.TransactionType.INVESTMENT_DEPOSIT,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_WITHDRAWAL,
+                             it.wallettracker.transaction.TransactionType.SECURITIES_BUY,
+                             it.wallettracker.transaction.TransactionType.SECURITIES_SELL,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_INCOME,
+                             it.wallettracker.transaction.TransactionType.WITHHOLDING_TAX,
+                             it.wallettracker.transaction.TransactionType.INVESTMENT_TAX)
+            """)
+    List<BankTransaction> findInvestmentMovements();
+
+    /**
+     * Per il saldo di un conto manuale (V34, docs/saldi.md): la somma dei movimenti contabilizzati arrivati dopo il
+     * saldo scritto dall'utente. "Dopo" vuol dire con una data successiva al giorno del saldo, oppure con lo stesso
+     * giorno ma importati dopo che l'utente l'ha scritto (quelli di prima li aveva già davanti).
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.bookingDate > :date OR (t.bookingDate = :date AND t.importedAt > :at))
+            """)
+    BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
+
+    /** Il giorno dell'ultimo movimento contabilizzato di un conto, o null se non ne ha. */
+    @Query("""
+            SELECT MAX(t.bookingDate) FROM BankTransaction t
+            WHERE t.account.id = :accountId AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+            """)
+    LocalDate lastBookingDate(@Param("accountId") Long accountId);
 }

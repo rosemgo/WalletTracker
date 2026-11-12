@@ -54,7 +54,21 @@ describe('RulesPage', () => {
       previewRule: (rule: RuleRequest) => {
         previewed.push(rule);
         previews++;
-        return of<RulePreview>({ matches: 4, examples: [] });
+        // 4 corrispondono; 3 li prende una regola che viene prima, 1 è stato scelto a mano.
+        return of<RulePreview>({
+          matches: 4,
+          applies: 0,
+          blockers: [
+            {
+              reason: 'RULE',
+              rule: 'Trasferimento a un proprio conto',
+              priority: 40,
+              movements: 3,
+            },
+            { reason: 'MANUAL', rule: null, priority: null, movements: 1 },
+          ],
+          examples: [],
+        });
       },
     };
     TestBed.configureTestingModule({
@@ -104,8 +118,23 @@ describe('RulesPage', () => {
 
     expect(text).toContain('inizia con «Div.su»');
     expect(text).toContain('solo entrate');
-    expect(text).toContain('Cedole e dividendi');
-    expect(text).toContain('regola di partenza');
+    expect(text).toContain('Cedole, dividendi e interessi');
+    expect(text).toContain('Regola di partenza');
+  });
+
+  it('explains, closed by default, what comes before the rules', async () => {
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const why = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="why-rules"]',
+    ) as HTMLDetailsElement;
+
+    expect(why.open).toBe(false);
+    expect(why.querySelector('summary')?.textContent).toContain(
+      'Perché a volte una regola non vale?',
+    );
+    expect(why.textContent).toContain("se il movimento l'hai sistemato tu");
+    expect(why.textContent).toContain('da un tuo conto a un altro');
   });
 
   it('saves a new rule with the values typed in the form', async () => {
@@ -168,6 +197,11 @@ describe('RulesPage', () => {
   });
 
   it('"Modifica" fills the form and saving updates the same rule', async () => {
+    // jsdom non sa scorrere: lo finge, per vedere che "Modifica" porta il modulo in vista.
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
@@ -181,6 +215,7 @@ describe('RulesPage', () => {
     expect((page.querySelector('[formControlName="pattern"]') as HTMLInputElement).value).toBe(
       'Div.su',
     );
+    expect(scrolled.map((e) => e.id)).toEqual(['rule-form']);
 
     type(page, 'priority', '5');
     (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
@@ -189,6 +224,25 @@ describe('RulesPage', () => {
     expect(updated.length).toBe(1);
     expect(updated[0][0]).toBe(2);
     expect(updated[0][1].priority).toBe(5);
+  });
+
+  it('after saving, warns when another rule wins on some movements', async () => {
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    type(page, 'name', 'PAC');
+    type(page, 'pattern', 'IT00X0000000000000000000009');
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    // La prova rifatta da sola dopo il salvataggio, per la regola salvata.
+    expect(previews).toBe(1);
+    const warning = page.querySelector('.card.warning')?.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(warning).toContain('la regola «PAC» è salvata, ma');
+    expect(warning).toContain(
+      'vince la regola «Trasferimento a un proprio conto», che ha priorità 40',
+    );
   });
 
   it('"Prova" shows how many transactions the rule would match', async () => {
@@ -206,7 +260,15 @@ describe('RulesPage', () => {
     await fixture.whenStable();
 
     expect(previews).toBe(1);
-    expect(page.textContent).toMatch(/corrisponde a\s*4\s*movimenti/);
+    const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toMatch(/corrisponde a 4 movimenti/);
+    // Corrispondere non basta: quanti ne classificherebbe davvero, e chi vince sugli altri.
+    expect(text).toMatch(/La regola ne classificherebbe 0/);
+    expect(text).toContain(
+      '3 movimenti: vince la regola «Trasferimento a un proprio conto», che ha priorità 40',
+    );
+    expect(text).toContain('dalle una priorità più bassa di 40');
+    expect(text).toMatch(/1 movimento: il tipo è stato scelto a mano/);
   });
 
   it('fills the form from a correction (address parameters) and tries the rule right away', async () => {
@@ -234,6 +296,21 @@ describe('RulesPage', () => {
     ]);
     expect(page.textContent).toContain('Modulo compilato dalla tua correzione');
     expect(created).toEqual([]); // salva solo l'utente
+  });
+
+  it('from a movement still without category, the form asks to choose it', async () => {
+    queryParams = {
+      pattern: 'FINDOMESTIC',
+      resultType: 'EXPENSE',
+      amountSign: 'NEGATIVE',
+      categoryId: '',
+    };
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(page.textContent).toContain('Modulo compilato dal movimento: scegli la categoria');
+    expect(page.textContent).not.toContain('dalla tua correzione');
   });
 
   it('ignores unknown values in the address', async () => {

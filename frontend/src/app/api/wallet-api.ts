@@ -3,15 +3,21 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  BankConnection,
+  ConnectionRemoval,
   Account,
   AiCloudProvider,
+  AuthStatus,
+  RecoveryCode,
   AiConnectionTest,
   AiProvider,
   AiSettingsChange,
   AiStatus,
+  AppVersion,
   AiSuggestionsStatus,
   AccountRole,
   Alert,
+  BackupStatus,
   Bank,
   Budget,
   BudgetRequest,
@@ -33,6 +39,8 @@ import {
   ExplorePeriod,
   ExploreSeries,
   GroupBy,
+  InvestmentPeriod,
+  Investments,
   Metric,
   Rule,
   RulePreview,
@@ -47,6 +55,7 @@ import {
   TransactionPage,
   TransactionType,
   UsedCategories,
+  UpdateStatus,
 } from './models';
 
 /**
@@ -77,6 +86,23 @@ export class WalletApi {
   }
 
   /** PUT /api/accounts/{id}/display-name: il nome del conto scelto dall'utente; vuoto lo toglie. */
+  /** PUT /api/accounts/{id}/logo: il logo di un conto manuale (docs/loghi.md). PNG, JPEG o WebP, al massimo 256 KB. */
+  uploadAccountLogo(accountId: number, file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.put<void>(`/api/accounts/${accountId}/logo`, form);
+  }
+
+  /** DELETE /api/accounts/{id}/logo: toglie il logo caricato. */
+  deleteAccountLogo(accountId: number): Observable<void> {
+    return this.http.delete<void>(`/api/accounts/${accountId}/logo`);
+  }
+
+  /** Il saldo di un conto manuale (docs/saldi.md); null lo toglie. */
+  changeBalance(accountId: number, balance: number | null): Observable<Account> {
+    return this.http.put<Account>(`/api/accounts/${accountId}/balance`, { balance });
+  }
+
   renameAccount(accountId: number, displayName: string): Observable<Account> {
     return this.http.put<Account>(`/api/accounts/${accountId}/display-name`, { displayName });
   }
@@ -220,6 +246,16 @@ export class WalletApi {
     return this.http.post<{ url: string }>('/api/connections', { bank, country });
   }
 
+  /** GET /api/connections: i collegamenti alle banche, anche scaduti, rimossi o senza conti. */
+  connections(): Observable<BankConnection[]> {
+    return this.http.get<BankConnection[]>('/api/connections');
+  }
+
+  /** DELETE /api/connections/{id}: rimuove un collegamento, tenendo i conti come storia. */
+  removeConnection(id: number): Observable<ConnectionRemoval> {
+    return this.http.delete<ConnectionRemoval>(`/api/connections/${id}`);
+  }
+
   /** POST /api/connections/complete: completa il collegamento con i parametri ricevuti dalla banca. */
   completeLink(code: string, state: string): Observable<LinkResult> {
     return this.http.post<LinkResult>('/api/connections/complete', { code, state });
@@ -251,11 +287,77 @@ export class WalletApi {
   }
 
   /** POST /api/rules/preview: a quali movimenti si applicherebbe la regola, senza salvarla. */
-  previewRule(rule: RuleRequest): Observable<RulePreview> {
-    return this.http.post<RulePreview>('/api/rules/preview', rule);
+  /** POST /api/rules/preview (?id=7 mentre si modifica la regola 7: non blocca sé stessa) */
+  previewRule(rule: RuleRequest, id: number | null = null): Observable<RulePreview> {
+    return this.http.post<RulePreview>('/api/rules/preview', rule, {
+      params: id === null ? {} : { id },
+    });
   }
 
   /** GET /api/setup */
+  /** GET /api/auth/status: lo stato del PIN. Dà anche il cookie XSRF-TOKEN, che Angular rimanda da solo. */
+  authStatus(): Observable<AuthStatus> {
+    return this.http.get<AuthStatus>('/api/auth/status');
+  }
+
+  /** POST /api/auth/no-pin: la scelta "senza PIN", alla prima apertura (solo dal PC). */
+  chooseWithoutPin(): Observable<void> {
+    return this.http.post<void>('/api/auth/no-pin', {});
+  }
+
+  /** POST /api/auth/pin: crea il PIN (solo dal PC) e apre la sessione; risponde con il codice di recupero. */
+  createPin(pin: string): Observable<RecoveryCode> {
+    return this.http.post<RecoveryCode>('/api/auth/pin', { pin });
+  }
+
+  /** POST /api/auth/login: controlla il PIN e apre la sessione (401 sbagliato, 429 in pausa). */
+  login(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/login', { pin });
+  }
+
+  /** POST /api/auth/recover: con il codice di recupero sceglie un PIN nuovo; risponde con il codice nuovo. */
+  recover(code: string, pin: string): Observable<RecoveryCode> {
+    return this.http.post<RecoveryCode>('/api/auth/recover', { code, pin });
+  }
+
+  /** POST /api/auth/pin/remove: toglie il PIN (solo dal PC, con il PIN di adesso). */
+  removePin(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/pin/remove', { pin });
+  }
+
+  /** POST /api/auth/logout: chiude la sessione. */
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', {});
+  }
+
+  /** GET /api/version: la versione dell'app (docs/50, parte B). */
+  version(): Observable<AppVersion> {
+    return this.http.get<AppVersion>('/api/version');
+  }
+
+  /** GET /api/version/update: c'è una versione nuova? (docs/50, parte J). L'ultima risposta di GitHub. */
+  updateStatus(): Observable<UpdateStatus> {
+    return this.http.get<UpdateStatus>('/api/version/update');
+  }
+
+  /** GET /api/backups: lo stato dei backup e l'elenco (docs/48, parte Q). */
+  backupStatus(): Observable<BackupStatus> {
+    return this.http.get<BackupStatus>('/api/backups');
+  }
+
+  /** POST /api/backups: "fai un backup adesso" (lo fa il container dei backup, entro qualche secondo). */
+  requestBackup(): Observable<BackupStatus> {
+    return this.http.post<BackupStatus>('/api/backups', {});
+  }
+
+  /**
+   * L'indirizzo per scaricare un backup: si usa in un link, non con HttpClient (il browser lo salva come file). Il
+   * backend lo dà solo dal server.
+   */
+  backupDownloadUrl(name: string): string {
+    return `/api/backups/${encodeURIComponent(name)}`;
+  }
+
   setupStatus(): Observable<SetupStatus> {
     return this.http.get<SetupStatus>('/api/setup');
   }
@@ -309,6 +411,13 @@ export class WalletApi {
   categoryOverview(id: number, month: string | null): Observable<CategoryOverview> {
     return this.http.get<CategoryOverview>(`/api/categories/${id}/overview`, {
       params: month ? { month } : {},
+    });
+  }
+
+  /** GET /api/investments?period=YEAR&currency=EUR (docs/investimenti.md) */
+  investments(period: InvestmentPeriod, currency: string | null = null): Observable<Investments> {
+    return this.http.get<Investments>('/api/investments', {
+      params: currency ? { period, currency } : { period },
     });
   }
 

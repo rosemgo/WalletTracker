@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+</defs>
+<rect width="1200" height="800" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Più indirizzi di ritorno: chi sceglie, chi controlla</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">il backend sceglie UN indirizzo per ogni collegamento; Enable Banking controlla che sia nell'elenco e rimanda lì il browser</text>
+
+<!-- browser -->
+<rect x="20" y="100" width="300" height="250" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
+<text x="170" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#1d4ed8">① Il browser</text>
+<text x="40" y="160" font-size="13" fill="#334155">premi "Collega una banca":</text>
+<text x="40" y="184" font-size="12" font-family="Consolas, monospace" fill="#0f172a">POST /api/connections</text>
+<text x="40" y="204" font-size="12" font-family="Consolas, monospace" fill="#0f172a">Host: &lt;il nome nella barra&gt;</text>
+<text x="40" y="236" font-size="13" fill="#334155">dal server:</text>
+<text x="60" y="256" font-size="12" font-family="Consolas, monospace" fill="#0f172a">Host: localhost</text>
+<text x="40" y="282" font-size="13" fill="#334155">da un dispositivo remoto:</text>
+<text x="60" y="302" font-size="12" font-family="Consolas, monospace" fill="#0f172a">Host: pc-casa.tail0000.ts.net</text>
+<text x="40" y="330" font-size="11" fill="#475569">(Tailscale conserva Host così com'è)</text>
+
+<!-- backend -->
+<rect x="360" y="100" width="440" height="250" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="580" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#c2410c">② Il backend SCEGLIE (redirectUrlFor)</text>
+<text x="380" y="158" font-size="12" fill="#334155">l'elenco nel .env, separato da virgole:</text>
+<rect x="380" y="168" width="400" height="76" rx="8" fill="#ffffff" stroke="#c2410c"/>
+<text x="395" y="192" font-size="12" font-family="Consolas, monospace" fill="#0f172a">http://localhost:8000/callback</text>
+<text x="395" y="212" font-size="12" font-family="Consolas, monospace" fill="#0f172a">https://pc-casa.tail0000.ts.net/callback</text>
+<text x="395" y="232" font-size="11" fill="#475569">→ nomi: "localhost", "pc-casa.tail0000.ts.net"</text>
+<text x="380" y="270" font-size="13" fill="#334155">prende il PRIMO con lo stesso nome di Host;</text>
+<text x="380" y="290" font-size="13" fill="#334155">se nessuno coincide, il primo dell'elenco.</text>
+<text x="380" y="320" font-size="12" fill="#b91c1c">dal browser non arriva nessun indirizzo: solo il nome,</text>
+<text x="380" y="338" font-size="12" fill="#b91c1c">già controllato dal buttafuori (WALLETTRACKER_ALLOWED_HOSTS)</text>
+
+<line x1="320" y1="225" x2="355" y2="225" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<!-- enable banking -->
+<rect x="840" y="100" width="340" height="250" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2.5"/>
+<text x="1010" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#15803d">③ Enable Banking CONTROLLA</text>
+<text x="860" y="158" font-size="12" fill="#334155">riceve (POST /auth):</text>
+<text x="860" y="178" font-size="11" font-family="Consolas, monospace" fill="#0f172a">"redirect_url": "https://pc-casa…/callback"</text>
+<text x="860" y="206" font-size="12" fill="#334155">è in "Allowed redirect URLs"?</text>
+<rect x="860" y="216" width="300" height="56" rx="8" fill="#ffffff" stroke="#15803d"/>
+<text x="872" y="238" font-size="11" font-family="Consolas, monospace" fill="#0f172a">http://localhost:8000/callback</text>
+<text x="872" y="258" font-size="11" font-family="Consolas, monospace" fill="#0f172a">https://pc-casa.tail0000.ts.net/callback</text>
+<text x="860" y="294" font-size="12" fill="#15803d">sì → risponde con la pagina della banca</text>
+<text x="860" y="314" font-size="12" fill="#b91c1c">no → errore su redirect_url</text>
+<text x="860" y="336" font-size="11" fill="#475569">non sceglie niente: ubbidisce, dentro l'elenco</text>
+
+<line x1="800" y1="225" x2="835" y2="225" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<!-- bottom: return -->
+<rect x="20" y="390" width="1160" height="140" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="600" y="420" text-anchor="middle" font-size="17" font-weight="700" fill="#334155">④ Login sulla banca, poi ⑤ il ritorno: un ordine AL BROWSER</text>
+<text x="600" y="450" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">HTTP/1.1 302 Found      Location: https://pc-casa.tail0000.ts.net/callback?code=…&amp;state=…</text>
+<text x="600" y="480" text-anchor="middle" font-size="13" fill="#334155">esattamente l'indirizzo scelto al punto ②: il browser lo apre, la pagina /callback di Angular legge code e state</text>
+<text x="600" y="502" text-anchor="middle" font-size="13" fill="#334155">e li manda al backend, che li scambia con Enable Banking (da server a server)</text>
+
+<!-- table -->
+<rect x="20" y="560" width="1160" height="220" rx="14" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+<text x="210" y="595" text-anchor="middle" font-size="14" font-weight="700" fill="#334155"></text>
+<text x="420" y="595" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">Dal server</text>
+<text x="880" y="595" text-anchor="middle" font-size="15" font-weight="700" fill="#7e22ce">Da un dispositivo remoto</text>
+<line x1="40" y1="608" x2="1160" y2="608" stroke="#cbd5e1"/>
+<text x="50" y="634" font-size="13" fill="#334155">nella barra del browser</text>
+<text x="420" y="634" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">http://localhost:8000</text>
+<text x="880" y="634" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">https://pc-casa.tail0000.ts.net</text>
+<text x="50" y="664" font-size="13" fill="#334155">Host della richiesta</text>
+<text x="420" y="664" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">localhost</text>
+<text x="880" y="664" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">pc-casa.tail0000.ts.net</text>
+<text x="50" y="694" font-size="13" fill="#334155">indirizzo scelto</text>
+<text x="420" y="694" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">http://localhost:8000/callback</text>
+<text x="880" y="694" text-anchor="middle" font-size="13" font-family="Consolas, monospace" fill="#0f172a">https://pc-casa.tail0000.ts.net/callback</text>
+<text x="50" y="724" font-size="13" fill="#334155">dove torna il browser</text>
+<text x="420" y="724" text-anchor="middle" font-size="13" fill="#0f172a">sul server, porta 8000</text>
+<text x="880" y="724" text-anchor="middle" font-size="13" fill="#0f172a">sul server, passando da Tailscale (porta 8001)</text>
+<text x="600" y="762" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">In tutti e due i casi il browser torna da dove era partito: /callback si apre sullo stesso dispositivo che ha cominciato.</text>
+</svg>

@@ -182,7 +182,7 @@ public class CompletionService {
                 .orElseThrow(() -> new NotFoundException("Conto", accountId));
         if (account.isManual()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Questo è un conto manuale: i suoi movimenti si caricano con \"Importa CSV\".");
+                    "Questo è un conto manuale: i suoi movimenti si caricano con \"Importa\".");
         }
         if (!isTradeRepublic(account.getBankName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Questa pagina è per i conti Trade Republic: "

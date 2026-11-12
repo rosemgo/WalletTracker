@@ -193,6 +193,25 @@ class TransactionControllerTest {
     }
 
     @Test
+    void withoutCategoryShowsOnlyTheTypesThatNeedOne() {
+        // docs/categorie-e-tipi.md: a un acquisto di titoli o a un giroconto la categoria non serve.
+        Account account = account();
+        BankTransaction pizza = transaction(account, LocalDate.of(2026, 10, 7), "-24.00", "PIZZERIA DA GINO");
+        BankTransaction coupon = transaction(account, LocalDate.of(2026, 10, 8), "15.00", "CEDOLA BTP");
+        coupon.setManualType(TransactionType.INVESTMENT_INCOME);
+        BankTransaction buy = transaction(account, LocalDate.of(2026, 10, 9), "-200.00", "ACQUISTO ETF");
+        buy.setManualType(TransactionType.SECURITIES_BUY);
+        BankTransaction transfer = transaction(account, LocalDate.of(2026, 10, 10), "-50.00", "GIROCONTO");
+        transfer.setManualType(TransactionType.INTERNAL_TRANSFER);
+        transactionRepository.saveAll(List.of(coupon, buy, transfer));
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/transactions?uncategorized=true")).hasStatusOk().bodyJson()
+                .extractingPath("$.items[*].id").asArray()
+                .containsExactly(coupon.getId().intValue(), pizza.getId().intValue());
+    }
+
+    @Test
     void transactionsCanBeSearchedByText() {
         Account account = account();
         BankTransaction netflix = transaction(account, LocalDate.of(2026, 10, 3), "-12.99", "PAGAMENTO NETFLIX.COM");

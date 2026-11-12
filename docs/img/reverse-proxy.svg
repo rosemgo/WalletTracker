@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+</defs>
+<rect width="1200" height="640" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">nginx fa da reverse proxy</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">il browser parla solo con nginx; nginx decide se rispondere da solo o passare la richiesta al backend</text>
+
+<!-- PC -->
+<rect x="30" y="100" width="290" height="500" rx="16" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="175" y="130" text-anchor="middle" font-size="18" font-weight="700" fill="#334155">Il tuo PC</text>
+<rect x="55" y="160" width="240" height="200" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="175" y="192" text-anchor="middle" font-size="18" font-weight="700" fill="#1d4ed8">Browser</text>
+<text x="175" y="222" text-anchor="middle" font-size="14" fill="#0f172a">la dashboard Angular</text>
+<text x="175" y="242" text-anchor="middle" font-size="14" fill="#0f172a">gira qui dentro</text>
+<rect x="70" y="262" width="210" height="80" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+<text x="175" y="288" text-anchor="middle" font-size="13" fill="#475569">conosce un solo indirizzo:</text>
+<text x="175" y="316" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">localhost:8000</text>
+<text x="175" y="400" text-anchor="middle" font-size="14" fill="#475569">la porta 8000 è l'unica</text>
+<text x="175" y="420" text-anchor="middle" font-size="14" fill="#475569">aperta, e solo su questo PC</text>
+<text x="175" y="440" text-anchor="middle" font-size="14" fill="#475569">(127.0.0.1)</text>
+
+<!-- Docker -->
+<rect x="380" y="100" width="790" height="500" rx="16" fill="#f0fdf4" stroke="#16a34a" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="775" y="130" text-anchor="middle" font-size="18" font-weight="700" fill="#166534">Docker: rete privata (dal PC non si vede)</text>
+
+<!-- nginx -->
+<rect x="410" y="160" width="300" height="410" rx="12" fill="#ffffff" stroke="#15803d" stroke-width="2.5"/>
+<text x="560" y="192" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">container web: nginx</text>
+<rect x="440" y="215" width="240" height="70" rx="35" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+<text x="560" y="245" text-anchor="middle" font-size="15" font-weight="700" fill="#713f12">l'indirizzo comincia</text>
+<text x="560" y="266" text-anchor="middle" font-size="15" font-weight="700" fill="#713f12">con /api/ ?</text>
+<rect x="440" y="420" width="240" height="120" rx="10" fill="#f8fafc" stroke="#64748b"/>
+<text x="560" y="448" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">risponde da solo</text>
+<text x="560" y="472" text-anchor="middle" font-size="13" fill="#475569">i file della dashboard:</text>
+<text x="560" y="492" text-anchor="middle" font-size="13" fill="#475569">index.html, main-….js,</text>
+<text x="560" y="512" text-anchor="middle" font-size="13" fill="#475569">styles-….css, icone</text>
+<line x1="560" y1="285" x2="560" y2="415" stroke="#64748b" stroke-width="2.5" marker-end="url(#ag)"/>
+<rect x="573" y="335" width="40" height="24" rx="4" fill="#ffffff"/>
+<text x="580" y="352" font-size="15" font-weight="700" fill="#b91c1c">NO</text>
+
+<!-- backend -->
+<rect x="800" y="200" width="200" height="110" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="900" y="232" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">backend</text>
+<text x="900" y="258" text-anchor="middle" font-size="14" fill="#0f172a">Spring Boot</text>
+<text x="900" y="282" text-anchor="middle" font-size="14" fill="#0f172a">porta 8080 (interna)</text>
+<line x1="680" y1="235" x2="795" y2="235" stroke="#c2410c" stroke-width="2.5" marker-end="url(#ao)"/>
+<text x="737" y="222" text-anchor="middle" font-size="15" font-weight="700" fill="#15803d">SÌ</text>
+<line x1="795" y1="280" x2="685" y2="280" stroke="#c2410c" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ao)"/>
+<text x="740" y="300" text-anchor="middle" font-size="12" fill="#c2410c">risposta</text>
+
+<!-- db -->
+<rect x="1040" y="210" width="110" height="90" rx="12" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
+<text x="1095" y="250" text-anchor="middle" font-size="18" font-weight="700" fill="#334155">db</text>
+<text x="1095" y="274" text-anchor="middle" font-size="13" fill="#475569">PostgreSQL</text>
+<line x1="1000" y1="255" x2="1035" y2="255" stroke="#475569" stroke-width="2.5" marker-end="url(#ag)"/>
+
+<text x="900" y="360" text-anchor="middle" font-size="14" fill="#7c2d12">nginx la passa a</text>
+<text x="900" y="382" text-anchor="middle" font-size="15" font-weight="700" fill="#7c2d12">http://backend:8080</text>
+<text x="900" y="404" text-anchor="middle" font-size="14" fill="#7c2d12">e riporta la risposta al browser</text>
+
+<!-- browser <-> nginx -->
+<line x1="295" y1="215" x2="405" y2="215" stroke="#1d4ed8" stroke-width="3" marker-end="url(#ab)"/>
+<text x="348" y="200" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">richiesta</text>
+<line x1="405" y1="320" x2="300" y2="320" stroke="#1d4ed8" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ab)"/>
+<text x="350" y="342" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">risposta</text>
+</svg>

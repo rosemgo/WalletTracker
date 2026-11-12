@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import { categoryGroups, kindOf } from '../api/category-groups';
+import { WITHOUT_CATEGORY, categoryGroups, kindOf, needsCategory } from '../api/category-groups';
 import { TYPES, TYPE_LABELS } from '../api/labels';
 import {
   Account,
@@ -25,8 +25,14 @@ import {
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
-import { avatarHue, initialOf, nameOf } from './day-groups';
+import { nameOf } from './day-groups';
+import { merchantSearch } from './merchant-search';
+
+export { MAX_SEARCH_WORDS, merchantSearch } from './merchant-search';
 import { TransactionsChanged } from './transactions-changed';
+import { shortAccountName } from '../accounts/accounts-store';
+import { Avatar } from './avatar';
+import { UpperFirstPipe } from '../text/upper-first.pipe';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
 export const TYPE_HINTS: Record<TransactionType, string> = {
@@ -39,7 +45,8 @@ export const TYPE_HINTS: Record<TransactionType, string> = {
   SECURITIES_BUY: 'Investimenti: tenuto a parte',
   SECURITIES_SELL: 'Investimenti: tenuto a parte',
   INVESTMENT_INCOME: 'Rendite degli investimenti: tenute a parte',
-  INVESTMENT_TAX: 'Tasse sugli investimenti: tenute a parte',
+  WITHHOLDING_TAX: 'Trattenuta su una cedola o un dividendo: si toglie dalla rendita',
+  INVESTMENT_TAX: 'Bollo, capital gain, Tobin tax: tenute a parte',
   IGNORED: "Resta nell'elenco, fuori da tutti i totali",
   TO_REVIEW: 'Fuori dai totali finché non lo classifichi',
 };
@@ -71,7 +78,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [DatePipe, MoneyPipe, RouterLink],
+  imports: [Avatar, DatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {
@@ -85,8 +92,6 @@ export class TransactionDetail implements OnInit {
   protected readonly typeHints = TYPE_HINTS;
   protected readonly origins = ORIGINS;
   protected readonly nameOf = nameOf;
-  protected readonly initialOf = initialOf;
-  protected readonly avatarHue = avatarHue;
   protected readonly maxNoteLength = 300;
 
   protected readonly detail = signal<Detail | null>(null);
@@ -110,8 +115,29 @@ export class TransactionDetail implements OnInit {
 
   protected readonly accountName = computed(() => {
     const t = this.transaction();
-    return t === null ? '' : (this.accounts().find((a) => a.id === t.accountId)?.label ?? '');
+    const account = t === null ? undefined : this.accounts().find((a) => a.id === t.accountId);
+    return account ? shortAccountName(account, this.accounts()) : '';
   });
+
+  /**
+   * La categoria non serve (docs/categorie-e-tipi.md): un acquisto di titoli, un giroconto... senza categoria. Al
+   * posto di "Nessuna categoria", che sembrerebbe un buco da riempire, la scheda dice perché non serve; chi la vuole
+   * la può aggiungere lo stesso.
+   */
+  protected readonly categoryNotNeeded = computed(() => {
+    const t = this.transaction();
+    return t !== null && t.category === null && !needsCategory(t.type);
+  });
+
+  /** "Per un acquisto di titoli non serve una categoria: il tipo dice già che cos'è." */
+  protected readonly notNeededText = computed(() => {
+    const type = this.transaction()?.type;
+    const what = (type && WITHOUT_CATEGORY[type]) ?? 'questo tipo di movimento';
+    return `Per ${what} non serve una categoria: il tipo dice già che cos'è.`;
+  });
+
+  /** La frase di un movimento senza categoria che ne vuole una: nella pagina, "crea una regola" è un link. */
+  protected readonly noCategoryText = 'Nessuna categoria: sceglila tu, o crea una regola.';
 
   /** Perché ha questa categoria, in una frase. */
   protected readonly categoryWhy = computed(() => {
@@ -125,9 +151,10 @@ export class TransactionDetail implements OnInit {
       case 'RULE':
         return d.ruleName ? `Messa dalla regola «${d.ruleName}».` : 'Messa da una regola.';
       default:
-        return d.transaction.type === 'EXPENSE' || d.transaction.type === 'INCOME'
-          ? 'Nessuna categoria: sceglila tu, o crea una regola.'
-          : 'Nessuna categoria.';
+        if (d.transaction.type === null || d.transaction.type === 'TO_REVIEW') {
+          return 'Nessuna categoria: prima scegli il tipo, in «Conta come».';
+        }
+        return needsCategory(d.transaction.type) ? this.noCategoryText : 'Nessuna categoria.';
     }
   });
 
@@ -365,11 +392,11 @@ export class TransactionDetail implements OnInit {
     });
   }
 
-  /** "Tutti i movimenti di …": l'elenco cerca le parole dell'esercente. */
+  /** "Tutti i movimenti di …": l'elenco cerca le parole dell'esercente (al massimo 10: merchantSearch). */
   searchMerchant(): void {
     const key = this.detail()?.merchant?.key;
     if (key) {
-      this.changed.searchFor(key.toLowerCase());
+      this.changed.searchFor(merchantSearch(key));
       this.router.navigate(['/movimenti']);
     }
   }

@@ -5,11 +5,14 @@ import { RouterLink } from '@angular/router';
 import { AlertsPanel } from '../alerts/alerts-panel';
 import { Overview, OverviewCategory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { InvestmentsCard } from '../investments/investments-card';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
-import { MonthChart } from './month-chart';
+import { LiquidityCard } from './liquidity-card';
+import { MonthChart, Trend } from './month-chart';
+import { UpperFirstPipe } from '../text/upper-first.pipe';
 
-/** Quante categorie mostrare in "Dove vanno": le altre sono in Analisi. */
+/** Quante categorie mostrare in "Spese per categoria": le altre sono in Analisi. */
 export const TOP_CATEGORIES = 5;
 
 /** Sotto questa differenza (in euro) si è "in linea con il solito": 3 € di scarto non sono una notizia. */
@@ -41,7 +44,17 @@ function capitalized(text: string): string {
  */
 @Component({
   selector: 'app-overview-page',
-  imports: [AlertsPanel, DatePipe, MoneyPipe, MonthChart, NgTemplateOutlet, RouterLink],
+  imports: [
+    AlertsPanel,
+    DatePipe,
+    InvestmentsCard,
+    LiquidityCard,
+    MoneyPipe,
+    MonthChart,
+    NgTemplateOutlet,
+    RouterLink,
+    UpperFirstPipe,
+  ],
   templateUrl: './overview-page.html',
 })
 export class OverviewPage implements OnInit {
@@ -100,11 +113,25 @@ export class OverviewPage implements OnInit {
   });
 
   /** La frase sotto la cifra grande: com'è il mese rispetto al solito. */
+  /** Sotto o sopra il solito (docs/tema-blu-oceano.md, parte C): il colore del grafico e della frase. */
+  protected readonly trend = computed(() => {
+    const o = this.overview();
+    return o === null ? null : trendOf(o);
+  });
+
   protected readonly comparison = computed(() => {
     const o = this.overview();
     return o === null
       ? ''
       : comparisonSentence(o, this.isCurrent(), (v) => this.euros(v, o.currency));
+  });
+
+  /** I filtri di Movimenti per le spese senza categoria del mese guardato (fino a oggi, per il mese in corso). */
+  protected readonly uncategorizedQuery = computed(() => {
+    const o = this.overview();
+    return o === null
+      ? {}
+      : { uncategorized: 'true', type: 'EXPENSE', from: `${o.month}-01`, to: o.day };
   });
 
   protected readonly topCategories = computed(() =>
@@ -207,6 +234,18 @@ export class OverviewPage implements OnInit {
  *
  * @param euros come scrivere un importo ("126 €")
  */
+/**
+ * Sotto o sopra il solito: la spesa fino a oggi contro quella di un mese tipico (la media degli ultimi mesi) allo
+ * stesso giorno. "In linea" (meno di SAME_AS_USUAL di differenza) conta come sotto: non è un allarme. Null senza un
+ * solito.
+ */
+export function trendOf(o: Overview): Trend | null {
+  if (o.usualSoFar === null) {
+    return null;
+  }
+  return o.spent - o.usualSoFar >= SAME_AS_USUAL ? 'over' : 'under';
+}
+
 export function comparisonSentence(
   o: Overview,
   isCurrent: boolean,

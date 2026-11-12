@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { AiAnswerJob, AiSuggestionsStatus, CategorySuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -106,6 +106,31 @@ describe('SuggestionsPanel', () => {
     expect(page.querySelector('.suggestion-list')).toBeNull(); // niente più da suggerire
   });
 
+  it('while the backend answers, only the buttons of the touched suggestion are disabled', async () => {
+    suggestions = [PIZZA, CONAD_BY_AI];
+    const pending = new Subject<{ updated: number }>();
+    acceptResponse = pending; // il backend non ha ancora risposto
+    const fixture = TestBed.createComponent(SuggestionsPanel);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const rows = () => Array.from(page.querySelectorAll('.suggestion-list li'));
+    const disabled = (row: Element) =>
+      Array.from(row.querySelectorAll('button')).map((b) => (b as HTMLButtonElement).disabled);
+
+    (rows()[0].querySelector('button.primary') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    // Prima tutti i pulsanti si disattivavano (e sembravano premuti tutti insieme): ora solo i due della pizzeria.
+    expect(disabled(rows()[0])).toEqual([true, true]);
+    expect(disabled(rows()[1])).toEqual([false, false]);
+    expect(accepted).toEqual([['PIZZERIA DA GINO', 5]]);
+
+    pending.next({ updated: 3 });
+    pending.complete();
+    await fixture.whenStable();
+    expect(page.textContent).toContain('"Bar e ristoranti" assegnata a 3 movimenti');
+  });
+
   it('"no" remembers the refusal without telling the page to reload', async () => {
     const fixture = TestBed.createComponent(SuggestionsPanel);
     let reloads = 0;
@@ -113,7 +138,7 @@ describe('SuggestionsPanel', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    button(page, 'no').click();
+    button(page, 'No').click();
     await fixture.whenStable();
 
     expect(dismissed).toEqual([['PIZZERIA DA GINO', 5]]);

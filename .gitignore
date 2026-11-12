@@ -4,6 +4,15 @@ secrets/*
 !secrets/README.md
 *.pem
 .data/
+# I backup (docs/48): tutti i dati e la chiave di cifratura, anche se cifrati.
+/backup/
+*.backup
+*.dump
+# Gli aggiornamenti (docs/50, parte I): lo ZIP scaricato e i file della versione di prima.
+/.aggiornamento/
+# Il codice di recupero del PIN (docs/46): va conservato fuori dal progetto, mai su Git.
+*[Cc]odice*[Rr]ecupero*
+*CODICE*RECUPERO*
 
 # --- Build ---
 target/
@@ -13,3 +22,4 @@ target/
 *.iml
 .vscode/
 .DS_Store
+.github/ci/serve-chiamato

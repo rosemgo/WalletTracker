@@ -44,6 +44,15 @@ class ExplorerTest {
         assertThat(year.getFirst().from()).isEqualTo(LocalDate.of(2025, 11, 1));
         assertThat(Explorer.bars(Period.SIX_MONTHS, TODAY, TODAY).getFirst().from())
                 .isEqualTo(LocalDate.of(2026, 5, 1));
+
+        // L'anno in corso: da gennaio a ottobre, dieci mesi; a gennaio, una barra sola.
+        List<Bar> ytd = Explorer.bars(Period.YEAR_TO_DATE, TODAY, TODAY);
+        assertThat(ytd).hasSize(10);
+        assertThat(ytd.getFirst().from()).isEqualTo(LocalDate.of(2026, 1, 1));
+        assertThat(ytd.getLast().to()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(Explorer.bars(Period.YEAR_TO_DATE, LocalDate.of(2027, 1, 5), LocalDate.of(2027, 1, 5)))
+                .hasSize(1);
+        assertThat(Explorer.unitOf(Period.YEAR_TO_DATE)).isEqualTo(Unit.MONTH);
     }
 
     @Test

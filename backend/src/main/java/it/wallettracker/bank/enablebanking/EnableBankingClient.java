@@ -101,6 +101,17 @@ public class EnableBankingClient {
                 .body(Session.class);
     }
 
+    /**
+     * DELETE /sessions/{id}: chiude la sessione, cioè revoca il consenso dato in banca (docs/rimuovere-un-collegamento.md).
+     * Da allora Enable Banking non legge più quei conti per noi.
+     */
+    public void deleteSession(String sessionId) {
+        restClient.delete()
+                .uri("/sessions/{id}", sessionId)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     /** GET /accounts/{uid}/balances: i saldi di un conto, letti in background (senza l'utente). */
     public List<Balance> getBalances(String accountUid) {
         return getBalances(accountUid, null);

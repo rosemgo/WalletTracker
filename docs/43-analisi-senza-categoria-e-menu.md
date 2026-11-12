@@ -170,3 +170,16 @@ Nel browser (Chromium di Playwright, che ha `base-select`):
 - il menu del Budget aperto: scheda arrotondata, voce scelta con la spunta; scelta con la tastiera (frecce e
   Invio);
 - la pillola del periodo in Movimenti, aperta, nel tema scuro.
+
+---
+
+## Correzione: "da sistemare" solo su "Senza categoria"
+
+**Il difetto.** In Analisi, raggruppando per esercente, una riga come "Findomestic Banca S.P.A." diceva "· da
+sistemare ›", anche se il movimento aveva già la sua categoria (Prestiti e finanziamenti). La scritta non è nel modello
+ma nello stile (`::after`), e valeva per **ogni** `a.group-row`: quando è stata scritta, l'unica riga-link era "Senza
+categoria". Dopo, anche le righe degli esercenti e dei conti sono diventate link ai loro movimenti (`docs/collegamenti.md`), e si sono prese l'invito per sbaglio.
+
+**La correzione.** La riga di "Senza categoria" ha la classe `uncategorized`, e la scritta vale solo per
+`a.group-row.uncategorized`. Le altre righe restano link, senza invito.
+

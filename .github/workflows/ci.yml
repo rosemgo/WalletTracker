@@ -8,8 +8,14 @@ name: CI
 
 # Il "trigger": quando far partire la pipeline.
 on:
+  # Su ogni branch (i tag no: per quelli c'è rilascio.yml, che chiama questo stesso file prima di pubblicare).
   push:
+    branches: ['**']
   pull_request:
+  # Chiamato da rilascio.yml (docs/50): prima di pubblicare una versione, tutti i test.
+  workflow_call:
+  # Abilita il pulsante per l'avvio manuale
+  workflow_dispatch:
 
 # Permessi minimi: la pipeline deve solo leggere il codice, non modificare il repository.
 permissions:
@@ -90,3 +96,304 @@ jobs:
       # La build di produzione: se il codice o i template hanno errori, fallisce qui.
       - name: Compila
         run: npm run build
+
+  # L'installazione vera (Fase 4, docs/44 e docs/45): lo script installa.sh crea il .env con una password a caso,
+  # costruisce le immagini e avvia i container, come sul PC di chi installa. Poi controlliamo che l'app risponda,
+  # cambiamo la password del database e ricontrolliamo. Se un Dockerfile, la configurazione di nginx o lo script
+  # hanno un errore, ce ne accorgiamo qui. I test girano già nei due job sopra.
+  docker:
+    name: Installazione con Docker (installa.sh)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      # Sulla macchina di GitHub l'utente ha id 1001, il backend nel container 1000 (docs/45, parte F): la
+      # cartella della chiave di cifratura va data all'utente 1000, come farebbe chi installa su un Linux così.
+      - name: Prepara le cartelle .data e backup
+        run: mkdir .data backup && sudo chown 1000:1000 .data backup
+
+      - name: Installa e avvia
+        run: ./installa.sh --senza-browser
+
+      # I file da doppio clic (docs/50, parte N). Quelli di Windows (.cmd): fini riga di Windows in ogni riga e solo
+      # caratteri senza accenti (cmd.exe li leggerebbe male). Quelli del Mac (.command): eseguibili e con le fini riga
+      # di Unix. Poi "Avvia WalletTracker.command" lanciato davvero, come farebbe il Terminale del Mac: deve avviare
+      # l'app e aspettare Invio prima di chiudersi.
+      - name: I file da doppio clic
+        run: |
+          test "$(ls ./*.cmd | wc -l)" = 3 && test "$(ls ./*.command | wc -l)" = 3
+          for f in ./*.cmd; do
+            if [ "$(grep -c $'\r$' "$f")" != "$(wc -l < "$f")" ]; then echo "$f: fini riga non di Windows"; exit 1; fi
+            if LC_ALL=C grep -q '[^ -~[:cntrl:]]' "$f"; then echo "$f: caratteri non ASCII"; exit 1; fi
+            grep -q 'installa.ps1' "$f"
+          done
+          for f in ./*.command; do
+            test -x "$f"
+            if grep -q $'\r' "$f"; then echo "$f: fini riga di Windows"; exit 1; fi
+          done
+          printf '\n' | "./Avvia WalletTracker.command" --senza-browser | tee avvio.log
+          grep -q 'è avviato' avvio.log
+          grep -q 'Premi Invio' avvio.log
+
+      # -f: curl fallisce se la risposta è un errore (4xx, 5xx). Dal passo 3 (docs/46) le API vogliono il PIN: senza,
+      # 401. Poi facciamo quello che fa la dashboard: lo stato (che dà il cookie XSRF-TOKEN), il PIN creato dal PC
+      # con il gettone CSRF, e le API con la sessione aperta (i cookie restano nel file "biscotti"). La porta 8001 è
+      # quella "da un altro dispositivo": lì nginx scrive "remote", anche se chi chiama prova a scrivere "local".
+      - name: Controlla che l'app risponda, e che senza PIN le API siano chiuse
+        run: |
+          curl -fsS http://localhost:8000/ | grep -q '<app-root>'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/accounts)" = 401
+          curl -fsS http://localhost:8001/api/auth/status | grep -q '"local":false'
+          curl -fsS -H 'X-WalletTracker-Access: local' http://localhost:8001/api/auth/status | grep -q '"local":false'
+          curl -fsS -c biscotti -b biscotti http://localhost:8000/api/auth/status | grep -q '"local":true'
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' biscotti)
+          curl -fsS -c biscotti -b biscotti -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/pin > risposta.json
+          grep -oE '"recoveryCode":"[A-Z0-9-]{19}"' risposta.json | cut -d'"' -f4 > codice
+          curl -fsS -b biscotti http://localhost:8000/api/accounts
+
+      # Il PIN dimenticato, "dal telefono" (porta 8001): con il codice di recupero si sceglie un PIN nuovo, si entra,
+      # e la sessione aperta prima (biscotti) non vale più.
+      - name: Recupera il PIN con il codice, da un altro dispositivo
+        run: |
+          curl -fsS -c telefono -b telefono http://localhost:8001/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' telefono)
+          curl -fsS -c telefono -b telefono -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d "{\"code\":\"$(cat codice)\",\"pin\":\"246810\"}" http://localhost:8001/api/auth/recover | grep -q recoveryCode
+          curl -fsS -b telefono http://localhost:8001/api/accounts
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b biscotti http://localhost:8000/api/accounts)" = 401
+
+      # Passo 4 (docs/47, parte L). Le intestazioni che Tailscale aggiunge, e quelle false che potrebbe scrivere chiunque.
+      - name: Intestazioni di Tailscale e intestazioni false
+        run: |
+          # Un nome falso (DNS rebinding) resta fuori anche con X-Forwarded-Host: nginx non la fa passare.
+          for porta in 8000 8001; do
+            test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example' -H 'X-Forwarded-Host: localhost' \
+              http://localhost:$porta/api/auth/status)" = 403
+          done
+          # Entra con il PIN e stampa il cookie della sessione. $1 = porta, il resto = intestazioni in più.
+          entra() {
+            porta=$1; shift
+            rm -f prova-cookie
+            curl -fsS -c prova-cookie -b prova-cookie "$@" http://localhost:$porta/api/auth/status > /dev/null
+            gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' prova-cookie)
+            curl -fsS -D - -o /dev/null -b prova-cookie "$@" -H "X-XSRF-TOKEN: $gettone" \
+              -H 'Content-Type: application/json' -d '{"pin":"246810"}' http://localhost:$porta/api/auth/login |
+              grep -i '^set-cookie: WALLETTRACKER_SESSION'
+          }
+          # Dalla porta di Tailscale, con l'https che dice Tailscale: cookie Secure.
+          cookie=$(entra 8001 -H 'X-Forwarded-Proto: https')
+          echo "$cookie" | grep -q 'Secure'
+          # Dalla porta del PC un "https" scritto a mano non conta; e in http, niente Secure. (Non "! grep": con
+          # "set -e" una riga che comincia con "!" non fa mai fallire il passo.)
+          cookie=$(entra 8000 -H 'X-Forwarded-Proto: https')
+          if echo "$cookie" | grep -q 'Secure'; then echo "Secure sulla porta del PC: $cookie"; exit 1; fi
+          cookie=$(entra 8001)
+          if echo "$cookie" | grep -q 'Secure'; then echo "Secure in http: $cookie"; exit 1; fi
+          # Una richiesta arrivata da Internet con Tailscale Funnel: rifiutata, pagine comprese.
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Tailscale-Funnel-Request: ?1' http://localhost:8001/)" = 403
+
+      # ./installa.sh --tailscale con un finto "tailscale" (.github/ci/tailscale): il nome del PC e l'indirizzo di
+      # ritorno finiscono nel .env, e il backend accetta il nome Tailscale.
+      - name: Installazione con --tailscale
+        run: |
+          PATH="$PWD/.github/ci:$PATH" ./installa.sh --tailscale --senza-browser
+          grep -q 'serve --bg --https=443 http://127.0.0.1:8001' .github/ci/serve-chiamato
+          grep -q '^WALLETTRACKER_ALLOWED_HOSTS=localhost,127.0.0.1,pc-casa.tail0000.ts.net$' .env
+          # Dal codice: quello di ng serve (npm start) e quello di Tailscale. Da uno ZIP solo Tailscale (prova-aggiornamento.sh).
+          grep -q '^ENABLE_BANKING_REDIRECT_URL=https://localhost:8443/callback,https://pc-casa.tail0000.ts.net/callback$' .env
+          curl -fsS -H 'Host: pc-casa.tail0000.ts.net' http://localhost:8001/api/auth/status | grep -q '"local":false'
+
+      - name: Cambia la password del database e ricontrolla
+        run: |
+          ./installa.sh --cambia-password-db --senza-browser
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":true'
+
+      # Il PIN dimenticato: lo script lo azzera e chiude le sessioni (la vecchia non vale più).
+      - name: Azzera il PIN
+        run: |
+          ./installa.sh --reimposta-pin --senza-browser
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false,"withoutPin":false'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b telefono http://localhost:8001/api/accounts)" = 401
+
+      # Passo 5 (docs/48, parte L): backup e ripristino, provati davvero. Dati inventati (un PIN e una chiave di
+      # Gemini finta, salvata cifrata con la chiave di .data), un backup, poi si cancella TUTTO e si ripristina.
+      # I file dei backup sono dell'utente 1000 con permessi 600: per leggerli qui serve sudo.
+      - name: Backup
+        run: |
+          echo 'WALLETTRACKER_BACKUP_PASSWORD=Prova-backup-CI-2026' >> .env
+          rm -f prova
+          curl -fsS -c prova -b prova http://localhost:8000/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' prova)
+          curl -fsS -c prova -b prova -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/pin > /dev/null
+          curl -fsS -b prova -X PUT -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"apiKey":"chiave-finta-WXYZ"}' http://localhost:8000/api/ai/keys/GEMINI | grep -q 'WXYZ'
+          sudo sha256sum .data/encryption.key | cut -d' ' -f1 > chiave-prima
+          ./installa.sh --backup --senza-browser
+          file=$(ls backup/wallettracker-manuale-*.backup)
+          # Cifrato davvero: comincia con il marchio di OpenSSL, e dentro non c'è niente in chiaro.
+          sudo head -c 8 "$file" | grep -q 'Salted__'
+          if sudo strings "$file" | grep -q -i -E 'flyway|WXYZ'; then echo "testo in chiaro nel backup"; exit 1; fi
+          echo "$file" > backup-da-ripristinare
+
+      - name: Ripristino, dopo aver cancellato il database e la chiave
+        run: |
+          file=$(cat backup-da-ripristinare)
+          docker compose down -v
+          sudo rm .data/encryption.key
+          ./installa.sh --senza-browser
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false'
+          # Con la password sbagliata (e poi Invio vuoto alla domanda): si ferma, e non cambia niente.
+          if printf 'RIPRISTINA\n\n' | WALLETTRACKER_BACKUP_PASSWORD=password-sbagliata ./installa.sh --ripristina "$file" --senza-browser; then
+            echo "il ripristino con la password sbagliata è riuscito"; exit 1
+          fi
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":false'
+          # Con la password giusta (quella del .env).
+          printf 'RIPRISTINA\n' | ./installa.sh --ripristina "$file" --senza-browser
+          ls backup/wallettracker-prima-del-ripristino-*.backup
+          test "$(sudo sha256sum .data/encryption.key | cut -d' ' -f1)" = "$(cat chiave-prima)"
+          curl -fsS http://localhost:8000/api/auth/status | grep -q '"pinSet":true'
+          rm -f prova
+          curl -fsS -c prova -b prova http://localhost:8000/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' prova)
+          curl -fsS -c prova -b prova -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/login
+          # La chiave di Gemini si legge ancora: il database e la chiave di cifratura sono tornati insieme.
+          curl -fsS -b prova http://localhost:8000/api/ai | grep -q '"keyHint":"…WXYZ"'
+
+      - name: Backup automatico
+        run: |
+          sudo rm -f backup/wallettracker-automatico-*.backup
+          echo 'BACKUP_TIME=00:00' >> .env
+          docker compose up -d backup
+          for i in $(seq 1 40); do
+            if ls backup/wallettracker-automatico-*.backup 2> /dev/null; then exit 0; fi
+            sleep 3
+          done
+          docker compose logs backup
+          exit 1
+
+      # I backup dalla dashboard (docs/48, parte Q): lo stato, "fai un backup adesso", e lo scaricamento solo dal
+      # server (porta 8000); da un dispositivo remoto (porta 8001) 403.
+      - name: Backup dalla dashboard
+        run: |
+          entra() {
+            rm -f "$2"
+            curl -fsS -c "$2" -b "$2" http://localhost:$1/api/auth/status > /dev/null
+            gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' "$2")
+            curl -fsS -c "$2" -b "$2" -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+              -d '{"pin":"135792"}' http://localhost:$1/api/auth/login
+          }
+          entra 8000 server
+          entra 8001 remoto
+          curl -fsS -b server http://localhost:8000/api/backups | grep -q '"serviceRunning":true'
+          prima=$(ls backup/wallettracker-manuale-*.backup | wc -l)
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' server)
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b server -X POST -H "X-XSRF-TOKEN: $gettone" \
+            http://localhost:8000/api/backups)" = 202
+          for i in $(seq 1 20); do
+            if [ "$(ls backup/wallettracker-manuale-*.backup | wc -l)" -gt "$prima" ]; then break; fi
+            sleep 2
+          done
+          test "$(ls backup/wallettracker-manuale-*.backup | wc -l)" -gt "$prima"
+          nome=$(curl -fsS -b server http://localhost:8000/api/backups | grep -o 'wallettracker-manuale-[0-9-]*\.backup' | head -1)
+          curl -fsS -b server -o scaricato.backup "http://localhost:8000/api/backups/$nome"
+          sudo cmp scaricato.backup "backup/$nome"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b remoto "http://localhost:8001/api/backups/$nome")" = 403
+
+      # Quanti backup si tengono (docs/48, parte G2): di ogni tipo solo gli ultimi, e un tipo non tocca gli altri. Dodici
+      # backup fatti a mano di fila: ne restano 10 (i più nuovi); gli automatici e quelli di prima di un aggiornamento
+      # restano quanti erano. Lo stato scritto dal container dice i numeri alla dashboard.
+      - name: Quanti backup si tengono
+        run: |
+          conta() { sudo find backup -maxdepth 1 -name "wallettracker-$1-*.backup" | wc -l; }
+          automatici=$(conta automatico)
+          sudo find backup -maxdepth 1 -name 'wallettracker-manuale-*.backup' > manuali-prima.txt
+          for i in $(seq 1 3); do docker compose run --rm -T backup crea prima-dell-aggiornamento > /dev/null; sleep 1; done
+          for i in $(seq 1 12); do docker compose run --rm -T backup crea manuale > /dev/null; sleep 1; done
+          docker compose run --rm -T backup crea prima-dell-aggiornamento | tee crea.log
+          grep -q "Tolto il backup vecchio (prima-dell-aggiornamento, se ne tengono 3)" crea.log
+          test "$(conta manuale)" = 10
+          test "$(conta prima-dell-aggiornamento)" = 3
+          test "$(conta automatico)" = "$automatici"
+          # I 10 rimasti sono i più nuovi: i manuali che c'erano prima dei dodici, i più vecchi, non ci sono più.
+          test -s manuali-prima.txt
+          while read -r f; do if sudo test -e "$f"; then echo "c'è ancora $f"; exit 1; fi; done < manuali-prima.txt
+          sudo grep -qx 'tieni-manuali=10' .data/backup-stato/stato.txt
+          sudo grep -qx 'tieni-prima=3' .data/backup-stato/stato.txt
+
+      # Niente backup di un database senza le tabelle di WalletTracker (docs/48, parte G4): sarebbe un backup "vuoto",
+      # e con i limiti di "Quanti backup si tengono" 14 vuoti di fila toglierebbero 14 buoni. Un database vuoto apposta
+      # (PGDATABASE=vuoto): il backup si rifiuta con il codice 6, e nella cartella non cambia niente.
+      - name: Niente backup di un database vuoto
+        run: |
+          utente=$(grep '^POSTGRES_USER=' .env | cut -d= -f2)
+          docker compose exec -T db psql -q -U "$utente" -d postgres -c 'CREATE DATABASE vuoto'
+          prima=$(sudo find backup -maxdepth 1 -name '*.backup' | sort)
+          codice=0
+          docker compose run --rm -T -e PGDATABASE=vuoto backup crea manuale > vuoto.log 2>&1 || codice=$?
+          cat vuoto.log
+          test "$codice" = 6
+          grep -q "non ha le tabelle di WalletTracker" vuoto.log
+          test "$(sudo find backup -maxdepth 1 -name '*.backup' | sort)" = "$prima"
+          docker compose exec -T db psql -q -U "$utente" -d postgres -c 'DROP DATABASE vuoto'
+
+      # La cartella dei backup scelta dallo script (docs/48, parte F): al primo avvio, una volta sola; poi un percorso
+      # relativo, con uno spazio e tra virgolette (come lo incolla un terminale), diventa completo nel .env; i container
+      # la usano subito, l'app la mostra; Invio vuoto la lascia com'è. La cartella è già dell'utente 1000, come per
+      # .data e backup.
+      - name: La cartella dei backup
+        run: |
+          # Al primo avvio da una finestra vera ("script" ne simula una) la domanda arriva, una volta sola: Invio scrive
+          # la cartella di serie. Fino a qui la CI non l'aveva vista: la risposta non arrivava da un terminale.
+          if grep -q '^BACKUP_DIR=' .env; then echo "BACKUP_DIR c'è già"; exit 1; fi
+          printf '\n' | script -qec './installa.sh --senza-browser' /dev/null > primo-avvio.txt
+          grep -q 'Dove salvo i backup' primo-avvio.txt
+          grep -qx 'BACKUP_DIR=./backup' .env
+          script -qec './installa.sh --senza-browser' /dev/null < /dev/null > secondo-avvio.txt
+          if grep -q 'Dove salvo i backup' secondo-avvio.txt; then echo "la domanda è tornata"; exit 1; fi
+          sudo mkdir "altra cartella" && sudo chown 1000:1000 "altra cartella"
+          printf '"altra cartella"\n' | ./installa.sh --cartella-backup --senza-browser
+          grep -qxF "BACKUP_DIR=$PWD/altra cartella" .env
+          ./installa.sh --backup --senza-browser
+          ls "altra cartella"/wallettracker-manuale-*.backup
+          rm -f server
+          curl -fsS -c server -b server http://localhost:8000/api/auth/status > /dev/null
+          gettone=$(awk '$6 == "XSRF-TOKEN" { print $7 }' server)
+          curl -fsS -c server -b server -H "X-XSRF-TOKEN: $gettone" -H 'Content-Type: application/json' \
+            -d '{"pin":"135792"}' http://localhost:8000/api/auth/login
+          curl -fsS -b server http://localhost:8000/api/backups | grep -qF "\"serverDirectory\":\"$PWD/altra cartella\""
+          printf '\n' | ./installa.sh --cartella-backup --senza-browser
+          grep -qxF "BACKUP_DIR=$PWD/altra cartella" .env
+
+      # nginx -t controlla la configurazione senza riavviare il server.
+      - name: Controlla la configurazione di nginx
+        run: docker compose exec -T web nginx -t
+
+      - name: Log dei container
+        if: failure()
+        run: docker compose logs --tail 200
+
+  # "Aggiorna" (Fase 4, passo 6b: docs/50, parte I), da una versione all'altra, con un finto GitHub sulla macchina
+  # stessa: l'ultima già installata, uno ZIP manomesso (rifiutato), un aggiornamento riuscito e uno che fallisce (lo
+  # script torna da solo alla versione di prima, con i dati di prima). Tutto in .github/ci/prova-aggiornamento.sh.
+  aggiornamento:
+    name: Aggiornamento (installa.sh --aggiorna)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      - name: Prova l'aggiornamento
+        run: .github/ci/prova-aggiornamento.sh "$RUNNER_TEMP/aggiornamento"
+
+      - name: Log dei container
+        if: failure()
+        working-directory: ${{ runner.temp }}/aggiornamento/WalletTracker
+        run: docker compose logs --tail 200

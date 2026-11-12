@@ -57,7 +57,13 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     // Il backend: la richiesta passa così com'è, e la risposta torna così com'è.
     const proxied = request(
-      { ...BACKEND, path: req.url, method: req.method, headers: req.headers },
+      // "local": questo server gira sul PC e ascolta solo su 127.0.0.1, come la porta 8000 di nginx (docs/46, parte C).
+      {
+        ...BACKEND,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, 'x-wallettracker-access': 'local' },
+      },
       (answer) => {
         res.writeHead(answer.statusCode ?? 502, answer.headers);
         answer.pipe(res);

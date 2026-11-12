@@ -233,7 +233,7 @@ class AccountControllerTest {
         assertThat(mvc.delete().uri("/api/accounts/{id}", account.getId()))
                 .hasStatus(400)
                 .bodyJson().extractingPath("$.detail")
-                .isEqualTo("Si possono eliminare solo i conti manuali (caricati da file CSV).");
+                .isEqualTo("Si possono eliminare solo i conti manuali (caricati da un file).");
         assertThat(accountRepository.findById(account.getId())).isPresent();
     }
 

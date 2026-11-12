@@ -57,7 +57,7 @@
                     (keydown.escape)="renaming.set(null)"
                   />
                   <button type="button" (click)="rename(category, nameInput.value)">Salva</button>
-                  <button type="button" class="link" (click)="renaming.set(null)">annulla</button>
+                  <button type="button" class="link" (click)="renaming.set(null)">Annulla</button>
                 </div>
               } @else {
                 {{ category.name }}
@@ -67,7 +67,17 @@
               }
             </td>
             <td data-label="Movimenti" class="amount secondary">
-              {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
+              @if (category.uses > 0) {
+                <a
+                  class="action"
+                  routerLink="/movimenti"
+                  [queryParams]="{ categoryId: category.id }"
+                >
+                  {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
+                </a>
+              } @else {
+                nessun movimento
+              }
             </td>
             <td data-label="Gruppo" class="group">
               <select
@@ -84,27 +94,36 @@
             <td data-label="" class="amount actions">
               @if (confirmingDelete() === category.id) {
                 <!-- Eliminare chiede conferma: non si può annullare. -->
-                <span class="secondary">
-                  @if (category.uses > 0) {
-                    {{ category.uses }}
-                    {{ category.uses === 1 ? 'movimento resterà' : 'movimenti resteranno' }}
-                    senza categoria.
-                  } @else {
-                    Nessun movimento la usa.
-                  }
-                </span>
-                <button type="button" (click)="remove(category)">Elimina</button>
-                <button type="button" class="link" (click)="confirmingDelete.set(null)">
-                  annulla
-                </button>
+                <div class="confirm-delete">
+                  <span class="secondary">
+                    @if (category.uses > 0) {
+                      {{ category.uses }}
+                      {{ category.uses === 1 ? 'movimento resterà' : 'movimenti resteranno' }}
+                      senza categoria.
+                    } @else {
+                      Nessun movimento la usa.
+                    }
+                  </span>
+                  <div class="confirm-buttons">
+                    <button type="button" class="danger" (click)="remove(category)">Elimina</button>
+                    <button type="button" class="link" (click)="confirmingDelete.set(null)">
+                      Annulla
+                    </button>
+                  </div>
+                </div>
               } @else {
-                <button type="button" class="link" (click)="renaming.set(category.id)">
-                  rinomina
-                </button>
-                ·
-                <button type="button" class="link" (click)="confirmingDelete.set(category.id)">
-                  elimina
-                </button>
+                <div class="row-actions">
+                  <button type="button" class="link" (click)="renaming.set(category.id)">
+                    Rinomina
+                  </button>
+                  <button
+                    type="button"
+                    class="link danger"
+                    (click)="confirmingDelete.set(category.id)"
+                  >
+                    Elimina
+                  </button>
+                </div>
               }
             </td>
           </tr>

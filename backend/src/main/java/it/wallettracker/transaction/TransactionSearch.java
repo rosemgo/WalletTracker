@@ -87,7 +87,9 @@ public final class TransactionSearch {
                 conditions.add(cb.equal(category.get("id"), filter.categoryId()));
             }
             if (filter.uncategorized()) {
+                // Solo dove la categoria serve: un acquisto di titoli senza categoria non è da sistemare.
                 conditions.add(cb.isNull(root.get("category")));
+                conditions.add(root.get("type").in(TransactionType.WITH_CATEGORY));
             }
             if (filter.from() != null) {
                 conditions.add(cb.greaterThanOrEqualTo(root.get("bookingDate"), filter.from()));

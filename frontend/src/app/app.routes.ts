@@ -24,6 +24,11 @@ export const routes: Routes = [
     title: 'Categoria · WalletTracker',
   },
   {
+    path: 'investimenti',
+    loadComponent: () => import('./investments/investments-page').then((m) => m.InvestmentsPage),
+    title: 'Investimenti · WalletTracker',
+  },
+  {
     path: 'budget',
     loadComponent: () => import('./budget/budget-page').then((m) => m.BudgetPage),
     title: 'Budget · WalletTracker',
@@ -56,7 +61,7 @@ export const routes: Routes = [
   {
     path: 'importa',
     loadComponent: () => import('./import/import-page').then((m) => m.ImportPage),
-    title: 'Importa CSV · WalletTracker',
+    title: 'Importa movimenti · WalletTracker',
   },
   {
     path: 'importa/completa',

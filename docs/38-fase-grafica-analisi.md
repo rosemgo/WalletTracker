@@ -221,3 +221,116 @@ Riepilogo.
    è di 45 giorni? E di due anni?
 3. **Investimenti.** Una pagina che mostra per mese le rendite (`INVESTMENT_INCOME`), le tasse (`INVESTMENT_TAX`) e il
    netto: puoi riusare `BarChart` con `diverging`. Quale `Metric` aggiungeresti, e dove?
+
+---
+
+## Aggiunta: "Quest'anno" (l'anno in corso, YTD)
+
+Richiesta dell'utente: poter guardare i grafici **dall'inizio dell'anno a oggi** (YTD, *year to date*).
+
+- **Il periodo nuovo** `YEAR_TO_DATE` (`ExploreDtos.Period`): le barre sono i mesi da gennaio al mese di oggi
+  (`Explorer.bars`): a novembre undici barre, a gennaio una sola. Si chiama **"Quest'anno"**, come il filtro di
+  Movimenti e la scheda "Investito" del Riepilogo; nell'indirizzo `?periodo=questanno`.
+- **"Anno" diventa "12 mesi"**: erano gli ultimi 12 mesi, non l'anno solare, e con "Quest'anno" accanto il vecchio nome
+  avrebbe confuso. Nell'indirizzo resta `?periodo=anno`, così i link salvati continuano a funzionare.
+- **Sotto le barre** l'iniziale del mese, come per i 12 mesi (`explore-labels.ts`, `barLabel`).
+- **Sul telefono** cinque pulsanti in fila non ci stavano ("Settimana" e "Quest'anno" erano tagliati): con cinque
+  scelte, sotto i 520 pixel, ogni pulsante prende la larghezza del suo testo, con un carattere un poco più piccolo
+  (`.segmented:has(> button:nth-child(5))`). Provato a 390 e a 360 pixel.
+
+Lo stesso periodo c'è nella pagina Investimenti (`docs/investimenti.md`, parte N).
+
+**I test.** `ExplorerTest.theBarsOfEachPeriod` (dieci mesi a fine ottobre, uno a gennaio); `explore-page.spec.ts`
+(il pulsante chiede `YEAR_TO_DATE` e scrive `questanno` nell'indirizzo).
+
+**Anche nella pagina di una categoria.** Il grafico aveva sempre gli ultimi 12 mesi; ora sopra ha **12 mesi ·
+Quest'anno**. Qui non serve cambiare l'API: dà già i 12 mesi che finiscono con il mese guardato, e da gennaio di
+quell'anno ci sono sempre tutti. Il frontend tiene solo quelli dello stesso anno (`category-page.ts`, `chartMonths`).
+Il titolo dice "Quest'anno" per l'anno in corso e "Gennaio–ottobre 2025" per un mese di un anno passato. Test:
+`category-page.spec.ts` (12 barre, poi 10 da gennaio a ottobre).
+
+---
+
+## Aggiunta: niente riquadro bianco dopo aver toccato una barra
+
+**Il difetto, visto dall'utente sul telefono.** Toccando una barra compariva un riquadro bianco arrotondato attorno a
+lei, alto quanto il grafico.
+
+**Perché.** Ogni barra ha un'area toccabile (`rect.hit`) con `tabindex="0"`, per poterla scegliere anche con la
+tastiera. Dopo un tocco l'area ha il focus; lo stile toglieva il contorno solo per il focus della tastiera
+(`:focus-visible`, dove disegna un bordo dell'accento), e per il focus dopo un tocco restava il contorno del browser
+(`outline: auto`): il riquadro bianco.
+
+**La correzione.** `.bar-chart .hit:focus { outline: none; }`: dopo un tocco niente contorno (la barra scelta si vede
+già, accesa); con la tastiera il bordo dell'accento resta. Vale per tutti i grafici a barre (Analisi, una categoria,
+Investimenti). I grafici a linea (Riepilogo, Investimenti) non avevano il difetto.
+
+**La prova.** Con Playwright e un telefono simulato (Pixel 7, tocchi veri): prima, dopo il tocco, `outline: auto`
+e il riquadro nella cattura; dopo, `outline: none` e nessun riquadro; con il tasto Tab la barra ha ancora il bordo.
+È solo CSS: i test dei componenti (jsdom) non disegnano la pagina.
+
+---
+
+## Aggiunta: la pagina di una categoria, nel mese giusto e con le barre da toccare
+
+Due difetti trovati dall'utente.
+
+**1. Dal Riepilogo di ottobre si apriva novembre.** Il link di una categoria in "Dove vanno" non diceva il mese, e la
+pagina della categoria prende allora quello in corso. Ora il link porta `?mese=` con il mese guardato nel Riepilogo
+(come facevano già il Budget e Analisi).
+
+**2. Le barre non si potevano toccare.** Ora funzionano come in Analisi:
+
+- toccando una barra si accende, e sopra il grafico c'è il mese con la sua cifra ("settembre 2026: 85,40 €");
+- la cifra grande con il confronto con il solito, il budget e **"Dove"** passano a quel mese ("Dove, a settembre");
+- **il grafico resta fermo**: sono i 12 mesi del primo caricamento. Se ogni tocco ricaricasse anche le barre, l'API
+  darebbe i 12 mesi che finiscono con quello toccato e il grafico "scapperebbe" sotto il dito. Nel codice
+  (`category-page.ts`) ci sono due dati: `chart` (le barre e la loro media, fermi) e `overview` (il mese guardato,
+  ricaricato con `categoryOverview(id, mese)` a ogni tocco);
+- l'indirizzo diventa `?mese=2026-09` (`replaceUrl`: il tasto indietro non deve ripassare per ogni barra toccata), così
+  ricaricando la pagina si resta sullo stesso mese;
+- la barra accesa è quella del mese guardato, non per forza l'ultima.
+
+**I test.** `category-page.spec.ts`, "touching a bar shows that month, its figure and where; the chart stays as it
+is"; `overview-page.spec.ts` (il link porta `?mese=`). Nel browser, con un telefono simulato: dal Riepilogo di
+ottobre, "Spesa alimentare" apre ottobre (140 €); toccando settembre, 85 €, "settembre 2026: 85,40 €" e "Dove, a
+settembre", con le stesse 12 barre.
+
+**Il grafico arriva sempre fino al mese in corso.** Con il link del Riepilogo, aperta a ottobre, la pagina mostrava i 12
+mesi fino a ottobre, e novembre (il mese in corso) spariva. Ora si caricano due cose (`forkJoin`): il grafico senza
+mese, cioè fino a oggi, e il mese aperto per la cifra, il budget e "Dove". La barra accesa è quella del mese aperto.
+Solo un mese più vecchio delle 12 barre (per esempio da un budget di due anni fa) ha il grafico che finisce con lui,
+altrimenti la sua barra non ci sarebbe. Test: `category-page.spec.ts`, "opened on an earlier month, the chart still
+reaches the current month". Nel browser: dal Riepilogo di ottobre, barre fino a novembre con ottobre acceso.
+
+## Aggiunta: "Quest'anno" di serie
+
+Richiesta dell'utente: aprire Analisi sull'anno in corso, non sugli ultimi 12 mesi. Senza `?periodo=` nell'indirizzo
+il periodo è **"Quest'anno"** (`YEAR_TO_DATE`). L'ordine dei pulsanti è lo stesso in tutte le barre dei periodi:
+prima "Quest'anno", poi "12 mesi", poi gli altri allontanandosi dai 12 mesi. Qui: **Quest'anno · 12 mesi · 6 mesi ·
+Mese · Settimana** (`PERIODS` in `explore-page.ts`); in Investimenti: Quest'anno · 12 mesi · 2 anni · Tutto. Lo stesso nel grafico della pagina di una categoria (`chartPeriod` in `category-page.ts`) e nella
+pagina Investimenti (`docs/investimenti.md`, parte R). A gennaio "Quest'anno" ha una barra sola: è l'anno, appena
+cominciato; "12 mesi" è a un clic.
+
+**I test.** `explore-page.spec.ts` (la prima richiesta è `YEAR_TO_DATE`, nell'indirizzo `questanno`, l'ordine dei
+pulsanti); `category-page.spec.ts` (dieci barre da gennaio, poi "12 mesi").
+
+## Correzione: "Quest'anno" usciva dal suo riquadro sul telefono
+
+**Il difetto.** In Investimenti, sul telefono, la scritta "Quest'anno" usciva dal riquadro che la evidenzia. I
+pulsanti di una barra di scelta (`.segmented`) erano tutti **larghi uguali** (una griglia di colonne uguali): con
+quattro pulsanti ognuno aveva da 67 a 90 pixel, secondo il telefono, e "Quest'anno" ne vuole 91. Le altre parole ("12
+mesi", "2 anni", "Tutto") ci stavano con spazio d'avanzo. Misurato a 320, 360, 375, 390 e 412 pixel: usciva sempre.
+
+**La correzione.** Sotto i 520 pixel ogni pulsante parte dalla **larghezza del suo testo**, e lo spazio che avanza si
+divide in parti uguali (`display: flex` e `flex: 1 1 auto`): "Quest'anno" ha ora da 97 a 120 pixel, "Tutto" un poco
+meno. Vale per tutte le barre di scelta del telefono. Sul PC restano larghe uguali.
+
+Controllando tutte le barre è uscito anche un caso più piccolo: a **320 pixel** (il primo iPhone SE) i cinque pulsanti
+di Analisi volevano 304 pixel e ne avevano 280, e "Settimana" usciva. Sotto i 360 pixel quei pulsanti hanno il
+carattere un poco più piccolo e meno margine ai lati: 266 pixel.
+
+**La prova.** Le barre di Investimenti, Analisi e della pagina di una categoria, a 320, 360, 375, 390, 412 e 1280
+pixel: nessun testo più largo del suo pulsante, nessun pulsante fuori dalla barra, nessuna pagina più larga dello
+schermo.
+

@@ -39,73 +39,114 @@
       </label>
     }
 
-    <section class="card hero">
-      <span class="secondary">{{ figure()?.label }}</span>
-      <span class="big-figure">{{
-        figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
-      }}</span>
-      <p class="comparison">{{ comparison() }}</p>
-      <app-month-chart
-        [spentByDay]="o.spentByDay"
-        [usualByDay]="o.usualByDay"
-        [daysInMonth]="o.daysInMonth"
-        [monthShort]="monthShort()"
-        [description]="chartDescription()"
-        [currency]="o.currency"
-        [live]="isCurrent()"
-        (scrubbed)="scrubDay.set($event)"
-      />
-      <div class="chart-keys">
-        <span><span class="key month"></span>{{ monthTitle() }}</span>
-        @if (o.usualMonths > 0) {
-          <span>
-            <span class="key usual"></span>Un mese tipico (media di
-            {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
-          </span>
-        }
-      </div>
-      <p class="secondary income">
-        Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
-        {{ o.income | money: o.currency : 'symbol' : '1.0-0' }}
-      </p>
-    </section>
+    <!-- Sul PC la colonna di sinistra: la cifra del mese con il grafico, e sotto la liquidità. -->
+    <div class="overview-main">
+      <section class="card hero">
+        <span class="secondary">{{ figure()?.label }}</span>
+        <span class="big-figure">{{
+          figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
+        }}</span>
+        <p
+          class="comparison"
+          [class.trend-under]="trend() === 'under'"
+          [class.trend-over]="trend() === 'over'"
+        >
+          @if (trend() === 'over') {
+            <span aria-hidden="true">▲ </span>
+          } @else if (trend() === 'under') {
+            <span aria-hidden="true">▼ </span>
+          }
+          {{ comparison() }}
+        </p>
+        <app-month-chart
+          [spentByDay]="o.spentByDay"
+          [usualByDay]="o.usualByDay"
+          [daysInMonth]="o.daysInMonth"
+          [monthShort]="monthShort()"
+          [description]="chartDescription()"
+          [currency]="o.currency"
+          [live]="isCurrent()"
+          [trend]="trend()"
+          (scrubbed)="scrubDay.set($event)"
+        />
+        <div class="chart-keys">
+          <span
+            ><span
+              class="key month"
+              [class.trend-under]="trend() === 'under'"
+              [class.trend-over]="trend() === 'over'"
+            ></span
+            >{{ monthTitle() }}</span
+          >
+          @if (o.usualMonths > 0) {
+            <span>
+              <span class="key usual"></span>Un mese tipico (media di
+              {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
+            </span>
+          }
+        </div>
+        <p class="secondary income">
+          Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
+          {{ o.income | money: o.currency : 'symbol' : '1.0-0' }}
+        </p>
+      </section>
+
+      <!-- Quanti soldi ci sono sui conti adesso (docs/saldi.md, parte K). -->
+      <app-liquidity-card />
+    </div>
 
     @if (topCategories().length > 0) {
-      <section class="card">
+      <section class="card spending-card">
         <div class="card-head">
-          <h2>Dove vanno</h2>
-          <a routerLink="/analisi">Tutte</a>
+          <h2>Spese per categoria</h2>
+          <a routerLink="/analisi">Tutte ›</a>
         </div>
         <ul class="bars">
           @for (c of topCategories(); track c.categoryId) {
             <li>
               @if (c.categoryId !== null) {
-                <a class="bar-link" [routerLink]="['/analisi/categoria', c.categoryId]">
+                <!-- Nel mese guardato qui, non in quello in corso. -->
+                <a
+                  class="bar-link"
+                  [routerLink]="['/analisi/categoria', c.categoryId]"
+                  [queryParams]="{ mese: o.month }"
+                >
                   <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
                 </a>
               } @else {
-                <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
+                <!-- "Senza categoria": le spese del mese da sistemare, in Movimenti (come in Analisi, docs/43). -->
+                <a
+                  class="bar-link"
+                  routerLink="/movimenti"
+                  [queryParams]="uncategorizedQuery()"
+                  [attr.aria-label]="'Senza categoria: apri le spese del mese, per dare loro una categoria'"
+                >
+                  <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
+                </a>
               }
             </li>
           }
         </ul>
       </section>
     } @else {
-      <section class="card">
-        <h2>Dove vanno</h2>
+      <section class="card spending-card">
+        <h2>Spese per categoria</h2>
         <p class="secondary">Nessuna spesa {{ isCurrent() ? 'finora' : 'in questo mese' }}.</p>
       </section>
     }
 
     @if (o.upcoming.length > 0) {
       <section class="card">
-        <h2>In arrivo nei prossimi 7 giorni</h2>
+        <div class="card-head">
+          <h2>In arrivo nei prossimi 7 giorni</h2>
+          <a routerLink="/abbonamenti">Abbonamenti ›</a>
+        </div>
         <ul class="rows">
           @for (u of o.upcoming; track u.subscriptionId) {
             <li>
               <span>
                 {{ u.name }}
-                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' }}</span>
+                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' | upperFirst }}</span>
               </span>
               <strong>{{ u.amount | money: o.currency }}</strong>
             </li>
@@ -113,6 +154,9 @@
         </ul>
       </section>
     }
+
+    <!-- Gli investimenti dell'anno: una scheda che porta alla pagina (docs/investimenti.md). -->
+    <app-investments-card />
 
     @if (o.toReview > 0 || o.suggestions > 0) {
       <!-- aria-label: il nome del link per i lettori di schermo, "7 movimenti da verificare" in una frase sola. -->
@@ -140,7 +184,7 @@
   <p>Caricamento...</p>
 }
 
-<!-- Una categoria di "Dove vanno": il nome, l'importo, la barra e la differenza dal solito. -->
+<!-- Una categoria di "Spese per categoria": il nome, l'importo, la barra e la differenza dal solito. -->
 <ng-template #bar let-c>
   <span class="bar-label">
     <span>{{ categoryName(c) }}</span>

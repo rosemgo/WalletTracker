@@ -3,6 +3,7 @@ package it.wallettracker.transaction;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 
 import it.wallettracker.account.Account;
 import it.wallettracker.category.Category;
@@ -162,6 +163,21 @@ public class BankTransaction {
             changed = true;
         }
         return changed;
+    }
+
+    /**
+     * Un movimento importato da un file prima che si leggesse la seconda colonna della causale (docs/tinaba.md,
+     * parte H): reimportando il file, la causale si completa. Cambia solo se è ancora quella di allora, così una
+     * causale diversa non si sovrascrive mai.
+     *
+     * @return true se ha cambiato qualcosa
+     */
+    public boolean extendDescription(String expected, String extended) {
+        if (extended == null || extended.equals(description) || !Objects.equals(description, expected)) {
+            return false;
+        }
+        description = extended;
+        return true;
     }
 
     /**

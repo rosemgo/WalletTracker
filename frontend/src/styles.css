@@ -37,18 +37,18 @@
   ); /* il bordo dei campi: un po' più deciso delle linee */
   --track: light-dark(#eef0f4, #232831); /* il fondo di una barra, i pulsanti secondari */
   --acc: light-dark(
-    #3557ee,
-    #7d97ff
+    #1d4ed8,
+    #60a5fa
   ); /* l'accento per testi e linee: link, la sezione attiva, i grafici */
-  --acc-2: light-dark(#7a4cf2, #b48cff); /* il secondo colore delle sfumature dei grafici (viola) */
+  --acc-2: light-dark(#0891b2, #0ea5c6); /* il secondo colore delle sfumature dei grafici (ciano) */
   --acc-strong: light-dark(
-    #3557ee,
-    #4566ff
+    #1d4ed8,
+    #2563eb
   ); /* l'accento come sfondo pieno (pulsanti): con il testo bianco */
   --on-acc: #ffffff; /* il testo sopra l'accento pieno, in entrambi i temi */
-  --soft: light-dark(#ebefff, #1d2440); /* un riquadro da notare, la scelta attiva di una pillola */
+  --soft: light-dark(#e6eeff, #13213f); /* un riquadro da notare, la scelta attiva di una pillola */
   --bar: light-dark(#c3c9d4, #3a404b); /* le linee "di confronto" dei grafici (il mese tipico) */
-  --pos: light-dark(#3557ee, #7d97ff); /* entrate, risparmio */
+  --pos: light-dark(#1d4ed8, #60a5fa); /* entrate, risparmio */
   --neg: light-dark(#e2620f, #ff9a4d); /* uscite oltre le entrate, valori negativi da notare */
   --ok: light-dark(#14894a, #4cc38a); /* stati: tutto bene */
   --warn: light-dark(#f2ae0c, #f5c451); /* stati: attenzione (solo come sfondo di un'icona) */
@@ -178,7 +178,8 @@ ul.rows strong {
 
 .app-nav .brand,
 .app-nav .more-pages,
-.app-nav .nav-eye {
+.app-nav .nav-eye,
+.app-nav .nav-logout {
   display: none;
 }
 
@@ -232,17 +233,11 @@ ul.rows strong {
 
 /* Il marchio: un quadrato arrotondato con la sfumatura dell'accento, come l'icona di un'app. */
 .brand-mark {
-  display: flex;
+  /* Il marchio (public/icons/icon.svg, docs/tema-blu-oceano.md): lo stesso disegno dell'icona dell'app. */
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--acc-strong), var(--acc-2));
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 800;
+  border-radius: 9px;
 }
 
 /* La barra in alto (docs/42, parte B): sul telefono il nome dell'app a sinistra e l'occhio a destra. */
@@ -284,6 +279,53 @@ button.eye[aria-checked='true'] {
 /* Senza rete: un giallo tenue, si nota ma non allarma (docs/42). */
 .banner.offline {
   background: light-dark(#fff4d1, #3a3012);
+}
+
+/* Le novità di una versione nuova, nelle Impostazioni (docs/50, parte J): il testo come arriva, a capo compresi. */
+.release-news .notes {
+  white-space: pre-line;
+  padding: 10px 12px;
+  background: var(--soft);
+  border-radius: 10px;
+}
+
+/* Ogni comando su una riga intera, mai spezzato (copiato a metà sarebbe sbagliato): se è troppo lungo, si scorre. */
+.release-news .commands code {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Una versione nuova pubblicata (docs/50, parte J): il testo e, a destra, la crocetta per chiudere. */
+.banner.release {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.banner.release span {
+  flex: 1;
+}
+
+.banner.release .close {
+  flex: none;
+  min-width: 32px;
+  min-height: 32px;
+  margin: -6px -8px -6px 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.banner.release .close:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .banner.update button.link {
@@ -428,6 +470,25 @@ button.eye[aria-checked='true'] {
     font-size: 14px;
     font-weight: 500;
     text-align: left;
+  }
+
+  /* "Esci", sotto la modalità discreta: discreto come le pagine di servizio. */
+  .app-nav .nav-logout {
+    display: block;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sec);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .app-nav .nav-logout:hover {
+    background: var(--track);
+    color: var(--ink);
   }
 
   .app-nav .nav-eye .nav-icon {
@@ -604,6 +665,16 @@ table {
   overflow: hidden;
 }
 
+/*
+ * L'attesa dei dati nuovi (docs/grafici-tocco.md): ogni pagina si oscura un poco con la classe .loading, ma solo se
+ * l'attesa dura più di 0,3 secondi. Una risposta veloce (il tocco su una barra) non fa più lampeggiare la pagina: di
+ * notte il testo chiaro che si spegne e si riaccende si vedeva come un lampo. Togliendo la classe, l'opacità torna
+ * subito piena: se non era ancora calata, non succede niente.
+ */
+.loading {
+  transition: opacity 0.2s ease 0.3s;
+}
+
 table.loading {
   opacity: 0.5;
 }
@@ -670,6 +741,17 @@ td.amount.negative {
 
 .message {
   color: var(--ok);
+}
+
+/* Dopo "Aggiorna ora": una riga per conto (docs/aggiorna-ora.md). */
+.sync-outcomes {
+  margin: 0 0 12px;
+  padding-left: 1.2em;
+  color: var(--ink);
+}
+
+.sync-outcomes li + li {
+  margin-top: 4px;
 }
 
 .error {
@@ -943,7 +1025,8 @@ app-file-drop {
 }
 
 /* Nei moduli a griglia occupa tutta la riga: è un bersaglio grande. */
-.form-grid > app-file-drop.wide {
+.form-grid > app-file-drop.wide,
+.form-grid > .import-mode.wide {
   grid-column: 1 / -1;
 }
 
@@ -987,14 +1070,15 @@ app-file-drop {
   }
 }
 
-/* Mentre si trascina un file sopra, o quando il campo è attivo con la tastiera. */
+/* Mentre si trascina un file sopra, o quando il campo è attivo con la tastiera (:focus-visible: con il mouse il
+   campo riceve il focus lo stesso, e il bordo restava acceso dopo aver scelto il file). */
 .file-drop.dragging,
-.file-drop:focus-within {
+.file-drop:has(input:focus-visible) {
   border-color: var(--acc);
   background: var(--soft);
 }
 
-.file-drop:focus-within {
+.file-drop:has(input:focus-visible) {
   box-shadow: 0 0 0 4px var(--ring);
 }
 
@@ -1109,6 +1193,30 @@ button.link {
   font-weight: 500;
 }
 
+/* Un'azione resta intera: si va a capo tra un'azione e l'altra, mai in mezzo ("Carica il / logo" in una colonna
+   stretta della pagina Conti). I testi delle azioni sono tutti brevi. */
+button.link,
+label.link,
+a.action {
+  white-space: nowrap;
+}
+
+/* Un link da solo (un'azione, o il passaggio a un'altra pagina: "Vedi i movimenti", "Scarica", "12 movimenti") ha
+   l'aspetto dei pulsanti-azione: il colore dell'accento, senza sottolineatura, che compare passandoci sopra. La
+   sottolineatura resta ai link dentro una frase: lì serve, per non distinguerli dal testo solo con il colore. */
+a.action {
+  color: var(--acc);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  a.action:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 @media (hover: hover) {
   button.link:not(:disabled):hover {
     background: none;
@@ -1140,8 +1248,92 @@ button.link:not(:disabled):active {
 
 /* Un riquadro subito dopo una tabella (es. il modulo sotto l'elenco dei conti): un po' di spazio. */
 table + .card,
+/* Una tabella più larga dello spazio (un PC con lo schermo ingrandito, molte colonne) scorre da sola, non fa scorrere
+   tutta la pagina. Il margine interno, annullato da quello esterno negativo, lascia spazio all'ombra della tabella:
+   senza, overflow la taglierebbe ai bordi. */
+.table-scroll {
+  overflow-x: auto;
+  padding: 0 16px 24px;
+  margin: 0 -16px -24px;
+}
+
 .table-scroll + .card {
   margin-top: 1.5rem;
+}
+
+/* Le azioni di un conto manuale (pagina Conti): una per riga, allineate a sinistra. "Elimina" in fondo, un poco
+   staccata: cancella il conto con tutti i suoi movimenti, non deve stare in mezzo alle altre. */
+ul.account-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+ul.account-actions li.delete {
+  margin-top: 6px;
+}
+
+/* Più azioni sulla stessa riga ("Vedi i movimenti", "Rinomina", "Elimina"): uno spazio tra l'una e l'altra, senza "·";
+   se non ci stanno vanno a capo tra un'azione e l'altra, mai in mezzo. */
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+/* In una colonna allineata a destra (le azioni delle Categorie) anche le azioni e la conferma stanno a destra. */
+td.actions .row-actions,
+td.actions .confirm-buttons {
+  justify-content: flex-end;
+}
+
+td.actions .confirm-delete {
+  align-items: flex-end;
+}
+
+/* Un'azione che cancella qualcosa: rossa, come gli errori. Il pulsante pieno (la conferma) ha lo sfondo rosso. */
+button.link.danger {
+  color: var(--bad);
+}
+
+/* Il testo: bianco sul rosso scuro del tema chiaro; scuro sul rosso chiaro del tema scuro (il bianco lì si legge male). */
+button.danger:not(.link) {
+  background: var(--bad);
+  color: light-dark(#ffffff, #0c0e12);
+}
+
+@media (hover: hover) {
+  button.danger:not(.link):not(:disabled):hover {
+    background-color: var(--bad);
+    filter: brightness(1.08);
+  }
+}
+
+.confirm-delete {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm-buttons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Lo spazio tra i due pulsanti lo dà già gap: senza questo si sommerebbe al margine di "td button + button". */
+.confirm-buttons button + button {
+  margin-left: 0;
+}
+
+/* Un IBAN è una parola sola di 27 caratteri: nelle tabelle può andare a capo, invece di allargare la colonna. */
+.iban {
+  overflow-wrap: anywhere;
 }
 
 .form-grid {
@@ -1206,6 +1398,18 @@ input.ng-invalid.ng-touched {
   margin-top: 1rem;
 }
 
+/* Nella prova di una regola: chi vince sui movimenti a cui la regola non si applicherebbe. */
+ul.blockers {
+  margin: 0 0 12px;
+  padding: 10px 14px 10px 30px;
+  border-radius: 12px;
+  background: var(--soft);
+}
+
+ul.blockers li + li {
+  margin-top: 6px;
+}
+
 tr.disabled {
   color: var(--sec);
 }
@@ -1215,6 +1419,60 @@ code {
   padding: 0.1rem 0.4rem;
   border-radius: 6px;
   font-size: 0.88em;
+}
+
+/* Impostazioni → Backup: un backup per riga (tipo, data, dimensione, "Scarica"); sul telefono vanno a capo. */
+.backup-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0.5rem;
+}
+.backup-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--track);
+}
+.backup-list .backup-type {
+  font-weight: 600;
+  min-width: 11rem;
+}
+
+/* Sul telefono ogni backup sta su due righe, sempre uguali: il tipo a sinistra e la data a destra, poi la dimensione e
+   "Scarica". Così le date stanno in colonna sul bordo destro, qualunque sia la lunghezza del tipo. */
+@media (max-width: 699px) {
+  .backup-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .backup-list li > :nth-child(2),
+  .backup-list li > :nth-child(4) {
+    justify-self: end;
+  }
+}
+
+/* Da 700 pixel in su l'elenco è una tabella: colonne fisse per tipo, data, dimensione e "Scarica", così le date stanno
+   in colonna anche quando il tipo è lungo ("Prima di un aggiornamento"). */
+@media (min-width: 700px) {
+  .backup-list li {
+    display: grid;
+    grid-template-columns: 14rem 10rem 4.5rem auto;
+    justify-content: start;
+  }
+
+  .backup-list .backup-type {
+    min-width: 0;
+  }
+}
+
+/* Impostazioni: gli indirizzi di ritorno di Enable Banking, uno per riga (sono lunghi, sul telefono vanno a capo). */
+.redirect-url {
+  display: block;
+  margin-top: 0.3rem;
+  overflow-wrap: anywhere;
 }
 
 progress {
@@ -1243,6 +1501,14 @@ progress::-moz-progress-bar {
 }
 
 /* ---- Riepilogo ---- */
+
+/* Impostazioni, senza indirizzi di ritorno: "Prima prepara Tailscale" al posto dell'indirizzo da registrare. */
+.needs-tailscale {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--soft);
+  border-radius: 10px;
+}
 
 .card.warning {
   background: var(--soft);
@@ -1591,6 +1857,30 @@ button.icon svg {
 }
 
 /* ---- Il grafico del mese (app-month-chart, docs/41 parte G) ---- */
+
+/*
+ * Il colore del grafico (docs/tema-blu-oceano.md, parte C): verde sotto il solito, rosso sopra, l'accento senza un
+ * solito. Una variabile sola, --trend, per la linea, la sfumatura, l'alone e il punto di oggi; anche la frase sopra e
+ * il trattino della legenda.
+ */
+:root {
+  --trend: var(--acc);
+}
+
+.trend-under {
+  --trend: var(--ok);
+}
+
+.trend-over {
+  --trend: var(--bad);
+}
+
+.comparison.trend-under,
+.comparison.trend-over {
+  color: var(--trend);
+  font-weight: 600;
+}
+
 .month-chart-wrap {
   position: relative;
   margin: 30px -4px 4px; /* sopra, il posto per l'etichetta del giorno scelto */
@@ -1663,24 +1953,24 @@ button.icon svg {
 }
 
 .month-chart .area {
-  fill: var(--acc);
+  fill: var(--trend);
 }
 
 /* L'alone sotto la linea: un'ombra dell'accento, che la fa "brillare" sulla scheda. */
 .line-layer {
-  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--acc) 35%, transparent));
+  filter: drop-shadow(0 6px 8px color-mix(in srgb, var(--trend) 35%, transparent));
 }
 
 .month-chart .month {
   fill: none;
-  stroke: var(--acc);
+  stroke: var(--trend);
   stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .month-chart .today {
-  fill: var(--acc);
+  fill: var(--trend);
   stroke: var(--card);
   stroke-width: 2.5;
 }
@@ -1698,7 +1988,7 @@ button.icon svg {
 }
 
 .month-chart .halo {
-  fill: var(--acc);
+  fill: var(--trend);
   pointer-events: none;
 }
 
@@ -1791,7 +2081,7 @@ button.icon svg {
   height: 0;
   margin-right: 6px;
   vertical-align: middle;
-  border-top: 2.5px solid var(--acc);
+  border-top: 2.5px solid var(--trend);
   border-radius: 2px;
 }
 
@@ -1805,12 +2095,22 @@ button.icon svg {
   justify-content: space-between;
 }
 
+/* Il link nell'intestazione di una scheda ("Tutte ›", "Abbonamenti ›"): come "Vedi tutto ›" delle schede intere. */
 .card-head a {
-  color: var(--sec);
+  color: var(--acc);
   font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-/* "Dove vanno": barre sottili, tutte dello stesso colore (conta la lunghezza), con la differenza dal solito. */
+@media (hover: hover) {
+  .card-head a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* "Spese per categoria": barre sottili, tutte dello stesso colore (conta la lunghezza), con la differenza dal solito. */
 ul.bars,
 ul.rows {
   list-style: none;
@@ -1851,7 +2151,7 @@ ul.rows strong {
   overflow: hidden;
 }
 
-/* Le barre orizzontali ("Dove vanno", i gruppi di Analisi): la sfumatura dell'accento, e crescono all'apertura. */
+/* Le barre orizzontali ("Spese per categoria", i gruppi di Analisi): la sfumatura dell'accento, e crescono all'apertura. */
 .bar-line .fill,
 .group-row .fill {
   display: block;
@@ -1924,6 +2224,43 @@ ul.rows li > span {
   font-size: 0.85rem;
 }
 
+/* Sul telefono (e su uno schermo stretto) il Riepilogo è una colonna sola, in quest'ordine: la cifra con il grafico,
+   le spese per categoria (che spiegano il grafico), la liquidità, poi il resto. Nel modello la liquidità sta nel
+   contenitore della colonna di sinistra del PC (overview-main): qui il contenitore si "scioglie" (display: contents)
+   e le sue schede si mettono in fila con le altre, nell'ordine di "order". */
+@media (max-width: 1099px) {
+  .overview {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .overview > .overview-main {
+    display: contents;
+  }
+
+  .overview > *,
+  .overview-main > * {
+    order: 4;
+  }
+
+  .overview > .currency-choice {
+    order: 0;
+    align-self: flex-start;
+  }
+
+  .overview-main > .hero {
+    order: 1;
+  }
+
+  .overview > .spending-card {
+    order: 2;
+  }
+
+  .overview-main > app-liquidity-card {
+    order: 3;
+  }
+}
+
 /* Sul PC il Riepilogo sta in due colonne: a sinistra la cifra e il grafico, a destra il resto. */
 @media (min-width: 1100px) {
   .overview {
@@ -1938,8 +2275,11 @@ ul.rows li > span {
     justify-self: start;
   }
 
-  .overview > .hero {
-    grid-row: span 3;
+  /* La colonna di sinistra (la cifra del mese con il grafico, la liquidità) resta alta quanto il suo contenuto, anche se
+     la colonna a destra finisce più in basso. Allungare la scheda del grafico lasciava un grande spazio vuoto sopra il
+     grafico (provato e tolto, su richiesta dell'utente). Quattro righe: a destra ci sono al massimo quattro schede. */
+  .overview > .overview-main {
+    grid-row: span 4;
   }
 }
 
@@ -2295,6 +2635,66 @@ button.icon svg {
   font-size: 24px;
 }
 
+/* Il logo accanto al nome del conto, nella pagina Conti. */
+.account-logo {
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* "carica il logo": un link che apre la scelta del file; il campo vero resta nascosto. */
+.logo-upload {
+  position: relative; /* il campo nascosto qui sotto si posiziona qui: fuori, sfuggiva al riquadro della tabella */
+  color: var(--acc);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Con la tastiera il campo nascosto ha il focus: il contorno va sul link che si vede. Solo con la tastiera
+   (:focus-visible): con il mouse il campo riceve il focus lo stesso, e :focus-within lasciava un riquadro attorno al
+   link dopo ogni clic. */
+.logo-upload:has(input:focus-visible) {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+.logo-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* Il logo della banca del conto, piccolo nell'angolo in basso del cerchio (docs/loghi.md). Il bordo del colore della
+   scheda lo stacca dal cerchio; lo sfondo chiaro tiene leggibili i loghi scuri anche di notte. */
+.avatar {
+  position: relative;
+}
+
+.avatar-bank {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: #fff;
+  object-fit: contain;
+}
+
+.avatar.large .avatar-bank {
+  width: 36px;
+  height: 36px;
+  right: -8px;
+  bottom: -8px;
+}
+
 .detail-head h1 {
   margin: 8px 0 0;
   font-size: 1.2rem;
@@ -2322,7 +2722,8 @@ button.icon svg {
   padding-bottom: 4px;
 }
 
-button.detail-row {
+/* Anche la riga "Categoria: Non serve", che non è un pulsante (docs/categorie-e-tipi.md). */
+.detail-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2336,7 +2737,7 @@ button.detail-row {
   text-align: left;
 }
 
-button.detail-row > span:first-child {
+.detail-row > span:first-child {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2347,7 +2748,7 @@ button.detail-row strong {
   font-weight: 600;
 }
 
-button.detail-row + .why + button.detail-row {
+.detail-row + .why + button.detail-row {
   border-top: 1px solid var(--line);
 }
 
@@ -2595,6 +2996,43 @@ button.choice .check {
   font-weight: 550;
 }
 
+/* Sul telefono i pulsanti non sono più tutti larghi uguali: ognuno parte dalla larghezza del suo testo, e lo spazio che
+   avanza si divide in parti uguali (flex: 1 1 auto). Con colonne uguali "Quest'anno" (91 pixel) usciva dal suo
+   riquadro in Investimenti, a ogni larghezza da 320 a 412: le altre parole ci stavano con spazio d'avanzo. */
+@media (max-width: 520px) {
+  .segmented {
+    display: flex;
+  }
+
+  .segmented button {
+    flex: 1 1 auto;
+    white-space: nowrap;
+  }
+}
+
+/* Con cinque scelte (Analisi: Quest'anno ... Settimana) non basta: un carattere un poco più piccolo, e meno spazio. */
+@media (max-width: 520px) {
+  .segmented:has(> button:nth-child(5)) {
+    grid-auto-columns: auto;
+    gap: 2px;
+  }
+
+  .segmented:has(> button:nth-child(5)) button {
+    padding: 0 4px;
+    font-size: 0.86rem;
+    white-space: nowrap;
+  }
+}
+
+/* Sui telefoni più stretti (320 pixel, il primo iPhone SE) i cinque pulsanti volevano 304 pixel e ne avevano 280:
+   "Settimana" usciva dalla barra. Ancora un poco più piccoli, con meno margine ai lati: 266 pixel. */
+@media (max-width: 359px) {
+  .segmented:has(> button:nth-child(5)) button {
+    padding: 0 2px;
+    font-size: 0.8rem;
+  }
+}
+
 @media (hover: hover) {
   .segmented button:not(:disabled):hover {
     background: transparent;
@@ -2645,7 +3083,11 @@ button.chip-button {
 }
 
 /* ---- Il grafico a barre (app-bar-chart, docs/41 parte H) ---- */
+
+/* Sul telefono, toccando una barra il browser illuminava il rettangolo toccabile (alto quanto il grafico, più largo
+   della barra) per tutto il tocco: la barra scelta si vede già, quel rettangolo no (docs/grafici-tocco.md). */
 .bar-chart-wrap {
+  -webkit-tap-highlight-color: transparent;
   position: relative;
   margin: 8px 0 4px;
 }
@@ -2681,22 +3123,34 @@ button.chip-button {
   }
 }
 
-/* Il netto: in su (risparmiato) e in giù (speso più delle entrate) in due colori; la barra scelta piena. */
+/* Il netto (docs/tema-blu-oceano.md, parte D): in su (risparmiato) in verde, in giù (speso più delle entrate) in
+   rosso; tenui, e la barra scelta piena. */
 .bar-chart .bar.pos {
-  fill: color-mix(in srgb, var(--pos) 30%, var(--card));
+  fill: color-mix(in srgb, var(--ok) 55%, var(--card));
 }
 
 .bar-chart .bar.neg {
-  fill: color-mix(in srgb, var(--neg) 35%, var(--card));
+  fill: color-mix(in srgb, var(--bad) 55%, var(--card));
 }
 
 .bar-chart .bar.pos.on {
-  fill: var(--pos);
+  fill: var(--ok);
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--ok) 45%, transparent));
 }
 
 .bar-chart .bar.neg.on {
-  fill: var(--neg);
-  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--neg) 45%, transparent));
+  fill: var(--bad);
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--bad) 45%, transparent));
+}
+
+@media (hover: hover) {
+  .bar-chart .slot:hover .bar.pos:not(.on) {
+    fill: color-mix(in srgb, var(--ok) 75%, var(--card));
+  }
+
+  .bar-chart .slot:hover .bar.neg:not(.on) {
+    fill: color-mix(in srgb, var(--bad) 75%, var(--card));
+  }
 }
 
 /* Le barre crescono dalla linea dello zero, una dopo l'altra (--i è il numero della barra: 25 ms di ritardo
@@ -2765,6 +3219,12 @@ button.chip-button {
   cursor: pointer;
 }
 
+/* Dopo un tocco la barra ha il focus, e il browser le disegnava il suo contorno (un riquadro bianco attorno alla
+   barra, sul telefono): niente contorno. Con la tastiera (:focus-visible) c'è il bordo dell'accento, qui sotto. */
+.bar-chart .hit:focus {
+  outline: none;
+}
+
 .bar-chart .hit:focus-visible {
   outline: none;
   stroke: var(--acc);
@@ -2795,13 +3255,15 @@ ul.groups > li.secondary {
   padding: 10px 0;
 }
 
-/* "Senza categoria" in Analisi: un link, con l'invito a sistemarli (docs/43). */
+/* Le righe di Analisi che portano ai movimenti: "Senza categoria", un esercente, un conto. */
 a.group-row {
   box-sizing: border-box;
   text-decoration: none;
 }
 
-a.group-row .group-text > span:first-child::after {
+/* Solo "Senza categoria" ha l'invito a sistemarli (docs/43): gli altri movimenti hanno già la loro categoria. Prima
+   l'invito era su ogni riga-link, e un esercente categorizzato diceva "da sistemare". */
+a.group-row.uncategorized .group-text > span:first-child::after {
   content: ' · da sistemare ›';
   color: var(--acc);
   font-size: 0.85em;
@@ -2862,7 +3324,7 @@ a.group-row .group-text > span:first-child::after {
   margin: 16px 4px 8px;
 }
 
-/* Il Riepilogo: una categoria di "Dove vanno" apre la sua pagina. */
+/* Il Riepilogo: una categoria di "Spese per categoria" apre la sua pagina. */
 a.bar-link {
   display: flex;
   flex-direction: column;
@@ -2970,6 +3432,251 @@ a.button.primary {
 .buttons.wide {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ---- Il saldo dei conti (docs/saldi.md) ---- */
+.balance-cell button.link {
+  text-align: left;
+}
+
+/* Il plafond disponibile di una carta di credito, al posto del saldo (docs/saldi.md, parte J). */
+.available-credit {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Con il modulo aperto, la colonna del saldo si allarga quanto serve. */
+.balance-cell:has(app-balance-form) {
+  min-width: 260px;
+}
+
+.balance-form .balance-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.balance-form .hint {
+  margin-top: 0;
+}
+
+/* Importa (docs/importa-file.md): che cosa farà l'importazione con il conto scelto, prima di caricare il file. */
+.import-mode {
+  padding: 12px 14px;
+  border-radius: var(--radius-s);
+  background: var(--soft);
+}
+
+.import-mode p {
+  margin: 0;
+}
+
+.import-mode p + p {
+  margin-top: 8px;
+}
+
+/* Il riepilogo prima di importare: quante righe si aggiungono, e perché le altre no. */
+.import-summary {
+  margin: 0 0 12px;
+}
+
+.balance-check {
+  margin: 16px 0;
+}
+
+.balance-check h3 {
+  margin: 0 0 6px;
+}
+
+/* ---- Investimenti (docs/investimenti.md) ---- */
+.category-page.loading,
+.investments.loading {
+  opacity: 0.6;
+}
+
+/* Una cifra media: più piccola della cifra grande (una sola per schermata), più grande del testo. */
+.mid-figure {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-value {
+  margin: 8px 0 0;
+}
+
+.investments h3 {
+  margin: 18px 0 4px;
+  color: var(--sec);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+ul.steps {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+ul.steps li + li {
+  margin-top: 6px;
+}
+
+/* Acquistato e rientrato dalle vendite: due cifre affiancate sotto la linea dell'investito. */
+.trade-figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.trade-figures strong {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sopra le barre: il mese in evidenza e la sua cifra. Alta una riga anche vuota, così il grafico non salta. */
+.bar-pick {
+  min-height: 1.4em;
+  margin: 12px 0 2px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Mostra tutti" / "Mostra meno" sotto gli elenchi dei movimenti e delle schede di Investimenti: centrato, con
+   spazio intorno per il dito. */
+.day button.show-all,
+.card button.show-all {
+  display: block;
+  min-height: 44px;
+  margin: 4px auto 0;
+  padding: 0 16px;
+}
+
+/* La liquidità del Riepilogo: come la scheda degli investimenti, tutta toccabile; il totale grande, poi i conti. */
+a.card.liquidity-card {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s var(--ease);
+}
+
+@media (hover: hover) {
+  a.card.liquidity-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.liquidity-card .card-head span {
+  color: var(--acc);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Un totale per ogni valuta, uno accanto all'altro (vanno a capo se non ci stanno). */
+.liquidity-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+/* Con più valute, il codice sopra i conti di ognuna. */
+.liquidity-currency {
+  margin: 14px 0 0;
+  color: var(--sec);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.liquidity-total {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.liquidity-card ul.rows {
+  margin-top: 10px;
+}
+
+.liquidity-card .missing {
+  margin: 8px 0 0;
+}
+
+/* La scheda del Riepilogo: tutta toccabile, porta alla pagina. */
+a.card.investments-card {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s var(--ease);
+}
+
+@media (hover: hover) {
+  a.card.investments-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.investments-card .card-head span {
+  color: var(--acc);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.investments-card .figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 6px 0 10px;
+}
+
+.investments-card .figures strong {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Il piccolo grafico della scheda: la stessa linea, senza assi. */
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 48px;
+  overflow: visible;
+}
+
+.sparkline .spark-area {
+  fill: var(--acc);
+  fill-opacity: 0.12;
+}
+
+.sparkline .spark-line {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; /* lo spessore resta quello, anche se il disegno si allarga */
+}
+
+@media (min-width: 1100px) {
+  .investments-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 0 16px;
+    align-items: start;
+  }
 }
 
 /* ---- Le tabelle sul telefono: una scheda per riga (docs/39, parte C) ----
@@ -3114,6 +3821,52 @@ a.budget-name:hover {
   gap: 16px;
 }
 
+/* "Perché a volte una regola non vale?": una spiegazione da aprire, sotto quella della pagina Regole. Il titolo ha il
+   colore dei link, perché si capisca che si clicca. */
+details.why-rules {
+  margin: -4px 0 20px; /* stretto sotto la spiegazione, a cui appartiene; staccato dalla scheda che segue */
+}
+
+details.why-rules summary {
+  width: fit-content;
+  color: var(--acc);
+  cursor: pointer;
+}
+
+details.why-rules[open] summary {
+  margin-bottom: 10px;
+}
+
+details.why-rules ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+details.why-rules li + li {
+  margin-top: 6px;
+}
+
+/* Collega una banca e la pagina di ritorno (docs/modalita-ristretta.md): come aggiungere un conto in Enable Banking. */
+details.linked-accounts summary {
+  width: fit-content;
+  color: var(--acc);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+details.linked-accounts[open] summary {
+  margin-bottom: 10px;
+}
+
+.linked-steps {
+  margin: 0 0 8px;
+  padding-left: 1.25rem;
+}
+
+.linked-steps li + li {
+  margin-top: 6px;
+}
+
 /* Le regole di partenza: una sezione da aprire, sotto le regole dell'utente. */
 details.builtin-rules {
   margin-top: 1.5rem;
@@ -3191,4 +3944,76 @@ table.cards.compact td {
   table.cards.compact td.actions {
     margin-left: auto;
   }
+}
+
+/* La pagina del PIN (docs/46): al posto dell'app, una colonna stretta al centro. */
+.pin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 24rem;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 2rem;
+}
+
+.pin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.pin-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pin-page label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--sec);
+}
+
+/* Le cifre del PIN un po' distanziate, più facili da contare. */
+.pin-page input {
+  color: var(--ink);
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+}
+
+/* "Esci" in fondo alla pagina "Altro" del telefono. */
+button.logout {
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+/* Il pulsante di un modulo in griglia (es. "Togli il PIN"): in basso, allineato ai campi. */
+.form-grid .form-button {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Il codice di recupero (docs/46): grande, a spaziatura fissa, facile da ricopiare a mano. */
+.recovery-code {
+  margin: 0.5rem 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+  user-select: all;
+}
+
+.recovery {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
 }

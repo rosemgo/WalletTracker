@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="660" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Come Investimenti riconosce una ritenuta</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">il tipo è una chiave del codice e decide; la categoria è un nome dell'utente e può cambiare</text>
+
+<!-- PRIMA -->
+<rect x="20" y="95" width="565" height="545" rx="16" fill="#fef2f2" stroke="#b91c1c" stroke-width="2"/>
+<text x="302" y="128" text-anchor="middle" font-size="20" font-weight="700" fill="#b91c1c">Fino alla 1.2.5: dal nome della categoria</text>
+
+<rect x="50" y="150" width="505" height="70" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="70" y="176" font-size="15" fill="#0f172a">"Rit.ced BTP ALFA"</text><text x="535" y="176" text-anchor="end" font-size="15" fill="#0f172a">-15,63 €</text>
+<text x="70" y="202" font-size="14" fill="#475569">tipo <tspan font-family="Consolas, monospace" fill="#0f172a">INVESTMENT_TAX</tspan> · categoria <tspan font-weight="700" fill="#0f172a">"Ritenute"</tspan></text>
+
+<rect x="50" y="235" width="505" height="56" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="70" y="260" font-size="14" font-family="Consolas, monospace" fill="#0f172a">if (category.equals("Ritenute"))</text>
+<text x="70" y="280" font-size="13" fill="#475569">la decisione dipende da un nome che l'utente può cambiare</text>
+
+<path d="M302,300 L302,335" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="315" y="324" font-size="13" fill="#b91c1c">l'utente la rinomina</text>
+
+<rect x="50" y="345" width="505" height="44" rx="10" fill="#ffffff" stroke="#b91c1c" stroke-width="2"/>
+<text x="70" y="373" font-size="15" fill="#0f172a">"Ritenute fiscali" ≠ "Ritenute"</text>
+<text x="535" y="373" text-anchor="end" font-size="15" font-weight="700" fill="#b91c1c">non è più una ritenuta ✗</text>
+
+<rect x="50" y="405" width="505" height="215" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+<text x="70" y="433" font-size="15" font-weight="700" fill="#b91c1c">Investimenti sbaglia, in silenzio</text>
+<text x="70" y="462" font-size="14" fill="#0f172a">cedola lorda</text><text x="535" y="462" text-anchor="end" font-size="14" fill="#0f172a">125,00 €</text>
+<text x="70" y="487" font-size="14" fill="#0f172a">ritenute</text><text x="535" y="487" text-anchor="end" font-size="14" fill="#0f172a">—</text>
+<text x="70" y="512" font-size="14" font-weight="700" fill="#b91c1c">"netto"</text><text x="535" y="512" text-anchor="end" font-size="14" font-weight="700" fill="#b91c1c">125,00 €</text>
+<text x="70" y="537" font-size="14" fill="#0f172a">altre tasse</text><text x="535" y="537" text-anchor="end" font-size="14" fill="#b91c1c">-15,63 €</text>
+<text x="70" y="568" font-size="13" fill="#475569">La ritenuta finisce tra le altre tasse, come il bollo:</text>
+<text x="70" y="588" font-size="13" fill="#475569">il netto è troppo alto, e nessun messaggio lo dice.</text>
+<text x="70" y="608" font-size="13" fill="#475569">Lo stesso con l'app in inglese ("Withholding tax").</text>
+
+<!-- ADESSO -->
+<rect x="615" y="95" width="565" height="545" rx="16" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="897" y="128" text-anchor="middle" font-size="20" font-weight="700" fill="#1d4ed8">Dalla V37: dal tipo</text>
+
+<rect x="645" y="150" width="505" height="70" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="665" y="176" font-size="15" fill="#0f172a">"Rit.ced BTP ALFA"</text><text x="1130" y="176" text-anchor="end" font-size="15" fill="#0f172a">-15,63 €</text>
+<text x="665" y="202" font-size="14" fill="#475569">tipo <tspan font-family="Consolas, monospace" font-weight="700" fill="#0f172a">WITHHOLDING_TAX</tspan> · nessuna categoria</text>
+
+<rect x="645" y="235" width="505" height="56" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="665" y="260" font-size="14" font-family="Consolas, monospace" fill="#0f172a">if (type == WITHHOLDING_TAX)</text>
+<text x="665" y="280" font-size="13" fill="#475569">la decisione dipende da una chiave che non cambia mai</text>
+
+<path d="M897,300 L897,335" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="910" y="324" font-size="13" fill="#1d4ed8">l'utente rinomina le categorie</text>
+
+<rect x="645" y="345" width="505" height="44" rx="10" fill="#ffffff" stroke="#15803d" stroke-width="2"/>
+<text x="665" y="373" font-size="15" fill="#0f172a">il tipo resta WITHHOLDING_TAX</text>
+<text x="1130" y="373" text-anchor="end" font-size="15" font-weight="700" fill="#15803d">è una ritenuta ✓</text>
+
+<rect x="645" y="405" width="505" height="215" rx="10" fill="#ffffff" stroke="#93c5fd"/>
+<text x="665" y="433" font-size="15" font-weight="700" fill="#15803d">Investimenti resta giusto</text>
+<text x="665" y="462" font-size="14" fill="#0f172a">cedola lorda</text><text x="1130" y="462" text-anchor="end" font-size="14" fill="#0f172a">125,00 €</text>
+<text x="665" y="487" font-size="14" fill="#0f172a">ritenute</text><text x="1130" y="487" text-anchor="end" font-size="14" fill="#0f172a">-15,63 €</text>
+<text x="665" y="512" font-size="14" font-weight="700" fill="#15803d">netto</text><text x="1130" y="512" text-anchor="end" font-size="14" font-weight="700" fill="#15803d">109,37 €</text>
+<text x="665" y="537" font-size="14" fill="#0f172a">altre tasse (INVESTMENT_TAX: bollo...)</text><text x="1130" y="537" text-anchor="end" font-size="14" fill="#0f172a">a parte</text>
+<text x="665" y="568" font-size="13" fill="#475569">Come per tutto il resto dell'app: il tipo decide,</text>
+<text x="665" y="588" font-size="13" fill="#475569">la categoria è solo un'etichetta. Nessuna categoria</text>
+<text x="665" y="608" font-size="13" fill="#475569">"speciale": tutte si rinominano e si eliminano.</text>
+</svg>

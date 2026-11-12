@@ -17,6 +17,12 @@ const ACRONYMS = new Set([
   'ING',
   'BNL',
   'BPER',
+  'BTP', // le sigle dei titoli di Stato e dei fondi (docs/investimenti.md)
+  'BOT',
+  'CCT',
+  'CTZ',
+  'ETF',
+  'ETC',
   'UK',
   'USA',
   'EU',
@@ -83,8 +89,13 @@ export function readable(text: string): string {
   return text.toLowerCase().replace(/[\p{L}\p{N}']+/gu, (word, offset: number) => {
     const isFirst = first;
     first = false;
-    // Le sigle, e le lettere puntate di un'abbreviazione (S.P.A., S.R.L.): maiuscole.
-    if (ACRONYMS.has(word.toUpperCase()) || (word.length === 1 && text[offset + 1] === '.')) {
+    // Le sigle, le lettere puntate di un'abbreviazione (S.P.A., S.R.L.) e i codici che mescolano lettere e cifre
+    // (un ISIN come IT0005436693, "7OT45" di un bond: docs/investimenti.md parte L): maiuscole.
+    if (
+      ACRONYMS.has(word.toUpperCase()) ||
+      (word.length === 1 && text[offset + 1] === '.') ||
+      (/\p{L}/u.test(word) && /\p{N}/u.test(word))
+    ) {
       return word.toUpperCase();
     }
     // Dopo un punto attaccato (AMAZON.IT, NETFLIX.COM) è la fine di un indirizzo: resta minuscola.

@@ -1,5 +1,8 @@
 # 25. Fase 3, passo 6: l'import CSV e i conti manuali
 
+> Dalla 1.3.0 la pagina Importa legge anche i file **Excel**, trova la tabella sotto le note della banca e funziona anche
+> con i **conti collegati** (solo i mesi più vecchi della banca): `docs/importa-file.md`.
+
 **Obiettivo:** portare in WalletTracker i movimenti dei conti che Enable Banking non copre (ad esempio
 Trade Republic), caricando il file CSV che la banca ti fa esportare. Il programma propone come leggere le
 colonne, tu controlli l'anteprima, e importi. Reimportare lo stesso file non crea doppioni.

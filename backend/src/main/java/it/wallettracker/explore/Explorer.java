@@ -72,7 +72,8 @@ final class Explorer {
      *   <li>WEEK: i sette giorni della settimana (lunedì-domenica) di {@code end};</li>
      *   <li>MONTH: le settimane del mese di {@code end}, a blocchi di sette giorni dal primo (1-7, 8-14, 15-21,
      *       22-28 e, se ci sono, 29-31): ogni barra si confronta con le altre senza settimane a cavallo di due mesi;</li>
-     *   <li>SIX_MONTHS e YEAR: i 6 o 12 mesi che finiscono con quello di {@code end}.</li>
+     *   <li>SIX_MONTHS e YEAR: i 6 o 12 mesi che finiscono con quello di {@code end};</li>
+     *   <li>YEAR_TO_DATE: l'anno di {@code end}, da gennaio al mese di {@code end} (a gennaio, una barra sola).</li>
      * </ul>
      * Le barre dopo {@code today} sono "future": non ancora successe.
      */
@@ -92,10 +93,14 @@ final class Explorer {
                             month.atDay(Math.min(first + 6, month.lengthOfMonth()))});
                 }
             }
-            case SIX_MONTHS, YEAR -> {
-                int count = period == Period.YEAR ? 12 : 6;
+            case SIX_MONTHS, YEAR, YEAR_TO_DATE -> {
                 YearMonth last = YearMonth.from(end);
-                for (YearMonth m = last.minusMonths(count - 1); !m.isAfter(last); m = m.plusMonths(1)) {
+                YearMonth first = switch (period) {
+                    case SIX_MONTHS -> last.minusMonths(5);
+                    case YEAR -> last.minusMonths(11);
+                    default -> YearMonth.of(last.getYear(), 1);
+                };
+                for (YearMonth m = first; !m.isAfter(last); m = m.plusMonths(1)) {
                     ranges.add(new LocalDate[] {m.atDay(1), m.atEndOfMonth()});
                 }
             }
@@ -115,7 +120,7 @@ final class Explorer {
         return switch (period) {
             case WEEK -> Unit.DAY;
             case MONTH -> Unit.WEEK;
-            case SIX_MONTHS, YEAR -> Unit.MONTH;
+            case SIX_MONTHS, YEAR, YEAR_TO_DATE -> Unit.MONTH;
         };
     }
 
