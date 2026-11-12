@@ -1271,6 +1271,13 @@ table + .card,
   margin: 0 -16px -24px;
 }
 
+/* Sotto la tabella, nei 24px di spazio, si disegna la barra di scorrimento orizzontale. Il margine negativo li
+   restituisce solo se la tabella chiude il riquadro: se sotto c'è altro (un pulsante, un testo), quello deve
+   cominciare dopo la barra, non sopra (Importa: "Niente da aggiungere" coperto dalla barra). */
+.table-scroll:not(:last-child) {
+  margin-bottom: 0;
+}
+
 .table-scroll + .card {
   margin-top: 1.5rem;
 }
