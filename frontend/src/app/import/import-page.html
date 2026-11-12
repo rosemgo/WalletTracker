@@ -1,16 +1,10 @@
-<h1>Importa CSV</h1>
+<h1>Importa movimenti da un file</h1>
 
 <p class="hint">
-  Hai Trade Republic <strong>collegato</strong> con la banca? Allora non serve importare: usa
-  <a routerLink="/importa/completa">Completa i movimenti</a>, che aggiunge le causali ai movimenti
-  già arrivati.
-</p>
-
-<p class="hint">
-  Per i conti che Enable Banking non copre (conti manuali): esporta i movimenti dalla banca in un
-  file CSV e caricalo qui. Il programma propone come leggere le colonne; tu controlli l'anteprima e,
-  se serve, correggi. Reimportare lo stesso file, o un file che si sovrappone al precedente, non
-  crea doppioni.
+  Esporta i movimenti dalla banca in un file <strong>CSV</strong> o <strong>Excel</strong> e
+  caricalo qui. Il programma propone come leggere le colonne; tu controlli l'anteprima e, se serve,
+  correggi. Che cosa viene aggiunto dipende dal conto che scegli: lo vedi qui sotto prima di
+  caricare il file.
 </p>
 
 @if (error()) {
@@ -21,30 +15,51 @@
   <p>Caricamento...</p>
 } @else if (accounts().length === 0) {
   <p>
-    Non hai ancora un conto manuale: crealo nella pagina
-    <a routerLink="/conti">Conti</a> (sezione "Nuovo conto manuale"), poi torna qui.
+    Non hai ancora nessun conto: collega una banca (<a routerLink="/collega">Collega una banca</a>)
+    oppure crea un conto manuale nella pagina <a routerLink="/conti">Conti</a>, poi torna qui.
   </p>
 } @else if (result(); as done) {
   <!-- Fatto: il riepilogo e i passi successivi. -->
   <div class="card">
     <h2>Importazione completata</h2>
-    <p class="message">
-      {{ accountName() }}:
-      {{ done.imported === 1 ? '1 movimento importato' : done.imported + ' movimenti importati' }}
-      @if (done.duplicates > 0) {
-        ({{
-          done.duplicates === 1
-            ? '1 riga era già presente ed è stata saltata'
-            : done.duplicates + ' righe erano già presenti e sono state saltate'
-        }})
-      }
-      .
-    </p>
+    <p class="message">{{ accountName() }}: {{ doneMessage(done) }}</p>
     <p>
-      I movimenti sono stati classificati come quelli delle banche collegate.
+      I movimenti sono stati classificati come quelli arrivati dalla banca.
       <a routerLink="/movimenti">Vai ai movimenti</a>, filtra per questo conto e controlla quelli
-      "Da verificare": molti CSV non hanno causale, e senza testo il programma non indovina.
+      "Da verificare": molti file non hanno causale, e senza testo il programma non indovina.
     </p>
+    @if (importedAccount(); as a) {
+      <!-- Il saldo del conto (docs/saldi.md, parte C): da confrontare con la banca, o da scrivere. -->
+      <section class="balance-check">
+        <h3>Il saldo del conto</h3>
+        @if (editingBalance()) {
+          <app-balance-form
+            [account]="a"
+            (saved)="onBalanceSaved($event)"
+            (cancelled)="editingBalance.set(false)"
+          />
+        } @else if (a.balance; as b) {
+          <p>
+            <strong>{{ b.amount | money: a.currency }}</strong> al {{ b.date | date: 'd MMMM y' }}.
+            @if (balanceSaved()) {
+              Salvato: da qui si aggiorna con i movimenti che importerai.
+            } @else {
+              È quello che vedi nell'app della banca?
+              <button type="button" class="link" (click)="editingBalance.set(true)">
+                No, correggilo
+              </button>
+            }
+          </p>
+        } @else {
+          <p class="hint">
+            Senza saldo il conto non mostra quanti soldi ci sono.
+            <button type="button" class="link" (click)="editingBalance.set(true)">
+              Scrivi il saldo
+            </button>
+          </p>
+        }
+      </section>
+    }
     <button type="button" (click)="restart()">Importa un altro file</button>
   </div>
 } @else {
@@ -54,15 +69,51 @@
       <label>
         Conto
         <select [formControl]="account">
-          @for (a of accounts(); track a.id) {
-            <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
+          @if (manualAccounts().length > 0) {
+            <optgroup label="Conti manuali (non collegati a una banca)">
+              @for (a of manualAccounts(); track a.id) {
+                <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
+              }
+            </optgroup>
+          }
+          @if (linkedAccounts().length > 0) {
+            <optgroup label="Conti collegati con Enable Banking">
+              @for (a of linkedAccounts(); track a.id) {
+                <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
+              }
+            </optgroup>
           }
         </select>
       </label>
+      <!-- Che cosa farà l'importazione con questo conto: si legge prima di scegliere il file. -->
+      <div class="import-mode wide" data-testid="import-mode">
+        @if (linked()) {
+          <p>
+            <strong>Completa lo storico di un conto collegato.</strong> I movimenti di questo conto
+            arrivano dalla banca, ma solo da quando l'hai collegato: la banca dà uno storico
+            limitato. Dal file aggiungo <strong>solo i movimenti più vecchi</strong> del primo
+            arrivato dalla banca{{ bankFromText() }}; gli altri li porta la banca, e aggiungerli
+            farebbe doppioni.
+          </p>
+          @if (selectedIsTradeRepublic()) {
+            <p data-testid="trade-republic-hint">
+              Per Trade Republic c'è anche
+              <a routerLink="/importa/completa">Completa i movimenti</a>, che aggiunge le causali ai
+              movimenti già arrivati senza testo.
+            </p>
+          }
+        } @else {
+          <p>
+            <strong>Importa i movimenti di un conto manuale</strong>, uno che Enable Banking non
+            copre. Aggiungo tutte le righe del file; quelle già importate (lo stesso file, o un file
+            che si sovrappone al precedente) si saltano.
+          </p>
+        }
+      </div>
       <app-file-drop
         class="wide"
-        accept=".csv,text/csv,text/plain"
-        title="Scegli il file CSV"
+        accept=".csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        title="Scegli il file (CSV o Excel)"
         hint="o trascinalo qui · al massimo 5 MB"
         (picked)="onFile($event)"
       />
@@ -70,111 +121,177 @@
   </div>
 
   @if (preview(); as p) {
-    <form class="card" [formGroup]="mapping">
-      <h2>2. Come leggere le colonne</h2>
-      <p class="hint">
-        Proposta in base ai nomi delle colonne e alle prime righe: controllala. Ogni modifica
-        aggiorna l'anteprima qui sotto.
-      </p>
-      <div class="form-grid">
-        <label>
-          Separatore
-          <select formControlName="delimiter">
-            @for (d of delimiters; track d.value) {
-              <option [ngValue]="d.value">{{ d.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Data
-          <select formControlName="dateColumn">
-            <option [ngValue]="null">— scegli —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Formato della data
-          <select formControlName="dateFormat">
-            @for (f of dateFormats; track f.value) {
-              <option [ngValue]="f.value">{{ f.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Importo
-          <select formControlName="amountMode">
-            <option [ngValue]="'SINGLE'">una colonna, con il segno (-12,50)</option>
-            <option [ngValue]="'SPLIT'">due colonne: entrate e uscite</option>
-          </select>
-        </label>
-        @if (mapping.controls.amountMode.value === 'SINGLE') {
-          <label>
-            Colonna dell'importo
-            <select formControlName="amountColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-        } @else {
-          <label>
-            Colonna delle entrate
-            <select formControlName="incomeColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-          <label>
-            Colonna delle uscite
-            <select formControlName="expenseColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-        }
-        <label>
-          Decimali
-          <select formControlName="decimalSeparator">
-            <option [ngValue]="'COMMA'">virgola (1.234,56)</option>
-            <option [ngValue]="'DOT'">punto (1,234.56)</option>
-          </select>
-        </label>
-        <label>
-          Descrizione (facoltativa)
-          <select formControlName="descriptionColumn">
-            <option [ngValue]="null">— nessuna —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Controparte (facoltativa)
-          <select formControlName="counterpartyColumn">
-            <option [ngValue]="null">— nessuna —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Valuta (facoltativa)
-          <select formControlName="currencyColumn">
-            <option [ngValue]="null">— quella del conto —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
+    @if (p.tradeRepublic) {
+      <!-- Il file di Trade Republic si legge da solo: niente mappatura (docs/importa-file.md, parte H). -->
+      <div class="card" data-testid="trade-republic-file">
+        <h2>2. File di Trade Republic</h2>
+        <p>
+          È l'<strong>esportazione delle transazioni</strong> di Trade Republic: le colonne le leggo
+          da solo, non c'è niente da scegliere.
+        </p>
+        <ul>
+          <li>
+            L'importo è <strong>quello che vedi sul conto</strong>: per interessi e dividendi già
+            tolte le tasse, per gli acquisti con commissione e tassa, e l'imposta di bollo con il
+            suo importo vero.
+          </li>
+          @if (p.skippedRows > 0) {
+            <li>
+              {{
+                p.skippedRows === 1
+                  ? "1 riga è un'operazione sui titoli (azioni trasferite, diritti) e non muove denaro: la salto."
+                  : p.skippedRows +
+                    ' righe sono operazioni sui titoli (azioni trasferite, diritti) e non muovono denaro: le salto.'
+              }}
+            </li>
+          }
+        </ul>
       </div>
-    </form>
+    } @else {
+      <form class="card" [formGroup]="mapping">
+        <h2>2. Come leggere le colonne</h2>
+        <p class="hint">
+          Proposta in base ai nomi delle colonne e alle prime righe: controllala. Ogni modifica
+          aggiorna l'anteprima qui sotto.
+        </p>
+        <div class="form-grid">
+          @if (!p.spreadsheet) {
+            <!-- In un file Excel le colonne sono già separate: il separatore non c'entra. -->
+            <label>
+              Separatore
+              <select formControlName="delimiter">
+                @for (d of delimiters; track d.value) {
+                  <option [ngValue]="d.value">{{ d.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            Data
+            <select formControlName="dateColumn">
+              <option [ngValue]="null">— scegli —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Formato della data
+            <select formControlName="dateFormat">
+              @for (f of dateFormats; track f.value) {
+                <option [ngValue]="f.value">{{ f.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Importo
+            <select formControlName="amountMode">
+              <option [ngValue]="'SINGLE'">Una colonna, con il segno (-12,50)</option>
+              <option [ngValue]="'SPLIT'">Due colonne: entrate e uscite</option>
+              <option [ngValue]="'UNSIGNED'">
+                Una colonna senza segno: il verso si capisce dal testo
+              </option>
+            </select>
+          </label>
+          @if (mapping.controls.amountMode.value !== 'SPLIT') {
+            <label>
+              Colonna dell'importo
+              <select formControlName="amountColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          @if (mapping.controls.amountMode.value === 'UNSIGNED') {
+            <!-- Senza segno (Tinaba, docs/tinaba.md): sono entrate le righe con una di queste parole, le altre uscite. -->
+            <label>
+              Cerca le parole delle entrate nella colonna
+              <select formControlName="signColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Parole delle entrate, separate da virgole
+              <input
+                type="text"
+                formControlName="incomeWords"
+                placeholder="es. ricevuto, accredito"
+              />
+              <span class="hint"
+                >Le righe che ne contengono una sono entrate; tutte le altre, uscite.</span
+              >
+            </label>
+          } @else if (mapping.controls.amountMode.value === 'SPLIT') {
+            <label>
+              Colonna delle entrate
+              <select formControlName="incomeColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Colonna delle uscite
+              <select formControlName="expenseColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            Decimali
+            <select formControlName="decimalSeparator">
+              <option [ngValue]="'COMMA'">Virgola (1.234,56)</option>
+              <option [ngValue]="'DOT'">Punto (1,234.56)</option>
+            </select>
+          </label>
+          <label>
+            Descrizione (facoltativa)
+            <select formControlName="descriptionColumn">
+              <option [ngValue]="null">— nessuna —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Altro testo da aggiungere alla descrizione (facoltativo)
+            <select formControlName="detailColumn">
+              <option [ngValue]="null">— nessuno —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Controparte (facoltativa)
+            <select formControlName="counterpartyColumn">
+              <option [ngValue]="null">— nessuna —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Valuta (facoltativa)
+            <select formControlName="currencyColumn">
+              <option [ngValue]="null">— quella del conto —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </form>
+    }
 
     <div class="card">
       <h2>3. Anteprima</h2>
@@ -185,7 +302,11 @@
               {{
                 p.errorCount === 1 ? '1 riga non si legge' : p.errorCount + ' righe non si leggono'
               }}
-              con queste impostazioni. Correggi la mappatura (o il file) per poter importare:
+              @if (p.tradeRepublic) {
+                nel file di Trade Republic. È stato modificato? Scaricalo di nuovo dall'app:
+              } @else {
+                con queste impostazioni. Correggi la mappatura (o il file) per poter importare:
+              }
             </p>
           }
           <ul>
@@ -196,8 +317,19 @@
         </div>
       }
 
+      @if (p.errorCount === 0) {
+        <!-- Che cosa succederà: quante righe si aggiungono, e perché le altre no. -->
+        <p class="import-summary" data-testid="import-summary">{{ summary(p) }}</p>
+      }
+
       @if (p.parsedRows.length > 0) {
-        <p class="secondary">Le prime righe, come verranno importate:</p>
+        <p class="secondary">
+          {{
+            p.newRows > 0
+              ? 'Le prime righe, come verranno aggiunte:'
+              : 'Le prime righe del file, come si leggono:'
+          }}
+        </p>
         <div class="table-scroll">
           <table>
             <thead>
@@ -255,7 +387,7 @@
           @if (importing()) {
             Importazione in corso...
           } @else {
-            Importa {{ p.totalRows === 1 ? '1 riga' : p.totalRows + ' righe' }}
+            {{ importLabel(p) }}
           }
         </button>
       </div>

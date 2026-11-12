@@ -53,6 +53,12 @@ class CsvReaderTest {
         assertThat(CsvReader.detectDelimiter("Data;Descrizione;Importo\n1;2;3")).isEqualTo(';');
         assertThat(CsvReader.detectDelimiter("Date,Description,Amount")).isEqualTo(',');
         assertThat(CsvReader.detectDelimiter("Date\tAmount")).isEqualTo('\t');
+        // Le note di Fineco sopra la tabella: la prima riga non ha separatori, una ha una virgola per caso.
+        assertThat(CsvReader.detectDelimiter("""
+                Conto Corrente: 0000001
+                Nota: il saldo considera i movimenti contabilizzati, sul conto corrente.
+                Data_Operazione;Data_Valuta;Entrate;Uscite;Descrizione
+                05/11/2026;31/10/2026;3,95;;Sconto""")).isEqualTo(';');
         // Le virgole dentro le virgolette non contano.
         assertThat(CsvReader.detectDelimiter("\"Data, ora\";\"Importo, EUR\";Note")).isEqualTo(';');
     }

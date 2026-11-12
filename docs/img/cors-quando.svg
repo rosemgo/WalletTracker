@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect width="1200" height="560" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Quando si applica il CORS?</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">solo quando il JavaScript di una pagina legge la risposta di un'ALTRA origine</text>
+<rect x="40" y="95" width="1120" height="50" rx="8" fill="#0f172a"/>
+<text x="65" y="127" font-size="16" font-weight="700" fill="#ffffff">Chi fa la richiesta</text>
+<text x="640" y="127" font-size="16" font-weight="700" fill="#ffffff">CORS?</text>
+<text x="770" y="127" font-size="16" font-weight="700" fill="#ffffff">Perché</text>
+<g font-size="16">
+<rect x="40" y="150" width="1120" height="62" rx="8" fill="#f8fafc"/>
+<text x="65" y="187" fill="#0f172a">curl, Postman, un programma Java</text>
+<text x="640" y="187" font-weight="700" fill="#15803d">✓ no</text>
+<text x="770" y="187" fill="#475569">non sono browser: la regola non esiste</text>
+<rect x="40" y="217" width="1120" height="62" rx="8" fill="#ffffff"/>
+<text x="65" y="254" fill="#0f172a">tu, scrivendo l'indirizzo nella barra</text>
+<text x="640" y="254" font-weight="700" fill="#15803d">✓ no</text>
+<text x="770" y="254" fill="#475569">è una navigazione, non c'è una pagina in mezzo</text>
+<rect x="40" y="284" width="1120" height="62" rx="8" fill="#f8fafc"/>
+<text x="65" y="321" fill="#0f172a">un link cliccato in una pagina</text>
+<text x="640" y="321" font-weight="700" fill="#15803d">✓ no</text>
+<text x="770" y="321" fill="#475569">anche questa è una navigazione</text>
+<rect x="40" y="351" width="1120" height="62" rx="8" fill="#ffffff"/>
+<text x="65" y="388" fill="#0f172a">il JavaScript della pagina, verso la SUA origine</text>
+<text x="640" y="388" font-weight="700" fill="#15803d">✓ no</text>
+<text x="770" y="388" fill="#475569">stessa origine (il nostro caso, con nginx)</text>
+<rect x="40" y="418" width="1120" height="62" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+<text x="65" y="455" font-weight="700" fill="#991b1b">il JavaScript della pagina, verso UN'ALTRA origine</text>
+<text x="640" y="455" font-weight="700" fill="#b91c1c">✗ sì</text>
+<text x="770" y="455" fill="#991b1b">solo qui il browser controlla i permessi</text>
+</g>
+<text x="600" y="525" text-anchor="middle" font-size="15" fill="#475569">Il CORS protegge te mentre navighi. Non protegge il backend: lì servono porta su 127.0.0.1, buttafuori e PIN.</text>
+</svg>

@@ -19,28 +19,50 @@
     @let t = d.transaction;
 
     <section class="card detail-head">
-      <span class="avatar large" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
-        initialOf(t)
-      }}</span>
+      <span class="avatar large" [appAvatar]="t"></span>
       <h1>{{ nameOf(t) }}</h1>
       <span class="detail-amount" [class.positive]="t.amount > 0">{{
         t.amount | money: t.currency
       }}</span>
       <span class="secondary"
-        >{{ t.bookingDate | date: 'EEEE d MMMM y' }} · {{ accountName() }}</span
+        >{{ t.bookingDate | date: 'EEEE d MMMM y' | upperFirst }} · {{ accountName() }}</span
       >
       <span class="chip">{{ t.status === 'PENDING' ? 'In attesa' : 'Contabilizzato' }}</span>
     </section>
 
     <section class="card detail-rows">
-      <button type="button" class="detail-row" (click)="openCategories()">
-        <span>
-          <span class="secondary">Categoria</span>
-          <strong>{{ t.category ?? 'Nessuna categoria' }}</strong>
-        </span>
-        <span class="action">Cambia</span>
-      </button>
-      <p class="secondary why">{{ categoryWhy() }}</p>
+      @if (categoryNotNeeded()) {
+        <!-- A un acquisto di titoli, a un giroconto... la categoria non serve (docs/categorie-e-tipi.md). -->
+        <div class="detail-row category-not-needed">
+          <span>
+            <span class="secondary">Categoria</span>
+            <span>Non serve</span>
+          </span>
+        </div>
+        <p class="secondary why">
+          {{ notNeededText() }}
+          <button type="button" class="link" (click)="openCategories()">Aggiungila comunque</button>
+        </p>
+      } @else {
+        <button type="button" class="detail-row" (click)="openCategories()">
+          <span>
+            <span class="secondary">Categoria</span>
+            <strong>{{ t.category ?? 'Nessuna categoria' }}</strong>
+          </span>
+          <span class="action">Cambia</span>
+        </button>
+        @if (categoryWhy() === noCategoryText) {
+          <!-- "crea una regola" porta alle Regole con l'esercente e il tipo già scritti: la categoria si sceglie lì. -->
+          <p class="secondary why">
+            Nessuna categoria: sceglila tu, o
+            <a routerLink="/regole" [queryParams]="ruleParams(t)" data-testid="create-rule"
+              >crea una regola</a
+            >.
+          </p>
+        } @else {
+          <p class="secondary why">{{ categoryWhy() }}</p>
+        }
+      }
       <button type="button" class="detail-row" (click)="sheet.set('type')">
         <span>
           <span class="secondary">Conta come</span>
@@ -55,7 +77,7 @@
       </button>
     </section>
 
-    @if (d.suggestion; as s) {
+    @if (categoryNotNeeded() ? null : d.suggestion; as s) {
       <section class="card soft suggestion-card">
         <p>
           Suggerita: <strong>{{ s.category }}</strong>
@@ -122,8 +144,8 @@
               <li>
                 <a [routerLink]="['/movimenti', r.id]" queryParamsHandling="preserve">
                   <span>
-                    {{ r.bookingDate | date: 'EEEE d MMMM' }}
-                    <span class="secondary">{{ r.category ?? 'senza categoria' }}</span>
+                    {{ r.bookingDate | date: 'EEEE d MMMM' | upperFirst }}
+                    <span class="secondary">{{ r.category ?? 'Senza categoria' }}</span>
                   </span>
                   <strong>{{ r.amount | money: r.currency }}</strong>
                 </a>
@@ -178,10 +200,10 @@
           <dd>{{ t.description }}</dd>
         }
         <dt>Data contabile</dt>
-        <dd>{{ t.bookingDate | date: 'EEEE d MMMM y' }}</dd>
+        <dd>{{ t.bookingDate | date: 'EEEE d MMMM y' | upperFirst }}</dd>
         @if (t.valueDate && t.valueDate !== t.bookingDate) {
           <dt>Data valuta</dt>
-          <dd>{{ t.valueDate | date: 'EEEE d MMMM y' }}</dd>
+          <dd>{{ t.valueDate | date: 'EEEE d MMMM y' | upperFirst }}</dd>
         }
         <dt>Arrivato</dt>
         <dd>{{ origins[d.origin] }}, il {{ d.importedAt | date: 'd MMMM y' }}</dd>

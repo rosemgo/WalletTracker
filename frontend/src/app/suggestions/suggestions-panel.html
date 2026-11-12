@@ -37,15 +37,11 @@
               </span>
             </span>
             <span class="buttons">
-              <button
-                type="button"
-                class="primary"
-                [disabled]="busy() !== null"
-                (click)="accept(s)"
-              >
+              <!-- Si disattivano solo i pulsanti di questo esercente, mentre il backend risponde. -->
+              <button type="button" class="primary" [disabled]="isBusy(s)" (click)="accept(s)">
                 Accetta
               </button>
-              <button type="button" [disabled]="busy() !== null" (click)="dismiss(s)">no</button>
+              <button type="button" [disabled]="isBusy(s)" (click)="dismiss(s)">No</button>
             </span>
           </li>
         }
@@ -81,7 +77,7 @@
             ({{ a.model }}). Ogni risposta richiede qualche secondo: ne chiede al massimo 20 alla
             volta.
           </p>
-          <button type="button" [disabled]="busy() !== null" (click)="askAi()">
+          <button type="button" [disabled]="busy().size > 0" (click)="askAi()">
             Chiedi all'IA
           </button>
         }

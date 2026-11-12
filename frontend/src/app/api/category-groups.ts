@@ -24,6 +24,7 @@ export function kindOf(type: TransactionType | null): CategoryKind {
     case 'INCOME':
       return 'INCOME';
     case 'INVESTMENT_INCOME':
+    case 'WITHHOLDING_TAX':
     case 'INVESTMENT_TAX':
     case 'SECURITIES_BUY':
     case 'SECURITIES_SELL':
@@ -34,6 +35,34 @@ export function kindOf(type: TransactionType | null): CategoryKind {
       return 'OTHER';
   }
 }
+
+/**
+ * I tipi per cui la categoria serve (docs/categorie-e-tipi.md): risponde a una domanda che il tipo lascia aperta (una
+ * spesa, ma per che cosa? una rendita, ma quale?). Lo stesso elenco di TransactionType.WITH_CATEGORY nel backend.
+ * Un movimento ancora da verificare (null o TO_REVIEW) la mostra: prima si sceglie il tipo.
+ */
+export function needsCategory(type: TransactionType | null): boolean {
+  return (
+    type === null ||
+    type === 'TO_REVIEW' ||
+    type === 'EXPENSE' ||
+    type === 'INCOME' ||
+    type === 'INVESTMENT_INCOME' ||
+    type === 'INVESTMENT_TAX'
+  );
+}
+
+/** "Per un acquisto di titoli non serve una categoria": come dirlo per ogni tipo che non ne ha bisogno. */
+export const WITHOUT_CATEGORY: Partial<Record<TransactionType, string>> = {
+  SECURITIES_BUY: 'un acquisto di titoli',
+  SECURITIES_SELL: 'una vendita di titoli',
+  INVESTMENT_DEPOSIT: 'un versamento negli investimenti',
+  INVESTMENT_WITHDRAWAL: 'un prelievo dagli investimenti',
+  INTERNAL_TRANSFER: 'un trasferimento tra i tuoi conti',
+  CARD_SETTLEMENT: 'il saldo della carta di credito',
+  IGNORED: 'un movimento ignorato',
+  WITHHOLDING_TAX: 'una ritenuta', // docs/investimenti.md, parte T: il tipo dice già tutto
+};
 
 /** Un gruppo pronto per un <optgroup>: il titolo e le sue categorie. */
 export interface CategoryGroup {

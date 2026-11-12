@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -116,6 +117,9 @@ public class PocRunner implements CommandLineRunner {
             System.out.println("Vedi 'Problemi comuni' in docs/02-fase-0-collegamento-banca.md");
         } catch (IllegalStateException e) {
             System.out.println("Errore: " + e.getMessage());
+        } catch (ResponseStatusException e) {
+            // Per esempio Enable Banking non configurato: il messaggio è già scritto per l'utente.
+            System.out.println("Errore: " + e.getReason());
         }
     }
 
@@ -149,6 +153,11 @@ public class PocRunner implements CommandLineRunner {
         AuthorizationResult authorization = authorize(bank);
         Session session = client.createSession(authorization.code());
         System.out.println("Collegamento riuscito! Conti autorizzati: " + session.accounts().size());
+        if (session.accounts().isEmpty()) {
+            // Come la dashboard (BankLinkService.complete): un collegamento senza conti non si salva.
+            throw new IllegalStateException("Enable Banking non ha passato nessun conto. In modalità ristretta ogni "
+                    + "banca va prima collegata dal suo pannello, con \"Link accounts\" (docs/modalita-ristretta.md).");
+        }
 
         BankConnection connection = connectionService.saveSession(session, authorization.validUntil());
         System.out.println("Collegamento e conti salvati nel database.");
@@ -201,19 +210,22 @@ public class PocRunner implements CommandLineRunner {
         // "state" è un valore casuale che ci torna indietro invariato dopo il login:
         // se coincide, siamo sicuri che la risposta corrisponde alla nostra richiesta.
         String state = UUID.randomUUID().toString();
+        if (properties.redirectUrls().isEmpty()) {
+            throw new IllegalStateException("Manca ENABLE_BANKING_REDIRECT_URL nel file .env");
+        }
 
         AuthorizationRequest request = new AuthorizationRequest(
                 new Access(validUntil),
                 new AspspRef(bank.name(), bank.country()),
                 state,
-                properties.redirectUrl(),
+                properties.redirectUrls().getFirst(),
                 "personal");
         AuthorizationResponse response = client.startAuthorization(request);
 
         System.out.println();
         System.out.println("1) Apri questo link nel browser e accedi alla tua banca:");
         System.out.println("   " + response.url());
-        System.out.println("2) Alla fine verrai mandato su " + properties.redirectUrl());
+        System.out.println("2) Alla fine verrai mandato su " + properties.redirectUrls().getFirst());
         System.out.println("   La pagina darà errore: è normale, per ora non c'è un server in ascolto.");
         System.out.println("3) Copia l'indirizzo completo dalla barra del browser e incollalo qui.");
         String redirectedUrl = ask("Indirizzo");

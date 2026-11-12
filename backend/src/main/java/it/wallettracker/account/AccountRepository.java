@@ -1,6 +1,8 @@
 package it.wallettracker.account;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,4 +49,25 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Transactional
     @Query("UPDATE Account a SET a.lastSyncAt = :at, a.lastSyncError = :error WHERE a.id = :id")
     void recordSync(@Param("id") Long id, @Param("at") Instant at, @Param("error") String error);
+
+    /**
+     * Salva il saldo dato dalla banca (V34), come {@link #recordSync}: solo queste colonne, in una transazione sua.
+     * Con {@code balance} null il saldo si toglie (la banca non ne dà più uno).
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE Account a SET a.balance = :balance, a.balanceDate = :date, a.balanceSource = :source,
+                a.balanceUpdatedAt = :at
+            WHERE a.id = :id
+            """)
+    void recordBalance(@Param("id") Long id, @Param("balance") BigDecimal balance, @Param("date") LocalDate date,
+            @Param("source") BalanceSource source, @Param("at") Instant at);
+
+    /** Salva il plafond disponibile di una carta (V35), come {@link #recordBalance}; null lo toglie. */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Account a SET a.availableCredit = :amount, a.availableCreditDate = :date WHERE a.id = :id")
+    void recordAvailableCredit(@Param("id") Long id, @Param("amount") BigDecimal amount,
+            @Param("date") LocalDate date);
 }

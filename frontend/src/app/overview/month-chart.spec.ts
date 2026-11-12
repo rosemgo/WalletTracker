@@ -46,6 +46,23 @@ describe('MonthChart', () => {
     expect(chart.textContent).toContain('31 ott');
   });
 
+  it('takes the color of the trend, and the accent without one', async () => {
+    const { fixture, chart } = await render([0, 100], [10, 20]);
+    const wrap = chart.querySelector('.month-chart-wrap')!;
+    expect(wrap.classList.contains('trend-under') || wrap.classList.contains('trend-over')).toBe(
+      false,
+    );
+
+    fixture.componentRef.setInput('trend', 'over');
+    await fixture.whenStable();
+    expect(wrap.classList.contains('trend-over')).toBe(true);
+
+    fixture.componentRef.setInput('trend', 'under');
+    await fixture.whenStable();
+    expect(wrap.classList.contains('trend-under')).toBe(true);
+    expect(wrap.classList.contains('trend-over')).toBe(false);
+  });
+
   it('the line of today is higher when more was spent', async () => {
     const { chart } = await render([0, 50, 300], []);
     const ys = endpoints(chart.querySelector('path.month')?.getAttribute('d') ?? '').map(

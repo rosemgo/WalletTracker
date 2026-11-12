@@ -247,7 +247,7 @@ Due dettagli trovati provando:
   Movimenti e Analisi.
 
 **Le icone.** Il disegno è uno solo, `icons/icon.svg`: il quadrato con la sfumatura dell'accento e una W disegnata
-come **linea**, non come lettera. Una lettera dipenderebbe dal carattere installato su chi la disegna. Le misure PNG
+come **linea**, non come lettera (poi sostituito dal monogramma W e T, `docs/tema-blu-oceano.md`, parte A). Una lettera dipenderebbe dal carattere installato su chi la disegna. Le misure PNG
 (192, 512, 180 per iOS, 32 per la scheda del browser) le ha fatte Chromium, aprendo l'SVG e fotografandolo con
 Playwright: niente programmi di grafica.
 

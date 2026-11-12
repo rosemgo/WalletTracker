@@ -60,9 +60,40 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 .env        configurazione personale (ignorato da Git; parti da .env.example)
 ```
 
-`docker-compose.yml` (nella radice) avvia il database PostgreSQL.
+`docker-compose.yml` (nella radice) avvia l'app completa: database, backend, nginx con la dashboard e, se vuoi,
+Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per lo sviluppo.
 
 ## Guide
+
+> **Per installare e usare WalletTracker senza essere informatici: [GUIDA.md](GUIDA.md).**
+
+> **Promemoria per lo sviluppo: [quali comandi lanciare, mai due backend insieme, e come portare le modifiche in `main` con una pull request](docs/sviluppo-comandi.md).**
+
+> Sempre fuori dalla numerazione: [La CI su GitHub: ci.yml, rilascio.yml e il ramo main protetto](docs/ci-github.md).
+
+> Fuori dalla numerazione (scritta in parallelo alla Fase 4): [Investimenti: quanto hai versato, cedole, dividendi e interessi](docs/investimenti.md).
+
+> Sempre fuori dalla numerazione: [Tinaba: un CSV senza segno](docs/tinaba.md).
+
+> Sempre fuori dalla numerazione: [Importa da un file: Excel, conti collegati e manuali](docs/importa-file.md).
+
+> Sempre fuori dalla numerazione: [Enable Banking in modalità ristretta: un conto nuovo va prima nella lista](docs/modalita-ristretta.md).
+
+> Sempre fuori dalla numerazione: [Rimuovere un collegamento, tenendo la storia](docs/rimuovere-un-collegamento.md).
+
+> Sempre fuori dalla numerazione: [I loghi delle banche accanto ai movimenti](docs/loghi.md).
+
+> Sempre fuori dalla numerazione: [Il nuovo logo, il tema Blu oceano e i colori dei grafici](docs/tema-blu-oceano.md).
+
+> Sempre fuori dalla numerazione: [Il tocco sulle barre: niente lampo, niente rettangolo](docs/grafici-tocco.md).
+
+> Sempre fuori dalla numerazione: ["Aggiorna ora": che cosa è arrivato, conto per conto](docs/aggiorna-ora.md).
+
+> Sempre fuori dalla numerazione: [Le maiuscole, il riquadro dopo un clic e le azioni spezzate](docs/maiuscole-e-contorni.md).
+
+> Sempre fuori dalla numerazione: [I saldi dei conti, il plafond della carta e la liquidità nel Riepilogo](docs/saldi.md).
+
+> Sempre fuori dalla numerazione: [Da ogni riepilogo ai suoi movimenti: i collegamenti](docs/collegamenti.md).
 
 1. [Installazione e setup dell'ambiente](docs/01-installazione-e-setup.md)
 2. [Fase 0: collegamento alla banca](docs/02-fase-0-collegamento-banca.md)
@@ -107,6 +138,13 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
 41. [Fase grafica: un aspetto moderno, grafici vivi (Inter, campi, scelta del file, grafici animati e da scorrere)](docs/41-fase-grafica-aspetto-moderno.md)
 42. [Fase grafica, passo 7: l'app installabile (PWA) e la modalità discreta](docs/42-fase-grafica-pwa-e-modalita-discreta.md)
 43. [Ritocchi: "Senza categoria" porta ai movimenti, la categoria tra spese ed entrate, i menu aperti](docs/43-analisi-senza-categoria-e-menu.md)
+44. [Fase 4, passo 1: l'app in tre container (Dockerfile multi-stage, nginx, Docker Compose)](docs/44-fase-4-passo-1-docker-nginx.md)
+45. [Fase 4, passo 2: lo script di installazione, la password del database generata e come cambiarla](docs/45-fase-4-passo-2-installazione-e-segreti.md)
+46. [Fase 4, passo 3: il PIN per aprire l'app, facoltativo dal PC (Spring Security dalle basi: filtri, sessione, CSRF, hash, blocco, codice di recupero)](docs/46-fase-4-passo-3-pin.md)
+47. [Fase 4, passo 4: Tailscale, l'app dal telefono con https vero (reti, VPN e certificati dalle basi; `tailscale serve`; più indirizzi di ritorno per Enable Banking)](docs/47-fase-4-passo-4-tailscale.md)
+48. [Fase 4, passo 5: backup e ripristino (pg_dump, cifratura con password, backup automatico ogni notte, ripristino provato davvero, spostare l'app su un altro computer)](docs/48-fase-4-passo-5-backup.md)
+49. [Il server in cloud: WalletTracker sempre acceso su Oracle Cloud "Always Free" (VM ARM gratuita, Docker, Tailscale senza porte aperte, i limiti dimezzati nel 2026, il recupero delle VM inattive, i backup fuori da Oracle)](docs/49-server-in-cloud-oracle.md)
+50. [Fase 4, passo 6: le versioni e le immagini già pronte (6a: GitHub Container Registry, immagini per PC e Mac, versione semantica, tag e release con lo ZIP); "Aggiorna" con backup e ritorno da solo, e l'avviso della versione nuova nell'app (6b); il doppio clic e l'avvio automatico (6c)](docs/50-fase-4-passo-6-versioni-e-aggiornamenti.md)
 
 ## Piano di lavoro
 
@@ -137,14 +175,42 @@ secrets/    chiave privata di Enable Banking (ignorata da Git)
   - [x] suggerimenti di categoria con l'intelligenza artificiale per gli esercenti mai visti, con Spring AI: modello locale con Ollama (passo 7b: 7b.1 fatto, impostazioni e scaricamento del modello; 7b.2 fatto, il modello che sceglie la categoria e la misura della precisione; 7b.3 fatto, "Chiedi all'IA" nei Movimenti) e servizio cloud (passo 7c fatto: Google Gemini)
 - [x] **Fase grafica**: app pensata per il telefono, a colpo d'occhio; il progetto è in `docs/33`, le basi in `docs/35`, il Riepilogo in `docs/36`, i Movimenti in `docs/37`, Analisi in `docs/38`, Budget e Altro in `docs/39`, l'aspetto moderno e i grafici vivi in `docs/41`, l'app installabile e la modalità discreta in `docs/42`
 - [ ] **Fase 4**: installazione con un solo comando (Docker Compose), guida per chi non è informatico, accesso via Tailscale
+  - [x] passo 1: tre container (`db`, `backend`, `web` con nginx) più Ollama facoltativo, avviati con `docker compose up -d` (`docs/44`)
+  - [x] passo 2: lo script di installazione (`installa.ps1` / `installa.sh`): `.env` con la password del database generata a caso, cambio della password, avvio e attesa del backend (`docs/45`)
+  - [x] passo 3: il PIN per aprire l'app (Spring Security), facoltativo dal PC: due porte per distinguere il PC dagli altri dispositivi, codice di recupero, sessione di 12 ore, blocco dopo 5 errori, CSRF, copia dei dati sul telefono solo a sessione aperta (`docs/46`)
+  - [x] passo 4: Tailscale, l'app dal telefono con https vero: `installa --tailscale` configura `tailscale serve` verso la porta "remota", nome del PC e indirizzo di ritorno di Enable Banking nel `.env`; cookie `Secure` dal telefono, Funnel rifiutato, `X-Forwarded-Host` non più inoltrato (`docs/47`)
+  - [x] passo 5: backup e ripristino (provato davvero): `installa --backup` e `--ripristina <file>`, file cifrato con una password tua (AES-256, PBKDF2), backup automatico ogni notte in un container dedicato (tiene gli ultimi 14), ripristino con conferma e copia di sicurezza, provato nella CI cancellando tutto; nella dashboard lo stato, "Fai un backup adesso", lo scaricamento solo dal server e un avviso se qualcosa non va (`docs/48`)
+  - [ ] passo 6: aggiornamenti e la guida per chi non è informatico (`docs/50`)
+    - [x] 6a: il numero di versione (in Impostazioni → Informazioni) e le immagini già pronte: con un tag `v1.0.0` la CI esegue tutti i test, pubblica le tre immagini su GitHub Container Registry (per PC e Mac con chip Apple) e crea la release con lo ZIP; lo script riconosce da solo se costruire dal codice o scaricare le immagini
+    - [x] 6b: "Aggiorna" (`installa.ps1 -Aggiorna`, `./installa.sh --aggiorna`): ultima versione da GitHub, ZIP controllato con l'impronta SHA-256, novità e conferma, backup prima, file nuovi al posto dei vecchi (mai `.env`, `.data`, backup, `secrets`), ritorno da solo alla versione di prima (file e dati) se la nuova non parte; nell'app una striscia che si chiude e le novità in Impostazioni → Informazioni (il backend chiede a GitHub una volta al giorno, spegnibile); provato nella CI con un finto GitHub (`docs/50`, parti I-M)
+    - [x] 6c: il doppio clic: `Avvia`, `Aggiorna` e `Backup WalletTracker` (`.cmd` per Windows, `.command` per il Mac), anche nello ZIP di ogni versione; Docker Desktop acceso dallo script se è spento; alla fine lo script dice se all'accensione del computer WalletTracker ripartirà da solo (`docs/50`, parti N-R)
+    - [ ] 6d: la guida per chi non è informatico (`GUIDA.md`, con le schermate dell'app; `LEGGIMI.txt` nello ZIP), la prova vera su Windows (`docs/50`, parti T-U) e la versione 1.1.0 — in corso
+  - da valutare: la firma delle release (con una chiave che resta fuori da GitHub), così "Aggiorna" riconoscerebbe uno ZIP falso anche se qualcuno entrasse nell'account GitHub (`docs/50`, parte K)
+  - da valutare (decisione rimandata): accesso dai dispositivi remoti anche con una VPN già esistente, al posto di Tailscale. Servirebbero: la porta remota pubblicata solo sull'indirizzo della VPN (mai `0.0.0.0` né l'indirizzo della rete di casa), un certificato https per il nome scelto, quel nome in `WALLETTRACKER_ALLOWED_HOSTS` e negli indirizzi di ritorno di Enable Banking
 
 ## Comandi utili
 
 Dalla radice del progetto:
 
 ```bash
-docker compose up -d      # avvia il database (serve anche ai test: Docker Desktop deve essere avviato)
+./installa.sh                                 # primo avvio e avvii successivi: crea il .env se manca e avvia (docs/45)
+./installa.sh --aggiorna                      # dalla cartella di una versione scaricata: passa all'ultima (docs/50, parte I)
+                                              # su Windows: powershell -ExecutionPolicy Bypass -File installa.ps1
+docker compose down                           # ferma tutto (i dati restano)
+
+# A mano, senza lo script. Dal codice (sviluppo) serve anche docker-compose.build.yml (docs/50, parte C):
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build                 # l'app completa su http://localhost:8000
+docker compose -f docker-compose.yml -f docker-compose.build.yml --profile ia up -d --build    # la stessa, con anche Ollama (l'IA locale)
+
+# Pubblicare una versione (docs/50, parte E): prima la sezione "## 1.0.0" in NOVITA.md, poi
+git tag -a v1.0.0 -m "WalletTracker 1.0.0" && git push origin v1.0.0
+
+# Per lo sviluppo: solo il database, raggiungibile dal PC (poi backend con ./mvnw e dashboard con npm start).
+# Non insieme all'app completa: due backend leggerebbero due volte le banche.
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
 ```
+
+I test del backend non hanno bisogno di Compose (usano Testcontainers), ma Docker Desktop deve essere avviato.
 
 Dalla cartella `backend/` (su Windows usa `mvnw.cmd` al posto di `./mvnw`):
 

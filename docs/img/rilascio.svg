@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+</defs>
+<rect width="1200" height="740" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Dal tuo codice al computer di chi usa l'app: una versione</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">tu lavori come sempre; quando è pronto, un tag "v1.0.0" fa partire tutto il resto, da solo</text>
+
+<!-- dev -->
+<rect x="20" y="100" width="260" height="250" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
+<text x="150" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">Tu (sviluppo)</text>
+<text x="40" y="158" font-size="12" fill="#334155">commit e push, quanti vuoi:</text>
+<text x="40" y="176" font-size="12" fill="#334155">nessun utente riceve niente</text>
+<text x="40" y="204" font-size="12" fill="#334155">sul tuo PC: codice sorgente →</text>
+<text x="40" y="222" font-size="12" fill="#334155">immagini costruite, "sviluppo"</text>
+<text x="40" y="254" font-size="12" font-weight="700" fill="#0f172a">quando è pronto:</text>
+<text x="40" y="276" font-size="11" font-family="Consolas, monospace" fill="#0f172a">NOVITA.md: "## 1.0.0"</text>
+<text x="40" y="296" font-size="11" font-family="Consolas, monospace" fill="#0f172a">git tag -a v1.0.0</text>
+<text x="40" y="316" font-size="11" font-family="Consolas, monospace" fill="#0f172a">git push origin v1.0.0</text>
+
+<line x1="280" y1="225" x2="325" y2="225" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<!-- CI -->
+<rect x="330" y="100" width="420" height="330" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2.5"/>
+<text x="540" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#15803d">GitHub Actions: rilascio.yml</text>
+<rect x="350" y="148" width="380" height="58" rx="10" fill="#ffffff" stroke="#15803d"/>
+<text x="365" y="172" font-size="13" font-weight="700" fill="#0f172a">① CI completa (ci.yml)</text>
+<text x="365" y="192" font-size="12" fill="#334155">un test che fallisce = non si pubblica niente</text>
+<rect x="350" y="216" width="380" height="120" rx="10" fill="#ffffff" stroke="#15803d"/>
+<text x="365" y="240" font-size="13" font-weight="700" fill="#0f172a">② tre immagini, due processori</text>
+<text x="365" y="262" font-size="12" fill="#334155">backend, web, backup × amd64 (PC) e arm64 (Mac M)</text>
+<text x="365" y="282" font-size="12" fill="#334155">compilazione una volta sola ($BUILDPLATFORM),</text>
+<text x="365" y="300" font-size="12" fill="#334155">immagine finale per ognuno (QEMU per arm64)</text>
+<text x="365" y="322" font-size="12" fill="#334155">versione "1.0.0" scritta dentro (--build-arg)</text>
+<rect x="350" y="346" width="380" height="68" rx="10" fill="#ffffff" stroke="#15803d"/>
+<text x="365" y="370" font-size="13" font-weight="700" fill="#0f172a">③ la release</text>
+<text x="365" y="392" font-size="12" fill="#334155">ZIP (script, compose, VERSION) + SHA256SUMS + novità</text>
+
+<!-- GHCR & release -->
+<rect x="810" y="100" width="370" height="150" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2.5"/>
+<text x="995" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#7e22ce">GitHub Container Registry</text>
+<text x="830" y="160" font-size="11" font-family="Consolas, monospace" fill="#0f172a">ghcr.io/rosemgo/wallettracker-backend:1.0.0</text>
+<text x="830" y="180" font-size="11" font-family="Consolas, monospace" fill="#0f172a">ghcr.io/rosemgo/wallettracker-web:1.0.0</text>
+<text x="830" y="200" font-size="11" font-family="Consolas, monospace" fill="#0f172a">ghcr.io/rosemgo/wallettracker-backup:1.0.0</text>
+<text x="830" y="228" font-size="12" fill="#475569">(anche :latest) pubbliche: si scaricano senza account</text>
+
+<rect x="810" y="280" width="370" height="150" rx="14" fill="#fffbeb" stroke="#b45309" stroke-width="2.5"/>
+<text x="995" y="310" text-anchor="middle" font-size="16" font-weight="700" fill="#92400e">Release "WalletTracker 1.0.0"</text>
+<text x="830" y="340" font-size="12" font-family="Consolas, monospace" fill="#0f172a">WalletTracker-1.0.0.zip</text>
+<text x="830" y="360" font-size="12" font-family="Consolas, monospace" fill="#0f172a">SHA256SUMS</text>
+<text x="830" y="388" font-size="12" fill="#334155">le novità, da NOVITA.md</text>
+<text x="830" y="410" font-size="12" fill="#475569">github.com/rosemgo/WalletTracker/releases</text>
+
+<line x1="750" y1="280" x2="805" y2="180" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+<line x1="750" y1="380" x2="805" y2="360" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<!-- user -->
+<rect x="330" y="480" width="850" height="160" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="755" y="510" text-anchor="middle" font-size="16" font-weight="700" fill="#c2410c">Il computer di chi usa l'app (il server)</text>
+<text x="350" y="540" font-size="13" fill="#334155">scarica e apre lo ZIP (la prima volta; poi "Aggiorna", passo 6b)</text>
+<text x="350" y="564" font-size="13" fill="#334155">lo script trova VERSION (1.0.0) e niente codice →</text>
+<text x="370" y="584" font-size="12" font-family="Consolas, monospace" fill="#0f172a">docker compose pull  →  docker compose up -d</text>
+<text x="350" y="612" font-size="13" fill="#334155">niente Maven, niente npm, niente compilazione: le immagini sono già pronte</text>
+<line x1="1165" y1="250" x2="1165" y2="475" stroke="#334155" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#ak)"/>
+<line x1="900" y1="430" x2="860" y2="475" stroke="#334155" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#ak)"/>
+
+<rect x="20" y="480" width="280" height="160" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="160" y="510" text-anchor="middle" font-size="15" font-weight="700" fill="#334155">La regola dei numeri</text>
+<text x="40" y="540" font-size="13" fill="#334155">1.0.0 → 1.0.1  una correzione</text>
+<text x="40" y="566" font-size="13" fill="#334155">1.0.0 → 1.1.0  qualcosa di nuovo</text>
+<text x="40" y="592" font-size="13" fill="#334155">1.0.0 → 2.0.0  un cambiamento</text>
+<text x="40" y="612" font-size="13" fill="#334155">              importante per l'utente</text>
+
+<rect x="20" y="670" width="1160" height="52" rx="12" fill="#fef2f2" stroke="#b91c1c"/>
+<text x="600" y="702" text-anchor="middle" font-size="14" font-weight="700" fill="#7f1d1d">Nelle immagini pubbliche non c'è niente di tuo: né il .env, né la chiave, né i dati. Quelli restano sul computer di chi installa.</text>
+</svg>

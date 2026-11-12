@@ -34,11 +34,31 @@
         <strong>Production</strong>.
       </li>
       <li>
-        Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
-        <code>{{ status.redirectUrl }}</code>
-        <button type="button" class="link" (click)="copyRedirectUrl(status.redirectUrl)">
-          {{ copied() ? 'copiato ✓' : 'copia' }}
-        </button>
+        @if (status.redirectUrls.length === 0) {
+          <!-- Nessun indirizzo di ritorno (installazione da ZIP, docs/47 parte Q): serve prima Tailscale. -->
+          <div class="needs-tailscale" data-testid="needs-tailscale">
+            <strong>Prima prepara Tailscale.</strong> Come indirizzo di ritorno (<em
+              >Redirect URL</em
+            >) Enable Banking accetta solo indirizzi <strong>https</strong>, e quello di
+            WalletTracker lo dà Tailscale: è anche quello che apre l'app dal telefono. I passi sono
+            nella <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">guida</a>, capitolo
+            «Tailscale». Dopo, qui comparirà l'indirizzo da registrare.
+          </div>
+        } @else {
+          @if (status.redirectUrls.length > 1) {
+            Come indirizzi di ritorno (<em>Redirect URLs</em>) inseriscili tutti, esattamente così:
+          } @else {
+            Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
+          }
+          @for (url of status.redirectUrls; track url) {
+            <span class="redirect-url">
+              <code>{{ url }}</code>
+              <button type="button" class="link" (click)="copyRedirectUrl(url)">
+                {{ copied() === url ? 'Copiato ✓' : 'Copia' }}
+              </button>
+            </span>
+          }
+        }
       </li>
       <li>
         Alla fine il browser scarica un file <code>.pem</code>: è la tua
@@ -46,8 +66,12 @@
         del file è l'Application ID.
       </li>
       <li>
-        Se Enable Banking ti chiede di attivare l'applicazione collegando i tuoi conti, segui le sue
-        istruzioni.
+        <strong>Attiva l'applicazione collegando i tuoi conti</strong>: nella sua pagina premi
+        <strong>Link accounts</strong>, scegli la banca e seleziona
+        <strong>tutti i conti</strong> che vuoi leggere con WalletTracker. L'applicazione resta in
+        <strong>modalità ristretta</strong>
+        (gratuita, per uso personale): l'app riceverà solo i conti di questa lista. Per un conto
+        nuovo, in futuro, ripeti questo passaggio prima di collegarlo.
       </li>
     </ol>
   </div>
@@ -99,8 +123,84 @@
 
 <app-ai-settings-panel />
 
+<!-- I backup (docs/48, parte Q): lo stato, "Fai un backup adesso", e lo scaricamento solo dal server. -->
+<h2 id="backup">Backup</h2>
+<div class="card">
+  <app-backup-section />
+</div>
+
+<!-- Come si entra nell'app (docs/46): con il PIN o senza, solo dal server. -->
+<h2 id="accesso">Accesso</h2>
+<div class="card">
+  <app-access-section />
+</div>
+
 <!-- In fondo: la configurazione della banca, la prima cosa da fare, resta in cima. -->
 <h2>Aspetto</h2>
 <div class="card">
   <app-theme-section />
+</div>
+
+<!-- Quale versione è installata (docs/50, parte B): serve per sapere se ce n'è una nuova, e per chiedere aiuto. -->
+<h2 id="informazioni">Informazioni</h2>
+<div class="card">
+  @if (version(); as current) {
+    @if (current === 'sviluppo') {
+      <p data-testid="version">
+        WalletTracker, <strong>versione di sviluppo</strong>: costruita dal codice, non da una
+        versione pubblicata.
+      </p>
+    } @else {
+      <p data-testid="version">
+        WalletTracker, versione <strong>{{ current }}</strong
+        >.
+      </p>
+    }
+  } @else {
+    <p class="hint">Versione: il server non risponde.</p>
+  }
+
+  <!-- Le versioni nuove (docs/50, parte J): il backend chiede a GitHub una volta al giorno. -->
+  @if (updates.status(); as update) {
+    @if (update.available) {
+      <div class="release-news" data-testid="update-available">
+        <p>
+          È disponibile la versione <strong>{{ update.latestVersion }}</strong
+          >.
+          @if (update.releaseUrl) {
+            <a [href]="update.releaseUrl" target="_blank" rel="noopener noreferrer"
+              >La pagina della versione su GitHub</a
+            >.
+          }
+        </p>
+        @if (update.notes) {
+          <p class="notes" data-testid="update-notes">{{ update.notes }}</p>
+        }
+        <p>
+          Per aggiornare, sul <strong>server</strong> (il computer con Docker), nella cartella di
+          WalletTracker:
+        </p>
+        <ul class="commands">
+          <li>
+            Windows: <code>powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna</code>
+          </li>
+          <li>Mac e Linux: <code>./installa.sh --aggiorna</code></li>
+        </ul>
+        <p class="hint">
+          Prima di cambiare qualcosa fa un backup; se la versione nuova non parte, torna da solo a
+          quella di adesso, con i dati di prima.
+        </p>
+      </div>
+    } @else if (update.checkEnabled && update.latestVersion) {
+      <p class="hint" data-testid="update-latest">
+        È l'ultima versione pubblicata (controllato il
+        {{ update.checkedAt | date: 'd MMMM y, HH:mm' }}).
+      </p>
+    } @else if (!update.checkEnabled && update.currentVersion !== 'sviluppo') {
+      <p class="hint">
+        Il controllo delle versioni nuove è spento (<code>WALLETTRACKER_UPDATE_CHECK=false</code>
+        nel .env).
+      </p>
+    }
+  }
 </div>

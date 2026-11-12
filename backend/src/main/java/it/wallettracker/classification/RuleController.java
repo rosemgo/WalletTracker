@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,8 +62,9 @@ public class RuleController {
         ruleService.delete(id);
     }
 
+    /** {@code POST /api/rules/preview?id=7}: con {@code id}, la prova della regola 7 che si sta modificando. */
     @PostMapping("/preview")
-    public RulePreview preview(@Valid @RequestBody RuleRequest request) {
-        return ruleService.preview(request);
+    public RulePreview preview(@Valid @RequestBody RuleRequest request, @RequestParam(required = false) Long id) {
+        return ruleService.preview(request, id);
     }
 }

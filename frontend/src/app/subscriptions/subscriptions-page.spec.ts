@@ -2,6 +2,7 @@ import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
 import {
@@ -94,6 +95,7 @@ describe('SubscriptionsPage', () => {
     TestBed.configureTestingModule({
       imports: [SubscriptionsPage],
       providers: [
+        provideRouter([]),
         { provide: WalletApi, useValue: fakeApi },
         { provide: LOCALE_ID, useValue: 'it-IT' },
       ],
@@ -118,6 +120,8 @@ describe('SubscriptionsPage', () => {
 
     expect(page.querySelector('.tile-value')?.textContent).toMatch(/13,99\s€/);
     expect(rows[0].textContent).toContain('Netflix');
+    // Il nome porta ai pagamenti dell'abbonamento, cercando l'esercente.
+    expect(rows[0].querySelector('a')?.getAttribute('href')).toBe('/movimenti?text=netflix%20com');
     expect(rows[0].textContent).toMatch(/prezzo cambiato: prima 12,99\s€/);
     expect(rows[0].textContent).toContain('03/11/2026'); // il prossimo pagamento
     expect(rows[1].classList).toContain('disabled');
@@ -154,13 +158,13 @@ describe('SubscriptionsPage', () => {
   it('dismisses a suggestion and can bring a dismissed merchant back', async () => {
     const page = await render();
 
-    button(page, 'no, non suggerirlo più').click();
+    button(page, 'No, non suggerirlo più').click();
     expect(dismissed).toEqual([['SPOTIFY AB', SPOTIFY.typicalAmount]]); // con l'importo della serie
 
     const list = page.querySelector('.dismissed')!.textContent!.replace(/\s+/g, ' ');
     expect(list).toContain('ASSICURAZIONE AUTO · tutti gli importi (EUR)');
     expect(list).toContain('FASTWEB S P A · circa 23,95 €');
-    button(page, 'suggeriscilo di nuovo').click();
+    button(page, 'Suggeriscilo di nuovo').click();
     expect(deleted).toEqual([9]);
   });
 });

@@ -5,6 +5,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,7 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Per ogni movimento si prova, in quest'ordine, e la prima risposta vince:
  * <ol>
  *   <li><b>conto escluso</b> → IGNORED;</li>
- *   <li><b>correzione manuale</b> dell'utente → il tipo scelto;</li>
+ *   <li><b>correzione manuale</b> dell'utente → il tipo scelto. Se è un giroconto (trasferimento interno,
+ *       versamento o prelievo investimenti, saldo della carta) il movimento si abbina lo stesso all'altra metà,
+ *       che così non resta un'entrata o una spesa;</li>
  *   <li><b>importo zero</b> (es. verifiche della carta) → IGNORED;</li>
  *   <li><b>trasferimento abbinato</b>: su un altro tuo conto c'è un movimento con lo stesso importo e
  *       segno opposto, a pochi giorni di distanza, ed entrambi hanno l'aspetto di un trasferimento
@@ -54,6 +57,13 @@ public class ClassificationService {
 
     /** Due movimenti di un trasferimento possono essere registrati a qualche giorno di distanza. */
     static final int TRANSFER_MAX_DAYS_APART = 3;
+
+    /**
+     * I tipi dei giroconti: un movimento corretto a mano con uno di questi si abbina lo stesso all'altra metà
+     * (docs/tinaba.md, parte H). Chi sceglie "Spesa" o "Entrata" invece dice che non è un giroconto.
+     */
+    static final Set<TransactionType> TRANSFER_TYPES = EnumSet.of(TransactionType.INTERNAL_TRANSFER,
+            TransactionType.INVESTMENT_DEPOSIT, TransactionType.INVESTMENT_WITHDRAWAL, TransactionType.CARD_SETTLEMENT);
 
     private final BankTransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
@@ -107,7 +117,8 @@ public class ClassificationService {
         }
         // 2. Correzione manuale.
         if (transaction.getManualType() != null) {
-            return new Result(transaction.getManualType(), null, null, null);
+            // Il tipo resta quello scelto; l'abbinamento, se c'è, si ricorda (solo per i giroconti, vedi pairTransfers).
+            return new Result(transaction.getManualType(), null, null, peer == null ? null : peer.getId());
         }
         // 3. Importo zero.
         if (amount.signum() == 0) {
@@ -178,7 +189,9 @@ public class ClassificationService {
         Map<String, List<BankTransaction>> incomingByAmount = new HashMap<>();
         List<BankTransaction> outgoing = new ArrayList<>();
         for (BankTransaction transaction : transactions) {
-            if (!canBePaired(transaction) || !looksLikeOwnTransfer(transaction, ownerNames, ownIbans)) {
+            boolean chosenAsTransfer = transaction.getManualType() != null;
+            if (!canBePaired(transaction)
+                    || !chosenAsTransfer && !looksLikeOwnTransfer(transaction, ownerNames, ownIbans)) {
                 continue;
             }
             if (transaction.getAmount().signum() > 0) {
@@ -214,11 +227,14 @@ public class ClassificationService {
         return peers;
     }
 
-    /** Si abbinano solo movimenti contabilizzati, non nulli, non corretti a mano, di conti non esclusi. */
+    /**
+     * Si abbinano solo movimenti contabilizzati, non nulli, di conti non esclusi, e non corretti a mano, a meno che
+     * la correzione non dica proprio che è un giroconto: allora non serve nemmeno che "ne abbia l'aspetto".
+     */
     private static boolean canBePaired(BankTransaction transaction) {
         return transaction.getStatus() == TransactionStatus.BOOKED
                 && transaction.getAmount().signum() != 0
-                && transaction.getManualType() == null
+                && (transaction.getManualType() == null || TRANSFER_TYPES.contains(transaction.getManualType()))
                 && transaction.getAccount().getRole() != AccountRole.EXCLUDED;
     }
 

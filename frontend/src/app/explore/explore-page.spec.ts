@@ -67,6 +67,7 @@ describe('ExplorePage', () => {
     routeParams = {};
     navigations = [];
     const fakeApi: Partial<WalletApi> = {
+      accounts: () => of([]), // per i loghi nel cerchio dei movimenti (AccountsStore)
       exploreSeries: (query) => {
         seriesQueries.push(query);
         return of(series(query));
@@ -143,13 +144,13 @@ describe('ExplorePage', () => {
     return { fixture, page, button };
   }
 
-  it('starts with the expenses of the year, the last month chosen, the usual and the categories', async () => {
+  it('starts with the expenses of this year, the last month chosen, the usual and the categories', async () => {
     const { page } = await render();
     const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
 
     expect(seriesQueries[0]).toMatchObject({
       metric: 'EXPENSES',
-      period: 'YEAR',
+      period: 'YEAR_TO_DATE', // di serie: Quest'anno
       categoryId: null,
     });
     expect(groupQueries[0]).toMatchObject({ by: 'CATEGORY', from: '2026-10-01', to: '2026-10-28' });
@@ -163,7 +164,16 @@ describe('ExplorePage', () => {
     expect(rows[0]).toMatch(/Spesa alimentare\s*4 movimenti · \+32\s€ sul solito\s*412\s€\s*65%/);
     expect(rows[2]).toContain('Senza categoria');
     // Le scelte nell'indirizzo, senza un passo nella cronologia.
-    expect(navigations.at(-1)).toMatchObject({ cosa: 'spese', periodo: 'anno', per: 'categoria' });
+    expect(navigations.at(-1)).toMatchObject({
+      cosa: 'spese',
+      periodo: 'questanno',
+      per: 'categoria',
+    });
+    // I periodi partono da "Quest'anno" e "12 mesi", come in tutte le barre dei periodi.
+    const periods = Array.from(
+      page.querySelectorAll('.segmented[aria-label="Periodo"] button'),
+    ).map((b) => b.textContent?.trim());
+    expect(periods).toEqual(["Quest'anno", '12 mesi', '6 mesi', 'Mese', 'Settimana']);
   });
 
   it('a bar shows its period; the metric, the period and the grouping change the view', async () => {
@@ -177,6 +187,10 @@ describe('ExplorePage', () => {
     button('Esercente').click();
     await fixture.whenStable();
     expect(groupQueries.at(-1)).toMatchObject({ by: 'MERCHANT', from: '2026-02-01' });
+    // Ogni esercente porta ai suoi movimenti della barra, in Movimenti.
+    const merchant =
+      page.querySelector<HTMLAnchorElement>('a.group-row')?.getAttribute('href') ?? '';
+    expect(merchant).toMatch(/^\/movimenti\?from=2026-02-01&to=2026-02-28&type=EXPENSE&text=/);
 
     button('6 mesi').click();
     await fixture.whenStable();
@@ -186,6 +200,14 @@ describe('ExplorePage', () => {
     button('Entrate').click();
     await fixture.whenStable();
     expect(seriesQueries.at(-1)).toMatchObject({ metric: 'INCOME' });
+
+    // L'anno in corso (YTD): da gennaio a oggi; nell'indirizzo "questanno".
+    button("Quest'anno").click();
+    await fixture.whenStable();
+    expect(seriesQueries.at(-1)).toMatchObject({ period: 'YEAR_TO_DATE' });
+    expect(navigations.at(-1)).toMatchObject({ periodo: 'questanno' });
+    // "Anno" ora si chiama "12 mesi": sono gli ultimi 12, non l'anno solare.
+    expect(button('12 mesi')).toBeTruthy();
   });
 
   it('the net shows income and expenses in two lists, with bars up and down', async () => {

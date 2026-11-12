@@ -137,9 +137,9 @@ describe('TransactionsPage', () => {
     expect(rows[0]).toMatch(
       /^E\s*Esselunga Milano\s*Spesa alimentare · Conto corrente\s*-56,30\s€$/,
     );
-    expect(rows[1]).toContain('trasferimento interno · Conto corrente'); // senza categoria: il tipo
+    expect(rows[1]).toContain('Trasferimento interno · Conto corrente'); // senza categoria: il tipo
     expect(rows[2]).toMatch(/Acme SRL\s*Stipendio e pensione · Conto corrente\s*ottobre/);
-    expect(rows[3]).toContain('senza categoria · Conto corrente · in attesa');
+    expect(rows[3]).toContain('Senza categoria · Conto corrente · in attesa');
     // Un'entrata ha il colore delle entrate (il link al dettaglio lo prova il browser: docs/37, parte H).
     expect(page.querySelectorAll('a.movement .amount.positive').length).toBe(1);
   });
@@ -286,6 +286,12 @@ describe('TransactionsPage', () => {
     });
     expect(pill(page, 'Senza categoria').classList.contains('on')).toBe(true);
     expect((page.querySelector('input[type="date"]') as HTMLInputElement).value).toBe('2026-09-01');
+  });
+
+  it('from Conti and Analisi: the account in the address is the starting filter', async () => {
+    routeParams = { accountId: '7', type: 'INCOME' };
+    await render();
+    expect(requests[0]).toMatchObject({ accountId: 7, type: 'INCOME' });
   });
 
   it('dates in the address that are not real dates are ignored', () => {

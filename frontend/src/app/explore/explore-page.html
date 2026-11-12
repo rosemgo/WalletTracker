@@ -131,7 +131,7 @@
                 @if (uncategorizedQuery(r); as query) {
                   <!-- "Senza categoria": i movimenti da sistemare, in Movimenti (docs/43). -->
                   <a
-                    class="group-row"
+                    class="group-row uncategorized"
                     routerLink="/movimenti"
                     [queryParams]="query"
                     [attr.aria-label]="r.name + ': apri i movimenti, per dare loro una categoria'"
@@ -147,6 +147,16 @@
                   >
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
                   </button>
+                } @else if (movementsQuery(r); as query) {
+                  <!-- Un esercente, un conto: i suoi movimenti del periodo, in Movimenti. -->
+                  <a
+                    class="group-row"
+                    routerLink="/movimenti"
+                    [queryParams]="query"
+                    [attr.aria-label]="(r.name | readable) + ': apri i movimenti'"
+                  >
+                    <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
+                  </a>
                 } @else {
                   <div class="group-row">
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
@@ -171,9 +181,7 @@
               @for (t of day.items; track t.id) {
                 <li>
                   <a class="movement" [routerLink]="['/movimenti', t.id]">
-                    <span class="avatar" aria-hidden="true" [style.--hue]="avatarHue(t)">{{
-                      initialOf(t)
-                    }}</span>
+                    <span class="avatar" [appAvatar]="t"></span>
                     <span class="movement-text">
                       <span class="name">{{ nameOf(t) }}</span>
                       @if (t.note) {

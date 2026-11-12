@@ -101,7 +101,9 @@ a partire dalle causali reali viste nella Fase 0. Valgono su **qualsiasi conto**
 | Regola | Testo | Tipo |
 |---|---|---|
 | Cedola, dividendo, interessi | inizia con `Ced.su`, `Div.su`, `Interessi Portaf` | `INVESTMENT_INCOME` |
-| Ritenute, bolli, capital gain, Tobin tax | `Rit.ced`, `Rit.div`, `Ritenuta Fiscale`, `Imposta Sostitutiva`... | `INVESTMENT_TAX` |
+| Ritenute su cedole, dividendi, interessi | `Rit.ced`, `Rit.div`, `Ritenuta Fiscale`, `Rit. Fisc` | `WITHHOLDING_TAX` (dalla V37, `docs/investimenti.md` parte T) |
+| Bolli, capital gain, Tobin tax | `Imposta Sostitutiva`, `Tobin Tax`, `imposta di bollo Dossier` | `INVESTMENT_TAX` |
+| Ritenuta sul rateo nel giro titoli tra i tuoi conti | tutte le parole `Ritenuta Fiscale Qta/Val.nom` (priorità 9) | `INTERNAL_TRANSFER` (dalla V39, `docs/investimenti.md` parte W) |
 | Compravendita titoli | contiene `Compravendita Titoli` | `SECURITIES_BUY` (−) / `SECURITIES_SELL` (+) |
 | Saldo della carta di credito | contiene `Estratto conto carta di credito` | `CARD_SETTLEMENT` |
 | Trasferimento a un proprio conto | contiene `Trasferimento a mio conto` | `INTERNAL_TRANSFER` |

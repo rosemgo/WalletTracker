@@ -5,10 +5,29 @@
 }
 
 @if (result(); as r) {
-  <p class="message">
-    <strong>{{ r.bank }}</strong> collegata: {{ r.accounts }}
-    {{ r.accounts === 1 ? 'conto' : 'conti' }}, {{ r.imported }} movimenti nuovi importati.
-  </p>
+  @if (r.accounts === 0) {
+    <!-- La banca ha autorizzato, ma Enable Banking non ha passato nessun conto (docs/modalita-ristretta.md). -->
+    <div class="card warning" data-testid="no-accounts">
+      <h2>{{ r.bank }}: nessun conto passato da Enable Banking</h2>
+      <p>
+        La banca ha accettato il consenso, ma Enable Banking non ha passato nessun conto all'app:
+        quelli che hai autorizzato non sono nella lista della tua applicazione Enable Banking. Non è
+        stato collegato niente. Per collegarli:
+      </p>
+      <app-linked-accounts-steps />
+      <p><a routerLink="/collega">Torna a Collega una banca</a></p>
+    </div>
+  } @else {
+    <p class="message">
+      <strong>{{ r.bank }}</strong> collegata: {{ r.accounts }}
+      {{ r.accounts === 1 ? 'conto' : 'conti' }}, {{ r.imported }} movimenti nuovi importati.
+    </p>
+    <details class="hint linked-accounts" data-testid="missing-account">
+      <summary>Manca un conto che hai autorizzato?</summary>
+      <p>Non è nella lista della tua applicazione Enable Banking. Aggiungilo e ricollega:</p>
+      <app-linked-accounts-steps />
+    </details>
+  }
   @if (r.errors.length > 0) {
     <p>Alcuni conti non sono stati importati (riproveremo al prossimo aggiornamento):</p>
     <ul>
@@ -17,10 +36,12 @@
       }
     </ul>
   }
-  <p>
-    Ora scegli il <a routerLink="/conti">ruolo dei nuovi conti</a>, oppure guarda i
-    <a routerLink="/movimenti">movimenti</a>.
-  </p>
+  @if (r.accounts > 0) {
+    <p>
+      Ora scegli il <a routerLink="/conti">ruolo dei nuovi conti</a>, oppure guarda i
+      <a routerLink="/movimenti">movimenti</a>.
+    </p>
+  }
 }
 
 @if (error()) {

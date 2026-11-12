@@ -5,11 +5,16 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
 import it.wallettracker.bank.enablebanking.TestKeys;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.MockMvcBuilderCustomizer;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
@@ -43,9 +48,25 @@ public class IntegrationTestConfiguration {
                 // Una chiave di cifratura usa e getta, creata al primo avvio nella cartella temporanea.
                 Path keyFile = privateKey.getParent().resolve("encryption.key");
                 registry.add("wallettracker.encryption.key-file", keyFile::toString);
+                // Le cartelle dei backup (docs/48, parte Q): temporanee, mai quelle vere del progetto. Non esistono
+                // finché un test non le crea (BackupControllerTest).
+                Path backups = privateKey.getParent().resolve("backup");
+                registry.add("wallettracker.backup.directory", backups::toString);
+                registry.add("wallettracker.backup.state-directory", () -> backups.resolveSibling("backup-stato").toString());
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         };
+    }
+
+    /**
+     * Dal passo 3 (docs/46) le API vogliono il PIN. I test delle API non parlano del PIN: per loro ogni richiesta di
+     * MockMvc parte "come chi ha già inserito il PIN" ({@code user}) e con il gettone CSRF ({@code csrf}).
+     * {@code defaultRequest} aggiunge queste due cose a ogni richiesta. I test del PIN e della sicurezza, che vogliono
+     * proprio le richieste SENZA, si costruiscono un MockMvc loro (AuthControllerTest, SecurityTest).
+     */
+    @Bean
+    MockMvcBuilderCustomizer authenticatedRequests() {
+        return builder -> builder.defaultRequest(MockMvcRequestBuilders.get("/").with(user("proprietario")).with(csrf()));
     }
 }

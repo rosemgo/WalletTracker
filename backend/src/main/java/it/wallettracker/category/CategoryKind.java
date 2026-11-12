@@ -28,7 +28,7 @@ public enum CategoryKind {
         return switch (type) {
             case EXPENSE -> EXPENSE;
             case INCOME -> INCOME;
-            case INVESTMENT_INCOME, INVESTMENT_TAX, SECURITIES_BUY, SECURITIES_SELL,
+            case INVESTMENT_INCOME, WITHHOLDING_TAX, INVESTMENT_TAX, SECURITIES_BUY, SECURITIES_SELL,
                  INVESTMENT_DEPOSIT, INVESTMENT_WITHDRAWAL -> INVESTMENT;
             default -> OTHER;
         };

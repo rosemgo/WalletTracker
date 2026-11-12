@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+</defs>
+<rect width="1200" height="800" fill="#ffffff"/>
+<text x="600" y="38" text-anchor="middle" font-size="25" font-weight="700" fill="#0f172a">Il doppio clic e l'avvio automatico</text>
+<text x="600" y="64" text-anchor="middle" font-size="14" fill="#475569">chi non è informatico non apre mai un terminale e non scrive mai un comando</text>
+
+<!-- doppio clic -->
+<text x="20" y="104" font-size="17" font-weight="700" fill="#1d4ed8">① Il doppio clic</text>
+<rect x="20" y="118" width="330" height="200" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="185" y="146" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">nella cartella di WalletTracker</text>
+<text x="40" y="178" font-size="13" fill="#0f172a">Windows (.cmd)</text>
+<text x="56" y="200" font-size="12" font-family="Consolas, monospace" fill="#334155">Avvia WalletTracker.cmd</text>
+<text x="56" y="218" font-size="12" font-family="Consolas, monospace" fill="#334155">Aggiorna WalletTracker.cmd</text>
+<text x="56" y="236" font-size="12" font-family="Consolas, monospace" fill="#334155">Backup WalletTracker.cmd</text>
+<text x="40" y="264" font-size="13" fill="#0f172a">Mac (.command): gli stessi tre</text>
+<text x="40" y="292" font-size="12" fill="#475569">dentro, una riga: lancia lo script di sempre</text>
+
+<rect x="400" y="118" width="360" height="200" rx="14" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<text x="580" y="146" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">si apre una finestra</text>
+<text x="420" y="176" font-size="12" font-family="Consolas, monospace" fill="#0f172a">powershell … installa.ps1 [-Aggiorna|-Backup]</text>
+<text x="420" y="196" font-size="12" font-family="Consolas, monospace" fill="#0f172a">./installa.sh [--aggiorna|--backup]</text>
+<text x="420" y="228" font-size="13" fill="#334155">i messaggi dello script, come sempre</text>
+<text x="420" y="252" font-size="13" fill="#334155">alla fine la finestra aspetta un tasto:</text>
+<text x="420" y="272" font-size="13" fill="#334155">così si leggono, anche gli errori</text>
+<text x="420" y="300" font-size="12" fill="#475569">Avvia apre anche l'app nel browser</text>
+<line x1="350" y1="218" x2="395" y2="218" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<rect x="810" y="118" width="370" height="200" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+<text x="995" y="146" text-anchor="middle" font-size="15" font-weight="700" fill="#15803d">Docker spento?</text>
+<text x="830" y="176" font-size="13" fill="#334155">Windows e Mac: lo script accende</text>
+<text x="830" y="196" font-size="13" fill="#334155">Docker Desktop e aspetta che risponda</text>
+<text x="830" y="216" font-size="13" fill="#334155">(al massimo 3 minuti)</text>
+<text x="830" y="250" font-size="13" fill="#334155">Linux: spiega il comando</text>
+<text x="846" y="270" font-size="12" font-family="Consolas, monospace" fill="#0f172a">sudo systemctl start docker</text>
+<text x="830" y="298" font-size="12" fill="#475569">(vuole la password di amministratore)</text>
+<line x1="760" y1="218" x2="805" y2="218" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<!-- la prima volta -->
+<rect x="20" y="340" width="1160" height="82" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="40" y="368" font-size="14" font-weight="700" fill="#c2410c">La prima volta, il sistema diffida dei file scaricati da Internet (non sono "firmati")</text>
+<text x="40" y="392" font-size="13" fill="#334155">Windows: "Windows ha protetto il PC" → Ulteriori informazioni → Esegui comunque   (oppure, prima: ZIP → tasto destro → Proprietà → Sblocca)</text>
+<text x="40" y="412" font-size="13" fill="#334155">Mac: "proviene da uno sviluppatore non identificato" → tasto destro sul file → Apri → Apri   (una volta sola per file)</text>
+
+<!-- avvio automatico -->
+<text x="20" y="468" font-size="17" font-weight="700" fill="#7e22ce">② L'avvio automatico: una catena di tre anelli</text>
+<rect x="20" y="484" width="260" height="150" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="150" y="514" text-anchor="middle" font-size="15" font-weight="700" fill="#7e22ce">accendi il computer</text>
+<text x="40" y="546" font-size="13" fill="#334155">ed entri con il tuo utente</text>
+<text x="40" y="580" font-size="12" fill="#475569">(su Windows e Mac Docker Desktop</text>
+<text x="40" y="598" font-size="12" fill="#475569">parte quando entri, non prima)</text>
+
+<rect x="330" y="484" width="300" height="150" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="480" y="514" text-anchor="middle" font-size="15" font-weight="700" fill="#7e22ce">parte Docker Desktop</text>
+<text x="350" y="544" font-size="12" fill="#334155">Settings → General →</text>
+<text x="350" y="562" font-size="12" fill="#334155">"Start Docker Desktop when you</text>
+<text x="350" y="580" font-size="12" fill="#334155">sign in to your computer"</text>
+<text x="350" y="610" font-size="12" font-weight="700" fill="#7e22ce">lo script controlla e lo dice</text>
+
+<rect x="680" y="484" width="240" height="150" rx="14" fill="#faf5ff" stroke="#7e22ce" stroke-width="2"/>
+<text x="800" y="514" text-anchor="middle" font-size="15" font-weight="700" fill="#7e22ce">ripartono i container</text>
+<text x="700" y="544" font-size="12" font-family="Consolas, monospace" fill="#0f172a">restart: unless-stopped</text>
+<text x="700" y="572" font-size="12" fill="#334155">in docker-compose.yml:</text>
+<text x="700" y="590" font-size="12" fill="#334155">già fatto dal passo 1</text>
+
+<rect x="970" y="484" width="210" height="150" rx="14" fill="#dcfce7" stroke="#15803d" stroke-width="2.5"/>
+<text x="1075" y="514" text-anchor="middle" font-size="15" font-weight="700" fill="#15803d">l'app risponde</text>
+<text x="990" y="546" font-size="12" fill="#334155">dopo un minuto circa,</text>
+<text x="990" y="564" font-size="12" fill="#334155">anche dal telefono</text>
+<text x="990" y="582" font-size="12" fill="#334155">(Tailscale parte da solo)</text>
+
+<line x1="280" y1="559" x2="325" y2="559" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+<line x1="630" y1="559" x2="675" y2="559" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+<line x1="920" y1="559" x2="965" y2="559" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<rect x="20" y="660" width="1160" height="118" rx="12" fill="#f8fafc" stroke="#94a3b8"/>
+<text x="40" y="688" font-size="14" font-weight="700" fill="#0f172a">Due cose da sapere</text>
+<text x="40" y="714" font-size="13" fill="#334155">• "unless-stopped" = riparte sempre, TRANNE se l'hai fermato tu: dopo  docker compose down  (o il quadratino ■ in Docker Desktop) resta</text>
+<text x="52" y="734" font-size="13" fill="#334155">spento anche al riavvio. Per riaccenderlo: doppio clic su "Avvia WalletTracker".</text>
+<text x="40" y="760" font-size="13" fill="#334155">• Il computer deve restare acceso (non in sospensione) perché l'app risponda dal telefono e il backup di ogni notte parta.</text>
+</svg>

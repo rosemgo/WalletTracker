@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 
-import { Overview, OverviewCategory } from '../api/models';
+import { Investments, Overview, OverviewCategory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import {
   OverviewPage,
@@ -13,6 +13,7 @@ import {
   categoryNote,
   comparisonSentence,
   monthOf,
+  trendOf,
 } from './overview-page';
 
 /** Un Riepilogo inventato del mese in corso: 1.284 € spesi, di solito 1.410 € allo stesso giorno. */
@@ -60,6 +61,34 @@ function category(name: string | null, amount: number, usual: number | null): Ov
 
 const euros = (v: number) => `${Math.round(v)} €`;
 
+/** Nessun investimento: la scheda "Investito" non compare (la provano i test degli investimenti). */
+const NO_INVESTMENTS = {
+  currency: 'EUR',
+  currencies: [],
+  period: 'YEAR',
+  from: '2025-11',
+  to: '2026-10',
+  investedTotal: 0,
+  investedThisYear: 0,
+  investedThisMonth: 0,
+  transferredTotal: 0,
+  incomeThisYear: 0,
+  boughtInPeriod: 0,
+  soldInPeriod: 0,
+  transferredInPeriod: 0,
+  incomeInPeriod: 0,
+  withholdingInPeriod: 0,
+  otherTaxesInPeriod: 0,
+  months: [],
+  incomeByType: [],
+  incomeBySource: [],
+  otherTaxesByType: [],
+  trades: [],
+  transfers: [],
+  onlyTransfers: [],
+  cash: [],
+} as Investments;
+
 describe('OverviewPage', () => {
   const requests: [string | null, string | null][] = [];
   let respond: (month: string | null) => Observable<Overview>;
@@ -69,6 +98,8 @@ describe('OverviewPage', () => {
     requests.length = 0;
     respond = () => of(overview());
     const fakeApi: Partial<WalletApi> = {
+      investments: () => of(NO_INVESTMENTS), // la scheda degli investimenti: qui non c'è niente
+      accounts: () => of([]), // la scheda della liquidità: nessun conto, nessuna scheda
       alerts: () => of([]),
       overview: (month: string | null, currency: string | null) => {
         requests.push([month, currency]);
@@ -113,6 +144,9 @@ describe('OverviewPage', () => {
       li.textContent?.replace(/\s+/g, ' ').trim(),
     );
 
+    expect(page.querySelector('.spending-card h2')?.textContent?.trim()).toBe(
+      'Spese per categoria',
+    );
     expect(rows.length).toBe(5); // la sesta (senza categoria) è in Analisi
     expect(rows[0]).toMatch(/^Spesa alimentare\s*412\s€\s*\+32\s€ sul solito$/);
     expect(rows[1]).toContain('come al solito');
@@ -122,7 +156,8 @@ describe('OverviewPage', () => {
     const links = Array.from(page.querySelectorAll('ul.bars a.bar-link')).map((a) =>
       a.getAttribute('href'),
     );
-    expect(links[0]).toMatch(/^\/analisi\/categoria\/\d+$/);
+    // ...nel mese guardato qui (prima si apriva sempre nel mese in corso).
+    expect(links[0]).toMatch(new RegExp(`^/analisi/categoria/\\d+\\?mese=${monthOf(new Date())}$`));
     expect(links.length).toBe(5);
     // La barra più lunga è la prima.
     const widths = Array.from(page.querySelectorAll<HTMLElement>('.bar-line .fill')).map(
@@ -136,13 +171,37 @@ describe('OverviewPage', () => {
     const text = page.textContent?.replace(/\s+/g, ' ') ?? '';
 
     expect(text).toContain('In arrivo nei prossimi 7 giorni');
-    expect(text).toMatch(/Netflix\s*martedì 3 novembre\s*12,99\s€/);
+    expect(text).toMatch(/Netflix\s*Martedì 3 novembre\s*12,99\s€/);
     const links = Array.from(page.querySelectorAll<HTMLAnchorElement>('.todo a'));
     expect(links.map((a) => a.getAttribute('aria-label'))).toEqual([
       '7 movimenti da verificare',
       '1 categoria suggerita',
     ]);
     expect(links[0].getAttribute('href')).toBe('/movimenti?type=TO_REVIEW');
+    // "In arrivo" porta agli abbonamenti.
+    const upcoming = Array.from(page.querySelectorAll('section.card')).find((c) =>
+      c.textContent?.includes('In arrivo'),
+    ) as HTMLElement;
+    expect(upcoming.querySelector('a')?.getAttribute('href')).toBe('/abbonamenti');
+  });
+
+  it('"Senza categoria" leads to the expenses of the month without a category', async () => {
+    respond = (month) =>
+      of(
+        overview({
+          month: month ?? monthOf(new Date()),
+          categories: [category(null, 437, 392), category('Famiglia e amici', 360, 40)],
+        }),
+      );
+    const { page } = await render();
+
+    const link = Array.from(page.querySelectorAll<HTMLAnchorElement>('a.bar-link')).find((a) =>
+      a.textContent?.includes('Senza categoria'),
+    );
+    const month = monthOf(new Date());
+    expect(link?.getAttribute('href')).toBe(
+      `/movimenti?uncategorized=true&type=EXPENSE&from=${month}-01&to=${month}-25`,
+    );
   });
 
   it('goes back to past months and not beyond the current one', async () => {
@@ -174,6 +233,30 @@ describe('OverviewPage', () => {
     await fixture.whenStable();
 
     expect(requests.at(-1)).toEqual([monthOf(new Date()), 'USD']);
+  });
+
+  it('colors the chart and the sentence: green under the usual, red over it', async () => {
+    const { fixture, page } = await render();
+    // 1.284 € contro 1.410 € di solito: sotto.
+    expect(page.querySelector('.comparison')?.classList.contains('trend-under')).toBe(true);
+    expect(page.querySelector('.comparison')?.textContent).toContain('▼');
+    expect(page.querySelector('.month-chart-wrap')?.classList.contains('trend-under')).toBe(true);
+
+    respond = () => of(overview({ spent: 1500, usualSoFar: 1410 }));
+    fixture.componentInstance.load();
+    await fixture.whenStable();
+    expect(page.querySelector('.comparison')?.textContent).toContain('▲');
+    expect(page.querySelector('.month-chart-wrap')?.classList.contains('trend-over')).toBe(true);
+    expect(page.querySelector('.chart-keys .key.month')?.classList.contains('trend-over')).toBe(
+      true,
+    );
+  });
+
+  it('is under the usual when in line, over only from 5 € more, and neither without a usual', () => {
+    expect(trendOf(overview({ spent: 1412, usualSoFar: 1410 }))).toBe('under');
+    expect(trendOf(overview({ spent: 1415, usualSoFar: 1410 }))).toBe('over');
+    expect(trendOf(overview({ spent: 1300, usualSoFar: 1410 }))).toBe('under');
+    expect(trendOf(overview({ usualSoFar: null }))).toBeNull();
   });
 
   it('explains an error of the backend', async () => {

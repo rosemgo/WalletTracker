@@ -13,12 +13,14 @@ import {
   Transaction,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { merchantSearch } from '../transactions/merchant-search';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
 import { ReadablePipe } from '../text/readable';
-import { avatarHue, groupByDay, initialOf, nameOf } from '../transactions/day-groups';
+import { groupByDay, nameOf } from '../transactions/day-groups';
 import { BarChart } from './bar-chart';
 import { barLabel, barName, lastPastBar, monthOfDay, perUnit } from './explore-labels';
+import { Avatar } from '../transactions/avatar';
 
 /** Sotto questa differenza (in euro) una categoria è "come al solito", come nel Riepilogo. */
 const SAME_AS_USUAL = 5;
@@ -29,11 +31,16 @@ export const METRICS: { value: Metric; label: string; slug: string }[] = [
   { value: 'INCOME', label: 'Entrate', slug: 'entrate' },
   { value: 'NET', label: 'Netto', slug: 'netto' },
 ];
+// Come in tutte le barre dei periodi (Investimenti, il grafico di una categoria): prima "Quest'anno", la scelta di serie,
+// poi "12 mesi", poi gli altri allontanandosi dai 12 mesi.
 export const PERIODS: { value: ExplorePeriod; label: string; slug: string }[] = [
-  { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
-  { value: 'MONTH', label: 'Mese', slug: 'mese' },
+  // L'anno in corso, da gennaio a oggi (YTD).
+  { value: 'YEAR_TO_DATE', label: "Quest'anno", slug: 'questanno' },
+  // "anno" resta nell'indirizzo per i link già salvati: sono gli ultimi 12 mesi.
+  { value: 'YEAR', label: '12 mesi', slug: 'anno' },
   { value: 'SIX_MONTHS', label: '6 mesi', slug: '6mesi' },
-  { value: 'YEAR', label: 'Anno', slug: 'anno' },
+  { value: 'MONTH', label: 'Mese', slug: 'mese' },
+  { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
 ];
 export const GROUPINGS: { value: GroupBy; label: string; slug: string }[] = [
   { value: 'CATEGORY', label: 'Categoria', slug: 'categoria' },
@@ -51,14 +58,15 @@ interface Row {
 }
 
 /**
- * Analisi (docs/38): l'esploratore. Che cosa (spese, entrate, netto) × periodo (settimana, mese, 6 mesi, anno) ×
+ * Analisi (docs/38): l'esploratore. Che cosa (spese, entrate, netto) × periodo (settimana, mese, 6 mesi, 12 mesi,
+ * quest'anno) ×
  * raggruppamento (categoria, esercente, conto). Si tocca una barra per guardare quel periodo, una categoria per
  * guardare solo lei (con i suoi movimenti, giorno per giorno). Le scelte stanno nell'indirizzo: ricaricando la pagina
  * o tornando indietro si ritrova la stessa vista.
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [BarChart, MoneyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
+  imports: [Avatar, BarChart, MoneyPipe, NgTemplateOutlet, ReadablePipe, RouterLink],
   templateUrl: './explore-page.html',
 })
 export class ExplorePage implements OnInit {
@@ -72,11 +80,9 @@ export class ExplorePage implements OnInit {
   protected readonly periods = PERIODS;
   protected readonly groupings = GROUPINGS;
   protected readonly nameOf = nameOf;
-  protected readonly initialOf = initialOf;
-  protected readonly avatarHue = avatarHue;
 
   protected readonly metric = signal<Metric>('EXPENSES');
-  protected readonly period = signal<ExplorePeriod>('YEAR');
+  protected readonly period = signal<ExplorePeriod>('YEAR_TO_DATE'); // di serie: Quest'anno
   protected readonly by = signal<GroupBy>('CATEGORY');
   protected readonly category = signal<{ id: number; name: string } | null>(null);
   /** Il tipo di ogni categoria (spesa, entrata...): una categoria di spesa non ha senso tra le entrate. */
@@ -219,6 +225,33 @@ export class ExplorePage implements OnInit {
     };
   }
 
+  /**
+   * I filtri di Movimenti per una riga che non è una categoria da scegliere: i movimenti di quell'esercente o di quel
+   * conto (o di quella categoria, quando non si può sceglierla qui), nel periodo della barra. Null se non c'è niente.
+   */
+  protected movementsQuery(row: Row): Record<string, string> | null {
+    const b = this.bar();
+    if (b === null) {
+      return null;
+    }
+    const query: Record<string, string> = { from: b.bar.from, to: b.bar.to };
+    const metric = this.metric();
+    if (metric !== 'NET') {
+      query['type'] = metric === 'EXPENSES' ? 'EXPENSE' : 'INCOME';
+    }
+    const key = row.group.key;
+    if (this.by() === 'MERCHANT' && key) {
+      query['text'] = merchantSearch(key);
+    } else if (this.by() === 'ACCOUNT' && key) {
+      query['accountId'] = key;
+    } else if (row.group.categoryId !== null) {
+      query['categoryId'] = String(row.group.categoryId);
+    } else {
+      return null;
+    }
+    return query;
+  }
+
   /** Il mese per la pagina della categoria: quello della barra, se è un mese; altrimenti quello in corso. */
   protected readonly categoryMonth = computed(() => {
     const s = this.series();
@@ -232,7 +265,7 @@ export class ExplorePage implements OnInit {
     const find = <T>(list: { value: T; slug: string }[], slug: string | null) =>
       list.find((x) => x.slug === slug)?.value;
     this.metric.set(find(METRICS, q.get('cosa')) ?? 'EXPENSES');
-    this.period.set(find(PERIODS, q.get('periodo')) ?? 'YEAR');
+    this.period.set(find(PERIODS, q.get('periodo')) ?? 'YEAR_TO_DATE');
     this.by.set(find(GROUPINGS, q.get('per')) ?? 'CATEGORY');
     const categoryId = Number(q.get('categoria'));
     if (Number.isInteger(categoryId) && categoryId > 0) {

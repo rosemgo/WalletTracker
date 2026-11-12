@@ -14,6 +14,9 @@ const STEPS = [
   10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000,
 ];
 
+/** Sotto o sopra il solito: decide il colore del grafico. */
+export type Trend = 'under' | 'over';
+
 /** Un punto del disegno. */
 interface Point {
   x: number;
@@ -43,6 +46,8 @@ interface Point {
     <div
       class="month-chart-wrap"
       [class.scrubbing]="day() !== null"
+      [class.trend-under]="trend() === 'under'"
+      [class.trend-over]="trend() === 'over'"
       tabindex="0"
       role="slider"
       [attr.aria-label]="description() + '. Con le frecce si scorrono i giorni.'"
@@ -134,6 +139,11 @@ export class MonthChart {
   readonly currency = input('EUR');
   /** Il mese in corso: il punto di oggi pulsa. */
   readonly live = input(false);
+  /**
+   * Come va il mese rispetto al solito (docs/tema-blu-oceano.md, parte C): 'under' colora la linea e la sfumatura di
+   * verde, 'over' di rosso; null (senza un solito) le lascia del colore del tema.
+   */
+  readonly trend = input<Trend | null>(null);
 
   /** Il giorno su cui si sta scorrendo (1 = il primo), o null: per aggiornare la cifra grande sopra il grafico. */
   readonly scrubbed = output<number | null>();

@@ -89,16 +89,26 @@ class BankLinkServiceTest {
 
     @Test
     void startAsksForTheLongestConsentTheBankAllowsAndReturnsTheLoginPage() {
-        String url = bankLinkService.start("ING", "IT");
+        String url = bankLinkService.start("ING", "IT", "https://localhost:8443");
 
         assertThat(url).isEqualTo("https://banca.example/login");
         AuthorizationRequest request = sentAuthorization();
-        assertThat(request.redirectUrl()).isEqualTo(properties.redirectUrl());
+        assertThat(request.redirectUrl()).isEqualTo("https://localhost:8443/callback");
         assertThat(request.aspsp()).isEqualTo(new AspspRef("ING", "IT"));
         // ING concede al massimo 90 giorni: chiediamo 90 giorni meno 5 minuti di margine.
         assertThat(request.access().validUntil())
                 .isBetween(Instant.now().plus(90, ChronoUnit.DAYS).minus(6, ChronoUnit.MINUTES),
                         Instant.now().plus(90, ChronoUnit.DAYS));
+    }
+
+    @Test
+    void withoutAReturnAddressThatAnswersTheLinkDoesNotStart() {
+        // Dal server in Docker (http://localhost:8000) con il solo indirizzo di ng serve: la banca rimanderebbe a una
+        // pagina dove non risponde nessuno. Meglio dirlo prima, senza chiamare Enable Banking.
+        assertThatThrownBy(() -> bankLinkService.start("ING", "IT", "http://localhost:8000"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("prepara Tailscale");
+        verify(client, never()).startAuthorization(any());
     }
 
     @Test
@@ -112,7 +122,7 @@ class BankLinkServiceTest {
 
     @Test
     void completeSavesTheAccountsAndImportsWithTheUserPresent() {
-        bankLinkService.start("ING", "IT");
+        bankLinkService.start("ING", "IT", "https://localhost:8443");
         String state = sentAuthorization().state();
         when(client.createSession("code-1")).thenReturn(new Session("session-1",
                 List.of(new Account("uid-a", new AccountId("IT60X001"), "Conto Arancio", "EUR", "hash-a")),
@@ -140,8 +150,23 @@ class BankLinkServiceTest {
     }
 
     @Test
+    void withoutAccountsFromEnableBankingNoEmptyConnectionIsSaved() {
+        // Modalità ristretta (docs/modalita-ristretta.md): la banca autorizza, ma Enable Banking toglie i conti che non
+        // sono nella lista dell'applicazione. Un collegamento senza conti non serve.
+        bankLinkService.start("ING", "IT", "https://localhost:8443");
+        String state = sentAuthorization().state();
+        when(client.createSession("code-1")).thenReturn(new Session("session-1", List.of(),
+                new AspspRef("ING", "IT"), new Access(Instant.now().plus(90, ChronoUnit.DAYS))));
+
+        LinkResult result = bankLinkService.complete("code-1", state, PSU);
+
+        assertThat(result).isEqualTo(new LinkResult("ING", 0, 0, List.of()));
+        assertThat(connectionRepository.count()).isZero();
+    }
+
+    @Test
     void aStateCanBeUsedOnlyOnce() {
-        bankLinkService.start("ING", "IT");
+        bankLinkService.start("ING", "IT", "https://localhost:8443");
         String state = sentAuthorization().state();
         when(client.createSession("code-1")).thenReturn(new Session("session-1", List.of(),
                 new AspspRef("ING", "IT"), new Access(Instant.now().plus(90, ChronoUnit.DAYS))));

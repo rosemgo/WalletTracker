@@ -4,28 +4,39 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 
 import { ROLES, ROLE_LABELS } from '../api/labels';
-import { Account, AccountRole } from '../api/models';
+import { Account, AccountOutcome, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isTradeRepublic } from '../import/completion-page';
+import { MoneyPipe } from '../privacy/money.pipe';
+import { AccountsStore, logoUrl } from './accounts-store';
+import { BalanceForm } from './balance-form';
+import { ConnectionsSection } from './connections-section';
 
 /**
  * La pagina dei conti: elenco dei conti, con il ruolo modificabile da un menu a tendina.
  *
  * I conti sono di due tipi: quelli collegati a una banca (Enable Banking, si aggiornano da soli) e quelli
  * "manuali", per le banche che Enable Banking non copre: li crei qui e ci carichi i movimenti da un file
- * CSV (pagina Importa CSV). Solo i conti manuali si possono eliminare da qui.
+ * CSV o Excel (pagina Importa). Solo i conti manuali si possono eliminare da qui.
+ *
+ * Il saldo (docs/saldi.md): per un conto collegato lo dà la banca a ogni aggiornamento; per un conto manuale, o un
+ * collegato di cui la banca non lo dà, lo scrivi tu una volta, dopo aver controllato l'ultimo movimento, e poi si
+ * aggiorna con i movimenti che arrivano dopo.
  *
  * È un componente "standalone": non serve dichiararlo in un NgModule. Le cose che il template usa
  * (qui la pipe `date`) si elencano direttamente in `imports`.
  */
 @Component({
   selector: 'app-accounts-page',
-  imports: [DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [BalanceForm, ConnectionsSection, DatePipe, MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './accounts-page.html',
 })
 export class AccountsPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly store = inject(AccountsStore);
+
+  protected readonly logoUrl = logoUrl;
 
   // Le costanti che il template deve vedere vanno esposte come proprietà del componente.
   protected readonly roles = ROLES;
@@ -39,8 +50,13 @@ export class AccountsPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly message = signal<string | null>(null);
   protected readonly syncing = signal(false);
+  /** Dopo "Aggiorna ora": una riga per conto, con quello che è arrivato (docs/aggiorna-ora.md). */
+  protected readonly syncOutcomes = signal<string[]>([]);
+  /** Dopo "Aggiorna ora": true se nessun conto letto ha portato niente, né nuovo né in attesa. */
+  protected readonly nothingArrived = signal(false);
   protected readonly confirmingDelete = signal<number | null>(null);
   protected readonly renaming = signal<number | null>(null); // il conto di cui si sta cambiando il nome // il conto da eliminare, in attesa di conferma
+  protected readonly editingBalance = signal<number | null>(null); // il conto di cui si scrive il saldo
 
   /**
    * Il modulo del conto manuale. Gli stessi controlli del backend (ManualAccountRequest): qui servono a
@@ -67,9 +83,19 @@ export class AccountsPage implements OnInit {
     this.syncing.set(true);
     this.message.set(null);
     this.error.set(null);
+    this.syncOutcomes.set([]);
+    this.nothingArrived.set(false);
     this.api.syncNow().subscribe({
       next: (round) => {
         this.syncing.set(false);
+        const names = new Map(this.accounts().map((a) => [a.id, this.nameOf(a)]));
+        this.syncOutcomes.set(
+          round.accounts.map((o) =>
+            outcomeLine(o, names.get(o.accountId) ?? `Conto ${o.accountId}`),
+          ),
+        );
+        const read = round.accounts.filter((o) => o.error === null);
+        this.nothingArrived.set(read.length > 0 && read.every((o) => o.inserted + o.pending === 0));
         const failed = round.failed > 0 ? `, ${round.failed} con errori (vedi sotto)` : '';
         const updated =
           round.updated === 1 ? 'Aggiornato 1 conto' : `Aggiornati ${round.updated} conti`;
@@ -83,10 +109,16 @@ export class AccountsPage implements OnInit {
     });
   }
 
+  /** Dopo la rimozione di un collegamento: lo stato dei conti cambia ("collegamento rimosso"). */
+  protected reload(): void {
+    this.loadAccounts();
+  }
+
   private loadAccounts(): void {
     this.api.accounts().subscribe({
       next: (accounts) => {
         this.accounts.set(accounts);
+        this.store.accounts.set(accounts); // i loghi e i nomi accanto ai movimenti seguono (docs/loghi.md)
         this.loading.set(false);
       },
       error: () => {
@@ -193,4 +225,70 @@ export class AccountsPage implements OnInit {
       error: (response) => this.error.set(response.error?.detail ?? 'Il nome non è stato salvato.'),
     });
   }
+
+  /** Il saldo scritto a mano è stato salvato. */
+  onBalanceSaved(updated: Account): void {
+    this.editingBalance.set(null);
+    this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
+    this.message.set(
+      `Saldo di "${updated.label}" salvato: da qui si aggiorna con i movimenti che arriveranno.`,
+    );
+    this.error.set(null);
+  }
+
+  /** Il logo scelto per un conto manuale: si carica subito (docs/loghi.md, parte C). */
+  uploadLogo(account: Account, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // per poter scegliere di nuovo lo stesso file
+    if (!file) {
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      this.error.set("Il logo è troppo grande: al massimo 256 KB. Scegli un'immagine più piccola.");
+      return;
+    }
+    this.api.uploadAccountLogo(account.id, file).subscribe({
+      next: () => {
+        this.message.set(`Logo di "${account.label}" salvato.`);
+        this.error.set(null);
+        this.loadAccounts();
+      },
+      error: (response) => this.error.set(response.error?.detail ?? 'Il logo non è stato salvato.'),
+    });
+  }
+
+  removeLogo(account: Account): void {
+    this.api.deleteAccountLogo(account.id).subscribe({
+      next: () => {
+        this.message.set(`Logo di "${account.label}" tolto.`);
+        this.error.set(null);
+        this.loadAccounts();
+      },
+      error: (response) => this.error.set(response.error?.detail ?? 'Il logo non è stato tolto.'),
+    });
+  }
+}
+
+/** Il limite del backend (LogoImage.MAX_BYTES): oltre, si dice subito senza mandare il file. */
+const MAX_LOGO_BYTES = 256 * 1024;
+
+/**
+ * La riga di un conto dopo "Aggiorna ora": "Conto corrente: 2 movimenti nuovi, 1 in attesa", "nessun movimento
+ * nuovo", o l'errore.
+ */
+export function outcomeLine(outcome: AccountOutcome, name: string): string {
+  if (outcome.error !== null) {
+    return `${name}: non aggiornato (${outcome.error.replace(/\.$/, '')})`;
+  }
+  const parts = [];
+  if (outcome.inserted > 0) {
+    parts.push(
+      outcome.inserted === 1 ? '1 movimento nuovo' : `${outcome.inserted} movimenti nuovi`,
+    );
+  }
+  if (outcome.pending > 0) {
+    parts.push(`${outcome.pending} in attesa`);
+  }
+  return `${name}: ${parts.length > 0 ? parts.join(', ') : 'nessun movimento nuovo'}`;
 }

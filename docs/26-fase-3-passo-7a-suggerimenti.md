@@ -278,3 +278,24 @@ in orizzontale.
    pagina Categorie e rileggi la tabella. Che cosa è successo, e quale riga della V15 lo fa?
 3. Togli `JOIN FETCH` da `findAllWithManualCategory` e accendi il registro delle query. Quante query fa ora
    `GET /api/category-suggestions` con 10 categorie scelte a mano?
+
+---
+
+## Aggiunta: solo i pulsanti del suggerimento toccato
+
+**Il difetto, visto dall'utente sul telefono.** Toccando "Accetta" (o "no") di un suggerimento, si "illuminavano" tutti
+gli "Accetta" e i "no" dell'elenco, come se fossero stati toccati tutti. Era solo l'aspetto: la richiesta partiva per
+uno solo.
+
+**Perché.** Per evitare un doppio clic, mentre il backend rispondeva **tutti** i pulsanti diventavano
+`[disabled]="busy() !== null"`; e un pulsante disattivato ha `opacity: 0.5`. Quindi tutto l'elenco cambiava aspetto
+insieme.
+
+**La correzione** (`suggestions-panel.ts`): `busy` è l'insieme degli esercenti in lavorazione, e si disattivano solo i
+due pulsanti di quell'esercente (`isBusy(s)`). Gli altri suggerimenti restano toccabili; "Chiedi all'IA" aspetta che
+non ce ne sia nessuno in lavorazione.
+
+**I test.** `suggestions-panel.spec.ts`, "while the backend answers, only the buttons of the touched suggestion are
+disabled" (con un backend che non ha ancora risposto). Nel browser, con la risposta del backend ritardata di due
+secondi: i pulsanti della pizzeria a metà opacità, quelli di Netflix normali; poi il messaggio "assegnata a 2
+movimenti".

@@ -73,7 +73,7 @@ class SummaryControllerTest {
         pending(account, "2026-10-14", "-50.00", "BENZINA");                          // EXPENSE in attesa: conta
         transaction(account, "2026-10-10", "-300.00", "Trasferimento a mio conto", "EUR"); // INTERNAL_TRANSFER: non conta
         transaction(account, "2026-10-12", "50.00", "Div.su AZIONI XYZ", "EUR");      // INVESTMENT_INCOME
-        transaction(account, "2026-10-12", "-13.00", "Rit.div AZIONI XYZ", "EUR");    // INVESTMENT_TAX
+        transaction(account, "2026-10-12", "-13.00", "Rit.div AZIONI XYZ", "EUR");    // WITHHOLDING_TAX
         transaction(account, "2026-10-13", "-7.00", null, "EUR");                     // TO_REVIEW: non conta, ma si segnala
         // Settembre
         transaction(account, "2026-09-20", "-200.00", "RISTORANTE", "EUR");

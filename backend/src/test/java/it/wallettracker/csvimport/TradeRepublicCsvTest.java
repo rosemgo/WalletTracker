@@ -102,6 +102,20 @@ class TradeRepublicCsvTest {
     }
 
     @Test
+    void theLinesCountFromTheHeaderAndAnExcelDateIsReadToo() {
+        // Il file aperto con Excel e salvato come .xlsx: SpreadsheetReader scrive le date "01/07/2026". E se
+        // l'intestazione non è la prima riga, i numeri di riga sono comunque quelli del file.
+        String excel = CSV.replace("\"2026-07-07\"", "\"07/07/2026\"");
+        List<List<String>> all = lines(excel);
+
+        TradeRepublicCsv.Reading reading = TradeRepublicCsv.read(all.getFirst(), all.subList(1, all.size()), 3);
+
+        assertThat(reading.errors()).isEmpty();
+        assertThat(reading.rows().get(1).date()).isEqualTo(LocalDate.of(2026, 7, 7));
+        assertThat(reading.rows().get(1).line()).isEqualTo(5);
+    }
+
+    @Test
     void wrongCellsAreReportedWithTheirLine() {
         String broken = CSV.replace("\"10.000000\"", "\"dieci\"").replace("\"2026-07-07\"", "\"7 luglio\"");
         List<List<String>> all = lines(broken);

@@ -19,6 +19,7 @@ export type TransactionType =
   | 'SECURITIES_BUY'
   | 'SECURITIES_SELL'
   | 'INVESTMENT_INCOME'
+  | 'WITHHOLDING_TAX'
   | 'INVESTMENT_TAX'
   | 'IGNORED'
   | 'TO_REVIEW';
@@ -38,8 +39,29 @@ export interface Account {
   role: AccountRole;
   source: AccountSource;
   consentValidUntil: string | null; // data e ora ISO, es. "2027-01-05T14:35:51Z"; null nei conti manuali
+  connectionRemovedAt: string | null; // collegamento rimosso: il conto resta come storia (docs/rimuovere-un-collegamento.md)
   lastSyncAt: string | null;
   lastSyncError: string | null;
+  balance: CurrentBalance | null; // il saldo (docs/saldi.md); null se la banca non lo dà e non l'hai scritto
+  availableCredit: AvailableCredit | null; // solo per una carta di credito: il plafond che resta (docs/saldi.md, parte I)
+  logoVersion: number | null; // se ha un logo (docs/loghi.md): cambia quando cambia il logo; null senza
+}
+
+/** Il plafond che resta su una carta di credito, dato dalla banca. */
+export interface AvailableCredit {
+  amount: number;
+  date: string; // "2026-11-02"
+}
+
+/** Da dove viene un saldo: dalla banca, o scritto da te per un conto manuale. */
+export type BalanceSource = 'BANK' | 'MANUAL';
+
+/** Il saldo di un conto (docs/saldi.md). */
+export interface CurrentBalance {
+  amount: number;
+  date: string; // il giorno a cui si riferisce: "2026-10-31"
+  source: BalanceSource;
+  startDate: string | null; // solo per un conto manuale: il giorno del saldo che hai scritto, da cui si parte
 }
 
 /** Il corpo di POST /api/accounts: un conto manuale, i cui movimenti si caricano da file CSV. */
@@ -52,7 +74,7 @@ export interface ManualAccountRequest {
 }
 
 /** Una colonna con l'importo con il segno, oppure due colonne (entrate e uscite). */
-export type AmountMode = 'SINGLE' | 'SPLIT';
+export type AmountMode = 'SINGLE' | 'SPLIT' | 'UNSIGNED'; // UNSIGNED: senza segno, dal testo (docs/tinaba.md)
 
 /** Il separatore dei decimali: virgola (12,50) o punto (12.50). */
 export type DecimalSeparator = 'COMMA' | 'DOT';
@@ -73,6 +95,9 @@ export interface ImportMapping {
   descriptionColumn: number | null;
   counterpartyColumn: number | null;
   currencyColumn: number | null;
+  signColumn: number | null; // con UNSIGNED: dove cercare le parole delle entrate
+  incomeWords: string | null; // con UNSIGNED: "ricevuto, ricevuta": quelle righe sono entrate, le altre uscite
+  detailColumn: number | null; // una seconda colonna di testo, aggiunta alla descrizione (docs/tinaba.md, parte H)
 }
 
 /** Una riga letta con la mappatura, nell'anteprima. */
@@ -84,21 +109,31 @@ export interface ImportPreviewRow {
   counterparty: string | null;
 }
 
-/** La risposta di POST /api/imports/preview. */
+/** La risposta di POST /api/imports/preview (docs/importa-file.md). */
 export interface ImportPreview {
-  headers: string[];
+  headers: string[]; // la riga dell'intestazione, anche se nel file non è la prima (Fineco: sotto le note)
   sampleRows: string[][]; // le prime righe così come sono nel file
   totalRows: number;
   mapping: ImportMapping; // quella proposta dal backend, o quella mandata
-  parsedRows: ImportPreviewRow[];
+  parsedRows: ImportPreviewRow[]; // le prime righe che verranno aggiunte (o le prime del file)
   errorCount: number;
   errors: string[];
+  spreadsheet: boolean; // un file Excel: il separatore non c'entra
+  linkedAccount: boolean; // un conto collegato: si aggiungono solo le righe più vecchie della banca
+  bankFrom: string | null; // con un conto collegato, il primo giorno dei movimenti arrivati dalla banca
+  newRows: number; // le righe che verranno aggiunte
+  duplicateRows: number; // le righe già aggiunte da un'importazione precedente
+  coveredRows: number; // con un conto collegato, le righe che la banca porta da sé
+  tradeRepublic: boolean; // il file di Trade Republic: si legge da solo, senza mappatura, con gli importi netti
+  skippedRows: number; // le righe che non muovono denaro (operazioni sui titoli), che si saltano
 }
 
 /** La risposta di POST /api/imports. */
 export interface ImportResult {
   imported: number;
   duplicates: number; // righe già importate in passato, saltate
+  completed: number; // tra quelle, quante hanno avuto la descrizione completata con la seconda colonna
+  covered: number; // con un conto collegato, le righe del periodo che la banca porta da sé, saltate
 }
 
 /**
@@ -216,7 +251,7 @@ export interface Bank {
 /** Il risultato di un collegamento completato (POST /api/connections/complete). */
 export interface LinkResult {
   bank: string;
-  accounts: number; // quanti conti sono stati autorizzati
+  accounts: number; // quanti conti ha passato Enable Banking: 0 = nessuno nella lista dell'applicazione
   imported: number; // quanti movimenti nuovi sono stati importati
   errors: string[]; // gli errori di importazione, conto per conto
 }
@@ -226,6 +261,15 @@ export interface SyncRound {
   updated: number;
   failed: number;
   notDue: number;
+  accounts: AccountOutcome[]; // l'esito di ogni conto letto (docs/aggiorna-ora.md)
+}
+
+/** Com'è andata la lettura di un conto con "Aggiorna ora". */
+export interface AccountOutcome {
+  accountId: number;
+  inserted: number; // i movimenti contabilizzati nuovi
+  pending: number; // i movimenti in attesa che la banca dà adesso
+  error: string | null; // la frase dell'errore, o null se la lettura è riuscita
 }
 
 /** Come una regola confronta il testo (enum MatchMode nel backend). */
@@ -256,16 +300,85 @@ export interface Rule extends RuleRequest {
 
 /** Il risultato della prova di una regola. */
 export interface RulePreview {
-  matches: number;
+  matches: number; // a quanti movimenti corrisponde il testo
+  applies: number; // quanti ne classificherebbe davvero
+  blockers: RuleBlocker[]; // per gli altri, chi vince al suo posto
   examples: Transaction[];
 }
 
+/** Chi vince al posto della regola provata, e su quanti movimenti. */
+export interface RuleBlocker {
+  reason: 'RULE' | 'MANUAL' | 'TRANSFER'; // una regola che viene prima, una scelta a mano, un trasferimento
+  rule: string | null; // il nome della regola (solo RULE)
+  priority: number | null; // la sua priorità (solo RULE)
+  movements: number;
+}
+
 /** Lo stato della configurazione di Enable Banking (GET /api/setup). */
+/** GET /api/auth/status (Fase 4, passo 3: docs/46): com'è protetta l'app, sei dentro, arrivi dal PC? */
+export interface AuthStatus {
+  pinSet: boolean; // il PIN c'è: si chiede su ogni dispositivo
+  withoutPin: boolean; // il proprietario ha scelto "senza PIN": si entra solo dal PC
+  authenticated: boolean; // questa richiesta è "dentro"
+  local: boolean; // l'app è aperta dal PC (la porta 8000 di nginx)
+}
+
+/** Il codice di recupero, mostrato una sola volta (alla creazione del PIN, e dopo un recupero). */
+export interface RecoveryCode {
+  recoveryCode: string;
+}
+
 export interface SetupStatus {
   configured: boolean;
   source: 'DASHBOARD' | 'ENV' | null; // da dove arrivano le credenziali in uso
   applicationId: string | null;
-  redirectUrl: string; // da registrare nell'applicazione Enable Banking
+  redirectUrl: string | null; // il primo degli indirizzi qui sotto; null se non ce n'è nessuno (docs/47, parte Q)
+  // Gli indirizzi di ritorno da registrare nell'applicazione Enable Banking: uno per ogni nome con cui si apre l'app
+  // (dal PC localhost, dal telefono il nome Tailscale: docs/47, parte I).
+  redirectUrls: string[];
+}
+
+/** GET /api/version: la versione dell'app (docs/50, parte B). "sviluppo" se è costruita dal codice. */
+/** GET /api/version/update: c'è una versione nuova? (docs/50, parte J) */
+export interface UpdateStatus {
+  currentVersion: string; // "sviluppo" se costruita dal codice
+  checkEnabled: boolean; // false: controllo spento nel .env, o app costruita dal codice
+  available: boolean; // true se l'ultima pubblicata è più nuova
+  latestVersion: string | null;
+  releaseUrl: string | null; // la pagina della versione su GitHub (solo quella di WalletTracker)
+  notes: string | null; // le novità, come testo
+  checkedAt: string | null;
+}
+
+export interface AppVersion {
+  version: string;
+}
+
+/** Un file di backup (Fase 4, passo 5: docs/48 parte Q). */
+export interface BackupFile {
+  name: string;
+  type: 'manuale' | 'automatico' | 'prima-del-ripristino' | 'prima-dell-aggiornamento';
+  createdAt: string; // ISO, quando è stato scritto
+  sizeBytes: number;
+}
+
+/** GET /api/backups: lo stato dei backup, che fa il container "backup" (docs/48, parte Q). */
+export interface BackupStatus {
+  available: boolean; // l'app è installata con Docker: c'è il container dei backup
+  serviceRunning: boolean; // il container ha dato segni di vita da poco
+  automaticEnabled: boolean; // c'è la password: il backup di ogni notte è acceso
+  backupTime: string | null; // es. "03:15"
+  keep: number; // quanti backup automatici si tengono
+  keepManual: number; // quanti backup fatti a mano si tengono (0 se il container non lo dice)
+  keepBefore: number; // quanti backup di prima di un aggiornamento o di un ripristino si tengono
+  inProgress: boolean; // un backup chiesto o in corso
+  lastErrorAt: string | null;
+  lastError: string | null; // l'ultimo errore, se è più recente dell'ultimo backup riuscito
+  lastSuccessAt: string | null;
+  attention: boolean; // qualcosa da sistemare: l'app mostra un avviso
+  backups: BackupFile[]; // dal più nuovo
+  canDownload: boolean; // la richiesta arriva dal server: i backup si possono scaricare
+  serverDirectory: string | null; // BACKUP_DIR del .env, o null: la cartella "backup" di WalletTracker
 }
 
 /** Come sta andando un budget (enum BudgetStatus nel backend). */
@@ -579,7 +692,7 @@ export interface CategoryChange {
 
 /** Analisi (docs/38): che cosa si guarda, il periodo delle barre, come raggruppare. */
 export type Metric = 'EXPENSES' | 'INCOME' | 'NET';
-export type ExplorePeriod = 'WEEK' | 'MONTH' | 'SIX_MONTHS' | 'YEAR';
+export type ExplorePeriod = 'WEEK' | 'MONTH' | 'SIX_MONTHS' | 'YEAR' | 'YEAR_TO_DATE'; // YEAR = 12 mesi; YEAR_TO_DATE = da gennaio
 export type GroupBy = 'CATEGORY' | 'MERCHANT' | 'ACCOUNT';
 
 /** Una barra del grafico: un giorno, una settimana o un mese. */
@@ -641,4 +754,93 @@ export interface CategoryOverview {
   months: { month: string; value: number }[];
   merchants: ExploreGroup[];
   budget: Budget | null;
+}
+
+// ---- Investimenti (docs/investimenti.md) ----
+
+/** Quanto indietro guardare: 12 mesi, 24 mesi, tutta la storia. */
+export type InvestmentPeriod = 'YEAR' | 'YEAR_TO_DATE' | 'TWO_YEARS' | 'ALL'; // YEAR = 12 mesi; YEAR_TO_DATE = da gennaio
+
+/** Un mese degli investimenti. */
+export interface InvestmentMonth {
+  month: string; // "2026-10"
+  bought: number; // acquisti di titoli del mese (positivo)
+  sold: number; // quanto è rientrato dalle vendite di titoli nel mese (positivo)
+  investedCumulative: number; // acquisti meno vendite dall'inizio della storia a questo mese: la linea del grafico
+  transferred: number; // bonifici verso i conti di investimento, meno quelli tornati indietro: le barre
+  income: number; // cedole, dividendi e interessi, lordi (come li paga la banca)
+  withholding: number; // le ritenute sulle rendite (tipo WITHHOLDING_TAX), di solito negativo
+  otherTaxes: number; // le altre tasse sugli investimenti (bollo, capital gain...), di solito negativo
+}
+
+/** Una voce di un elenco delle rendite: "Cedole", o un titolo. */
+export interface InvestmentGroup {
+  name: string;
+  amount: number;
+  movements: number;
+  accountId?: number | null; // quando la voce è un conto (una rendita senza il nome di un titolo)...
+  search?: string | null; // ...e le parole fisse del testo, per trovare proprio quei movimenti
+}
+
+/**
+ * GET /api/investments (docs/investimenti.md, parte I): quanto hai investito in titoli (acquisti meno vendite), i
+ * bonifici verso i conti di investimento e le rendite. Non quanto valgono oggi gli investimenti.
+ */
+export interface Investments {
+  currency: string;
+  currencies: string[];
+  period: InvestmentPeriod;
+  from: string; // "2025-11"
+  to: string;
+  investedTotal: number;
+  investedThisYear: number;
+  investedThisMonth: number;
+  transferredTotal: number;
+  incomeThisYear: number;
+  boughtInPeriod: number;
+  soldInPeriod: number;
+  transferredInPeriod: number;
+  incomeInPeriod: number; // lordo
+  withholdingInPeriod: number; // le ritenute: lordo più ritenute dà il netto
+  otherTaxesInPeriod: number; // bollo, capital gain, Tobin tax...
+  months: InvestmentMonth[];
+  incomeByType: InvestmentGroup[];
+  incomeBySource: InvestmentGroup[];
+  otherTaxesByType: InvestmentGroup[]; // le altre tasse per categoria
+  trades: Transaction[]; // acquisti e vendite del periodo, dal più recente
+  transfers: Transaction[]; // i bonifici del periodo che fanno le barre, dal più recente
+  onlyTransfers: string[]; // conti di investimento con bonifici ma senza nessun acquisto: l'investito non si vede
+  cash: InvestmentCash[]; // il saldo di ogni conto di investimento: la liquidità, non investita in titoli
+}
+
+/** Il saldo di un conto di investimento (docs/saldi.md, parte D). */
+export interface InvestmentCash {
+  accountId: number;
+  account: string;
+  manual: boolean;
+  balance: CurrentBalance | null;
+}
+
+/** Un collegamento a una banca, nella pagina Conti (GET /api/connections, docs/rimuovere-un-collegamento.md). */
+export interface BankConnection {
+  id: number;
+  bank: string;
+  country: string;
+  validUntil: string; // data e ora ISO della scadenza del consenso
+  removedAt: string | null; // rimosso dall'utente: i conti restano come storia
+  accounts: number;
+  accountList: LinkedAccount[]; // i conti del collegamento: si rimuovono tutti insieme
+}
+
+/** Un conto di un collegamento: il nome e le ultime quattro cifre dell'IBAN (null per una carta senza IBAN). */
+export interface LinkedAccount {
+  name: string;
+  ibanEnd: string | null;
+}
+
+/** L'esito di DELETE /api/connections/{id}. */
+export interface ConnectionRemoval {
+  bank: string;
+  accountsKept: number; // 0: il collegamento era vuoto ed è stato cancellato
+  revoked: boolean; // false: il consenso su Enable Banking va chiuso dal pannello
 }
