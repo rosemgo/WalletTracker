@@ -130,18 +130,18 @@ class CompletionControllerTest {
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$.bankFrom").isEqualTo("2026-07-01");
                     json.assertThat().extractingPath("$.toComplete.length()").isEqualTo(5);
-                    json.assertThat().extractingPath("$.toAdd.length()").isEqualTo(3);
+                    json.assertThat().extractingPath("$.toAdd.length()").isEqualTo(4);
                     json.assertThat().extractingPath("$.toAdd[0].amount").isEqualTo(-1003.0);
-                    // Il 29 giugno è a due giorni dal 1° luglio: potrebbe essere un movimento della banca con la data
-                    // spostata, quindi non si aggiunge. Si mostra.
-                    json.assertThat().extractingPath("$.rowsWithoutMovement.length()").isEqualTo(1);
-                    json.assertThat().extractingPath("$.rowsWithoutMovement[0].date").isEqualTo("2026-06-29");
+                    // Il 29 giugno è a due giorni dal 1° luglio, ma nessun movimento della banca ha quei 5,00 €: è un
+                    // movimento che la banca non ha dato, e si aggiunge (parte M). Prima si scartava, e si perdeva.
+                    json.assertThat().extractingPath("$.toAdd[3].date").isEqualTo("2026-06-29");
+                    json.assertThat().extractingPath("$.rowsWithoutMovement.length()").isEqualTo(0);
                 });
 
         assertThat(post("/api/imports/completion", TradeRepublicCsvTest.LONG_CSV)).hasStatusOk().bodyJson()
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$.completed").isEqualTo(5);
-                    json.assertThat().extractingPath("$.added").isEqualTo(3);
+                    json.assertThat().extractingPath("$.added").isEqualTo(4);
                 });
 
         BankTransaction buy = find("2026-05-04", "-1003.00");
@@ -157,9 +157,25 @@ class CompletionControllerTest {
                 .satisfies(json -> {
                     json.assertThat().extractingPath("$.completed").isEqualTo(0);
                     json.assertThat().extractingPath("$.added").isEqualTo(0);
-                    json.assertThat().extractingPath("$.alreadyComplete").isEqualTo(8);
+                    json.assertThat().extractingPath("$.alreadyComplete").isEqualTo(9);
                 });
-        assertThat(transactionRepository.count()).isEqualTo(6 + 3);
+        assertThat(transactionRepository.count()).isEqualTo(6 + 4);
+    }
+
+    @Test
+    void aRowJustBeforeTheBankWithTheSameAmountIsTheSameMovementWithAShiftedDate() {
+        // La banca ha un movimento di 5,00 € il 1° luglio (il suo primo giorno); nel file c'è il 29 giugno. È la
+        // stessa operazione con la data spostata: l'abbinamento la completa, e non nasce un doppione.
+        bare("2026-07-01", "5.00");
+
+        assertThat(post("/api/imports/completion", TradeRepublicCsvTest.LONG_CSV)).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.completed").isEqualTo(6);
+                    json.assertThat().extractingPath("$.added").isEqualTo(3); // solo maggio e il 1° giugno
+                });
+        BankTransaction interest = find("2026-07-01", "5.00");
+        assertThat(interest.getDescription()).isEqualTo("Interest payment for payout collection bbbb-2222");
+        assertThat(transactionRepository.count()).isEqualTo(7 + 3);
     }
 
     @Test

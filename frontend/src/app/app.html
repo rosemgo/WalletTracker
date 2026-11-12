@@ -83,21 +83,33 @@
 
       <!-- L'app installabile (docs/42, parte E): senza rete, e quando c'è una versione nuova. role="status": i lettori
          di schermo leggono l'avviso quando compare, senza spostare il punto in cui si trova chi li usa. -->
-      @if (!status.online()) {
-        <div class="banner offline" role="status">
-          Senza rete: stai vedendo gli ultimi dati scaricati, e per ora non si possono fare
-          modifiche.
+      @if (!status.online() && !dismissed.isDismissed('offline')) {
+        <div class="banner offline dismissible" role="status">
+          <span>
+            Senza rete: stai vedendo gli ultimi dati scaricati, e per ora non si possono fare
+            modifiche.
+          </span>
+          <app-close-button
+            label="Chiudi l'avviso senza rete"
+            (closed)="dismissed.dismissForNow('offline')"
+          />
         </div>
       }
-      @if (status.updateReady()) {
-        <div class="banner update" role="status">
-          È pronta una nuova versione di WalletTracker.
-          <button type="button" class="link" (click)="status.reload()">Aggiorna</button>
+      @if (status.updateReady() && !dismissed.isDismissed('update-ready')) {
+        <div class="banner update dismissible" role="status">
+          <span>
+            È pronta una nuova versione di WalletTracker.
+            <button type="button" class="link" (click)="status.reload()">Aggiorna</button>
+          </span>
+          <app-close-button
+            label="Chiudi l'avviso della versione pronta"
+            (closed)="dismissed.dismissForNow('update-ready')"
+          />
         </div>
       }
       <!-- Una versione nuova pubblicata (docs/50, parte J): si chiude, e ricompare al prossimo ingresso nell'app. -->
       @if (updates.bannerVersion(); as latest) {
-        <div class="banner release" role="status" data-testid="release-banner">
+        <div class="banner release dismissible" role="status" data-testid="release-banner">
           <span>
             È disponibile WalletTracker <strong>{{ latest }}</strong
             >.
@@ -105,26 +117,37 @@
               >Che cosa cambia e come aggiornare</a
             >.
           </span>
-          <button
-            type="button"
-            class="close"
-            aria-label="Chiudi l'avviso della versione nuova"
-            (click)="updates.dismiss()"
-          >
-            ×
-          </button>
+          <app-close-button
+            label="Chiudi l'avviso della versione nuova"
+            (closed)="updates.dismiss()"
+          />
         </div>
       }
       <!-- I backup (docs/48, parte Q): un avviso se c'è qualcosa da sistemare. Il testo dice che cosa. -->
       @if (backupWarning(); as warning) {
-        <div class="banner" role="status">
-          {{ warning }} <a routerLink="/impostazioni" fragment="backup">Apri le Impostazioni</a>.
-        </div>
+        @if (!dismissed.isDismissed('backup:' + warning)) {
+          <div class="banner dismissible" role="status" data-testid="backup-banner">
+            <span>
+              {{ warning }}
+              <a routerLink="/impostazioni" fragment="backup">Apri le Impostazioni</a>.
+            </span>
+            <app-close-button
+              label="Chiudi l'avviso dei backup"
+              (closed)="dismissed.dismiss('backup:' + warning)"
+            />
+          </div>
+        }
       }
-      @if (setup.status()?.configured === false) {
-        <div class="banner">
-          Per iniziare, configura il collegamento con Enable Banking:
-          <a routerLink="/impostazioni">apri le Impostazioni</a>.
+      @if (setup.status()?.configured === false && !dismissed.isDismissed('setup-not-configured')) {
+        <div class="banner dismissible" data-testid="setup-banner">
+          <span>
+            Per iniziare, configura il collegamento con Enable Banking:
+            <a routerLink="/impostazioni">apri le Impostazioni</a>.
+          </span>
+          <app-close-button
+            label="Chiudi l'avviso della configurazione"
+            (closed)="dismissed.dismiss('setup-not-configured')"
+          />
         </div>
       }
 

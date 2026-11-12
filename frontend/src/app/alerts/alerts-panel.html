@@ -1,6 +1,6 @@
 @if (alerts().length > 0) {
   <section class="alerts" aria-label="Avvisi">
-    @for (alert of alerts(); track $index) {
+    @for (alert of alerts(); track alert) {
       <!-- Lo stato: icona + testo, come nei budget. CRITICAL = rosso ✕, WARNING = giallo !. -->
       <div class="alert" [class]="'alert ' + alert.severity.toLowerCase()">
         <span
@@ -9,7 +9,7 @@
         >
           {{ alert.severity === 'CRITICAL' ? '✕' : '!' }}
         </span>
-        <div>
+        <div class="alert-body">
           @switch (alert.kind) {
             @case ('CONSENT_EXPIRED') {
               <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
@@ -39,6 +39,7 @@
             }
           }
         </div>
+        <app-close-button label="Chiudi questo avviso" (closed)="close(alert)" />
       </div>
     }
   </section>

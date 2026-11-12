@@ -168,6 +168,33 @@ class InvestmentServiceTest {
     }
 
     @Test
+    void aDossierThatReceivedItsSecuritiesFromAnotherAccountIsNotOnlyTransfers() {
+        // Come il secondo dossier Fineco: i titoli arrivano dall'altro conto (giro titoli, trasferimento interno),
+        // poi cedole con la loro ritenuta, il bollo e dei prelievi verso il conto corrente. Nessun acquisto, ma i
+        // movimenti ci sono: niente avviso (parte X).
+        Account dossier = accountRepository.save(Account.manual("Banca Gamma", "Dossier", null, "EUR",
+                AccountRole.INVESTMENT));
+        save(dossier, "2026-03-25", "60.80", TransactionType.INTERNAL_TRANSFER,
+                "Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000", null);
+        save(dossier, "2026-04-01", "1237.50", TransactionType.INVESTMENT_INCOME, "Ced.su 55.000,000 BTP-1OT53 4,5%",
+                "Cedole");
+        save(dossier, "2026-04-01", "-154.69", TransactionType.WITHHOLDING_TAX,
+                "Rit.ced.su 55.000,000 BTP-1OT53 4,5%", null);
+        save(dossier, "2026-05-20", "-3000", TransactionType.INVESTMENT_WITHDRAWAL, "Trasferimento a mio conto", null);
+        // Un altro conto con un prelievo e solo il bollo: anche il bollo dice che i titoli ci sono.
+        Account stamped = accountRepository.save(Account.manual("Banca Delta", "Dossier", null, "EUR",
+                AccountRole.INVESTMENT));
+        save(stamped, "2026-04-09", "-22.10", TransactionType.INVESTMENT_TAX, "Addebito imposta di bollo Dossier", null);
+        save(stamped, "2026-05-20", "-500", TransactionType.INVESTMENT_WITHDRAWAL, "Trasferimento a mio conto", null);
+        classificationService.classifyAll();
+
+        Overview o = investmentService.overview(Period.YEAR, null, TODAY);
+
+        // Resta solo Fondo Beta, che ha soltanto un versamento.
+        assertThat(o.onlyTransfers()).containsExactly(fund.label());
+    }
+
+    @Test
     void everythingStartsFromTheFirstInvestment() {
         Overview o = investmentService.overview(Period.ALL, null, TODAY);
 

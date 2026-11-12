@@ -97,9 +97,9 @@
           </p>
           @if (selectedIsTradeRepublic()) {
             <p data-testid="trade-republic-hint">
-              Per Trade Republic c'è anche
-              <a routerLink="/importa/completa">Completa i movimenti</a>, che aggiunge le causali ai
-              movimenti già arrivati senza testo.
+              Con il file di Trade Republic aggiungo anche controparte e causale ai movimenti
+              arrivati dalla banca senza testo, come
+              <a routerLink="/importa/completa">Completa i movimenti</a>.
             </p>
           }
         } @else {
@@ -143,6 +143,13 @@
                   : p.skippedRows +
                     ' righe sono operazioni sui titoli (azioni trasferite, diritti) e non muovono denaro: le salto.'
               }}
+            </li>
+          }
+          @if (p.linkedAccount) {
+            <li data-testid="trade-republic-complete">
+              Come <a routerLink="/importa/completa">Completa i movimenti</a>: i movimenti arrivati
+              dalla banca senza testo ricevono <strong>controparte e causale</strong> dal file, e
+              quelli più vecchi della banca si aggiungono. Data e importo della banca non cambiano.
             </li>
           }
         </ul>
@@ -325,9 +332,11 @@
       @if (p.parsedRows.length > 0) {
         <p class="secondary">
           {{
-            p.newRows > 0
-              ? 'Le prime righe, come verranno aggiunte:'
-              : 'Le prime righe del file, come si leggono:'
+            p.completeRows > 0
+              ? 'I movimenti che cambiano (aggiunti o completati), per data:'
+              : p.newRows > 0
+                ? 'Le prime righe, come verranno aggiunte:'
+                : 'Le prime righe del file, come si leggono:'
           }}
         </p>
         <div class="table-scroll">

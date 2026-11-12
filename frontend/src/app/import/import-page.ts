@@ -125,7 +125,9 @@ export class ImportPage implements OnInit {
       preview !== null &&
       preview.errorCount === 0 &&
       preview.parsedRows.length > 0 &&
-      (preview.newRows > 0 || (!preview.linkedAccount && preview.duplicateRows > 0)) &&
+      (preview.newRows > 0 ||
+        preview.completeRows > 0 ||
+        (!preview.linkedAccount && preview.duplicateRows > 0)) &&
       !this.importing()
     );
   });
@@ -359,6 +361,9 @@ export class ImportPage implements OnInit {
       return `${text}${skipped}.`;
     }
     const from = this.datePipe.transform(p.bankFrom, 'd MMMM y');
+    if (p.tradeRepublic) {
+      return this.tradeRepublicSummary(p, from ?? '', skipped);
+    }
     const added =
       p.newRows === 0
         ? 'nessun movimento da aggiungere'
@@ -381,8 +386,52 @@ export class ImportPage implements OnInit {
     return text;
   }
 
+  /**
+   * Il file di Trade Republic in un conto collegato, che fa come "Completa i movimenti" (docs/importa-file.md, parte I):
+   * "Il file ha 92 righe: nessun movimento più vecchio del 9 luglio 2026 da aggiungere; 4 movimenti arrivati dalla banca
+   * ricevono controparte e causale; 81 erano già fatte; 7 sono operazioni sui titoli senza denaro, che si saltano."
+   */
+  private tradeRepublicSummary(p: ImportPreview, from: string, skipped: string): string {
+    const n = (count: number, one: string, many: string) =>
+      count === 1 ? one : `${count} ${many}`;
+    let text = `Il file ha ${n(p.totalRows, '1 riga', 'righe')}: `;
+    text +=
+      p.newRows === 0
+        ? `nessun movimento più vecchio del ${from} da aggiungere`
+        : `${n(p.newRows, '1 movimento più vecchio', 'movimenti più vecchi')} del ${from} ` +
+          (p.newRows === 1 ? 'si aggiunge' : 'si aggiungono');
+    if (p.completeRows > 0) {
+      text += `; ${n(
+        p.completeRows,
+        '1 movimento arrivato dalla banca riceve',
+        'movimenti arrivati dalla banca ricevono',
+      )} controparte e causale`;
+    }
+    if (p.duplicateRows > 0) {
+      text += `; ${n(p.duplicateRows, '1 era già fatta', 'erano già fatte')}`;
+    }
+    if (p.coveredRows > 0) {
+      text += `; ${n(
+        p.coveredRows,
+        '1 è nel periodo della banca ma senza un movimento (forse arriverà con il prossimo aggiornamento)',
+        'sono nel periodo della banca ma senza un movimento (forse arriveranno con il prossimo aggiornamento)',
+      )}`;
+    }
+    text += `${skipped}.`;
+    if (p.newRows === 0 && p.completeRows === 0) {
+      text += " Questo file è già tutto nell'app.";
+    }
+    return text;
+  }
+
   /** "Aggiungi 43 movimenti" (conto collegato) o "Importa 75 righe" (conto manuale). */
   protected importLabel(p: ImportPreview): string {
+    if (p.linkedAccount && p.completeRows > 0) {
+      const complete = p.completeRows === 1 ? '1 movimento' : `${p.completeRows} movimenti`;
+      return p.newRows === 0
+        ? `Completa ${complete}`
+        : `Aggiungi ${p.newRows} e completa ${complete}`;
+    }
     if (p.linkedAccount) {
       if (p.newRows === 0) {
         return 'Niente da aggiungere';

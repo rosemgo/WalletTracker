@@ -78,6 +78,7 @@ function previewOf(mapping: ImportMapping, errors: string[] = []): ImportPreview
     coveredRows: 0,
     tradeRepublic: false,
     skippedRows: 0,
+    completeRows: 0,
   };
 }
 
@@ -358,6 +359,45 @@ describe('ImportPage', () => {
     await fixture.whenStable();
 
     expect(imports.map((i) => i.accountId)).toEqual([5]);
+  });
+
+  it('the Trade Republic file in a linked account completes the movements of the bank too', async () => {
+    accounts = [...accounts, account(7, 'ENABLE_BANKING', 'Trade Republic Bank GmbH')];
+    queryConto = '7';
+    nextPreview = (mapping) =>
+      of({
+        ...previewOf(mapping ?? GUESSED),
+        totalRows: 92,
+        linkedAccount: true,
+        bankFrom: '2026-07-09',
+        newRows: 0,
+        completeRows: 4,
+        duplicateRows: 81,
+        tradeRepublic: true,
+        skippedRows: 7,
+      });
+    importResponse = of({ imported: 0, duplicates: 81, completed: 4, covered: 0 });
+    const { fixture, page } = await open();
+    await chooseFile(fixture, page);
+
+    expect(page.querySelector('[data-testid="trade-republic-complete"]')?.textContent).toContain(
+      'controparte e causale',
+    );
+    expect(page.querySelector('[data-testid="import-summary"]')?.textContent?.trim()).toBe(
+      'Il file ha 92 righe: nessun movimento più vecchio del 9 luglio 2026 da aggiungere; ' +
+        '4 movimenti arrivati dalla banca ricevono controparte e causale; 81 erano già fatte; ' +
+        '7 sono operazioni sui titoli senza denaro, che si saltano.',
+    );
+    const button = Array.from(page.querySelectorAll('.toolbar button'))[0] as HTMLButtonElement;
+    expect(button.textContent?.trim()).toBe('Completa 4 movimenti');
+    expect(button.disabled).toBe(false);
+    button.click();
+    await fixture.whenStable();
+
+    expect(imports.map((i) => i.accountId)).toEqual([7]);
+    expect(page.textContent).toContain(
+      'a 4 movimenti già presenti è stata completata la descrizione',
+    );
   });
 
   it('an Excel file has no separator to choose', async () => {

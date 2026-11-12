@@ -184,6 +184,41 @@ describe('App', () => {
     localStorage.clear();
   });
 
+  it('the backup and setup banners close, and stay closed until their text changes', async () => {
+    localStorage.clear();
+    configured = false;
+    backup = { attention: true, automaticEnabled: false };
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+
+    for (const id of ['backup-banner', 'setup-banner']) {
+      const close = page.querySelector(`[data-testid="${id}"] button.close-button`);
+      (close as HTMLButtonElement).click();
+      await fixture.whenStable();
+      expect(page.querySelector(`[data-testid="${id}"]`)).toBeNull();
+    }
+
+    // Riaperta l'app: restano chiusi. Un altro problema dei backup (un altro testo) è un avviso nuovo.
+    TestBed.resetTestingModule();
+    configure();
+    const again = TestBed.createComponent(App);
+    await again.whenStable();
+    expect((again.nativeElement as HTMLElement).querySelector('.banner')).toBeNull();
+    backup = { attention: true, serviceRunning: false };
+    TestBed.resetTestingModule();
+    configure();
+    const third = TestBed.createComponent(App);
+    await third.whenStable();
+    expect(
+      (third.nativeElement as HTMLElement).querySelector('[data-testid="backup-banner"]')
+        ?.textContent,
+    ).toContain('non risponde');
+    backup = {};
+    configured = true;
+    localStorage.clear();
+  });
+
   it('announces a new published version; the banner closes, and comes back at the next entry', async () => {
     update = { available: true, latestVersion: '1.1.0' };
     const fixture = TestBed.createComponent(App);
@@ -194,7 +229,7 @@ describe('App', () => {
     expect(banner()?.textContent).toContain('È disponibile WalletTracker 1.1.0');
     expect(banner()?.querySelector('a')?.getAttribute('href')).toBe('/impostazioni#informazioni');
 
-    (banner()?.querySelector('button.close') as HTMLButtonElement).click();
+    (banner()?.querySelector('button.close-button') as HTMLButtonElement).click();
     await fixture.whenStable();
     expect(banner()).toBeNull();
 

@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -53,7 +54,10 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p><b>Il file di Trade Republic</b> (l'esportazione delle transazioni) si riconosce dalle colonne e si legge con
  * {@link TradeRepublicCsv}, non con la mappatura: le righe dei titoli senza denaro si saltano e l'importo è quello
- * netto ({@code amount + fee + tax}), come sul conto (docs/importa-file.md, parte H).
+ * netto ({@code amount + fee + tax}), come sul conto (docs/importa-file.md, parte H). In un conto <b>collegato</b> fa
+ * quello che fa "Completa i movimenti" ({@link CompletionService}): aggiunge le righe più vecchie della banca e dà
+ * controparte e causale ai movimenti arrivati dalla banca senza testo (parte I). Le due pagine danno lo stesso
+ * risultato.
  */
 @Service
 public class CsvImportService {
@@ -68,15 +72,21 @@ public class CsvImportService {
     private final AccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
+    private final CompletionService completionService;
     private final JsonMapper jsonMapper;
 
     public CsvImportService(AccountRepository accountRepository, BankTransactionRepository transactionRepository,
-            ClassificationService classificationService, JsonMapper jsonMapper) {
+            ClassificationService classificationService, CompletionService completionService, JsonMapper jsonMapper) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
+        this.completionService = completionService;
         this.jsonMapper = jsonMapper;
     }
+
+    /** Il messaggio per un conto collegato che non ha ancora movimenti dalla banca: non si sa da che giorno li porta. */
+    private static final String NO_BANK_MOVEMENTS = "Questo conto non ha ancora movimenti arrivati dalla banca: "
+            + "aggiornalo prima (pagina Conti), così si sa da quale giorno li porta la banca e quali aggiungere dal file.";
 
     /**
      * Il file letto: intestazione, righe, separatore.
@@ -108,9 +118,15 @@ public class CsvImportService {
      * @param fileIds per ogni riga letta, l'identificativo dell'operazione nel file (il {@code transaction_id} di
      *                Trade Republic), o null: se c'è, l'impronta si fa con quello (vedi {@link #keyFor})
      * @param skipped le righe saltate perché non muovono denaro (le operazioni sui titoli di Trade Republic)
+     * @param tradeRepublic il file di Trade Republic così come lo legge TradeRepublicCsv, o null per gli altri file
      */
     private record Reading(List<ParsedRow> parsed, List<List<String>> rawRows, int errorCount, List<String> errors,
-            List<String> fileIds, int skipped) {
+            List<String> fileIds, int skipped, TradeRepublicCsv.Reading tradeRepublic) {
+
+        /** Il file di Trade Republic, senza errori e con righe di denaro: in un conto collegato si completa. */
+        boolean completable() {
+            return tradeRepublic != null && errorCount == 0 && !tradeRepublic.rows().isEmpty();
+        }
     }
 
     /** L'anteprima, per il conto scelto. Senza mappatura ne propone una (ColumnGuesser). */
@@ -131,7 +147,10 @@ public class CsvImportService {
             reading = readRows(file, used, account.getCurrency());
         } catch (ResponseStatusException e) {
             return new Preview(file.headers(), samples, file.rows().size(), used, List.of(), file.rows().size(),
-                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0);
+                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0, 0);
+        }
+        if (linked && reading.completable()) {
+            return completionPreview(file, samples, used, completionPlan(account, reading), reading.skipped());
         }
         // Le righe mostrate: quelle che si aggiungerebbero (le prime). Se non se ne aggiunge nessuna (o il file ha
         // errori), le prime del file, così si vede almeno come si leggono.
@@ -154,7 +173,36 @@ public class CsvImportService {
                 .toList();
         return new Preview(file.headers(), samples, file.rows().size(), used, parsedRows, reading.errorCount(),
                 reading.errors(), file.spreadsheet(), linked, bankFrom, toAdd, duplicates, covered,
-                file.tradeRepublic(), reading.skipped());
+                file.tradeRepublic(), reading.skipped(), 0);
+    }
+
+    /** Il piano di "Completa i movimenti" per il file di Trade Republic in un conto collegato. */
+    private CompletionService.Plan completionPlan(Account account, Reading reading) {
+        CompletionService.Plan plan = completionService.plan(account, reading.tradeRepublic());
+        if (plan.bankFrom() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NO_BANK_MOVEMENTS);
+        }
+        return plan;
+    }
+
+    /**
+     * L'anteprima del file di Trade Republic in un conto collegato, con i numeri di "Completa i movimenti": le righe
+     * che si aggiungono (più vecchie della banca), i movimenti che ricevono i testi, quelle già fatte, quelle senza
+     * movimento (del periodo della banca). Le righe mostrate sono quelle che cambiano qualcosa, per data.
+     */
+    private Preview completionPreview(CsvFile file, List<List<String>> samples, ImportMapping used,
+            CompletionService.Plan plan, int skipped) {
+        ImportDtos.CompletionPreview c = completionService.preview(plan);
+        List<PreviewRow> changing = new ArrayList<>();
+        c.toAdd().forEach(r -> changing.add(new PreviewRow(r.date(), r.amount(), r.currency(), r.description(),
+                r.counterparty())));
+        c.toComplete().forEach(r -> changing.add(new PreviewRow(r.date(), r.amount(), r.currency(), r.description(),
+                r.counterparty())));
+        changing.sort(Comparator.comparing(PreviewRow::date));
+        return new Preview(file.headers(), samples, file.rows().size(), used,
+                changing.stream().limit(PREVIEW_ROWS).toList(), 0, List.of(), file.spreadsheet(), true,
+                plan.bankFrom(), c.toAdd().size(), c.alreadyComplete(), c.rowsWithoutMovement().size(), true, skipped,
+                c.toComplete().size());
     }
 
     /**
@@ -171,6 +219,13 @@ public class CsvImportService {
         if (reading.errorCount() > 0) {
             throw new ImportRejectedException(reading.errorCount() + " righe non si possono leggere: correggi la "
                     + "mappatura o il file. Non è stato importato niente.", reading.errors());
+        }
+        if (!account.isManual() && reading.completable()) {
+            // Il file di Trade Republic in un conto collegato: come "Completa i movimenti" (parte I).
+            CompletionService.Plan completion = completionPlan(account, reading);
+            int withoutMovement = completion.withoutMovement().size();
+            ImportDtos.CompletionResult done = completionService.complete(completion);
+            return new ImportResult(done.added(), done.alreadyComplete(), done.completed(), withoutMovement);
         }
         Plan plan = plan(account, reading);
         List<BankTransaction> toSave = new ArrayList<>();
@@ -222,9 +277,7 @@ public class CsvImportService {
         if (linked) {
             bankFrom = bankFrom(account);
             if (bankFrom == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Questo conto non ha ancora movimenti "
-                        + "arrivati dalla banca: aggiornalo prima (pagina Conti), così si sa da quale giorno li porta "
-                        + "la banca e quali aggiungere dal file.");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NO_BANK_MOVEMENTS);
             }
             edge = transactionRepository.findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(
                     account, TransactionStatus.BOOKED, bankFrom, bankFrom.plusDays(DAYS_TOLERANCE)).stream()
@@ -344,7 +397,7 @@ public class CsvImportService {
                 }
             }
         }
-        return new Reading(parsed, rawRows, errorCount, errors, fileIds, 0);
+        return new Reading(parsed, rawRows, errorCount, errors, fileIds, 0, null);
     }
 
     /**
@@ -364,7 +417,7 @@ public class CsvImportService {
             fileIds.add(row.transactionId());
         }
         List<String> errors = read.errors().subList(0, Math.min(read.errors().size(), MAX_ERRORS));
-        return new Reading(parsed, rawRows, read.errors().size(), errors, fileIds, read.skipped());
+        return new Reading(parsed, rawRows, read.errors().size(), errors, fileIds, read.skipped(), read);
     }
 
     /** Le colonne indispensabili devono essere indicate, e ogni colonna indicata deve esistere nel file. */

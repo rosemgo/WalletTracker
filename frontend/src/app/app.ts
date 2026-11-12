@@ -13,6 +13,8 @@ import { MORE_PAGES, NavItem } from './more/more-pages';
 import { PrivacyStore } from './privacy/privacy-store';
 import { AppStatus } from './pwa/app-status';
 import { ThemeStore } from './theme/theme-store';
+import { CloseButton } from './ui/close-button';
+import { DismissedNotices } from './ui/dismissed-notices';
 
 /**
  * Le sezioni principali, nella barra in basso del telefono e in cima alla colonna del PC (docs/35, parte D).
@@ -52,7 +54,7 @@ export const MORE_SECTION: NavItem = {
  */
 @Component({
   selector: 'app-root',
-  imports: [NgTemplateOutlet, RouterOutlet, RouterLink, RouterLinkActive, PinPage],
+  imports: [CloseButton, NgTemplateOutlet, RouterOutlet, RouterLink, RouterLinkActive, PinPage],
   templateUrl: './app.html',
 })
 export class App implements OnInit {
@@ -62,6 +64,12 @@ export class App implements OnInit {
   private readonly backups = inject(BackupStore);
   /** C'è una versione nuova? (docs/50, parte J) */
   protected readonly updates = inject(UpdateStore);
+  /**
+   * Le strisce in cima si chiudono con la crocetta (docs/avvisi-chiudibili.md). Quelle di uno stato passeggero
+   * (senza rete, versione pronta da caricare) solo fino alla prossima apertura dell'app; quelle dei backup e della
+   * configurazione restano chiuse finché il testo è lo stesso.
+   */
+  protected readonly dismissed = inject(DismissedNotices);
 
   /** Il testo dell'avviso sui backup, o null se va tutto bene (o se l'app non è in Docker: docs/48, parte Q). */
   protected readonly backupWarning = computed(() => {
