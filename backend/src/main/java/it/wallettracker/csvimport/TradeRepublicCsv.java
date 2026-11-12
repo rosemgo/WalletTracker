@@ -25,8 +25,8 @@ import java.util.Map;
  *       vuoti. Le saltiamo. Gli acquisti e le vendite invece ({@code category} TRADING) il denaro lo muovono, e
  *       molto: si riconoscono dall'importo, non dalla categoria.</li>
  * </ul>
- * Lo usano "Completa i movimenti" (CompletionService) e la pagina Importa (CsvImportService), che riconosce il
- * file dalle colonne e lo legge con questa classe invece che con la mappatura (docs/importa-file.md, parte H).
+ * La pagina Importa (CsvImportService) riconosce il file dalle colonne e lo legge con questa classe invece che con
+ * la mappatura (docs/importa-file.md, parte H); in un conto collegato lo completa con CompletionService.
  * Funzioni pure, provate da TradeRepublicCsvTest.
  */
 final class TradeRepublicCsv {

@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
 import { ROLES, ROLE_LABELS } from '../api/labels';
 import { Account, AccountOutcome, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { isTradeRepublic } from '../import/completion-page';
+import { isTradeRepublic } from '../import/trade-republic';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { AccountsStore, logoUrl } from './accounts-store';
 import { BalanceForm } from './balance-form';

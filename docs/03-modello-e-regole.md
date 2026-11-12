@@ -128,7 +128,7 @@ comportamento:
 | storico lungo solo subito dopo il login, poi max 90 giorni | Fineco, ING | se la banca rifiuta il periodo, si riprova con 89 giorni |
 | letture in background quasi assenti | Trade Republic | header PSU quando l'utente è presente |
 | **pagine ripetute**, date richieste ignorate, 6 decimali | Trade Republic | copie identiche eliminate, nessuna divisione del periodo, arrotondamento a 2 decimali |
-| **nessuna descrizione**: solo data, importo, direzione | Trade Republic | abbinamento dei trasferimenti; causale e controparte dal file di Trade Republic ("Completa i movimenti", `docs/31`), con regole di partenza per le sue causali (V25) |
+| **nessuna descrizione**: solo data, importo, direzione | Trade Republic | abbinamento dei trasferimenti; causale e controparte dal file di Trade Republic (pagina Importa, `docs/31` e `docs/importa-file.md`), con regole di partenza per le sue causali (V25) |
 | consenso di 90 giorni invece di 180 | Trade Republic | avviso di scadenza (Fase 3) |
 
 Sulla mancanza di descrizioni di Trade Republic: è un **limite noto** della sua interfaccia PSD2,

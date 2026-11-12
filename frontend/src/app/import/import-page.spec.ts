@@ -79,6 +79,8 @@ function previewOf(mapping: ImportMapping, errors: string[] = []): ImportPreview
     tradeRepublic: false,
     skippedRows: 0,
     completeRows: 0,
+    rowsWithoutMovement: [],
+    movementsWithoutRow: [],
   };
 }
 
@@ -220,19 +222,30 @@ describe('ImportPage', () => {
     );
   });
 
-  it('with Trade Republic only as a manual account there is no "Completa i movimenti"', async () => {
+  it('with Trade Republic only as a manual account there is no completion of the bank movements', async () => {
     const { page } = await open();
 
     expect(page.querySelector('[data-testid="trade-republic-hint"]')).toBeNull();
   });
 
-  it('with a linked Trade Republic account chosen it points also to "Completa i movimenti"', async () => {
+  it('with a linked Trade Republic account it explains the completion and the loading before the file', async () => {
     accounts = [...accounts, account(7, 'ENABLE_BANKING', 'Trade Republic Bank GmbH')];
     queryConto = '7';
     const { page } = await open();
 
-    const hint = page.querySelector('[data-testid="trade-republic-hint"]');
-    expect(hint?.querySelector('a')?.getAttribute('href')).toBe('/importa/completa');
+    const mode = page
+      .querySelector('[data-testid="import-mode"]')
+      ?.textContent?.replace(/\s+/g, ' ');
+    expect(mode).toContain('Conto Trade Republic collegato.');
+    expect(mode).toContain('vengono completati con causale e controparte');
+    expect(mode).toContain('vengono caricati');
+    expect(mode).toContain('Date e importi trasmessi dalla banca non vengono modificati');
+    // Niente più link a una pagina a parte: si fa tutto qui.
+    expect(page.querySelector('a[href="/importa/completa"]')).toBeNull();
+    // La guida per esportare il file c'è per tutti.
+    expect(page.querySelector('[data-testid="trade-republic-guide"]')?.textContent).toContain(
+      'Esportazione transazioni',
+    );
   });
 
   it('without any account it says to connect a bank or create a manual account', async () => {
@@ -347,10 +360,11 @@ describe('ImportPage', () => {
     const card = page
       .querySelector('[data-testid="trade-republic-file"]')
       ?.textContent?.replace(/\s+/g, ' ');
-    expect(card).toContain('quello che vedi sul conto');
-    expect(card).toContain('7 righe sono operazioni sui titoli');
+    expect(card).toContain('Importi netti');
+    expect(card).toContain('vengono aggiunti tutti i movimenti del file');
+    expect(card).toContain('7 righe, non registrate tra i movimenti');
     expect(page.querySelector('[data-testid="import-summary"]')?.textContent?.trim()).toBe(
-      '85 righe nuove; 7 sono operazioni sui titoli senza denaro, che si saltano.',
+      '85 righe nuove; 7 operazioni su titoli senza movimento di denaro non vengono registrate.',
     );
     const button = Array.from(page.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Importa 85 righe'),
@@ -381,13 +395,15 @@ describe('ImportPage', () => {
     await chooseFile(fixture, page);
 
     expect(page.querySelector('[data-testid="trade-republic-complete"]')?.textContent).toContain(
-      'controparte e causale',
+      'causale e controparte',
     );
     expect(page.querySelector('[data-testid="import-summary"]')?.textContent?.trim()).toBe(
-      'Il file ha 92 righe: nessun movimento più vecchio del 9 luglio 2026 da aggiungere; ' +
-        '4 movimenti arrivati dalla banca ricevono controparte e causale; 81 erano già fatte; ' +
-        '7 sono operazioni sui titoli senza denaro, che si saltano.',
+      'Il file contiene 92 righe: 4 movimenti ricevuti dalla banca verranno completati con causale ' +
+        'e controparte; nessun movimento precedente al 9 luglio 2026 da caricare; 81 righe sono già ' +
+        'presenti; 7 operazioni su titoli senza movimento di denaro non vengono registrate.',
     );
+    // Nessuna anomalia: la sezione "Da verificare" non c'è.
+    expect(page.querySelector('[data-testid="import-anomalies"]')).toBeNull();
     const button = Array.from(page.querySelectorAll('.toolbar button'))[0] as HTMLButtonElement;
     expect(button.textContent?.trim()).toBe('Completa 4 movimenti');
     expect(button.disabled).toBe(false);
@@ -396,8 +412,47 @@ describe('ImportPage', () => {
 
     expect(imports.map((i) => i.accountId)).toEqual([7]);
     expect(page.textContent).toContain(
-      'a 4 movimenti già presenti è stata completata la descrizione',
+      '4 movimenti completati con causale e controparte; nessun movimento caricato; ' +
+        '81 righe erano già presenti.',
     );
+  });
+
+  it('the rows and the movements that do not match are listed one by one', async () => {
+    accounts = [...accounts, account(7, 'ENABLE_BANKING', 'Trade Republic Bank GmbH')];
+    queryConto = '7';
+    nextPreview = (mapping) =>
+      of({
+        ...previewOf(mapping ?? GUESSED),
+        linkedAccount: true,
+        bankFrom: '2026-07-09',
+        newRows: 0,
+        completeRows: 1,
+        coveredRows: 1,
+        tradeRepublic: true,
+        rowsWithoutMovement: [
+          {
+            line: 40,
+            date: '2026-08-12',
+            amount: -25,
+            currency: 'EUR',
+            description: 'Outgoing transfer for Anna Bianchi',
+          },
+        ],
+        movementsWithoutRow: [{ id: 9, date: '2026-07-15', amount: -9.99, currency: 'EUR' }],
+      });
+    const { fixture, page } = await open();
+    await chooseFile(fixture, page);
+
+    expect(page.querySelector('[data-testid="import-summary"]')?.textContent).toContain(
+      '1 riga non trova un movimento della banca (vedi «Da verificare»)',
+    );
+    const rows = page.querySelector('[data-testid="rows-without-movement"]')?.textContent ?? '';
+    expect(rows).toContain('12/08/2026');
+    expect(rows).toContain('Outgoing transfer for Anna Bianchi');
+    const movements =
+      page.querySelector('[data-testid="movements-without-row"]')?.textContent ?? '';
+    expect(movements).toContain('15/07/2026');
+    expect(movements).toMatch(/-9,99/);
   });
 
   it('an Excel file has no separator to choose', async () => {

@@ -31,14 +31,20 @@ public final class ImportDtos {
      *                      senza mappatura, con gli importi netti
      * @param skippedRows   le righe che non muovono denaro (operazioni sui titoli di Trade Republic), che si saltano
      * @param completeRows  il file di Trade Republic in un conto collegato: i movimenti arrivati dalla banca senza
-     *                      testo che ricevono controparte e causale (come "Completa i movimenti", docs/31). Con un
+     *                      testo che ricevono controparte e causale (il completamento, docs/31). Con un
      *                      conto collegato e quel file, duplicateRows sono le righe già fatte e coveredRows quelle del
      *                      periodo della banca senza un movimento
+     * @param rowsWithoutMovement  il file di Trade Republic in un conto collegato: le righe del periodo della banca
+     *                             senza un movimento con lo stesso importo, che non si aggiungono (un'anomalia da
+     *                             guardare: docs/importa-file.md, parte J). Vuota negli altri casi
+     * @param movementsWithoutRow  lo stesso caso: i movimenti della banca del periodo del file che nel file non ci
+     *                             sono (restano come sono). Vuota negli altri casi
      */
     public record Preview(List<String> headers, List<List<String>> sampleRows, int totalRows, ImportMapping mapping,
             List<PreviewRow> parsedRows, int errorCount, List<String> errors, boolean spreadsheet,
             boolean linkedAccount, LocalDate bankFrom, int newRows, int duplicateRows, int coveredRows,
-            boolean tradeRepublic, int skippedRows, int completeRows) {
+            boolean tradeRepublic, int skippedRows, int completeRows, List<FileRow> rowsWithoutMovement,
+            List<Movement> movementsWithoutRow) {
     }
 
     /** Una riga letta, da mostrare nell'anteprima. */
@@ -58,7 +64,8 @@ public final class ImportDtos {
     }
 
     /**
-     * L'anteprima del completamento di un conto collegato con un file (docs/31). Non salva niente.
+     * L'anteprima del completamento di un conto collegato con il file di Trade Republic (CompletionService.preview).
+     * Interna: la pagina riceve un {@link Preview}.
      *
      * @param from                il primo giorno del file
      * @param to                  l'ultimo giorno del file
