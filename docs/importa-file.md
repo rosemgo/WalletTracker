@@ -189,3 +189,42 @@ caricare il file:
   verrebbe aggiunto due volte. Non succede con Fineco (la data è la stessa, `Data_Operazione`); con un'altra banca
   l'anteprima mostra le righe che si aggiungono, da controllare prima.
 - **Lo stato** ("Contabilizzato") non si legge: le righe più vecchie della banca sono comunque contabilizzate.
+
+## Parte H: il file di Trade Republic nella pagina Importa
+
+**Il problema.** Il file "Esportazione transazioni" di Trade Republic caricato in Importa dava errori come "Riga 80:
+manca l'importo". Le righe con l'errore erano le **operazioni sui titoli**: azioni trasferite (`DELIVERY` /
+`FREE_RECEIPT`), diritti di un aumento di capitale assegnati, esercitati o scaduti (`CORPORATE_ACTION`). Hanno
+importo, commissione, tassa e valuta vuoti, perché sul conto non si muove denaro. Il file è giusto: è la mappatura
+generica che vuole un importo su ogni riga. E anche le righe che si leggevano erano sbagliate, perché `amount` è
+**lordo** (`docs/31`, parte B2): gli interessi entravano senza le tasse, l'imposta di bollo a 0,00 €, gli acquisti
+senza commissione e tassa.
+
+**La soluzione.** Il lettore giusto c'era già, `TradeRepublicCsv`, ma lo usava solo "Completa i movimenti", e solo per
+un conto Trade Republic collegato. Ora `CsvImportService` riconosce il file dalle colonne
+(`TradeRepublicCsv.recognizes`, come `CompletionService`) e lo legge con quello, **in qualunque conto**, manuale o
+collegato:
+
+- la mappatura non conta: il browser la manda come sempre, il backend la ignora;
+- le righe senza denaro si **contano e si saltano** (`Preview.skippedRows`); tutte le altre diventano movimenti con
+  l'importo **netto** `amount + fee + tax`, la causale (`description`) e la controparte (chi manda o riceve il
+  bonifico; per dividendi e acquisti, il titolo);
+- l'impronta usa il `transaction_id` di Trade Republic: `csv:tr:<id>` in un conto manuale, `trcsv:<id>` in un conto
+  collegato. Quest'ultima è la stessa di "Completa i movimenti" (`CompletionService.fileKeys`): caricare il file da una
+  pagina e poi dall'altra non fa doppioni;
+- gli errori riportano la riga del file, come prima;
+- una data `01/07/2026` si legge anche: è come la scrive `SpreadsheetReader` se il CSV è stato aperto con Excel e
+  salvato come `.xlsx`.
+
+**La pagina.** Con `preview.tradeRepublic` al posto dei menu della mappatura c'è il riquadro "2. File di Trade
+Republic", che dice come si legge e quante righe dei titoli si saltano. Il riepilogo lo ripete ("85 righe nuove; 7 sono
+operazioni sui titoli senza denaro, che si saltano.") e il pulsante conta solo le righe che si importano.
+
+**Le prove.** `CsvImportControllerTest` (conto manuale: importi netti, impronte, raw_json, il secondo caricamento non
+aggiunge niente; conto collegato: solo i mesi prima della banca, con l'impronta `trcsv:`; una cella sbagliata con la sua
+riga), `TradeRepublicCsvTest` (numeri di riga con l'intestazione più in basso, la data di Excel), `import-page.spec.ts`
+(il riquadro al posto della mappatura, il riepilogo, il pulsante). Un file vero di 92 righe, letto in locale (non va
+nel repository): 85 movimenti, 7 operazioni sui titoli saltate, nessun errore.
+
+**Il limite.** Le operazioni sui titoli non diventano movimenti: non muovono denaro, e i movimenti del conto sono
+solo denaro.

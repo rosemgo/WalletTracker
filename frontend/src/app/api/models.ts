@@ -124,6 +124,8 @@ export interface ImportPreview {
   newRows: number; // le righe che verranno aggiunte
   duplicateRows: number; // le righe già aggiunte da un'importazione precedente
   coveredRows: number; // con un conto collegato, le righe che la banca porta da sé
+  tradeRepublic: boolean; // il file di Trade Republic: si legge da solo, senza mappatura, con gli importi netti
+  skippedRows: number; // le righe che non muovono denaro (operazioni sui titoli), che si saltano
 }
 
 /** La risposta di POST /api/imports. */

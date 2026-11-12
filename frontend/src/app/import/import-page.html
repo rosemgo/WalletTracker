@@ -121,149 +121,177 @@
   </div>
 
   @if (preview(); as p) {
-    <form class="card" [formGroup]="mapping">
-      <h2>2. Come leggere le colonne</h2>
-      <p class="hint">
-        Proposta in base ai nomi delle colonne e alle prime righe: controllala. Ogni modifica
-        aggiorna l'anteprima qui sotto.
-      </p>
-      <div class="form-grid">
-        @if (!p.spreadsheet) {
-          <!-- In un file Excel le colonne sono già separate: il separatore non c'entra. -->
-          <label>
-            Separatore
-            <select formControlName="delimiter">
-              @for (d of delimiters; track d.value) {
-                <option [ngValue]="d.value">{{ d.label }}</option>
-              }
-            </select>
-          </label>
-        }
-        <label>
-          Data
-          <select formControlName="dateColumn">
-            <option [ngValue]="null">— scegli —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Formato della data
-          <select formControlName="dateFormat">
-            @for (f of dateFormats; track f.value) {
-              <option [ngValue]="f.value">{{ f.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Importo
-          <select formControlName="amountMode">
-            <option [ngValue]="'SINGLE'">Una colonna, con il segno (-12,50)</option>
-            <option [ngValue]="'SPLIT'">Due colonne: entrate e uscite</option>
-            <option [ngValue]="'UNSIGNED'">
-              Una colonna senza segno: il verso si capisce dal testo
-            </option>
-          </select>
-        </label>
-        @if (mapping.controls.amountMode.value !== 'SPLIT') {
-          <label>
-            Colonna dell'importo
-            <select formControlName="amountColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-        }
-        @if (mapping.controls.amountMode.value === 'UNSIGNED') {
-          <!-- Senza segno (Tinaba, docs/tinaba.md): sono entrate le righe con una di queste parole, le altre uscite. -->
-          <label>
-            Cerca le parole delle entrate nella colonna
-            <select formControlName="signColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-          <label>
-            Parole delle entrate, separate da virgole
-            <input
-              type="text"
-              formControlName="incomeWords"
-              placeholder="es. ricevuto, accredito"
-            />
-            <span class="hint"
-              >Le righe che ne contengono una sono entrate; tutte le altre, uscite.</span
-            >
-          </label>
-        } @else if (mapping.controls.amountMode.value === 'SPLIT') {
-          <label>
-            Colonna delle entrate
-            <select formControlName="incomeColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-          <label>
-            Colonna delle uscite
-            <select formControlName="expenseColumn">
-              <option [ngValue]="null">— scegli —</option>
-              @for (c of columns(); track c.index) {
-                <option [ngValue]="c.index">{{ c.label }}</option>
-              }
-            </select>
-          </label>
-        }
-        <label>
-          Decimali
-          <select formControlName="decimalSeparator">
-            <option [ngValue]="'COMMA'">Virgola (1.234,56)</option>
-            <option [ngValue]="'DOT'">Punto (1,234.56)</option>
-          </select>
-        </label>
-        <label>
-          Descrizione (facoltativa)
-          <select formControlName="descriptionColumn">
-            <option [ngValue]="null">— nessuna —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Altro testo da aggiungere alla descrizione (facoltativo)
-          <select formControlName="detailColumn">
-            <option [ngValue]="null">— nessuno —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Controparte (facoltativa)
-          <select formControlName="counterpartyColumn">
-            <option [ngValue]="null">— nessuna —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
-        <label>
-          Valuta (facoltativa)
-          <select formControlName="currencyColumn">
-            <option [ngValue]="null">— quella del conto —</option>
-            @for (c of columns(); track c.index) {
-              <option [ngValue]="c.index">{{ c.label }}</option>
-            }
-          </select>
-        </label>
+    @if (p.tradeRepublic) {
+      <!-- Il file di Trade Republic si legge da solo: niente mappatura (docs/importa-file.md, parte H). -->
+      <div class="card" data-testid="trade-republic-file">
+        <h2>2. File di Trade Republic</h2>
+        <p>
+          È l'<strong>esportazione delle transazioni</strong> di Trade Republic: le colonne le leggo
+          da solo, non c'è niente da scegliere.
+        </p>
+        <ul>
+          <li>
+            L'importo è <strong>quello che vedi sul conto</strong>: per interessi e dividendi già
+            tolte le tasse, per gli acquisti con commissione e tassa, e l'imposta di bollo con il
+            suo importo vero.
+          </li>
+          @if (p.skippedRows > 0) {
+            <li>
+              {{
+                p.skippedRows === 1
+                  ? "1 riga è un'operazione sui titoli (azioni trasferite, diritti) e non muove denaro: la salto."
+                  : p.skippedRows +
+                    ' righe sono operazioni sui titoli (azioni trasferite, diritti) e non muovono denaro: le salto.'
+              }}
+            </li>
+          }
+        </ul>
       </div>
-    </form>
+    } @else {
+      <form class="card" [formGroup]="mapping">
+        <h2>2. Come leggere le colonne</h2>
+        <p class="hint">
+          Proposta in base ai nomi delle colonne e alle prime righe: controllala. Ogni modifica
+          aggiorna l'anteprima qui sotto.
+        </p>
+        <div class="form-grid">
+          @if (!p.spreadsheet) {
+            <!-- In un file Excel le colonne sono già separate: il separatore non c'entra. -->
+            <label>
+              Separatore
+              <select formControlName="delimiter">
+                @for (d of delimiters; track d.value) {
+                  <option [ngValue]="d.value">{{ d.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            Data
+            <select formControlName="dateColumn">
+              <option [ngValue]="null">— scegli —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Formato della data
+            <select formControlName="dateFormat">
+              @for (f of dateFormats; track f.value) {
+                <option [ngValue]="f.value">{{ f.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Importo
+            <select formControlName="amountMode">
+              <option [ngValue]="'SINGLE'">Una colonna, con il segno (-12,50)</option>
+              <option [ngValue]="'SPLIT'">Due colonne: entrate e uscite</option>
+              <option [ngValue]="'UNSIGNED'">
+                Una colonna senza segno: il verso si capisce dal testo
+              </option>
+            </select>
+          </label>
+          @if (mapping.controls.amountMode.value !== 'SPLIT') {
+            <label>
+              Colonna dell'importo
+              <select formControlName="amountColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          @if (mapping.controls.amountMode.value === 'UNSIGNED') {
+            <!-- Senza segno (Tinaba, docs/tinaba.md): sono entrate le righe con una di queste parole, le altre uscite. -->
+            <label>
+              Cerca le parole delle entrate nella colonna
+              <select formControlName="signColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Parole delle entrate, separate da virgole
+              <input
+                type="text"
+                formControlName="incomeWords"
+                placeholder="es. ricevuto, accredito"
+              />
+              <span class="hint"
+                >Le righe che ne contengono una sono entrate; tutte le altre, uscite.</span
+              >
+            </label>
+          } @else if (mapping.controls.amountMode.value === 'SPLIT') {
+            <label>
+              Colonna delle entrate
+              <select formControlName="incomeColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Colonna delle uscite
+              <select formControlName="expenseColumn">
+                <option [ngValue]="null">— scegli —</option>
+                @for (c of columns(); track c.index) {
+                  <option [ngValue]="c.index">{{ c.label }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            Decimali
+            <select formControlName="decimalSeparator">
+              <option [ngValue]="'COMMA'">Virgola (1.234,56)</option>
+              <option [ngValue]="'DOT'">Punto (1,234.56)</option>
+            </select>
+          </label>
+          <label>
+            Descrizione (facoltativa)
+            <select formControlName="descriptionColumn">
+              <option [ngValue]="null">— nessuna —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Altro testo da aggiungere alla descrizione (facoltativo)
+            <select formControlName="detailColumn">
+              <option [ngValue]="null">— nessuno —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Controparte (facoltativa)
+            <select formControlName="counterpartyColumn">
+              <option [ngValue]="null">— nessuna —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Valuta (facoltativa)
+            <select formControlName="currencyColumn">
+              <option [ngValue]="null">— quella del conto —</option>
+              @for (c of columns(); track c.index) {
+                <option [ngValue]="c.index">{{ c.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </form>
+    }
 
     <div class="card">
       <h2>3. Anteprima</h2>
@@ -274,7 +302,11 @@
               {{
                 p.errorCount === 1 ? '1 riga non si legge' : p.errorCount + ' righe non si leggono'
               }}
-              con queste impostazioni. Correggi la mappatura (o il file) per poter importare:
+              @if (p.tradeRepublic) {
+                nel file di Trade Republic. È stato modificato? Scaricalo di nuovo dall'app:
+              } @else {
+                con queste impostazioni. Correggi la mappatura (o il file) per poter importare:
+              }
             </p>
           }
           <ul>

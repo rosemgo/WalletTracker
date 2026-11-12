@@ -52,6 +52,9 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
  * 2. controlli l'anteprima e, se serve, correggi la mappatura: ogni modifica chiede una nuova anteprima;
  * 3. quando tutte le righe si leggono, importi.
  *
+ * Il file di Trade Republic il backend lo riconosce dalle colonne e lo legge da solo (preview.tradeRepublic): al posto
+ * della mappatura la pagina spiega come lo legge (docs/importa-file.md, parte H).
+ *
  * Il file resta nel browser: lo mandiamo al backend a ogni anteprima e all'importazione, che non lo
  * conserva.
  */
@@ -339,12 +342,21 @@ export class ImportPage implements OnInit {
   protected summary(p: ImportPreview): string {
     const n = (count: number, one: string, many: string) =>
       count === 1 ? one : `${count} ${many}`;
+    // Le operazioni sui titoli del file di Trade Republic: nel file, ma senza denaro sul conto.
+    const skipped =
+      p.skippedRows > 0
+        ? `; ${n(
+            p.skippedRows,
+            "1 è un'operazione sui titoli senza denaro, che si salta",
+            'sono operazioni sui titoli senza denaro, che si saltano',
+          )}`
+        : '';
     if (!p.linkedAccount) {
       let text = n(p.newRows, '1 riga nuova', 'righe nuove');
       if (p.duplicateRows > 0) {
         text += `, ${n(p.duplicateRows, '1 già importata, che si salta', 'già importate, che si saltano')}`;
       }
-      return `${text}.`;
+      return `${text}${skipped}.`;
     }
     const from = this.datePipe.transform(p.bankFrom, 'd MMMM y');
     const added =
@@ -359,7 +371,7 @@ export class ImportPage implements OnInit {
     if (p.duplicateRows > 0) {
       text += `; ${n(p.duplicateRows, '1 era già stata aggiunta', 'erano già state aggiunte')}`;
     }
-    text += '.';
+    text += `${skipped}.`;
     if (p.newRows === 0) {
       text +=
         p.duplicateRows > 0
@@ -377,7 +389,8 @@ export class ImportPage implements OnInit {
       }
       return p.newRows === 1 ? 'Aggiungi 1 movimento' : `Aggiungi ${p.newRows} movimenti`;
     }
-    return p.totalRows === 1 ? 'Importa 1 riga' : `Importa ${p.totalRows} righe`;
+    const rows = p.totalRows - p.skippedRows; // le operazioni sui titoli di Trade Republic non si importano
+    return rows === 1 ? 'Importa 1 riga' : `Importa ${rows} righe`;
   }
 
   private requestPreview(mapping: ImportMapping | null): void {

@@ -3,6 +3,7 @@ package it.wallettracker.csvimport;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,8 @@ import java.util.Map;
  *       vuoti. Le saltiamo. Gli acquisti e le vendite invece ({@code category} TRADING) il denaro lo muovono, e
  *       molto: si riconoscono dall'importo, non dalla categoria.</li>
  * </ul>
+ * Lo usano "Completa i movimenti" (CompletionService) e la pagina Importa (CsvImportService), che riconosce il
+ * file dalle colonne e lo legge con questa classe invece che con la mappatura (docs/importa-file.md, parte H).
  * Funzioni pure, provate da TradeRepublicCsvTest.
  */
 final class TradeRepublicCsv {
@@ -50,6 +53,9 @@ final class TradeRepublicCsv {
     record Reading(List<Row> rows, int skipped, List<String> errors) {
     }
 
+    /** Il formato di una data letta da un file Excel (SpreadsheetReader). */
+    private static final DateTimeFormatter SPREADSHEET_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private TradeRepublicCsv() {
     }
 
@@ -58,12 +64,20 @@ final class TradeRepublicCsv {
     }
 
     static Reading read(List<String> headers, List<List<String>> rows) {
+        return read(headers, rows, 1);
+    }
+
+    /**
+     * Come {@link #read(List, List)}, con l'intestazione alla riga {@code headerLine} del file (1 = la prima): i numeri
+     * di riga dei messaggi e di {@link Row#line} sono quelli del file.
+     */
+    static Reading read(List<String> headers, List<List<String>> rows, int headerLine) {
         List<String> names = headers.stream().map(TradeRepublicCsv::normalized).toList();
         List<Row> read = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         int skipped = 0;
         for (int i = 0; i < rows.size(); i++) {
-            int line = i + 2;
+            int line = headerLine + 1 + i;
             Cells cells = new Cells(names, rows.get(i));
             try {
                 if (cells.get("amount") == null && cells.get("fee") == null && cells.get("tax") == null) {
@@ -135,11 +149,14 @@ final class TradeRepublicCsv {
             }
         }
 
-        /** La data nel formato del file, "2026-07-01". */
+        /**
+         * La data nel formato del file, "2026-07-01". Anche "01/07/2026": è come SpreadsheetReader scrive una data,
+         * se il file è stato aperto con Excel e salvato come .xlsx.
+         */
         LocalDate date(String column) {
             String value = required(column);
             try {
-                return LocalDate.parse(value);
+                return value.contains("/") ? LocalDate.parse(value, SPREADSHEET_DATE) : LocalDate.parse(value);
             } catch (DateTimeParseException e) {
                 throw new IllegalArgumentException(column + " \"" + value + "\" non è una data");
             }

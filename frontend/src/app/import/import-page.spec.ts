@@ -76,6 +76,8 @@ function previewOf(mapping: ImportMapping, errors: string[] = []): ImportPreview
     newRows: errors.length > 0 ? 0 : 1,
     duplicateRows: 0,
     coveredRows: 0,
+    tradeRepublic: false,
+    skippedRows: 0,
   };
 }
 
@@ -325,6 +327,37 @@ describe('ImportPage', () => {
         '6 erano già state aggiunte. I mesi più vecchi di questo file li hai già aggiunti; gli altri li ' +
         'porta la banca.',
     );
+  });
+
+  it('the Trade Republic file is read without a mapping, and the securities rows are skipped', async () => {
+    nextPreview = (mapping) =>
+      of({
+        ...previewOf(mapping ?? GUESSED),
+        totalRows: 92,
+        newRows: 85,
+        tradeRepublic: true,
+        skippedRows: 7,
+      });
+    const { fixture, page } = await open();
+    await chooseFile(fixture, page);
+
+    // Niente menu della mappatura: la pagina spiega come legge il file.
+    expect(selectByLabel(page, 'Data')).toBeUndefined();
+    const card = page
+      .querySelector('[data-testid="trade-republic-file"]')
+      ?.textContent?.replace(/\s+/g, ' ');
+    expect(card).toContain('quello che vedi sul conto');
+    expect(card).toContain('7 righe sono operazioni sui titoli');
+    expect(page.querySelector('[data-testid="import-summary"]')?.textContent?.trim()).toBe(
+      '85 righe nuove; 7 sono operazioni sui titoli senza denaro, che si saltano.',
+    );
+    const button = Array.from(page.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Importa 85 righe'),
+    ) as HTMLButtonElement;
+    button.click();
+    await fixture.whenStable();
+
+    expect(imports.map((i) => i.accountId)).toEqual([5]);
   });
 
   it('an Excel file has no separator to choose', async () => {

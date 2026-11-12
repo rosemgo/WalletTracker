@@ -198,7 +198,8 @@ Di solito il collegamento dura 180 giorni. Quando sta per scadere l'app ti avvis
 **Ricollega**.
 
 Se la tua banca non c'è su Enable Banking (Trade Republic, per esempio), puoi importare i movimenti da un file CSV, da
-**Altro → Importa**.
+**Altro → Importa**. Il file di Trade Republic (nell'app: Profilo → Documenti → Esportazione transazioni,
+formato CSV) l'app lo riconosce e lo legge da sola, senza scegliere le colonne.
 
 Da quel momento WalletTracker aggiorna i conti da solo, fino a quattro volte al giorno (di più le banche non
 permettono), e mette ogni movimento in una categoria. Se sbaglia, la correggi toccando il movimento, e con le
