@@ -1,5 +1,8 @@
 # 22. Fase 3, passo 5: gli abbonamenti ricorrenti
 
+> Aggiornamento: la pagina ha un aspetto nuovo (`docs/39`, parti C e F): il costo al mese in grande e, sul
+> telefono, una scheda per abbonamento. L'API e la ricerca degli abbonamenti descritte qui sono le stesse.
+
 **Obiettivo:** sapere quanto spendi in abbonamenti (Netflix, Spotify, palestra, assicurazioni...) e
 accorgerti dei rincari e dei pagamenti spariti. Nuova pagina **Abbonamenti**:
 1. **suggerimenti**: WalletTracker trova le spese che si ripetono ogni mese o ogni anno con importi simili,

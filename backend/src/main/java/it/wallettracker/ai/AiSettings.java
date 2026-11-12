@@ -10,7 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Le impostazioni dell'IA (V18, V22): una sola riga, id = 1.
+ * Le impostazioni dell'IA (V18, V22, V23): una sola riga, id = 1.
  *
  * <p>Le chiavi dei servizi cloud sono salvate <b>cifrate</b> (SecretCipher): questa classe le tiene così come sono
  * nel database ("v1:..."), senza mai vederle in chiaro. Le cifra e decifra AiService.
@@ -31,15 +31,6 @@ public class AiSettings {
 
     @Column(name = "ollama_model", nullable = false)
     private String ollamaModel;
-
-    @Column(name = "mistral_api_key")
-    private String mistralApiKey; // cifrata
-
-    @Column(name = "mistral_model", nullable = false)
-    private String mistralModel;
-
-    @Column(name = "mistral_consent_at")
-    private Instant mistralConsentAt;
 
     @Column(name = "gemini_api_key")
     private String geminiApiKey; // cifrata
@@ -63,10 +54,9 @@ public class AiSettings {
         this.updatedAt = Instant.now();
     }
 
-    /** Cambia i modelli dei tre fornitori (ognuno resta salvato anche quando non è quello scelto). */
-    public void changeModels(String newOllamaModel, String newMistralModel, String newGeminiModel) {
+    /** Cambia i modelli dei due fornitori (ognuno resta salvato anche quando non è quello scelto). */
+    public void changeModels(String newOllamaModel, String newGeminiModel) {
         this.ollamaModel = newOllamaModel;
-        this.mistralModel = newMistralModel;
         this.geminiModel = newGeminiModel;
         this.updatedAt = Instant.now();
     }
@@ -79,9 +69,7 @@ public class AiSettings {
 
     /** Ricorda il consenso all'invio dei dati a un servizio cloud (la prima volta: la data resta quella). */
     public void consent(AiProvider cloud, Instant when) {
-        if (cloud == AiProvider.MISTRAL && mistralConsentAt == null) {
-            mistralConsentAt = when;
-        } else if (cloud == AiProvider.GEMINI && geminiConsentAt == null) {
+        if (cloud == AiProvider.GEMINI && geminiConsentAt == null) {
             geminiConsentAt = when;
         }
     }
@@ -91,9 +79,7 @@ public class AiSettings {
      * si spegne: senza chiave non funzionerebbe.
      */
     public void apiKey(AiProvider cloud, String encrypted) {
-        if (cloud == AiProvider.MISTRAL) {
-            mistralApiKey = encrypted;
-        } else if (cloud == AiProvider.GEMINI) {
+        if (cloud == AiProvider.GEMINI) {
             geminiApiKey = encrypted;
         } else {
             throw new IllegalArgumentException("Solo i servizi cloud hanno una chiave: " + cloud);
@@ -107,7 +93,6 @@ public class AiSettings {
     /** La chiave cifrata di un servizio cloud, o null. */
     public String encryptedApiKey(AiProvider cloud) {
         return switch (cloud) {
-            case MISTRAL -> mistralApiKey;
             case GEMINI -> geminiApiKey;
             default -> null;
         };
@@ -115,7 +100,6 @@ public class AiSettings {
 
     public boolean hasConsent(AiProvider cloud) {
         return switch (cloud) {
-            case MISTRAL -> mistralConsentAt != null;
             case GEMINI -> geminiConsentAt != null;
             default -> true; // Ollama: i dati non escono dal computer
         };
@@ -124,7 +108,6 @@ public class AiSettings {
     /** Il modello scelto per un fornitore. */
     public String model(AiProvider target) {
         return switch (target) {
-            case MISTRAL -> mistralModel;
             case GEMINI -> geminiModel;
             default -> ollamaModel;
         };

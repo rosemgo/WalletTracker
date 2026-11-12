@@ -83,6 +83,41 @@ class MerchantKeyTest {
         assertThat(MerchantKey.of("MARIO ROSSI", null, OWNER)).isNull();
     }
 
+    /** Due bonifici in arrivo dalla stessa banca (inventati): la causale è uguale fino al nome di chi paga. */
+    private static final String REFUND = "Bonifico N. 00000000000000000000000001IT BIC Ordinante ALFAITMMXXX "
+            + "Codifica Ordinante IT00X0000000000000000000001 Anagrafica Ordinante ACME SRL Note: Rimborso";
+    private static final String SALARY = "Bonifico N. 00000000000000000000000002IT BIC Ordinante ALFAITMMXXX "
+            + "Codifica Ordinante IT00X0000000000000000000002 Anagrafica Ordinante BETA SPA Note: Stipendio ottobre";
+
+    @Test
+    void theNameAfterALabelInTheDescriptionIsTheMerchant() {
+        // Prima la chiave era l'inizio della causale, tagliato a 60 caratteri: uguale per tutti e due.
+        assertThat(MerchantKey.of(null, REFUND, OWNER)).isEqualTo("ACME SRL");
+        assertThat(MerchantKey.of(null, SALARY, OWNER)).isEqualTo("BETA SPA");
+        assertThat(MerchantKey.of("MARIO ROSSI", SALARY, OWNER)).isEqualTo("BETA SPA");
+        assertThat(MerchantKey.merchantText(null, REFUND, OWNER)).isEqualTo("ACME SRL");
+        // Senza le note il nome arriva fino in fondo; anche il bonifico in uscita.
+        assertThat(MerchantKey.of(null, "Bonifico N. 1 Anagrafica Beneficiario Gamma Servizi S.r.l.", OWNER))
+                .isEqualTo("GAMMA SERVIZI S R L");
+    }
+
+    @Test
+    void theCreditorOfADirectDebitIsTheMerchantNotTheDebtor() {
+        String debit = "Addebito SDD CORE Scad. 01/10/2026 Imp. 45,00 Creditor id. IT00ZZZ0000000000 "
+                + "GAMMA LUCE E GAS S.P.A. Id Mandato 0000000001 Debitore MARIO ROSSI";
+
+        assertThat(MerchantKey.merchantText(null, debit, OWNER)).isEqualTo("GAMMA LUCE E GAS S.P.A.");
+        assertThat(MerchantKey.of(null, debit, OWNER)).isEqualTo("GAMMA LUCE E GAS S P A");
+    }
+
+    @Test
+    void withoutANameAfterTheLabelTheWholeDescriptionStays() {
+        assertThat(MerchantKey.nameInDescription("Anagrafica Ordinante Note: niente")).isNull();
+        assertThat(MerchantKey.nameInDescription("Anagrafica Ordinante 12345")).isNull();
+        assertThat(MerchantKey.nameInDescription("Pagamento POS ESSELUNGA")).isNull();
+        assertThat(MerchantKey.of(null, "Anagrafica Ordinante 12345", OWNER)).isEqualTo("ANAGRAFICA ORDINANTE");
+    }
+
     @Test
     void theFirstWordIsTheLooseComparisonForTheMenu() {
         assertThat(MerchantKey.firstWord("AMAZON LUXEMBOURG LUX")).isEqualTo("AMAZON");

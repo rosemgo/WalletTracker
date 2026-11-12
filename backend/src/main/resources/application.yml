@@ -27,8 +27,10 @@ spring:
       max-request-size: 6MB
 
   # Connessione al database PostgreSQL avviato con Docker Compose (stessi valori del .env).
+  # POSTGRES_HOST: avviando il backend a mano è "localhost"; nel container (Fase 4) è "db", il nome del servizio
+  # nel docker-compose.yml, che la rete interna di Docker trasforma nell'indirizzo del container del database.
   datasource:
-    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:wallettracker}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:wallettracker}
     username: ${POSTGRES_USER:wallettracker}
     password: ${POSTGRES_PASSWORD:}
 
@@ -49,26 +51,89 @@ spring:
 
 # Server web (Fase 2). Ascolta SOLO su questo PC (127.0.0.1): le API non hanno ancora un login, e
 # senza questa riga chiunque sulla stessa rete Wi-Fi (a casa, in un bar...) potrebbe leggere i tuoi movimenti.
+# Nel container (Fase 4) SERVER_ADDRESS è 0.0.0.0: dentro un container 127.0.0.1 è il container stesso, e nginx
+# (un altro container) non arriverebbe al backend. Resta chiuso lo stesso: docker-compose.yml non pubblica la
+# porta del backend, che si raggiunge solo dalla rete interna di Docker (vedi docs/44).
 server:
-  address: 127.0.0.1
+  address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8080}
+  # nginx dice al backend con quale protocollo è arrivata la richiesta (X-Forwarded-Proto, docs/44 parte D3). Con
+  # "native" Tomcat lo crede, ma solo se la richiesta arriva da un indirizzo interno (la rete di Docker): così, con
+  # Tailscale e https (passo 4), il cookie della sessione prende da solo l'attributo Secure.
+  forward-headers-strategy: native
+  # La sessione aperta dal PIN (Fase 4, passo 3: docs/46, parte B).
+  servlet:
+    session:
+      # Dopo 12 ore senza richieste la sessione si chiude, e l'app chiede di nuovo il PIN. Le sessioni stanno nella
+      # memoria del backend: anche un riavvio (un aggiornamento) le chiude.
+      timeout: 12h
+      # La sessione si riconosce solo dal cookie, mai da un ";jsessionid=..." scritto negli indirizzi (finirebbe nella
+      # cronologia, nei log, nei link copiati).
+      tracking-modes: cookie
+      cookie:
+        name: WALLETTRACKER_SESSION
+        # HttpOnly: il JavaScript della pagina non può leggerlo. Uno script infilato nella pagina non lo ruberebbe.
+        http-only: true
+        # SameSite=Strict: il browser non lo manda nelle richieste che partono da un altro sito (CSRF).
+        same-site: strict
+        # "Secure" (solo su https) non si scrive qui: Tomcat lo aggiunge da solo quando la richiesta è https. Su
+        # http://localhost non ci sarebbe, e il browser non manderebbe il cookie.
+
+# Actuator (Fase 4): solo /actuator/health, che dice se il backend e il database rispondono ("UP"). Lo usa il
+# controllo di salute di Docker (healthcheck nel docker-compose.yml). Non passa da nginx, che inoltra solo /api/:
+# da fuori non si raggiunge. I dettagli (quale controllo è fallito, lo spazio su disco) non si mostrano mai.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 enable-banking:
   base-url: https://api.enablebanking.com
   application-id: ${ENABLE_BANKING_APP_ID:}
   private-key-path: ${ENABLE_BANKING_PRIVATE_KEY_PATH:../secrets/enable-banking.pem}
+  # Gli indirizzi di ritorno, separati da virgole (docs/47, parti I e Q): dopo il consenso, la banca rimanda il browser
+  # a quello scelto da EnableBankingProperties.redirectUrlFor. Il valore di serie è quello di ng serve (npm start),
+  # perché qui arriva chi sviluppa con ./mvnw; l'app in Docker ha il suo (vuoto, in docker-compose.yml).
+  # Chi sviluppa: se nel .env scrivi SOLO l'indirizzo di Tailscale, la banca tornerebbe all'app in Docker invece che a
+  # questo backend, e il collegamento non si completerebbe. Tieni anche https://localhost:8443/callback nell'elenco
+  # (docs/sviluppo-comandi.md, docs/47 parte Q). La pagina "Collega una banca" lo dice da sola, ma solo a chi sviluppa:
+  # aperta da https://localhost (ng serve), vedi isDevServer in return-address.ts.
   redirect-url: ${ENABLE_BANKING_REDIRECT_URL:https://localhost:8443/callback}
 
 # Sincronizzazione automatica (Fase 1, passo 5): vedi SyncProperties e docs/08.
 wallettracker:
+  # La versione dell'app (docs/50, parte B): nelle immagini pubblicate la scrive il Dockerfile (es. 1.0.0); costruendo
+  # dal codice, o con ./mvnw, è "sviluppo". La mostra la pagina Impostazioni (GET /api/version).
+  version: ${WALLETTRACKER_VERSION:sviluppo}
+  # C'è una versione nuova? (docs/50, parte J). Una volta al giorno il backend chiede a GitHub l'ultima versione
+  # pubblicata (GitHub vede solo l'indirizzo IP) e la dashboard lo dice. WALLETTRACKER_UPDATE_CHECK=false nel .env lo
+  # spegne. Dal codice ("sviluppo") non si chiede mai niente. L'indirizzo si cambia solo per le prove.
+  update:
+    enabled: ${WALLETTRACKER_UPDATE_CHECK:true}
+    url: ${WALLETTRACKER_RELEASES_URL:https://api.github.com/repos/rosemgo/WalletTracker/releases/latest}
+    check-every: 24h
+    initial-delay: 2m
   # I nomi con cui si può raggiungere il backend (header Host, e Origin per le richieste che modificano dati).
   # Protezione contro DNS rebinding e richieste da altri siti: vedi LocalOnlyRequestFilter e docs/17.
-  allowed-hosts: localhost,127.0.0.1
+  # Con Tailscale (Fase 4) si aggiunge il nome del PC nella rete privata (es. pc-casa.esempio.ts.net).
+  allowed-hosts: ${WALLETTRACKER_ALLOWED_HOSTS:localhost,127.0.0.1}
   encryption:
     # Il file con la chiave che cifra i segreti nel database (vedi SecretCipher e docs/17). Se non esiste viene
     # creato al primo avvio. Sta FUORI dal database, nella cartella .data/ (esclusa da Git): includilo nei
     # backup, ma separato dal backup del database.
     key-file: ${WALLETTRACKER_KEY_FILE:../.data/encryption.key}
+  backup:
+    # I backup nella dashboard (Fase 4, passo 5: docs/48 parte Q). La cartella dei backup (il backend la legge e
+    # basta) e quella dove il container "backup" scrive il suo stato e legge le richieste. In sviluppo (./mvnw) sono
+    # quelle del progetto; se la seconda non c'è, la dashboard dice che i backup si fanno con l'app in Docker.
+    directory: ${WALLETTRACKER_BACKUP_DIR:../backup}
+    state-directory: ${WALLETTRACKER_BACKUP_STATE_DIR:../.data/backup-stato}
+    # La cartella dei backup come si chiama sul server (BACKUP_DIR nel .env), solo da mostrare in Impostazioni → Backup.
+    server-directory: ${WALLETTRACKER_BACKUP_DIR_ON_SERVER:}
   sync:
     enabled: true
     # Ogni conto viene aggiornato al massimo ogni 6 ore: 4 letture al giorno, il limite PSD2 in background.
@@ -77,9 +142,7 @@ wallettracker:
     check-every: 30m
     initial-delay: 10s
   ai:
-    # Gli indirizzi dei servizi cloud (passo 7c, docs/30). Si cambiano solo per i test, che li puntano a un
-    # server finto. Per Gemini, vuoto = l'indirizzo di Google (lo sceglie la libreria di Google).
-    mistral:
-      base-url: https://api.mistral.ai
+    # L'indirizzo di Gemini (passo 7c, docs/30). Si cambia solo per i test, che lo puntano a un server finto.
+    # Vuoto = l'indirizzo di Google (lo sceglie la libreria di Google).
     gemini:
       base-url:

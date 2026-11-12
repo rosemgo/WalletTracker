@@ -3,15 +3,21 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  BankConnection,
+  ConnectionRemoval,
   Account,
   AiCloudProvider,
+  AuthStatus,
+  RecoveryCode,
   AiConnectionTest,
   AiProvider,
   AiSettingsChange,
   AiStatus,
+  AppVersion,
   AiSuggestionsStatus,
   AccountRole,
   Alert,
+  BackupStatus,
   Bank,
   Budget,
   BudgetRequest,
@@ -20,9 +26,22 @@ import {
   CategorySuggestion,
   ImportMapping,
   ImportPreview,
+  CompletionPreview,
+  CompletionResult,
   ImportResult,
   LinkResult,
   ManualAccountRequest,
+  CategoryChange,
+  TransactionDetail,
+  Overview,
+  CategoryOverview,
+  ExploreGroups,
+  ExplorePeriod,
+  ExploreSeries,
+  GroupBy,
+  InvestmentPeriod,
+  Investments,
+  Metric,
   Rule,
   RulePreview,
   RuleRequest,
@@ -30,13 +49,13 @@ import {
   SubscriptionConfirmation,
   SubscriptionOverview,
   SubscriptionSuggestion,
-  Summary,
   SyncRound,
   Transaction,
   TransactionFilter,
   TransactionPage,
   TransactionType,
   UsedCategories,
+  UpdateStatus,
 } from './models';
 
 /**
@@ -67,6 +86,23 @@ export class WalletApi {
   }
 
   /** PUT /api/accounts/{id}/display-name: il nome del conto scelto dall'utente; vuoto lo toglie. */
+  /** PUT /api/accounts/{id}/logo: il logo di un conto manuale (docs/loghi.md). PNG, JPEG o WebP, al massimo 256 KB. */
+  uploadAccountLogo(accountId: number, file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.put<void>(`/api/accounts/${accountId}/logo`, form);
+  }
+
+  /** DELETE /api/accounts/{id}/logo: toglie il logo caricato. */
+  deleteAccountLogo(accountId: number): Observable<void> {
+    return this.http.delete<void>(`/api/accounts/${accountId}/logo`);
+  }
+
+  /** Il saldo di un conto manuale (docs/saldi.md); null lo toglie. */
+  changeBalance(accountId: number, balance: number | null): Observable<Account> {
+    return this.http.put<Account>(`/api/accounts/${accountId}/balance`, { balance });
+  }
+
   renameAccount(accountId: number, displayName: string): Observable<Account> {
     return this.http.put<Account>(`/api/accounts/${accountId}/display-name`, { displayName });
   }
@@ -99,6 +135,24 @@ export class WalletApi {
     });
   }
 
+  /** POST /api/imports/completion/preview: che cosa cambierebbe completando un conto collegato (docs/31). */
+  previewCompletion(file: File, accountId: number): Observable<CompletionPreview> {
+    return this.http.post<CompletionPreview>(
+      '/api/imports/completion/preview',
+      importForm(file, null),
+      {
+        params: { accountId },
+      },
+    );
+  }
+
+  /** POST /api/imports/completion: completa i movimenti del conto collegato con il file. */
+  completeTransactions(file: File, accountId: number): Observable<CompletionResult> {
+    return this.http.post<CompletionResult>('/api/imports/completion', importForm(file, null), {
+      params: { accountId },
+    });
+  }
+
   /** GET /api/transactions?accountId=...&type=...&page=...&size=... (i filtri null non vengono mandati) */
   transactions(filter: TransactionFilter): Observable<TransactionPage> {
     let params = new HttpParams().set('page', filter.page).set('size', filter.size);
@@ -108,6 +162,9 @@ export class WalletApi {
     if (filter.type !== null) {
       params = params.set('type', filter.type);
     }
+    if (filter.categoryId != null) {
+      params = params.set('categoryId', filter.categoryId);
+    }
     if (filter.uncategorized) {
       params = params.set('uncategorized', true);
     }
@@ -116,6 +173,9 @@ export class WalletApi {
     }
     if (filter.to !== null) {
       params = params.set('to', filter.to);
+    }
+    if (filter.text.trim() !== '') {
+      params = params.set('text', filter.text.trim());
     }
     return this.http.get<TransactionPage>('/api/transactions', { params });
   }
@@ -130,6 +190,30 @@ export class WalletApi {
     return this.http.put<Transaction>(`/api/transactions/${transactionId}/manual-category`, {
       categoryId,
     });
+  }
+
+  /** GET /api/transactions/{id}: il dettaglio di un movimento. */
+  transaction(id: number): Observable<TransactionDetail> {
+    return this.http.get<TransactionDetail>(`/api/transactions/${id}`);
+  }
+
+  /**
+   * GET /api/transactions/{id}/similar?categoryId=7: gli altri movimenti dello stesso esercente con quella categoria
+   * (con `null`: quelli senza categoria).
+   */
+  similarTransactions(id: number, categoryId: number | null): Observable<Transaction[]> {
+    const params: Record<string, number> = categoryId === null ? {} : { categoryId };
+    return this.http.get<Transaction[]>(`/api/transactions/${id}/similar`, { params });
+  }
+
+  /** PUT /api/transactions/manual-categories: la categoria di più movimenti; risponde con le scelte di prima. */
+  changeCategories(changes: CategoryChange[]): Observable<CategoryChange[]> {
+    return this.http.put<CategoryChange[]>('/api/transactions/manual-categories', changes);
+  }
+
+  /** PUT /api/transactions/{id}/note; con `null` o un testo vuoto la nota viene tolta. */
+  changeNote(transactionId: number, note: string | null): Observable<Transaction> {
+    return this.http.put<Transaction>(`/api/transactions/${transactionId}/note`, { note });
   }
 
   /** GET /api/categories: l'elenco delle categorie, per gruppo e nell'ordine dei menu. */
@@ -160,6 +244,16 @@ export class WalletApi {
   /** POST /api/connections: avvia il collegamento e restituisce l'indirizzo del login sulla banca. */
   startLink(bank: string, country: string): Observable<{ url: string }> {
     return this.http.post<{ url: string }>('/api/connections', { bank, country });
+  }
+
+  /** GET /api/connections: i collegamenti alle banche, anche scaduti, rimossi o senza conti. */
+  connections(): Observable<BankConnection[]> {
+    return this.http.get<BankConnection[]>('/api/connections');
+  }
+
+  /** DELETE /api/connections/{id}: rimuove un collegamento, tenendo i conti come storia. */
+  removeConnection(id: number): Observable<ConnectionRemoval> {
+    return this.http.delete<ConnectionRemoval>(`/api/connections/${id}`);
   }
 
   /** POST /api/connections/complete: completa il collegamento con i parametri ricevuti dalla banca. */
@@ -193,11 +287,77 @@ export class WalletApi {
   }
 
   /** POST /api/rules/preview: a quali movimenti si applicherebbe la regola, senza salvarla. */
-  previewRule(rule: RuleRequest): Observable<RulePreview> {
-    return this.http.post<RulePreview>('/api/rules/preview', rule);
+  /** POST /api/rules/preview (?id=7 mentre si modifica la regola 7: non blocca sé stessa) */
+  previewRule(rule: RuleRequest, id: number | null = null): Observable<RulePreview> {
+    return this.http.post<RulePreview>('/api/rules/preview', rule, {
+      params: id === null ? {} : { id },
+    });
   }
 
   /** GET /api/setup */
+  /** GET /api/auth/status: lo stato del PIN. Dà anche il cookie XSRF-TOKEN, che Angular rimanda da solo. */
+  authStatus(): Observable<AuthStatus> {
+    return this.http.get<AuthStatus>('/api/auth/status');
+  }
+
+  /** POST /api/auth/no-pin: la scelta "senza PIN", alla prima apertura (solo dal PC). */
+  chooseWithoutPin(): Observable<void> {
+    return this.http.post<void>('/api/auth/no-pin', {});
+  }
+
+  /** POST /api/auth/pin: crea il PIN (solo dal PC) e apre la sessione; risponde con il codice di recupero. */
+  createPin(pin: string): Observable<RecoveryCode> {
+    return this.http.post<RecoveryCode>('/api/auth/pin', { pin });
+  }
+
+  /** POST /api/auth/login: controlla il PIN e apre la sessione (401 sbagliato, 429 in pausa). */
+  login(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/login', { pin });
+  }
+
+  /** POST /api/auth/recover: con il codice di recupero sceglie un PIN nuovo; risponde con il codice nuovo. */
+  recover(code: string, pin: string): Observable<RecoveryCode> {
+    return this.http.post<RecoveryCode>('/api/auth/recover', { code, pin });
+  }
+
+  /** POST /api/auth/pin/remove: toglie il PIN (solo dal PC, con il PIN di adesso). */
+  removePin(pin: string): Observable<void> {
+    return this.http.post<void>('/api/auth/pin/remove', { pin });
+  }
+
+  /** POST /api/auth/logout: chiude la sessione. */
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', {});
+  }
+
+  /** GET /api/version: la versione dell'app (docs/50, parte B). */
+  version(): Observable<AppVersion> {
+    return this.http.get<AppVersion>('/api/version');
+  }
+
+  /** GET /api/version/update: c'è una versione nuova? (docs/50, parte J). L'ultima risposta di GitHub. */
+  updateStatus(): Observable<UpdateStatus> {
+    return this.http.get<UpdateStatus>('/api/version/update');
+  }
+
+  /** GET /api/backups: lo stato dei backup e l'elenco (docs/48, parte Q). */
+  backupStatus(): Observable<BackupStatus> {
+    return this.http.get<BackupStatus>('/api/backups');
+  }
+
+  /** POST /api/backups: "fai un backup adesso" (lo fa il container dei backup, entro qualche secondo). */
+  requestBackup(): Observable<BackupStatus> {
+    return this.http.post<BackupStatus>('/api/backups', {});
+  }
+
+  /**
+   * L'indirizzo per scaricare un backup: si usa in un link, non con HttpClient (il browser lo salva come file). Il
+   * backend lo dà solo dal server.
+   */
+  backupDownloadUrl(name: string): string {
+    return `/api/backups/${encodeURIComponent(name)}`;
+  }
+
   setupStatus(): Observable<SetupStatus> {
     return this.http.get<SetupStatus>('/api/setup');
   }
@@ -210,9 +370,55 @@ export class WalletApi {
     });
   }
 
-  /** GET /api/summary/monthly?from=2025-11: il riepilogo da quel mese al mese in corso. */
-  monthlySummary(from: string): Observable<Summary> {
-    return this.http.get<Summary>('/api/summary/monthly', { params: { from } });
+  /**
+   * GET /api/overview?month=2026-10&currency=EUR: il Riepilogo di un mese. Senza mese, quello in corso; senza
+   * valuta, quella con più spese.
+   */
+  overview(month: string | null, currency: string | null): Observable<Overview> {
+    let params = new HttpParams();
+    if (month) {
+      params = params.set('month', month);
+    }
+    if (currency) {
+      params = params.set('currency', currency);
+    }
+    return this.http.get<Overview>('/api/overview', { params });
+  }
+
+  /** GET /api/explore/series: le barre di Analisi. */
+  exploreSeries(query: {
+    metric: Metric;
+    period: ExplorePeriod;
+    categoryId: number | null;
+    currency: string | null;
+  }): Observable<ExploreSeries> {
+    return this.http.get<ExploreSeries>('/api/explore/series', { params: definedParams(query) });
+  }
+
+  /** GET /api/explore/groups: i movimenti di una barra raggruppati. */
+  exploreGroups(query: {
+    metric: Metric;
+    from: string;
+    to: string;
+    by: GroupBy;
+    categoryId: number | null;
+    currency: string | null;
+  }): Observable<ExploreGroups> {
+    return this.http.get<ExploreGroups>('/api/explore/groups', { params: definedParams(query) });
+  }
+
+  /** GET /api/categories/{id}/overview?month=2026-10: la pagina di una categoria. */
+  categoryOverview(id: number, month: string | null): Observable<CategoryOverview> {
+    return this.http.get<CategoryOverview>(`/api/categories/${id}/overview`, {
+      params: month ? { month } : {},
+    });
+  }
+
+  /** GET /api/investments?period=YEAR&currency=EUR (docs/investimenti.md) */
+  investments(period: InvestmentPeriod, currency: string | null = null): Observable<Investments> {
+    return this.http.get<Investments>('/api/investments', {
+      params: currency ? { period, currency } : { period },
+    });
   }
 
   /** GET /api/budgets?month=2026-10 */
@@ -360,4 +566,17 @@ function importForm(file: File, mapping: ImportMapping | null): FormData {
     form.append('mapping', new Blob([JSON.stringify(mapping)], { type: 'application/json' }));
   }
   return form;
+}
+
+/** I parametri di una richiesta senza quelli null: "nessun filtro" vuol dire non mandarli. */
+function definedParams(
+  query: Record<string, string | number | null>,
+): Record<string, string | number> {
+  const params: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== null) {
+      params[key] = value;
+    }
+  }
+  return params;
 }

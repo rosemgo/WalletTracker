@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="860" viewBox="0 0 1200 860" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="860" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Il PIN e la sessione, passo per passo</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">tutte le richieste passano da nginx, che le inoltra al backend così come sono (docs/44)</text>
+
+<!-- colonne -->
+<rect x="40" y="90" width="300" height="60" rx="12" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2"/>
+<text x="190" y="118" text-anchor="middle" font-size="18" font-weight="700" fill="#1d4ed8">Browser</text>
+<text x="190" y="140" text-anchor="middle" font-size="13" fill="#334155">la dashboard Angular</text>
+<rect x="860" y="90" width="300" height="60" rx="12" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+<text x="1010" y="118" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">Backend</text>
+<text x="1010" y="140" text-anchor="middle" font-size="13" fill="#334155">Spring Security + database</text>
+<line x1="190" y1="150" x2="190" y2="840" stroke="#93c5fd" stroke-width="2" stroke-dasharray="6 6"/>
+<line x1="1010" y1="150" x2="1010" y2="840" stroke="#fdba74" stroke-width="2" stroke-dasharray="6 6"/>
+
+<!-- 1 -->
+<circle cx="70" cy="190" r="16" fill="#0f172a"/><text x="70" y="196" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">1</text>
+<line x1="200" y1="190" x2="1000" y2="190" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="600" y="180" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">GET /api/auth/status</text>
+<line x1="1000" y1="225" x2="200" y2="225" stroke="#c2410c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ao)"/>
+<text x="600" y="217" text-anchor="middle" font-size="14" fill="#7c2d12">{"pinSet":true, "authenticated":false}  +  cookie XSRF-TOKEN (il gettone CSRF)</text>
+
+<!-- 2 -->
+<circle cx="70" cy="275" r="16" fill="#0f172a"/><text x="70" y="281" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">2</text>
+<rect x="100" y="255" width="300" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="250" y="283" text-anchor="middle" font-size="14" fill="#0f172a">mostra "Inserisci il PIN"</text>
+
+<!-- 3 -->
+<circle cx="70" cy="345" r="16" fill="#0f172a"/><text x="70" y="351" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">3</text>
+<line x1="200" y1="345" x2="1000" y2="345" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="600" y="327" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">POST /api/auth/login  {"pin":"••••••"}</text>
+<text x="420" y="365" font-size="13" fill="#1d4ed8">+ header X-XSRF-TOKEN (Angular lo copia dal cookie)</text>
+<rect x="780" y="380" width="370" height="96" rx="10" fill="#fff7ed" stroke="#fdba74"/>
+<text x="795" y="404" font-size="14" fill="#7c2d12">• gettone CSRF giusto? (se no: 403)</text>
+<text x="795" y="426" font-size="14" fill="#7c2d12">• in pausa per troppi errori? (se sì: 429)</text>
+<text x="795" y="448" font-size="14" fill="#7c2d12">• bcrypt: l'hash del PIN scritto = quello salvato?</text>
+<text x="795" y="470" font-size="14" fill="#7c2d12">• sì → apre la SESSIONE (no: 401, un errore in più)</text>
+<line x1="1000" y1="500" x2="200" y2="500" stroke="#c2410c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ao)"/>
+<text x="600" y="492" text-anchor="middle" font-size="14" font-weight="700" fill="#7c2d12">204  +  cookie WALLETTRACKER_SESSION  (HttpOnly, SameSite=Strict)</text>
+
+<!-- 4 -->
+<circle cx="70" cy="560" r="16" fill="#0f172a"/><text x="70" y="566" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">4</text>
+<line x1="200" y1="560" x2="1000" y2="560" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="600" y="550" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">GET /api/transactions   (il browser aggiunge da solo il cookie della sessione)</text>
+<line x1="1000" y1="595" x2="200" y2="595" stroke="#c2410c" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ao)"/>
+<text x="600" y="587" text-anchor="middle" font-size="14" fill="#7c2d12">200: i movimenti (e il service worker ne tiene una copia sul dispositivo)</text>
+
+<!-- 5 -->
+<circle cx="70" cy="665" r="16" fill="#b91c1c"/><text x="70" y="671" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">5</text>
+<rect x="430" y="635" width="340" height="40" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+<text x="600" y="660" text-anchor="middle" font-size="14" font-weight="700" fill="#991b1b">12 ore senza usare l'app, o il backend riparte</text>
+<line x1="200" y1="710" x2="1000" y2="710" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<text x="600" y="700" text-anchor="middle" font-size="15" font-weight="700" fill="#1d4ed8">GET /api/budgets   (con il vecchio cookie)</text>
+<line x1="1000" y1="745" x2="200" y2="745" stroke="#b91c1c" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#ar)"/>
+<text x="600" y="737" text-anchor="middle" font-size="14" font-weight="700" fill="#991b1b">401 "Inserisci il PIN."</text>
+<rect x="100" y="765" width="420" height="64" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+<text x="115" y="790" font-size="14" fill="#991b1b">l'intercettore se ne accorge: svuota la copia dei</text>
+<text x="115" y="812" font-size="14" fill="#991b1b">dati sul dispositivo e torna a "Inserisci il PIN" (2)</text>
+</svg>

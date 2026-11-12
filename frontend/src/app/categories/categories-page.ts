@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { KINDS, KIND_LABELS, categoryGroups } from '../api/category-groups';
 import { Category, CategoryKind } from '../api/models';
@@ -13,7 +14,7 @@ import { WalletApi } from '../api/wallet-api';
  */
 @Component({
   selector: 'app-categories-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './categories-page.html',
 })
 export class CategoriesPage implements OnInit {

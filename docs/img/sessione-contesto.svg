@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="980" viewBox="0 0 1200 980" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#15803d"/></marker>
+</defs>
+<rect width="1200" height="980" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Sessione e contesto: il cassetto e il cartellino</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">la sessione è il cassetto (dura 12 ore); il contesto è un oggetto che sta DENTRO il cassetto, e durante una richiesta si appende al thread</text>
+
+<!-- Tomcat memory in the middle -->
+<rect x="330" y="95" width="540" height="420" rx="16" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="600" y="125" text-anchor="middle" font-size="18" font-weight="700" fill="#c2410c">Memoria di Tomcat: l'elenco delle sessioni</text>
+<text x="600" y="147" text-anchor="middle" font-size="13" fill="#475569">una mappa: numero della sessione → cassetto</text>
+
+<rect x="355" y="165" width="490" height="250" rx="12" fill="#ffffff" stroke="#c2410c" stroke-width="2"/>
+<text x="375" y="193" font-size="15" font-weight="700" fill="#0f172a">Cassetto n. 8F3A91C2…   (la sessione del telefono)</text>
+<text x="375" y="213" font-size="12" fill="#475569">dentro: attributi, cioè coppie nome → valore</text>
+
+<rect x="375" y="228" width="450" height="110" rx="10" fill="#eff6ff" stroke="#1d4ed8"/>
+<text x="390" y="252" font-size="13" font-family="Consolas, monospace" font-weight="700" fill="#1d4ed8">"SPRING_SECURITY_CONTEXT" →</text>
+<rect x="405" y="262" width="400" height="64" rx="8" fill="#ffffff" stroke="#1d4ed8" stroke-dasharray="5 3"/>
+<text x="605" y="286" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">SecurityContext  (il "cartellino")</text>
+<text x="605" y="308" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#334155">Authentication: "proprietario", autenticato</text>
+
+<rect x="375" y="348" width="450" height="50" rx="10" fill="#f0fdf4" stroke="#15803d"/>
+<text x="390" y="378" font-size="13" font-family="Consolas, monospace" font-weight="700" fill="#15803d">"wallettracker.pin-generation" → 3</text>
+
+<rect x="355" y="430" width="490" height="60" rx="12" fill="#ffffff" stroke="#c2410c" stroke-dasharray="6 4"/>
+<text x="600" y="456" text-anchor="middle" font-size="14" fill="#334155">Cassetto n. 2B7E40D9…   (un altro dispositivo)</text>
+<text x="600" y="476" text-anchor="middle" font-size="12" fill="#475569">ogni browser ha il suo cassetto, con il suo numero</text>
+
+<!-- Left: login -->
+<rect x="20" y="95" width="290" height="420" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="165" y="125" text-anchor="middle" font-size="17" font-weight="700" fill="#334155">① La richiesta del PIN</text>
+<text x="40" y="155" font-size="13" fill="#334155">openSession, riga per riga:</text>
+<text x="40" y="182" font-size="12" fill="#0f172a">1-3  changeSessionId():</text>
+<text x="60" y="199" font-size="12" fill="#475569">cassetto già c'era? numero nuovo</text>
+<text x="40" y="224" font-size="12" fill="#0f172a">4    createEmptyContext():</text>
+<text x="60" y="241" font-size="12" fill="#475569">un cartellino nuovo, vuoto</text>
+<text x="40" y="266" font-size="12" fill="#0f172a">5    setAuthentication(...):</text>
+<text x="60" y="283" font-size="12" fill="#475569">ci scrive "proprietario"</text>
+<text x="40" y="308" font-size="12" fill="#0f172a">6    SecurityContextHolder.setContext:</text>
+<text x="60" y="325" font-size="12" fill="#475569">lo appende al thread, per ORA</text>
+<text x="40" y="350" font-size="12" font-weight="700" fill="#1d4ed8">7    saveContext(...):</text>
+<text x="60" y="367" font-size="12" fill="#1d4ed8">prende il cassetto (se manca lo crea)</text>
+<text x="60" y="384" font-size="12" fill="#1d4ed8">e ci mette il cartellino</text>
+<text x="40" y="409" font-size="12" font-weight="700" fill="#15803d">8    setAttribute(GENERATION, 3):</text>
+<text x="60" y="426" font-size="12" fill="#15803d">mette nel cassetto la generazione</text>
+<rect x="40" y="445" width="250" height="52" rx="8" fill="#ffffff" stroke="#334155"/>
+<text x="165" y="467" text-anchor="middle" font-size="12" fill="#0f172a">risposta: Set-Cookie:</text>
+<text x="165" y="485" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#0f172a">WALLETTRACKER_SESSION=8F3A…</text>
+
+<line x1="310" y1="365" x2="400" y2="300" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+<line x1="310" y1="418" x2="370" y2="378" stroke="#15803d" stroke-width="2.5" marker-end="url(#ag)"/>
+
+<!-- Right: next request -->
+<rect x="890" y="95" width="290" height="420" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="1035" y="125" text-anchor="middle" font-size="17" font-weight="700" fill="#334155">② La richiesta dopo</text>
+<rect x="910" y="145" width="250" height="52" rx="8" fill="#ffffff" stroke="#334155"/>
+<text x="1035" y="167" text-anchor="middle" font-size="12" fill="#0f172a">GET /api/accounts</text>
+<text x="1035" y="185" text-anchor="middle" font-size="11" font-family="Consolas, monospace" fill="#0f172a">Cookie: WALLETTRACKER_SESSION=8F3A</text>
+<text x="910" y="225" font-size="12" fill="#0f172a">a. Tomcat cerca il cassetto 8F3A…</text>
+<text x="910" y="250" font-size="12" fill="#1d4ed8">b. SecurityContextHolderFilter</text>
+<text x="928" y="267" font-size="12" fill="#1d4ed8">prende il cartellino dal cassetto</text>
+<text x="928" y="284" font-size="12" fill="#1d4ed8">e lo appende al thread</text>
+<text x="910" y="309" font-size="12" fill="#15803d">c. PinAccessFilter confronta la</text>
+<text x="928" y="326" font-size="12" fill="#15803d">generazione con quella del database</text>
+<text x="910" y="351" font-size="12" fill="#0f172a">d. AuthorizationFilter: autenticato? sì</text>
+<text x="910" y="376" font-size="12" fill="#0f172a">e. il controller risponde con i conti</text>
+<text x="910" y="401" font-size="12" fill="#c2410c">f. fine: il cartellino si stacca dal</text>
+<text x="928" y="418" font-size="12" fill="#c2410c">thread; il cassetto resta</text>
+
+<line x1="890" y1="230" x2="850" y2="210" stroke="#c2410c" stroke-width="2.5" marker-end="url(#ao)"/>
+<line x1="825" y1="280" x2="905" y2="262" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#ab)"/>
+
+<!-- Bottom: thread -->
+<rect x="20" y="545" width="1160" height="410" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="45" y="577" font-size="18" font-weight="700" fill="#334155">③ Il thread: la linea di lavoro che serve UNA richiesta</text>
+<text x="45" y="601" font-size="13" fill="#475569">Tomcat dà ogni richiesta a un thread; SecurityContextHolder tiene un cartellino per ogni thread (ThreadLocal)</text>
+
+<line x1="80" y1="680" x2="1120" y2="680" stroke="#334155" stroke-width="3" marker-end="url(#ao)"/>
+<text x="80" y="665" font-size="13" fill="#334155">inizio richiesta</text>
+<text x="1120" y="665" text-anchor="end" font-size="13" fill="#334155">fine richiesta</text>
+
+<rect x="80" y="700" width="230" height="90" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="195" y="728" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">SecurityContextHolder</text>
+<text x="195" y="752" text-anchor="middle" font-size="12" fill="#475569">riempito dal cassetto</text>
+<text x="195" y="772" text-anchor="middle" font-size="12" fill="#475569">(o vuoto, se non c'è)</text>
+
+<rect x="350" y="700" width="500" height="90" rx="10" fill="#eff6ff" stroke="#1d4ed8"/>
+<text x="600" y="728" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">durante la richiesta: chiunque chiede "chi è?"</text>
+<text x="600" y="752" text-anchor="middle" font-size="12" fill="#334155">PinAccessFilter, AuthorizationFilter, i controller</text>
+<text x="600" y="772" text-anchor="middle" font-size="12" font-family="Consolas, monospace" fill="#334155">SecurityContextHolder.getContext().getAuthentication()</text>
+
+<rect x="890" y="700" width="230" height="90" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+<text x="1005" y="728" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">svuotato</text>
+<text x="1005" y="752" text-anchor="middle" font-size="12" fill="#475569">il thread passa a un'altra</text>
+<text x="1005" y="772" text-anchor="middle" font-size="12" fill="#475569">richiesta, pulito</text>
+
+<rect x="80" y="815" width="1040" height="120" rx="10" fill="#fffbeb" stroke="#b45309"/>
+<text x="600" y="843" text-anchor="middle" font-size="14" font-weight="700" fill="#92400e">In una frase</text>
+<text x="600" y="868" text-anchor="middle" font-size="13" fill="#334155">Il cassetto è SEMPRE la sessione. Il contesto è una delle cose che ci stanno dentro, con l'etichetta "SPRING_SECURITY_CONTEXT".</text>
+<text x="600" y="890" text-anchor="middle" font-size="13" fill="#334155">saveContext lo mette nel cassetto (creando il cassetto se non c'era); a ogni richiesta dopo, SecurityContextHolderFilter</text>
+<text x="600" y="912" text-anchor="middle" font-size="13" fill="#334155">lo riprende e lo appende al thread. Per tutto il resto del backend, "chi è" si legge dal thread, non dalla sessione.</text>
+</svg>

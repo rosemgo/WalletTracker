@@ -3,14 +3,13 @@ package it.wallettracker.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import it.wallettracker.IntegrationTestConfiguration;
+import it.wallettracker.auth.TestSession;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -59,12 +58,11 @@ class UploadLimitTest {
         body.write(content);
         body.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
 
-        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/imports/preview?accountId=1"))
-                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray()))
-                .build();
-        try (HttpClient client = HttpClient.newHttpClient()) {
-            return client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        // Dal passo 3 (docs/46) serve il PIN: la richiesta parte da una sessione aperta, con il gettone CSRF.
+        try (TestSession session = TestSession.open(port)) {
+            return session.send(session.request("/api/imports/preview?accountId=1")
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray())));
         }
     }
 }

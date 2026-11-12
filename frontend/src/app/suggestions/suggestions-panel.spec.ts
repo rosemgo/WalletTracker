@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { AiAnswerJob, AiSuggestionsStatus, CategorySuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -103,7 +103,32 @@ describe('SuggestionsPanel', () => {
     expect(accepted).toEqual([['PIZZERIA DA GINO', 5]]);
     expect(reloads).toBe(1);
     expect(page.textContent).toContain('"Bar e ristoranti" assegnata a 3 movimenti');
-    expect(page.querySelector('table')).toBeNull(); // niente più da suggerire
+    expect(page.querySelector('.suggestion-list')).toBeNull(); // niente più da suggerire
+  });
+
+  it('while the backend answers, only the buttons of the touched suggestion are disabled', async () => {
+    suggestions = [PIZZA, CONAD_BY_AI];
+    const pending = new Subject<{ updated: number }>();
+    acceptResponse = pending; // il backend non ha ancora risposto
+    const fixture = TestBed.createComponent(SuggestionsPanel);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const rows = () => Array.from(page.querySelectorAll('.suggestion-list li'));
+    const disabled = (row: Element) =>
+      Array.from(row.querySelectorAll('button')).map((b) => (b as HTMLButtonElement).disabled);
+
+    (rows()[0].querySelector('button.primary') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    // Prima tutti i pulsanti si disattivavano (e sembravano premuti tutti insieme): ora solo i due della pizzeria.
+    expect(disabled(rows()[0])).toEqual([true, true]);
+    expect(disabled(rows()[1])).toEqual([false, false]);
+    expect(accepted).toEqual([['PIZZERIA DA GINO', 5]]);
+
+    pending.next({ updated: 3 });
+    pending.complete();
+    await fixture.whenStable();
+    expect(page.textContent).toContain('"Bar e ristoranti" assegnata a 3 movimenti');
   });
 
   it('"no" remembers the refusal without telling the page to reload', async () => {
@@ -113,7 +138,7 @@ describe('SuggestionsPanel', () => {
     await fixture.whenStable();
     const page = fixture.nativeElement as HTMLElement;
 
-    button(page, 'no').click();
+    button(page, 'No').click();
     await fixture.whenStable();
 
     expect(dismissed).toEqual([['PIZZERIA DA GINO', 5]]);
@@ -149,7 +174,7 @@ describe('SuggestionsPanel', () => {
       ai = [{ enabled: true, model: 'gemma3:4b', toAsk: 0, job: null }];
       const fixture = TestBed.createComponent(SuggestionsPanel);
       await fixture.whenStable();
-      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr');
+      const rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.suggestion-list li');
 
       expect(rows[0].querySelector('.ai-tag')).toBeNull(); // dalla tua storia
       expect(rows[1].querySelector('.ai-tag')?.textContent).toBe('IA');
@@ -166,7 +191,7 @@ describe('SuggestionsPanel', () => {
       expect(page.textContent).toContain(
         "4 esercenti senza categoria non sono ancora stati chiesti all'IA",
       );
-      expect(page.querySelector('table')).toBeNull();
+      expect(page.querySelector('.suggestion-list')).toBeNull();
       expect(button(page, "Chiedi all'IA")).toBeTruthy();
     });
 
@@ -199,7 +224,7 @@ describe('SuggestionsPanel', () => {
       expect(page.textContent).toContain(
         "L'IA ha guardato 3 esercenti: 2 suggerimenti, per 1 non sa.",
       );
-      expect(page.textContent).toContain('CONAD SUPERSTORE');
+      expect(page.textContent).toContain('Conad Superstore');
       expect(vi.getTimerCount()).toBe(0);
     });
 

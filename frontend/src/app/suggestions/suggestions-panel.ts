@@ -2,6 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, output, signal } from 
 
 import { AiSuggestionsStatus, CategorySuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { ReadablePipe } from '../text/readable';
 
 /** Ogni quanto chiedere lo stato mentre l'IA risponde. */
 const POLL_MS = 2000;
@@ -21,6 +22,7 @@ const POLL_MS = 2000;
  * finito, poi ricarica i suggerimenti. Quelli dell'IA hanno il segno "IA" e il nome del modello.
  */
 @Component({
+  imports: [ReadablePipe],
   selector: 'app-suggestions-panel',
   templateUrl: './suggestions-panel.html',
 })
@@ -32,7 +34,11 @@ export class SuggestionsPanel implements OnInit {
   protected readonly suggestions = signal<CategorySuggestion[]>([]);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly busy = signal<string | null>(null); // l'esercente in lavorazione: niente doppi clic
+  /**
+   * Gli esercenti in lavorazione: i loro due pulsanti restano disattivati finché il backend risponde, così un doppio
+   * clic non manda due richieste. Solo quelli: prima si disattivavano tutti, e sembravano premuti tutti insieme.
+   */
+  protected readonly busy = signal<ReadonlySet<string>>(new Set());
   protected readonly ai = signal<AiSuggestionsStatus | null>(null);
   private timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -53,27 +59,36 @@ export class SuggestionsPanel implements OnInit {
     this.load();
   }
 
+  /** True se l'esercente è in lavorazione. */
+  protected isBusy(suggestion: CategorySuggestion): boolean {
+    return this.busy().has(suggestion.merchantKey);
+  }
+
   accept(suggestion: CategorySuggestion): void {
-    this.busy.set(suggestion.merchantKey);
+    this.start(suggestion);
     this.api.acceptCategorySuggestion(suggestion.merchantKey, suggestion.categoryId).subscribe({
       next: ({ updated }) => {
         this.done(
+          suggestion,
           `${suggestion.merchantName}: "${suggestion.category}" assegnata a ` +
             (updated === 1 ? '1 movimento.' : `${updated} movimenti.`) +
             ' Per i movimenti futuri puoi creare una regola dal movimento, qui sotto.',
         );
         this.accepted.emit();
       },
-      error: (response) => this.fail(response),
+      error: (response) => this.fail(response, suggestion),
     });
   }
 
   dismiss(suggestion: CategorySuggestion): void {
-    this.busy.set(suggestion.merchantKey);
+    this.start(suggestion);
     this.api.dismissCategorySuggestion(suggestion.merchantKey, suggestion.categoryId).subscribe({
       next: () =>
-        this.done(`${suggestion.merchantName}: "${suggestion.category}" non verrà più suggerita.`),
-      error: (response) => this.fail(response),
+        this.done(
+          suggestion,
+          `${suggestion.merchantName}: "${suggestion.category}" non verrà più suggerita.`,
+        ),
+      error: (response) => this.fail(response, suggestion),
     });
   }
 
@@ -86,15 +101,32 @@ export class SuggestionsPanel implements OnInit {
     });
   }
 
-  private done(message: string): void {
-    this.busy.set(null);
+  private start(suggestion: CategorySuggestion): void {
+    this.busy.update((keys) => new Set(keys).add(suggestion.merchantKey));
+  }
+
+  private finish(suggestion: CategorySuggestion | null): void {
+    if (suggestion !== null) {
+      this.busy.update((keys) => {
+        const next = new Set(keys);
+        next.delete(suggestion.merchantKey);
+        return next;
+      });
+    }
+  }
+
+  private done(suggestion: CategorySuggestion, message: string): void {
+    this.finish(suggestion);
     this.error.set(null);
     this.message.set(message);
     this.load();
   }
 
-  private fail(response: { error?: { detail?: string } }): void {
-    this.busy.set(null);
+  private fail(
+    response: { error?: { detail?: string } },
+    suggestion: CategorySuggestion | null = null,
+  ): void {
+    this.finish(suggestion);
     this.message.set(null);
     this.error.set(response.error?.detail ?? 'Operazione non riuscita.');
   }

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<defs>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker>
+</defs>
+<rect width="1200" height="760" fill="#ffffff"/>
+<text x="600" y="40" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">I backup nella dashboard: due container che si parlano con dei file</text>
+<text x="600" y="68" text-anchor="middle" font-size="15" fill="#475569">il backend non comanda Docker e non tocca i backup: scrive una richiesta, legge lo stato; i backup li fa solo il container "backup"</text>
+
+<!-- browser -->
+<rect x="20" y="100" width="260" height="210" rx="14" fill="#eff6ff" stroke="#1d4ed8" stroke-width="2.5"/>
+<text x="150" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">Impostazioni → Backup</text>
+<text x="40" y="160" font-size="12" fill="#334155">GET /api/backups: lo stato</text>
+<text x="40" y="184" font-size="12" fill="#334155">POST /api/backups:</text>
+<text x="56" y="202" font-size="12" fill="#334155">"Fai un backup adesso"</text>
+<text x="56" y="220" font-size="11" fill="#475569">(poi lo stato ogni 3 secondi)</text>
+<text x="40" y="246" font-size="12" fill="#334155">GET /api/backups/{nome}:</text>
+<text x="56" y="264" font-size="12" fill="#334155">Scarica, SOLO dal server</text>
+<text x="56" y="282" font-size="11" fill="#475569">(porta 8000; da 8001: 403)</text>
+
+<!-- backend -->
+<rect x="340" y="100" width="300" height="210" rx="14" fill="#fff7ed" stroke="#c2410c" stroke-width="2.5"/>
+<text x="490" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#c2410c">backend (BackupService)</text>
+<text x="360" y="160" font-size="12" fill="#334155">legge stato.txt e l'elenco dei file</text>
+<text x="360" y="184" font-size="12" fill="#334155">scrive "richiesta" (solo se il servizio</text>
+<text x="360" y="202" font-size="12" fill="#334155">risponde, c'è la password, e niente</text>
+<text x="360" y="220" font-size="12" fill="#334155">è già in corso)</text>
+<text x="360" y="246" font-size="12" fill="#334155">scarica: solo un nome di backup valido,</text>
+<text x="360" y="264" font-size="12" fill="#334155">solo dentro la cartella (niente "../")</text>
+<text x="360" y="290" font-size="12" font-weight="700" fill="#b91c1c">nessun accesso a Docker</text>
+
+<line x1="280" y1="205" x2="335" y2="205" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+
+<!-- shared folders -->
+<rect x="340" y="360" width="300" height="160" rx="14" fill="#f0fdf4" stroke="#15803d" stroke-width="2.5"/>
+<text x="490" y="390" text-anchor="middle" font-size="15" font-weight="700" fill="#15803d">.data/backup-stato</text>
+<text x="490" y="410" text-anchor="middle" font-size="12" fill="#475569">(la vedono tutti e due)</text>
+<rect x="360" y="425" width="260" height="36" rx="8" fill="#ffffff" stroke="#15803d"/>
+<text x="375" y="448" font-size="13" font-family="Consolas, monospace" fill="#0f172a">richiesta</text>
+<text x="470" y="448" font-size="11" fill="#475569">← la scrive il backend</text>
+<rect x="360" y="469" width="260" height="36" rx="8" fill="#ffffff" stroke="#15803d"/>
+<text x="375" y="492" font-size="13" font-family="Consolas, monospace" fill="#0f172a">stato.txt</text>
+<text x="470" y="492" font-size="11" fill="#475569">← la scrive il container</text>
+
+<rect x="340" y="560" width="300" height="100" rx="14" fill="#fffbeb" stroke="#b45309" stroke-width="2.5"/>
+<text x="490" y="590" text-anchor="middle" font-size="15" font-weight="700" fill="#92400e">backup/ (BACKUP_DIR)</text>
+<text x="490" y="614" text-anchor="middle" font-size="12" fill="#334155">nel backend: SOLA LETTURA (":ro")</text>
+<text x="490" y="634" text-anchor="middle" font-size="12" fill="#334155">nel container backup: lettura e scrittura</text>
+
+<line x1="490" y1="310" x2="490" y2="355" stroke="#334155" stroke-width="2.5" marker-start="url(#ak)" marker-end="url(#ak)"/>
+<path d="M 350 310 Q 300 450 335 600" fill="none" stroke="#334155" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ak)"/>
+<text x="250" y="470" font-size="12" fill="#334155">legge, scarica</text>
+
+<!-- container -->
+<rect x="760" y="100" width="420" height="420" rx="14" fill="#eef2ff" stroke="#4338ca" stroke-width="2.5"/>
+<text x="970" y="130" text-anchor="middle" font-size="16" font-weight="700" fill="#4338ca">container "backup" (automatico)</text>
+<text x="780" y="160" font-size="13" fill="#334155">ogni 5 secondi:</text>
+<text x="800" y="186" font-size="12" fill="#334155">① c'è una "richiesta"? la cancella e fa</text>
+<text x="818" y="204" font-size="12" fill="#334155">un backup "manuale"</text>
+<text x="800" y="230" font-size="12" fill="#334155">② è passata l'ora, e oggi non c'è un</text>
+<text x="818" y="248" font-size="12" fill="#334155">automatico? lo fa (se c'è la chiave)</text>
+<text x="800" y="274" font-size="12" fill="#334155">③ almeno ogni minuto riscrive stato.txt:</text>
+<rect x="800" y="288" width="360" height="150" rx="8" fill="#ffffff" stroke="#4338ca"/>
+<text x="815" y="310" font-size="12" font-family="Consolas, monospace" fill="#0f172a">aggiornato=1793466000</text>
+<text x="815" y="330" font-size="12" font-family="Consolas, monospace" fill="#0f172a">automatico=acceso</text>
+<text x="815" y="350" font-size="12" font-family="Consolas, monospace" fill="#0f172a">ora=03:15</text>
+<text x="815" y="370" font-size="12" font-family="Consolas, monospace" fill="#0f172a">tieni=14</text>
+<text x="815" y="390" font-size="12" font-family="Consolas, monospace" fill="#0f172a">in-corso=</text>
+<text x="815" y="410" font-size="12" font-family="Consolas, monospace" fill="#0f172a">errore-quando=</text>
+<text x="815" y="430" font-size="12" font-family="Consolas, monospace" fill="#0f172a">errore=</text>
+<text x="780" y="466" font-size="12" fill="#475569">"aggiornato" vecchio di 3 minuti: il backend dice</text>
+<text x="780" y="484" font-size="12" fill="#475569">"il servizio dei backup non risponde"</text>
+<text x="780" y="506" font-size="12" fill="#475569">tempi in secondi dal 1970 (date +%s)</text>
+
+<line x1="755" y1="440" x2="645" y2="460" stroke="#334155" stroke-width="2.5" marker-start="url(#ak)" marker-end="url(#ak)"/>
+<line x1="760" y1="510" x2="645" y2="600" stroke="#334155" stroke-width="2.5" marker-end="url(#ak)"/>
+<text x="700" y="580" font-size="12" fill="#334155">scrive</text>
+
+<!-- bottom -->
+<rect x="20" y="690" width="1160" height="56" rx="12" fill="#fef2f2" stroke="#b91c1c"/>
+<text x="600" y="714" text-anchor="middle" font-size="14" font-weight="700" fill="#7f1d1d">Restano allo script, sul server: il ripristino (bisogna fermare il backend) e la password dei backup (sta nel .env,</text>
+<text x="600" y="734" text-anchor="middle" font-size="14" font-weight="700" fill="#7f1d1d">che il backend non può scrivere).</text>
+</svg>

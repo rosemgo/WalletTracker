@@ -7,6 +7,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -41,7 +42,10 @@ import org.springframework.web.client.RestClientResponseException;
  *   <li><b>movimenti uguali ma distinti</b> (es. due caffè da 1,20 € lo stesso giorno, con JSON
  *       diversi): all'impronta aggiungiamo un numero progressivo (#1, #2...);</li>
  *   <li><b>movimenti in attesa</b>: possono cambiare o sparire, quindi a ogni importazione cancelliamo
- *       quelli salvati e li sostituiamo con quelli attuali.</li>
+ *       quelli salvati e li sostituiamo con quelli attuali;</li>
+ *   <li><b>movimenti già aggiunti da un file</b> (docs/31): se la banca manda un movimento che avevamo già preso
+ *       dal file di Trade Republic (stesso importo, data vicina), è lo stesso: non lo salviamo di nuovo, e il
+ *       movimento del file prende l'impronta della banca.</li>
  * </ol>
  */
 @Service
@@ -49,6 +53,9 @@ public class TransactionImportService {
 
     /** Alla prima importazione di un conto chiediamo un anno di storico (la banca può darne meno). */
     static final int FIRST_IMPORT_DAYS = 365;
+
+    /** Quanti giorni di differenza tra la data della banca e quella del file di Trade Republic (docs/31). */
+    static final int FILE_MATCH_DAYS = 3;
 
     /** Le importazioni successive ripartono dall'ultimo movimento salvato, meno qualche giorno di margine. */
     static final int OVERLAP_DAYS = 10;
@@ -158,6 +165,15 @@ public class TransactionImportService {
             if (repository.existsByAccountAndDedupKey(account, dedupKey)) {
                 alreadyPresent++;
                 continue;
+            }
+
+            if (status == TransactionStatus.BOOKED) {
+                Optional<BankTransaction> fromFile = fileMovementFor(account, transaction);
+                if (fromFile.isPresent()) {
+                    fromFile.get().adoptBankKey(dedupKey); // regola 5
+                    alreadyPresent++;
+                    continue;
+                }
             }
 
             repository.save(toEntity(account, dedupKey, status, raw));
@@ -271,6 +287,26 @@ public class TransactionImportService {
                 counterpartyOf(transaction),
                 descriptionOf(transaction),
                 raw.json());
+    }
+
+    /**
+     * Regola 5: il movimento aggiunto dal file di Trade Republic (docs/31) che corrisponde a questo movimento della
+     * banca: stesso conto, importo e valuta, data entro {@link #FILE_MATCH_DAYS} giorni. Tra più candidati vince il
+     * più vicino nella data, poi il primo aggiunto. Succede se la banca, dopo un nuovo collegamento, dà uno storico
+     * più lungo di prima: senza questo controllo i mesi presi dal file sarebbero doppi.
+     */
+    Optional<BankTransaction> fileMovementFor(Account account, Transaction transaction) {
+        LocalDate date = dateOf(transaction);
+        if (date == null) {
+            return Optional.empty();
+        }
+        return repository.findFileMovements(account, BankTransaction.FILE_KEY_PREFIX + "%",
+                        transaction.signedAmount().setScale(2, RoundingMode.HALF_UP),
+                        transaction.transactionAmount().currency(), date.minusDays(FILE_MATCH_DAYS),
+                        date.plusDays(FILE_MATCH_DAYS))
+                .stream()
+                .min(Comparator.comparingLong(
+                        (BankTransaction t) -> Math.abs(ChronoUnit.DAYS.between(date, t.getBookingDate()))));
     }
 
     /** Non tutte le banche compilano tutte le date: contabile, poi valuta, poi operazione. */

@@ -1,9 +1,16 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AiSettingsPanel } from '../ai/ai-settings-panel';
+import { AccessSection } from '../auth/access-section';
 import { SetupStore } from '../api/setup-store';
+import { UpdateStore } from '../api/update-store';
+import { GUIDE_URL } from '../api/return-address';
 import { WalletApi } from '../api/wallet-api';
+import { BackupSection } from './backup-section';
+import { ThemeSection } from '../theme/theme-section';
+import { FileDrop } from '../ui/file-drop';
 
 /** Un Application ID di Enable Banking è un UUID, es. "cf589be3-3755-465b-a8df-a90a16a31403". */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,7 +24,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [AiSettingsPanel, RouterLink],
+  imports: [
+    AccessSection,
+    AiSettingsPanel,
+    BackupSection,
+    DatePipe,
+    FileDrop,
+    RouterLink,
+    ThemeSection,
+  ],
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
@@ -28,9 +43,22 @@ export class SettingsPage {
   protected readonly pem = signal<string | null>(null); // il contenuto del file .pem scelto
   protected readonly fileName = signal<string | null>(null);
   protected readonly saving = signal(false);
-  protected readonly copied = signal(false);
+  protected readonly copied = signal<string | null>(null); // l'ultimo indirizzo copiato
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
+  /** La versione dell'app (docs/50, parte B); null finché il backend non risponde. */
+  protected readonly version = signal<string | null>(null);
+  /** La guida, per i passi di Tailscale (docs/47, parte Q). */
+  protected readonly guideUrl = GUIDE_URL;
+  /** C'è una versione nuova? (docs/50, parte J) */
+  protected readonly updates = inject(UpdateStore);
+
+  constructor() {
+    this.updates.refresh();
+    this.api
+      .version()
+      .subscribe({ next: (answer) => this.version.set(answer.version), error: () => {} });
+  }
 
   /**
    * Chi ha scritto l'Application ID che c'è ora nel campo? true = l'abbiamo preso noi dal nome del file,
@@ -76,7 +104,7 @@ export class SettingsPage {
 
   /** Copia l'indirizzo di ritorno negli appunti, da incollare sul sito di Enable Banking. */
   copyRedirectUrl(url: string): void {
-    navigator.clipboard?.writeText(url).then(() => this.copied.set(true));
+    navigator.clipboard?.writeText(url).then(() => this.copied.set(url));
   }
 
   save(): void {

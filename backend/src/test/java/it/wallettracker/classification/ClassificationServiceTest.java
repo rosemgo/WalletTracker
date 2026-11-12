@@ -122,6 +122,29 @@ class ClassificationServiceTest {
     }
 
     @Test
+    void theWithholdingOnTheAccruedInterestOfATransferOfSecuritiesIsATransferBetweenOwnAccounts() {
+        // V39 (docs/investimenti.md, parte W): il giro titoli tra due tuoi conti Fineco. Testi veri, importi inventati.
+        Account giving = account("IT00GIVING", AccountRole.INVESTMENT);
+        Account receiving = account("IT00RECEIVING", AccountRole.INVESTMENT);
+        BankTransaction out = transaction(giving, DAY, "-60.80", null,
+                "Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000");
+        BankTransaction in = transaction(receiving, DAY, "60.80", null,
+                "Ritenuta Fiscale ROMANIA-7OT45 6,5% Qta/Val.nom. 16000,000000");
+        BankTransaction coupon = transaction(giving, DAY, "-65.00", null, "Rit.ced.su 16.000,000 ROMANIA-7OT45 6,5%");
+        BankTransaction cash = transaction(giving, DAY, "-0.04", null, "Rit. Fisc. Interessi Portaf.Remun. rit. 26,00 %");
+
+        classificationService.classifyAll();
+
+        // i due lati: trasferimenti tra i tuoi conti, senza categoria (non contano in nessun totale)
+        assertThat(typeOf(out)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INTERNAL_TRANSFER);
+        assertThat(reload(out).getCategory()).isNull();
+        // le ritenute su una cedola e sugli interessi della liquidità restano ritenute sulle rendite
+        assertThat(typeOf(coupon)).isEqualTo(TransactionType.WITHHOLDING_TAX);
+        assertThat(typeOf(cash)).isEqualTo(TransactionType.WITHHOLDING_TAX);
+    }
+
+    @Test
     void theIbanOfAnotherOwnAccountInTheDescriptionMeansTransfer() {
         // L'altro lato non è stato importato, ma la causale cita l'IBAN di un tuo conto (anche con spazi).
         Account main = account("IT00MAIN", AccountRole.MAIN);
@@ -177,7 +200,7 @@ class ClassificationServiceTest {
         classificationService.classifyAll();
 
         assertThat(typeOf(bill)).isEqualTo(TransactionType.EXPENSE);
-        assertThat(typeOf(tax)).isEqualTo(TransactionType.INVESTMENT_TAX);
+        assertThat(typeOf(tax)).isEqualTo(TransactionType.WITHHOLDING_TAX); // la regola "Rit.div" (V37)
     }
 
     @Test
@@ -310,6 +333,43 @@ class ClassificationServiceTest {
         classificationService.classifyAll();
 
         assertThat(typeOf(unknown)).isEqualTo(TransactionType.SECURITIES_BUY);
+    }
+
+    @Test
+    void aTransferChosenByHandIsStillPairedWithItsOtherHalf() {
+        // Il bonifico in uscita corretto a mano come versamento: l'entrata sul conto di investimento deve trovare
+        // lo stesso la sua metà, invece di restare un'entrata (docs/tinaba.md, parte H). Conto manuale, come Tinaba.
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "Mario Rossi");
+        Account broker = accountRepository.save(Account.manual("Banca Beta", "Investimenti", "IT00BETA", "EUR",
+                AccountRole.INVESTMENT));
+        BankTransaction out = transaction(main, DAY, "-200.00", null, "Bonifico istantaneo A favore di Mario Rossi");
+        out.setManualType(TransactionType.INVESTMENT_DEPOSIT);
+        transactionRepository.save(out);
+        BankTransaction in = transaction(broker, DAY, "200.00", "Mario Rossi", "Ricevuto da Mario Rossi");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(out)).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INVESTMENT_DEPOSIT);
+        assertThat(reload(in).getTransferPeerId()).isEqualTo(out.getId());
+        assertThat(reload(out).getTransferPeerId()).isEqualTo(in.getId());
+    }
+
+    @Test
+    void aMovementChosenByHandAsAnExpenseIsNeverPaired() {
+        // "Spesa" scelto a mano vuol dire: non è un giroconto. L'altra metà resta da sola.
+        Account main = owned("IT00MAIN", AccountRole.MAIN, "Mario Rossi");
+        Account spending = owned("IT00SPEND", AccountRole.SPENDING, "Mario Rossi");
+        BankTransaction out = transaction(main, DAY, "-80.00", null, "Bonifico a favore di Mario Rossi");
+        out.setManualType(TransactionType.EXPENSE);
+        transactionRepository.save(out);
+        BankTransaction in = transaction(spending, DAY, "80.00", null, "Payment from Mario Rossi");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(out)).isEqualTo(TransactionType.EXPENSE);
+        assertThat(reload(out).getTransferPeerId()).isNull();
+        assertThat(typeOf(in)).isEqualTo(TransactionType.INCOME);
     }
 
     // --- Strumenti per costruire gli scenari ---

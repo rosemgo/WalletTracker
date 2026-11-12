@@ -10,26 +10,15 @@ interface CloudInfo {
   keyUrl: string;
   keySteps: string[];
   dataNote: string;
+  /** I modelli consigliati, con che cosa cambia tra l'uno e l'altro: il campo resta libero per tutti gli altri. */
+  models: { name: string; note: string }[];
 }
 
 /**
- * I testi dei due servizi. Le regole (piani, prezzi, uso dei dati) cambiano: per questo rimandiamo sempre al sito
+ * I testi del servizio. Le regole (piani, prezzi, uso dei dati) cambiano: per questo rimandiamo sempre al sito
  * del fornitore, invece di scriverle qui come se fossero fisse.
  */
 export const CLOUD_INFO: Record<AiCloudProvider, CloudInfo> = {
-  MISTRAL: {
-    label: 'Mistral AI',
-    about: "Mistral AI è un'azienda francese: un servizio europeo.",
-    keyUrl: 'https://console.mistral.ai',
-    keySteps: [
-      'Apri console.mistral.ai e crea un account (bastano email e telefono).',
-      "Scegli un piano: di solito ce n'è uno di prova gratuito, con dei limiti.",
-      'Nel menu "API Keys" premi "Create new key" e copia la chiave.',
-      'Incollala qui sotto e premi "Salva la chiave".',
-    ],
-    dataNote:
-      'Prima di accettare, leggi sul sito come Mistral usa i dati con il piano che hai scelto.',
-  },
   GEMINI: {
     label: 'Google Gemini',
     about: 'Gemini è il servizio di intelligenza artificiale di Google.',
@@ -42,17 +31,29 @@ export const CLOUD_INFO: Record<AiCloudProvider, CloudInfo> = {
     dataNote:
       'Attenzione: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti. ' +
       'Leggi le condizioni sul sito prima di accettare.',
+    // Misurati con "Prova la connessione" (docs/30, parte O6): con il piano gratuito il Flash più recente può
+    // aspettare minuti in coda, il Lite risponde in pochi secondi.
+    models: [
+      {
+        name: 'gemini-flash-lite-latest',
+        note: 'veloce: di solito risponde in pochi secondi (è quello predefinito)',
+      },
+      {
+        name: 'gemini-flash-latest',
+        note: 'ragiona prima di rispondere, quindi può essere più preciso, ma con il piano gratuito può impiegare minuti',
+      },
+    ],
   },
 };
 
 /**
  * Un servizio cloud nelle Impostazioni (passo 7c): la chiave, il modello, il consenso, "Prova la connessione".
- * Lo stesso componente serve per Mistral e per Gemini: cambia solo `provider`.
+ * Il componente è scritto per un servizio qualunque (`provider`): oggi c'è solo Gemini.
  *
  * Come parla con il pannello che lo contiene:
  * - `provider` e `cloud` sono **input** (dal pannello al componente): quale servizio, e il suo stato;
  * - `aiModel` e `consent` sono **model**: un input che il componente può anche cambiare, e il pannello vede il
- *   valore nuovo (`[(aiModel)]="mistralModel"`, il "two-way binding"). Il pannello li usa quando salva;
+ *   valore nuovo (`[(aiModel)]="geminiModel"`, il "two-way binding"). Il pannello li usa quando salva;
  * - `statusChange` è un **output** (dal componente al pannello): dopo aver salvato o tolto la chiave, il backend
  *   restituisce lo stato nuovo, e il pannello lo mostra.
  *

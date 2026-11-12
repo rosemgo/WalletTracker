@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Le API delle impostazioni dell'IA:
  * <ul>
  *   <li>{@code GET  /api/ai}                lo stato: scelta dell'utente, Ollama acceso?, modello scaricato?;</li>
- *   <li>{@code PUT  /api/ai}                cambia la scelta (spento / Ollama / Mistral / Gemini) e i modelli;</li>
+ *   <li>{@code PUT  /api/ai}                cambia la scelta (spento / Ollama / Gemini) e i modelli;</li>
  *   <li>{@code PUT  /api/ai/keys/{provider}} salva la chiave di un servizio cloud, cifrata (non torna mai indietro);</li>
  *   <li>{@code DELETE /api/ai/keys/{provider}} la toglie;</li>
  *   <li>{@code POST /api/ai/connection-test/{provider}} una domanda di prova: chiave e modello funzionano?</li>
@@ -50,7 +50,7 @@ public class AiController {
 
     @PutMapping
     public AiService.Status change(@Valid @RequestBody SettingsChange change) {
-        return aiService.change(change.provider(), change.ollamaModel(), change.mistralModel(), change.geminiModel(),
+        return aiService.change(change.provider(), change.ollamaModel(), change.geminiModel(),
                 Boolean.TRUE.equals(change.consent()));
     }
 
@@ -104,7 +104,7 @@ public class AiController {
     }
 
     /**
-     * Il corpo di {@code PUT /api/ai/keys/{provider}}: la chiave. Le chiavi di Mistral e Google sono fatte di
+     * Il corpo di {@code PUT /api/ai/keys/{provider}}: la chiave. Le chiavi di Google sono fatte di
      * lettere, cifre, "-" e "_": accettiamo solo quelle (niente spazi, niente caratteri strani).
      */
     public record KeyChange(@NotBlank @Pattern(regexp = "[A-Za-z0-9._-]{10,300}") String apiKey) {
@@ -120,8 +120,7 @@ public class AiController {
     public record SettingsChange(
             @NotNull AiProvider provider,
             @NotNull @Pattern(regexp = MODEL_NAME) String ollamaModel,
-            @Pattern(regexp = MODEL_NAME) String mistralModel,     // null = lascia quello di prima
-            @Pattern(regexp = MODEL_NAME) String geminiModel,
+            @Pattern(regexp = MODEL_NAME) String geminiModel,      // null = lascia quello di prima
             Boolean consent) {                                       // il consenso all'invio dei dati (cloud)
     }
 }

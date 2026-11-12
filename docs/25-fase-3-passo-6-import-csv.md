@@ -1,5 +1,8 @@
 # 25. Fase 3, passo 6: l'import CSV e i conti manuali
 
+> Dalla 1.3.0 la pagina Importa legge anche i file **Excel**, trova la tabella sotto le note della banca e funziona anche
+> con i **conti collegati** (solo i mesi più vecchi della banca): `docs/importa-file.md`.
+
 **Obiettivo:** portare in WalletTracker i movimenti dei conti che Enable Banking non copre (ad esempio
 Trade Republic), caricando il file CSV che la banca ti fa esportare. Il programma propone come leggere le
 colonne, tu controlli l'anteprima, e importi. Reimportare lo stesso file non crea doppioni.
@@ -406,14 +409,10 @@ impossibile; pagina sul telefono senza scorrimento orizzontale; eliminazione del
 4. Togli `extends ResponseEntityExceptionHandler` da `ApiExceptionHandler` e rimetti un
    `@ExceptionHandler(MaxUploadSizeExceededException.class)`. Lancia `UploadLimitTest`: che cosa succede?
 
-### E Trade Republic? (da fare)
+### E Trade Republic? (fatto: `docs/31`)
 
 Trade Republic si collega con Enable Banking, ma i suoi movimenti arrivano **senza causale né
-controparte**: restano "Da verificare" (salvo i trasferimenti, che si abbinano anche senza testo). Oggi
-il file CSV si può caricare solo in un conto manuale. Il passo successivo, **da fare**:
-
-- caricare l'estratto conto anche in un conto **collegato**, non per aggiungere movimenti (sarebbero
-  doppioni) ma per **completare** quelli già arrivati da Enable Banking con causale e controparte;
-- l'utente sceglie come completare i movimenti: a mano (come già si può) oppure dal file;
-- servono la **riga di intestazione** del CSV di Trade Republic e una o due righe con dati **inventati**
-  (mai dati veri nel repository), per capire come abbinare ogni riga al suo movimento.
+controparte**: restano "Da verificare" (salvo i trasferimenti, che si abbinano anche senza testo). Ora il
+file "Esportazione transazioni" di Trade Republic si carica anche nel conto **collegato**, non per
+aggiungere movimenti (sarebbero doppioni) ma per **completare** quelli già arrivati con causale e
+controparte: pagina "Completa i movimenti", spiegata in `docs/31`.

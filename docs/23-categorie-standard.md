@@ -40,7 +40,7 @@ Con un elenco:
 
 | | Domanda | Esempi | A che cosa serve |
 |---|---|---|---|
-| **tipo** | *che cos'è* il movimento? | Spesa, Entrata, Trasferimento interno, Cedole e dividendi | decide **se** conta nel riepilogo e nei budget |
+| **tipo** | *che cos'è* il movimento? | Spesa, Entrata, Trasferimento interno, Cedole, dividendi e interessi | decide **se** conta nel riepilogo e nei budget |
 | **categoria** | *per che cosa* sono i soldi? | Spesa alimentare, Bar e ristoranti, Stipendio e pensione | decide **dove** compare tra le spese |
 | **gruppo** (della categoria) | a quali movimenti si addice la categoria? | Spese, Entrate, Investimenti, Altro | **ordina** i menu: per prime le categorie giuste |
 
@@ -56,7 +56,7 @@ tra tipo e gruppo è un piccolo calcolo, uguale nel backend (`CategoryKind.of`) 
 |---|---|
 | Spesa (anche "Rimborso di una spesa") | Categorie di spesa |
 | Entrata | Categorie di entrata |
-| Cedole e dividendi, Tasse investimenti, Acquisto/Vendita titoli, Versamento/Prelievo investimenti | Categorie di investimento |
+| Cedole, dividendi e interessi, Ritenute sulle rendite, Altre tasse investimenti, Acquisto/Vendita titoli, Versamento/Prelievo investimenti | Categorie di investimento |
 | tutto il resto (trasferimenti, saldo carta, ignorati, da verificare) | Altre categorie |
 
 ### 3. L'elenco di partenza

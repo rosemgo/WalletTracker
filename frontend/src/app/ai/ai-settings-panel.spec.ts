@@ -13,7 +13,6 @@ const OFF: AiStatus = {
   modelInstalled: false,
   download: null,
   evaluation: null,
-  mistral: { model: 'mistral-small-latest', keySet: false, keyHint: null, consent: false },
   gemini: { model: 'gemini-flash-latest', keySet: false, keyHint: null, consent: false },
 };
 
@@ -122,7 +121,8 @@ describe('AiSettingsPanel', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent!;
 
     expect(text).toContain('✗ Ollama non risponde');
-    expect(text).toContain('docker run');
+    expect(text).toContain('docker start ollama'); // di solito basta riavviarlo
+    expect(text).toContain('--restart unless-stopped'); // e la prima volta, crearlo così
     expect(text).not.toContain('Scarica il modello');
   });
 
@@ -320,8 +320,8 @@ describe('AiSettingsPanel', () => {
   });
 
   describe('with a cloud service', () => {
-    it('choosing Mistral shows its section, and saving sends models and consent', async () => {
-      status = { ...OFF, mistral: { ...OFF.mistral, keySet: true, keyHint: '…XYZ9' } };
+    it('choosing Gemini shows its section, and saving sends models and consent', async () => {
+      status = { ...OFF, gemini: { ...OFF.gemini, keySet: true, keyHint: '…XYZ9' } };
       let sent: AiSettingsChange | null = null;
       TestBed.overrideProvider(WalletApi, {
         useValue: {
@@ -331,7 +331,7 @@ describe('AiSettingsPanel', () => {
             return of({
               ...status,
               provider: change.provider,
-              mistral: { ...status.mistral, consent: true },
+              gemini: { ...status.gemini, consent: true },
             });
           },
         },
@@ -341,10 +341,10 @@ describe('AiSettingsPanel', () => {
       const page = fixture.nativeElement as HTMLElement;
       const select = page.querySelector('select') as HTMLSelectElement;
 
-      select.value = 'MISTRAL';
+      select.value = 'GEMINI';
       select.dispatchEvent(new Event('change'));
       await fixture.whenStable();
-      expect(page.querySelector('app-cloud-ai-section')?.textContent).toContain('Mistral AI');
+      expect(page.querySelector('app-cloud-ai-section')?.textContent).toContain('Google Gemini');
       const box = page.querySelector(
         'app-cloud-ai-section input[type="checkbox"]',
       ) as HTMLInputElement;
@@ -354,14 +354,13 @@ describe('AiSettingsPanel', () => {
       await fixture.whenStable();
 
       expect(sent).toEqual({
-        provider: 'MISTRAL',
+        provider: 'GEMINI',
         ollamaModel: 'qwen2.5:3b',
-        mistralModel: 'mistral-small-latest',
         geminiModel: 'gemini-flash-latest',
         consent: true,
       });
       expect(page.textContent).toContain(
-        "Suggerimenti con l'IA accesi: Mistral AI, modello mistral-small-latest.",
+        "Suggerimenti con l'IA accesi: Google Gemini, modello gemini-flash-latest.",
       );
     });
 

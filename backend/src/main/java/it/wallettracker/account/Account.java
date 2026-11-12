@@ -1,6 +1,8 @@
 package it.wallettracker.account;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import it.wallettracker.connection.BankConnection;
@@ -88,6 +90,29 @@ public class Account {
     /** Il nome scelto dall'utente (V17); null = nessuno, si usa {@link #label()}. */
     @Column(name = "display_name")
     private String displayName;
+
+    /** Il saldo (V34): dalla banca, o scritto dall'utente per un conto manuale; null se non si sa. */
+    @Column(name = "balance")
+    private BigDecimal balance;
+
+    /** Il giorno a cui si riferisce il saldo; per un saldo scritto a mano, il giorno dell'ultimo movimento controllato. */
+    @Column(name = "balance_date")
+    private LocalDate balanceDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "balance_source")
+    private BalanceSource balanceSource;
+
+    /** Quando è stato salvato il saldo. */
+    @Column(name = "balance_updated_at")
+    private Instant balanceUpdatedAt;
+
+    /** Per una carta di credito (V35): il plafond che resta, dato dalla banca; null se non si sa. */
+    @Column(name = "available_credit")
+    private BigDecimal availableCredit;
+
+    @Column(name = "available_credit_date")
+    private LocalDate availableCreditDate;
 
     protected Account() {
     }
@@ -213,6 +238,38 @@ public class Account {
 
     public boolean isManual() {
         return source == AccountSource.MANUAL;
+    }
+
+    /** Salva un saldo (o lo toglie, con {@code balance} null). */
+    public void changeBalance(BigDecimal balance, LocalDate date, BalanceSource source, Instant at) {
+        this.balance = balance;
+        this.balanceDate = balance == null ? null : date;
+        this.balanceSource = balance == null ? null : source;
+        this.balanceUpdatedAt = balance == null ? null : at;
+    }
+
+    public BigDecimal getAvailableCredit() {
+        return availableCredit;
+    }
+
+    public LocalDate getAvailableCreditDate() {
+        return availableCreditDate;
+    }
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public LocalDate getBalanceDate() {
+        return balanceDate;
+    }
+
+    public BalanceSource getBalanceSource() {
+        return balanceSource;
+    }
+
+    public Instant getBalanceUpdatedAt() {
+        return balanceUpdatedAt;
     }
 
     /** Il nome della banca o dell'istituto, per entrambi i tipi di conto. Va letto dentro una transazione. */

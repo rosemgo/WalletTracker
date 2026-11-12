@@ -21,8 +21,11 @@ import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.logo.LogoService;
 import it.wallettracker.sync.SyncService;
 import it.wallettracker.sync.SyncService.AccountSync;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -46,6 +49,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class BankLinkService {
 
+    private static final Logger log = LoggerFactory.getLogger(BankLinkService.class);
+
     /** Durata massima di un consenso PSD2 per la lettura dei conti. */
     static final Duration MAX_CONSENT = Duration.ofDays(180);
 
@@ -59,7 +64,9 @@ public class BankLinkService {
     /**
      * Il risultato di un collegamento completato.
      *
-     * @param accounts quanti conti sono stati autorizzati
+     * @param accounts quanti conti ha passato Enable Banking (e sono stati salvati): 0 vuol dire che non ne ha
+     *                 passato nessuno, di solito perché l'applicazione è in modalità ristretta e i conti non sono nella
+     *                 sua lista (docs/modalita-ristretta.md)
      * @param imported quanti movimenti nuovi sono stati importati
      * @param errors   gli errori di importazione, conto per conto (il collegamento è comunque salvato)
      */
@@ -79,15 +86,25 @@ public class BankLinkService {
     private final SyncService syncService;
     private final ClassificationService classificationService;
 
+    private final LogoService logoService;
+
     public BankLinkService(EnableBankingClient client, EnableBankingProperties properties,
             ConnectionService connectionService, SyncService syncService,
-            ClassificationService classificationService) {
+            ClassificationService classificationService, LogoService logoService) {
         this.client = client;
         this.properties = properties;
         this.connectionService = connectionService;
         this.syncService = syncService;
         this.classificationService = classificationService;
+        this.logoService = logoService;
     }
+
+    /**
+     * Il collegamento non parte perché non c'è un indirizzo di ritorno che risponda da questa pagina: dal server
+     * (http://localhost:8000) Enable Banking vuole un indirizzo https, e quello vero è di Tailscale (docs/47, parte Q).
+     */
+    static final String NO_RETURN_ADDRESS = "Per collegare una banca serve un indirizzo https: prepara Tailscale "
+            + "(GUIDA.md, capitolo «Tailscale»), poi registra su Enable Banking l'indirizzo che compare in Impostazioni.";
 
     /** Le banche di un paese supportate da Enable Banking, in ordine alfabetico. */
     public List<Aspsp> banks(String country) {
@@ -96,8 +113,16 @@ public class BankLinkService {
                 .toList();
     }
 
-    /** Avvia il collegamento: restituisce l'indirizzo della pagina di login della banca. */
-    public String start(String bankName, String country) {
+    /**
+     * Avvia il collegamento: restituisce l'indirizzo della pagina di login della banca.
+     *
+     * @param origin l'indirizzo della pagina da cui parte il collegamento (header Origin): sceglie l'indirizzo di
+     *               ritorno ({@link EnableBankingProperties#redirectUrlFor}). Se non ce n'è uno che risponda, il
+     *               collegamento non parte: dopo il consenso, la banca rimanderebbe a una pagina di errore
+     */
+    public String start(String bankName, String country, String origin) {
+        String redirectUrl = properties.redirectUrlFor(origin).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.CONFLICT, NO_RETURN_ADDRESS));
         Aspsp bank = banks(country).stream()
                 .filter(b -> b.name().equals(bankName))
                 .findFirst()
@@ -107,7 +132,7 @@ public class BankLinkService {
         Instant validUntil = consentValidUntil(bank, Instant.now());
         String state = UUID.randomUUID().toString();
         String url = client.startAuthorization(new AuthorizationRequest(new Access(validUntil),
-                new AspspRef(bank.name(), bank.country()), state, properties.redirectUrl(), "personal")).url();
+                new AspspRef(bank.name(), bank.country()), state, redirectUrl, "personal")).url();
 
         removeExpired();
         pending.put(state, new Pending(validUntil, Instant.now()));
@@ -128,6 +153,14 @@ public class BankLinkService {
         }
 
         Session session = client.createSession(code);
+        // Nessun conto: la banca ha autorizzato, ma Enable Banking non ne ha passato nessuno. Succede con
+        // un'applicazione in modalità ristretta, quando i conti non sono nella sua lista (docs/modalita-ristretta.md).
+        // Un collegamento senza conti non serve: non lo salviamo, e la pagina di ritorno spiega che cosa fare.
+        if (session.accounts() == null || session.accounts().isEmpty()) {
+            log.warn("{}: Enable Banking non ha passato nessun conto (applicazione in modalità ristretta?)",
+                    session.aspsp().name());
+            return new LinkResult(session.aspsp().name(), 0, 0, List.of());
+        }
         BankConnection connection = connectionService.saveSession(session, started.validUntil());
 
         List<Account> accounts = connectionService.accountsOf(connection);
@@ -145,6 +178,7 @@ public class BankLinkService {
             }
         }
         classificationService.classifyAll();
+        logoService.refreshBankLogos(Instant.now()); // il logo della banca appena collegata (docs/loghi.md)
         return new LinkResult(connection.getAspspName(), accounts.size(), imported, errors);
     }
 

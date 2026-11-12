@@ -1,8 +1,8 @@
-# 30. Fase 3, passo 7c: l'IA nel cloud, con Mistral AI e Google Gemini
+# 30. Fase 3, passo 7c: l'IA nel cloud, con Google Gemini
 
-**Obiettivo:** oltre al modello sul tuo computer (Ollama, passi 7b), poter usare un **servizio cloud**: Mistral AI
-o Google Gemini. La **chiave** del servizio la inserisce l'utente dalla pagina Impostazioni, e viene salvata
-**cifrata**. Prima di inviare qualcosa serve il suo **consenso**, uno per servizio. Tutto il resto (la domanda,
+**Obiettivo:** oltre al modello sul tuo computer (Ollama, passi 7b), poter usare un **servizio cloud**: Google
+Gemini. La **chiave** del servizio la inserisce l'utente dalla pagina Impostazioni, e viene salvata **cifrata**.
+Prima di inviare qualcosa serve il suo **consenso**, uno per servizio. Tutto il resto (la domanda,
 "Misura la precisione", "Chiedi all'IA") funziona con qualunque fornitore, senza essere riscritto: è il motivo per
 cui abbiamo scelto Spring AI.
 
@@ -25,8 +25,14 @@ impiegava 80 secondi a domanda), o chi non vuole installare Ollama.
 | L | provalo tu, con le tue chiavi |
 | M | sicurezza |
 | N | esercizi guidati, con le soluzioni |
+| O | aggiornamento: Mistral tolto, solo Gemini (V23); il modello più veloce come predefinito (V24) |
 
-> Prerequisiti: `docs/27`, `docs/28`, `docs/29`, e `git pull`. Al primo avvio Flyway applica la **V22**.
+> **Aggiornamento: Mistral AI è stato tolto (Parte O).** Il passo 7c è nato con due servizi, Mistral e Gemini, e le
+> parti B-K raccontano quella versione: ogni volta che leggi "i due servizi", oggi nel codice c'è solo Gemini. Mistral
+> non dà più chiavi API con il piano gratuito, e un servizio cloud (Gemini) più uno locale (Ollama) bastano. La
+> versione con Mistral resta nella storia di git (commit `7f2df93`), e aggiungerlo di nuovo è l'Esercizio 1.
+>
+> Prerequisiti: `docs/27`, `docs/28`, `docs/29`, e `git pull`. Al primo avvio Flyway applica la **V22**, la **V23** e la **V24**.
 >
 > Prezzi, limiti dei piani gratuiti e regole sull'uso dei dati **cambiano**: in questa guida non li scriviamo come
 > se fossero fissi. Leggili sul sito del fornitore prima di creare la chiave.
@@ -723,21 +729,20 @@ messaggio di "Prova la connessione" dirà che cosa (chiave, modello, limite, ret
 
 ---
 
-## Parte L: provalo tu, con le tue chiavi
+## Parte L: provalo tu, con la tua chiave
 
-1. `git pull`, riavvia il backend (Flyway applica la V22) e la dashboard.
-2. **Mistral**: apri console.mistral.ai, crea un account, scegli un piano (leggi le condizioni sull'uso dei dati),
-   crea una chiave in "API Keys".
-3. In **Impostazioni**, "Suggerimenti" → "Nel cloud: Mistral AI". Incolla la chiave, "Salva la chiave": deve
+1. `git pull`, riavvia il backend (Flyway applica la V22, la V23 e la V24) e la dashboard.
+2. Apri **aistudio.google.com**, entra con il tuo account Google, premi "Get API key" e poi "Create API key".
+   Leggi le condizioni: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti.
+3. In **Impostazioni**, "Suggerimenti" → "Nel cloud: Google Gemini". Incolla la chiave, "Salva la chiave": deve
    comparire "✓ Chiave salvata (…xxxx)" con le ultime 4 lettere della tua.
 4. Leggi "Che cosa viene inviato", spunta la casella, premi **Salva**.
 5. **Prova la connessione**: deve rispondere "ESSELUNGA → Spesa alimentare" in un secondo o due. Se no, il messaggio
    dice perché.
-6. **Misura la precisione** con "Mistral AI · mistral-small-latest" sui tuoi esercenti, e confrontala con gemma3:4b:
-   quale indovina di più? Quale è più veloce?
-7. Rifai i passi 2-6 con **Gemini** (aistudio.google.com → "Get API key").
-8. Scegli il servizio che preferisci, e prova **"Chiedi all'IA"** nella pagina Movimenti.
-9. Dopo qualche giorno, guarda sul sito del fornitore quanto hai consumato.
+6. **Misura la precisione** con "Google Gemini · gemini-flash-lite-latest" sui tuoi esercenti, e confrontala con
+   gemma3:4b: quale indovina di più? Quale è più veloce?
+7. Prova **"Chiedi all'IA"** nella pagina Movimenti.
+8. Dopo qualche giorno, guarda su aistudio.google.com quanto hai consumato.
 
 Test:
 
@@ -754,7 +759,7 @@ cd frontend; npm test -- --watch=false
 |---|---|
 | la chiave rubata dal database o da un backup | cifrata (AES-256-GCM), la chiave di cifratura fuori dal database (`docs/17`) |
 | la chiave vista nella pagina o in un log | mai restituita (solo le ultime 4 lettere), campo password svuotato dopo il salvataggio, mai scritta nei log |
-| la chiave di un servizio usata per un altro | un'etichetta di cifratura per servizio (`ai.mistral.api_key`, `ai.gemini.api_key`) |
+| la chiave di un servizio usata per un altro | un'etichetta di cifratura per servizio (`ai.gemini.api_key`; un servizio nuovo avrebbe la sua) |
 | dati inviati senza saperlo | consenso esplicito, per servizio, con la data; spiegato che cosa parte **prima** della casella; controllato prima di **ogni** domanda (e dal database) |
 | troppi dati al fornitore | le regole del 7b.2: testo senza cifre, niente importi, date, IBAN, nome |
 | una chiave "strana" (spazi, caratteri di controllo) | `@Pattern [A-Za-z0-9._-]{10,300}` |
@@ -764,16 +769,16 @@ cd frontend; npm test -- --watch=false
 
 ## Parte N: esercizi guidati
 
-### Esercizio 1: un terzo servizio
+### Esercizio 1: un secondo servizio
 
-Aggiungi **OpenAI** (o Anthropic), con lo stesso schema. Elenca tutti i punti da toccare, poi falli. Quanti test
+Aggiungi **OpenAI** (o di nuovo Mistral, se un giorno ti servisse), con lo stesso schema. Elenca tutti i punti da toccare, poi falli. Quanti test
 devi scrivere da zero?
 
 <details>
 <summary>Soluzione</summary>
 
 1. `pom.xml`: `spring-ai-openai` (la libreria, non lo starter);
-2. una migrazione (V23): il vincolo `ai_settings_provider_check` con `'OPENAI'`, le colonne `openai_api_key`,
+2. una migrazione (V25): il vincolo `ai_settings_provider_check` con `'OPENAI'`, le colonne `openai_api_key`,
    `openai_model`, `openai_consent_at`, e il vincolo `ck_ai_settings_cloud_ready` rifatto;
 3. `AiProvider`: `OPENAI("OpenAI")`, e `cloud()` lo comprende;
 4. `AiSettings`: i tre campi, e un caso in più negli `switch`;
@@ -781,7 +786,10 @@ devi scrivere da zero?
    (`OpenAiChatOptions`); `application.yml`: l'indirizzo;
 6. `AiService`: `CloudStatus` di OpenAI nello `Status`;
 7. frontend: il tipo, `CLOUD_INFO`, l'opzione nel menu, un `<app-cloud-ai-section provider="OPENAI">`;
-8. test: due casi in `CloudChatTest` (la risposta di OpenAI ha la stessa forma di quella di Mistral).
+8. test: due casi in `CloudChatTest` (la risposta di OpenAI ha la forma `choices[0].message.content`).
+
+Per Mistral non devi nemmeno inventare: è esattamente quello che la Parte O ha tolto. `git show 7f2df93:<file>` ti
+mostra ogni file com'era con Mistral.
 
 `CategoryModel`, `ModelEvaluation`, `AiAnswerJob`, `AiSuggestionService`, il prompt: **non si toccano**. È il
 vantaggio dell'astrazione: un fornitore nuovo è un "adattatore" in più, non un programma nuovo.
@@ -790,7 +798,7 @@ vantaggio dell'astrazione: un fornitore nuovo è un "adattatore" in più, non un
 ### Esercizio 2: quanto costa
 
 Con un piano a pagamento si paga a "token" (pezzi di parola), separati tra quelli della domanda e quelli della
-risposta. Nella risposta di Mistral c'è `usage` (`prompt_tokens`, `completion_tokens`, Parte K1). Come faresti a
+risposta. Nella risposta di Gemini c'è `usageMetadata` (`promptTokenCount`, `candidatesTokenCount`, Parte K1). Come faresti a
 mostrare nella pagina quanti token ha usato l'ultimo "Chiedi all'IA"?
 
 <details>
@@ -818,3 +826,182 @@ l'IA se `provider == cloud` (altrimenti il vincolo `ck_ai_settings_cloud_ready` 
 È importante perché un consenso vale solo se si può anche ritirare: chi ha detto sì deve poter cambiare idea, con la
 stessa facilità con cui ha detto sì (è anche il principio del GDPR).
 </details>
+
+---
+
+## Parte O: aggiornamento, Mistral tolto (V23)
+
+### O1. Perché
+
+Provando a creare la chiave, la console di Mistral ("Studio") ha mostrato: *"Passa a un piano a pagamento per
+utilizzare le tue chiavi API. La tua organizzazione è sul piano Free."* Con il piano gratuito le chiavi API non si
+attivano. Google invece dà ancora una chiave gratuita, con dei limiti. E per il nostro compito un servizio cloud
+basta: chi ha un computer adatto usa Ollama (i dati restano a casa), gli altri Gemini.
+
+È anche una lezione: i piani gratuiti dei servizi cloud **cambiano** (per questo la guida non scrive prezzi e limiti
+come se fossero fissi). Un'app che dipende da un fornitore deve poterlo cambiare senza essere riscritta.
+
+### O2. Che cosa abbiamo toccato
+
+È l'Esercizio 1 al contrario, e si vede di nuovo il vantaggio dell'astrazione: togliere un fornitore tocca solo gli
+"adattatori".
+
+| Dove | Che cosa |
+|---|---|
+| `pom.xml` | via la dipendenza `spring-ai-mistral-ai` |
+| `application.yml` | via `wallettracker.ai.mistral.base-url` |
+| `V23__solo_gemini.sql` | nuova migrazione (O3) |
+| `AiProvider` | via `MISTRAL`; `cloud()` è solo `GEMINI` |
+| `AiSettings` | via i tre campi di Mistral e i casi negli `switch`; `changeModels(ollama, gemini)` |
+| `AiChatClients` | via il caso Mistral in `chatModel` e `options`, e il suo indirizzo nei costruttori; `retry` non ha più il caso del 429 (lo aggiungevamo solo per Mistral: per Gemini i tentativi li fa la libreria di Google) |
+| `AiService`, `AiController` | via `mistral` dallo `Status` e `mistralModel` dalla richiesta |
+| frontend | via `'MISTRAL'` dai tipi, da `CLOUD_INFO`, dal menu e dal pannello |
+| test | `CloudChatTest`, `AiCloudControllerTest`, `AiErrorsTest` usano Gemini |
+
+**Non toccati**: `CategoryModel`, `CategoryPrompt`, `ModelEvaluation`, `AiAnswerJob`, `AiSuggestionService`,
+`AiErrors` (solo un commento), `CloudAiSection` (il componente è scritto per un servizio qualunque).
+
+### O3. La migrazione V23
+
+La V22 è già applicata nel tuo database: **non si modifica** (Flyway controlla il checksum, `docs/28`). Si scrive
+una migrazione nuova che la "annulla" in parte:
+
+```sql
+UPDATE ai_settings SET provider = 'NONE' WHERE provider = 'MISTRAL';
+
+ALTER TABLE ai_settings DROP CONSTRAINT ck_ai_settings_cloud_ready;
+ALTER TABLE ai_settings ADD CONSTRAINT ck_ai_settings_cloud_ready CHECK (
+    provider <> 'GEMINI' OR (gemini_api_key IS NOT NULL AND gemini_consent_at IS NOT NULL));
+
+ALTER TABLE ai_settings DROP CONSTRAINT ai_settings_provider_check;
+ALTER TABLE ai_settings ADD CONSTRAINT ai_settings_provider_check CHECK (provider IN ('NONE', 'OLLAMA', 'GEMINI'));
+
+ALTER TABLE ai_settings DROP COLUMN mistral_api_key;
+ALTER TABLE ai_settings DROP COLUMN mistral_model;
+ALTER TABLE ai_settings DROP COLUMN mistral_consent_at;
+```
+
+L'**ordine** conta:
+
+1. prima l'`UPDATE`: chi aveva scelto Mistral torna a "spento". Se lo facessimo dopo il nuovo vincolo, la riga con
+   `MISTRAL` lo violerebbe e la migrazione fallirebbe;
+2. poi il vincolo "chiave e consenso", rifatto senza Mistral. Va tolto **prima** delle colonne, perché le nomina;
+3. infine le colonne. Insieme a `mistral_api_key` se ne va anche l'eventuale chiave salvata: un segreto che non
+   serve più è meglio non tenerlo.
+
+L'abbiamo provata anche su un database "vecchio": applicate le V1-V22, scelto Mistral con chiave e consenso, poi la
+V23. Risultato: `provider = NONE`, le colonne di Mistral sparite, i vincoli nuovi al loro posto.
+
+### O4. Una cosa scoperta nei test
+
+Prima il 429 ("troppe richieste") lo provavamo con Mistral. Provandolo con Gemini si è visto che cosa fa la libreria
+di Google: riceve **5** richieste (la prima e 4 nuovi tentativi), aspettando sempre di più tra l'una e l'altra; il test
+durava 17 secondi. E per gli errori "passeggeri" riprovava anche il nostro `RetryTemplate`: due livelli di tentativi,
+uno dentro l'altro, senza che nel log restasse traccia. La Parte O6 lo sistema.
+
+### O5. Risultati
+
+- backend: tutti i test passano (1 saltato, la prova dal vivo), e dopo la O6 il test del 429 dura pochi secondi
+  invece di 17;
+- frontend: 116 test passano;
+- la V23 applicata su un database con Mistral scelto: va.
+
+### O6. "102 secondi": quanto ci mette, e quale modello risponde
+
+La prima "Prova la connessione" con Gemini ha risposto giusto, ma in **102,6 secondi**. Per capire di chi è il tempo
+abbiamo fatto la stessa domanda **senza l'app**, da PowerShell, con una sola richiesta:
+
+```powershell
+$k = Read-Host "Chiave"      # incollala qui: così non finisce nella cronologia né negli screenshot
+$body = '{"contents":[{"parts":[{"text":"Di che categoria di spesa è ESSELUNGA? Rispondi con una parola."}]}]}'
+$sw = [Diagnostics.Stopwatch]::StartNew()
+$r = Invoke-RestMethod -Method Post -ContentType "application/json" -Headers @{ "x-goog-api-key" = $k } `
+     -Uri "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" -Body $body
+$sw.Elapsed.TotalSeconds
+$r.modelVersion
+$r.usageMetadata
+```
+
+Risultato: **81 secondi** anche così, `modelVersion` = `gemini-3.8-flash`, `thoughtsTokenCount` = 246. Che cosa ci dice:
+
+- il tempo **non** è dell'app: una richiesta diretta, senza i nostri tentativi, ci mette lo stesso. È l'attesa dal
+  lato di Google (con il piano gratuito le richieste possono aspettare in coda) o della rete;
+- **non** è il ragionamento: 246 token un modello Flash li genera in un paio di secondi;
+- dietro l'alias `gemini-flash-latest` c'è, oggi, `gemini-3.8-flash`: lo dice Google nella risposta.
+
+Per separare rete e Google, `curl.exe` (incluso in Windows) misura le fasi della richiesta:
+
+```powershell
+curl.exe -s -o NUL -H "x-goog-api-key: $k" -H "Content-Type: application/json" -d $body `
+  -w "connessione %{time_connect}s, prima risposta %{time_starttransfer}s, totale %{time_total}s`n" `
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+```
+
+Se "connessione" è grande, il problema è la rete (firewall, antivirus, IPv6); se è piccola e "prima risposta" è
+grande, è Google che ci mette a rispondere. Prova anche `gemini-flash-lite-latest`, e in orari diversi.
+
+**Che cosa abbiamo cambiato nell'app:**
+
+1. **Il modello vero e il ragionamento, nella pagina.** `CategoryModel` ora usa `.responseEntity(...)` invece di
+   `.entity(...)`: insieme alla risposta "tradotta" in oggetto Java ci dà la `ChatResponse` completa. Da lì
+   `getMetadata().getModel()` è il `modelVersion` di Google, e `GoogleGenAiUsage.getThoughtsTokenCount()` i token di
+   ragionamento. "Prova la connessione" li mostra: *"Ha risposto il modello gemini-3.8-flash. Prima di rispondere ha
+   "ragionato" con 246 token."* Il risultato è un record, `CategoryModel.Reply`; `suggest(...)` (usato da misura e
+   "Chiedi all'IA") resta com'era e prende solo la categoria.
+2. **Un solo livello di tentativi, e nel log.** Alla libreria di Google diciamo di fare un tentativo solo
+   (`HttpRetryOptions.builder().attempts(1)`); i nuovi tentativi li fa il nostro `RetryTemplate`, per 429, 500, 503
+   e per gli errori "passeggeri" di Spring AI: al massimo 3 richieste, con 5 e 10 secondi di attesa. Un
+   `RetryListener` scrive ogni tentativo non riuscito nel log del backend:
+
+   ```
+   WARN  AiChatClients : Google Gemini: tentativo 1 non riuscito: Google Gemini risponde "troppe richieste"...
+   ```
+
+   Così, se un giorno vedi 100 secondi, nel terminale del backend c'è scritto se e perché ha riprovato. E ogni
+   "Prova la connessione" riuscita scrive una riga con il tempo, il modello e i token. Il codice HTTP lo trova
+   `AiErrors.httpCode(...)`, lo stesso metodo con cui `AiErrors` sceglie il messaggio.
+3. **Il ragionamento non lo limitiamo.** Si potrebbe chiedere a Gemini di ragionare meno (`thinkingLevel`), ma
+   abbiamo scelto di no: meglio una risposta più precisa che una più veloce, e come abbiamo visto il tempo non
+   dipende dal ragionamento.
+
+**Perché il nome del modello è un campo libero.** Google ha molti modelli e ne cambia l'elenco ogni pochi mesi:
+scritto nel codice, invecchierebbe subito. Il nome va a Google così com'è. Un **alias** (`gemini-flash-latest`,
+`gemini-flash-lite-latest`) lo sposta Google sul modello più recente; un **nome fisso** (es. `gemini-2.5-flash`)
+resta lo stesso finché Google non lo ritira, ed è meglio per confrontare le misure nel tempo. Un nome sbagliato dà
+404, e la pagina dice "Il modello non esiste".
+
+**Il Lite.** La stessa domanda con `gemini-flash-lite-latest` (oggi `gemini-3.5-flash-lite`): **4,3 secondi**,
+connessione 0,03 s, nessun token di ragionamento, risposta giusta. Con `gemini-flash-latest`, rifatta con `curl.exe`:
+connessione 0,08 s, **prima risposta dopo 366 secondi**. La rete è velocissima, l'attesa è tutta nella coda di
+Google per il piano gratuito (`"serviceTier": "standard"`), soprattutto su un modello appena uscito.
+
+Per questo sotto il campo "Modello" la pagina ora suggerisce i due nomi, con che cosa cambia (`CLOUD_INFO.models` in
+`cloud-ai-section.ts`): *gemini-flash-lite-latest*, veloce; *gemini-flash-latest*, ragiona e può essere più preciso
+ma può impiegare minuti. Un clic sul nome lo mette nel campo. Quale indovina di più sui tuoi esercenti lo dice
+"Misura la precisione".
+
+**Sicurezza:** una chiave mostrata in uno screenshot o incollata in una chat va considerata compromessa. Si cancella
+su aistudio.google.com (API keys) e se ne crea una nuova, poi "cambia" nelle Impostazioni. Per questo nel comando
+sopra c'è `Read-Host`: la chiave non resta scritta da nessuna parte.
+
+### O7. Il Lite diventa il predefinito (V24)
+
+"Misura la precisione" con `gemini-flash-lite-latest` sui tuoi esercenti: **43%** (3 su 7), **0,7 secondi** a
+domanda. Sugli stessi esercenti gemma3:4b aveva fatto 14% (1 su 7). Con 7 esercenti ogni risposta vale 14 punti,
+quindi il numero è solo indicativo; e degli errori, tre su quattro non si potevano indovinare (lo stesso Amazon una
+volta "Shopping" e una volta "Multimedia"; "PAYPAL *BANDINI SRL", che dal nome non dice che cosa vende). Per una
+misura affidabile servono più esercenti categorizzati a mano (30-40).
+
+Quindi il predefinito diventa il Lite, con una migrazione nuova (la V22, che conteneva il vecchio valore, è già
+applicata e non si modifica):
+
+```sql
+ALTER TABLE ai_settings ALTER COLUMN gemini_model SET DEFAULT 'gemini-flash-lite-latest';
+UPDATE ai_settings SET gemini_model = 'gemini-flash-lite-latest' WHERE gemini_model = 'gemini-flash-latest';
+```
+
+- `SET DEFAULT`: vale per le righe nuove (un'installazione da zero);
+- `UPDATE ... WHERE gemini_model = 'gemini-flash-latest'`: chi aveva ancora il vecchio predefinito passa al nuovo;
+  chi aveva scritto un altro nome lo tiene.
+
+Chi preferisce la precisione del Flash, accettando l'attesa, lo sceglie con un clic sotto il campo "Modello".

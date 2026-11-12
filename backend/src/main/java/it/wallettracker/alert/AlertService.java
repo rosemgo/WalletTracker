@@ -64,6 +64,9 @@ public class AlertService {
         ZoneId zone = ZoneId.systemDefault();
         LocalDate today = LocalDate.ofInstant(now, zone);
         for (BankConnection connection : connectionRepository.findAll()) {
+            if (connection.isRemoved()) {
+                continue; // rimosso dall'utente: la scadenza non interessa più (docs/rimuovere-un-collegamento.md)
+            }
             long daysLeft = ChronoUnit.DAYS.between(today, LocalDate.ofInstant(connection.getValidUntil(), zone));
             if (!connection.getValidUntil().isAfter(now)) {
                 alerts.add(consentAlert(AlertKind.CONSENT_EXPIRED, Severity.CRITICAL, connection, daysLeft));
@@ -76,6 +79,7 @@ public class AlertService {
         //    sappiamo già (avviso 1), e due avvisi per lo stesso problema confondono.
         for (Account account : accountRepository.findAllWithConnection()) {
             if (account.getConnection() != null && account.getLastSyncError() != null
+                    && !account.getConnection().isRemoved()
                     && account.getConnection().getValidUntil().isAfter(now)) {
                 alerts.add(new AlertDto(AlertKind.SYNC_FAILED, Severity.WARNING,
                         account.getConnection().getAspspName(), account.getConnection().getAspspCountry(),

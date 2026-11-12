@@ -2,11 +2,15 @@ package it.wallettracker.transaction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
+import com.jayway.jsonpath.JsonPath;
 import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
@@ -189,6 +193,113 @@ class TransactionControllerTest {
     }
 
     @Test
+    void withoutCategoryShowsOnlyTheTypesThatNeedOne() {
+        // docs/categorie-e-tipi.md: a un acquisto di titoli o a un giroconto la categoria non serve.
+        Account account = account();
+        BankTransaction pizza = transaction(account, LocalDate.of(2026, 10, 7), "-24.00", "PIZZERIA DA GINO");
+        BankTransaction coupon = transaction(account, LocalDate.of(2026, 10, 8), "15.00", "CEDOLA BTP");
+        coupon.setManualType(TransactionType.INVESTMENT_INCOME);
+        BankTransaction buy = transaction(account, LocalDate.of(2026, 10, 9), "-200.00", "ACQUISTO ETF");
+        buy.setManualType(TransactionType.SECURITIES_BUY);
+        BankTransaction transfer = transaction(account, LocalDate.of(2026, 10, 10), "-50.00", "GIROCONTO");
+        transfer.setManualType(TransactionType.INTERNAL_TRANSFER);
+        transactionRepository.saveAll(List.of(coupon, buy, transfer));
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/transactions?uncategorized=true")).hasStatusOk().bodyJson()
+                .extractingPath("$.items[*].id").asArray()
+                .containsExactly(coupon.getId().intValue(), pizza.getId().intValue());
+    }
+
+    @Test
+    void transactionsCanBeSearchedByText() {
+        Account account = account();
+        BankTransaction netflix = transaction(account, LocalDate.of(2026, 10, 3), "-12.99", "PAGAMENTO NETFLIX.COM");
+        BankTransaction refund = transaction(account, LocalDate.of(2026, 10, 5), "12.99", "Rimborso Zalando");
+        BankTransaction pizza = transaction(account, LocalDate.of(2026, 10, 7), "-24.00", "PIZZERIA DA GINO");
+        BankTransaction percent = transaction(account, LocalDate.of(2026, 10, 9), "-5.00", "Sconto 100% su_misura");
+        BankTransaction fee = transaction(account, LocalDate.of(2026, 10, 11), "-2.00", "Canone Mensile conto");
+        classificationService.classifyAll(); // il canone prende la categoria "Costi bancari" (regola di partenza)
+
+        // Nella causale, senza badare a maiuscole e minuscole.
+        assertThat(ids("netflix")).containsExactly(netflix.getId().intValue());
+        // Un pezzo di parola.
+        assertThat(ids("izzer")).containsExactly(pizza.getId().intValue());
+        // Nel nome della categoria.
+        assertThat(ids("costi banc")).containsExactly(fee.getId().intValue());
+        // Un importo, all'italiana o all'inglese, con o senza segno: la spesa e il rimborso.
+        assertThat(ids("12,99")).containsExactly(refund.getId().intValue(), netflix.getId().intValue());
+        assertThat(ids("12.99")).hasSize(2);
+        assertThat(ids("-12,99 €")).hasSize(2);
+        // % e _ sono caratteri come gli altri: "100%" non vuol dire "100 e qualsiasi cosa".
+        assertThat(ids("100%")).containsExactly(percent.getId().intValue());
+        assertThat(ids("su_m")).containsExactly(percent.getId().intValue());
+        // Da soli: senza la protezione "%" e "_" troverebbero tutti e cinque i movimenti.
+        assertThat(ids("%")).containsExactly(percent.getId().intValue());
+        assertThat(ids("_")).containsExactly(percent.getId().intValue());
+        // Niente: nessun risultato; spazi intorno ignorati; vuoto = nessun filtro.
+        assertThat(ids("spotify")).isEmpty();
+        assertThat(ids("  netflix  ")).containsExactly(netflix.getId().intValue());
+        assertThat(mvc.get().uri("/api/transactions?text=")).hasStatusOk().bodyJson()
+                .extractingPath("$.totalItems").isEqualTo(5);
+        // Insieme agli altri filtri, e il conteggio per le pagine è quello dei risultati.
+        assertThat(mvc.get().uri("/api/transactions?text=12,99&from=2026-10-04")).hasStatusOk().bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.totalItems").isEqualTo(1);
+                    json.assertThat().extractingPath("$.items[0].id").isEqualTo(refund.getId().intValue());
+                });
+        // Troppo lungo: 400.
+        assertThat(mvc.get().uri("/api/transactions?text=" + "x".repeat(101))).hasStatus(400);
+    }
+
+    @Test
+    void severalWordsMustAllBeThereInAnyOrderAndAnyField() {
+        Account account = account();
+        BankTransaction amsterdam = transaction(account, LocalDate.of(2026, 10, 3), "-12.99",
+                "PAGAMENTO CARTA NETFLIX.COM AMSTERDAM");
+        BankTransaction milano = transaction(account, LocalDate.of(2026, 10, 4), "-12.99", "NETFLIX MILANO");
+        BankTransaction fee = transaction(account, LocalDate.of(2026, 10, 11), "-2.00", "Canone Mensile conto");
+        BankTransaction pizza = transaction(account, LocalDate.of(2026, 10, 12), "-24.00", "PIZZERIA AMSTERDAM");
+        classificationService.classifyAll(); // il canone prende la categoria "Costi bancari"
+
+        // Tutte le parole, in qualsiasi ordine.
+        assertThat(ids("netflix amsterdam")).containsExactly(amsterdam.getId().intValue());
+        assertThat(ids("amsterdam netflix")).containsExactly(amsterdam.getId().intValue());
+        assertThat(ids("AMSTERDAM")).containsExactly(pizza.getId().intValue(), amsterdam.getId().intValue());
+        // Una parola nella causale, l'altra nella categoria.
+        assertThat(ids("canone bancari")).containsExactly(fee.getId().intValue());
+        // Una parola e un importo: "netflix" e 12,99 (anche con "€" staccato).
+        assertThat(ids("netflix 12,99 €")).containsExactly(milano.getId().intValue(), amsterdam.getId().intValue());
+        assertThat(ids("pizzeria 12,99")).isEmpty();
+        // Spazi in più tra le parole non contano.
+        assertThat(ids("  netflix    milano ")).containsExactly(milano.getId().intValue());
+        // Troppe parole: 400.
+        assertThat(mvc.get().uri("/api/transactions").queryParam("text", "a b c d e f g h i j k")).hasStatus(400);
+    }
+
+    @Test
+    void theSearchTextIsSplitIntoWords() {
+        assertThat(TransactionSearch.words("  Netflix   AMSTERDAM ")).containsExactly("netflix", "amsterdam");
+        assertThat(TransactionSearch.words("-12,99 €")).containsExactly("-12,99");
+        assertThat(TransactionSearch.words("12,99€")).containsExactly("12,99");
+        assertThat(TransactionSearch.words("   ")).isEmpty();
+        assertThat(TransactionSearch.words(null)).isEmpty();
+    }
+
+    @Test
+    void amountsAreRecognizedInTheSearch() {
+        assertThat(TransactionSearch.amountIn("12,99")).isEqualByComparingTo("12.99");
+        assertThat(TransactionSearch.amountIn("12.99")).isEqualByComparingTo("12.99");
+        assertThat(TransactionSearch.amountIn("1.234,56")).isEqualByComparingTo("1234.56");
+        assertThat(TransactionSearch.amountIn("1.234")).isEqualByComparingTo("1234");
+        assertThat(TransactionSearch.amountIn("-45,50 €")).isEqualByComparingTo("45.50");
+        assertThat(TransactionSearch.amountIn("2026")).isEqualByComparingTo("2026");
+        assertThat(TransactionSearch.amountIn("netflix")).isNull();
+        assertThat(TransactionSearch.amountIn("12,999")).isNull();
+        assertThat(TransactionSearch.amountIn("")).isNull();
+    }
+
+    @Test
     void aPeriodThatEndsBeforeItStartsIs400() {
         assertThat(mvc.get().uri("/api/transactions?from=2026-10-31&to=2026-10-01"))
                 .hasStatus(400)
@@ -209,6 +320,95 @@ class TransactionControllerTest {
                 .hasStatus(400)
                 .bodyJson().extractingPath("$.detail")
                 .isEqualTo("La categoria 999999 non esiste: forse è stata eliminata. Ricarica la pagina.");
+    }
+
+    @Test
+    void transactionsCanBeFilteredByCategory() {
+        BankTransaction pizza = transaction(account(), LocalDate.of(2026, 9, 1), "-20.00", "PIZZERIA");
+        BankTransaction shoes = transaction(account(), LocalDate.of(2026, 9, 2), "-50.00", "SCARPE");
+        pizza.setManualCategory(category("Bar e ristoranti"));
+        shoes.setManualCategory(category("Shopping"));
+        transactionRepository.saveAll(List.of(pizza, shoes));
+        classificationService.classifyAll();
+
+        assertThat(mvc.get().uri("/api/transactions?categoryId={id}", category("Shopping").getId()))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.items[*].id").asArray()
+                .containsExactly(shoes.getId().intValue());
+    }
+
+    @Test
+    void theNameIsTheCounterpartyOrTheNameWrittenInTheDescription() {
+        Account account = account();
+        transaction(account, LocalDate.of(2026, 9, 1), "12.00", "Bonifico N. 0000000001IT BIC Ordinante ALFAITMMXXX "
+                + "Codifica Ordinante IT00X0000000000000000000001 Anagrafica Ordinante ACME SRL Note: Rimborso");
+        transaction(account, LocalDate.of(2026, 9, 2), "-5.00", "BAR");
+
+        assertThat(mvc.get().uri("/api/transactions"))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.items[*].name").asArray()
+                .containsExactly("BAR", "ACME SRL");
+        // La ricerca guarda la causale intera: il nome c'è.
+        assertThat(mvc.get().uri("/api/transactions?text=acme"))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.items[*].name").asArray()
+                .containsExactly("ACME SRL");
+    }
+
+    @Test
+    void aNoteCanBeWrittenFoundAndRemoved() {
+        BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-9.98", "AMAZON");
+        BankTransaction other = transaction(account(), LocalDate.of(2026, 9, 2), "-5.00", "BAR");
+        classificationService.classifyAll();
+
+        // Gli spazi in più, anche gli a capo, diventano uno spazio solo.
+        assertThat(note(purchase, "\"  regalo per\\n  Luca  \""))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.note").isEqualTo("regalo per Luca");
+
+        // La classificazione (che riclassifica tutto) non la tocca, e la ricerca la trova.
+        assertThat(correct(purchase, "\"IGNORED\"")).hasStatusOk()
+                .bodyJson().extractingPath("$.note").isEqualTo("regalo per Luca");
+        assertThat(ids("luca")).containsExactly(purchase.getId().intValue());
+        assertThat(ids("amazon regalo")).containsExactly(purchase.getId().intValue());
+        assertThat(mvc.get().uri("/api/transactions"))
+                .bodyJson().extractingPath("$.items[?(@.id == " + other.getId() + ")].note").asArray()
+                .containsExactly((Object) null);
+
+        // Vuota o null: la nota viene tolta.
+        assertThat(note(purchase, "\"   \"")).hasStatusOk().bodyJson().extractingPath("$.note").isNull();
+        assertThat(note(purchase, "\"di nuovo\"")).hasStatusOk();
+        assertThat(note(purchase, "null")).hasStatusOk().bodyJson().extractingPath("$.note").isNull();
+        assertThat(ids("luca")).isEmpty();
+    }
+
+    @Test
+    void aWrongNoteIsRejected() {
+        BankTransaction purchase = transaction(account(), LocalDate.of(2026, 9, 1), "-9.98", "AMAZON");
+
+        assertThat(note(purchase, "\"" + "a".repeat(TransactionService.MAX_NOTE_LENGTH) + "\"")).hasStatusOk();
+        assertThat(note(purchase, "\"" + "a".repeat(TransactionService.MAX_NOTE_LENGTH + 1) + "\""))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").isEqualTo("La nota è troppo lunga: al massimo 300 caratteri.");
+        assertThat(note(purchase, "\"suono\\u0007\""))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.detail").isEqualTo("La nota contiene caratteri non validi.");
+        assertThat(mvc.put().uri("/api/transactions/999999/note")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": \"x\"}"))
+                .hasStatus(404);
+
+        // Le note rifiutate non hanno cambiato quella salvata.
+        assertThat(transactionRepository.findById(purchase.getId()).orElseThrow().getNote())
+                .isEqualTo("a".repeat(TransactionService.MAX_NOTE_LENGTH));
+    }
+
+    /** Manda la nota; {@code note} è già in formato JSON (es. {@code "\"ciao\""} oppure {@code "null"}). */
+    private MvcTestResult note(BankTransaction transaction, String note) {
+        return mvc.put().uri("/api/transactions/{id}/note", transaction.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": " + note + "}")
+                .exchange();
     }
 
     /** Manda la categoria scelta a mano: il suo id, oppure null per togliere la scelta. */
@@ -238,6 +438,17 @@ class TransactionControllerTest {
     private BankTransaction transaction(Account account, LocalDate date, String amount, String description) {
         return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
                 date, null, new BigDecimal(amount), "EUR", null, description, "{}"));
+    }
+
+    /** Gli id dei movimenti trovati cercando questo testo, dal più recente. */
+    private List<Integer> ids(String text) {
+        try {
+            String body = mvc.get().uri("/api/transactions").queryParam("text", text).exchange().getResponse()
+                    .getContentAsString(StandardCharsets.UTF_8);
+            return JsonPath.read(body, "$.items[*].id");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException(e); // UTF-8 c'è sempre: non succede
+        }
     }
 
     /** Una categoria dell'elenco di partenza, per nome. */

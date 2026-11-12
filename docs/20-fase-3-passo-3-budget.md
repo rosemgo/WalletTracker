@@ -1,5 +1,8 @@
 # 20. Fase 3, passo 3: i budget mensili
 
+> Aggiornamento: la pagina ha un aspetto nuovo (`docs/39`, parte B): il totale in cima, una scheda per budget
+> con il ritmo in parole, i superati per primi. L'API e i calcoli descritti qui sono gli stessi.
+
 **Obiettivo:** decidere quanto vuoi spendere al massimo in una categoria ogni mese (ad esempio "Spesa
 alimentare: 400 €") e vedere **come sta andando**. Nuova pagina **Budget**:
 1. per ogni budget, una **barra**: quanto hai speso rispetto al budget, colorata secondo lo stato

@@ -101,7 +101,9 @@ a partire dalle causali reali viste nella Fase 0. Valgono su **qualsiasi conto**
 | Regola | Testo | Tipo |
 |---|---|---|
 | Cedola, dividendo, interessi | inizia con `Ced.su`, `Div.su`, `Interessi Portaf` | `INVESTMENT_INCOME` |
-| Ritenute, bolli, capital gain, Tobin tax | `Rit.ced`, `Rit.div`, `Ritenuta Fiscale`, `Imposta Sostitutiva`... | `INVESTMENT_TAX` |
+| Ritenute su cedole, dividendi, interessi | `Rit.ced`, `Rit.div`, `Ritenuta Fiscale`, `Rit. Fisc` | `WITHHOLDING_TAX` (dalla V37, `docs/investimenti.md` parte T) |
+| Bolli, capital gain, Tobin tax | `Imposta Sostitutiva`, `Tobin Tax`, `imposta di bollo Dossier` | `INVESTMENT_TAX` |
+| Ritenuta sul rateo nel giro titoli tra i tuoi conti | tutte le parole `Ritenuta Fiscale Qta/Val.nom` (priorità 9) | `INTERNAL_TRANSFER` (dalla V39, `docs/investimenti.md` parte W) |
 | Compravendita titoli | contiene `Compravendita Titoli` | `SECURITIES_BUY` (−) / `SECURITIES_SELL` (+) |
 | Saldo della carta di credito | contiene `Estratto conto carta di credito` | `CARD_SETTLEMENT` |
 | Trasferimento a un proprio conto | contiene `Trasferimento a mio conto` | `INTERNAL_TRANSFER` |
@@ -126,14 +128,14 @@ comportamento:
 | storico lungo solo subito dopo il login, poi max 90 giorni | Fineco, ING | se la banca rifiuta il periodo, si riprova con 89 giorni |
 | letture in background quasi assenti | Trade Republic | header PSU quando l'utente è presente |
 | **pagine ripetute**, date richieste ignorate, 6 decimali | Trade Republic | copie identiche eliminate, nessuna divisione del periodo, arrotondamento a 2 decimali |
-| **nessuna descrizione**: solo data, importo, direzione | Trade Republic | abbinamento dei trasferimenti; il resto è `TO_REVIEW` (da classificare a mano, o con l'import del file di Trade Republic) |
+| **nessuna descrizione**: solo data, importo, direzione | Trade Republic | abbinamento dei trasferimenti; causale e controparte dal file di Trade Republic ("Completa i movimenti", `docs/31`), con regole di partenza per le sue causali (V25) |
 | consenso di 90 giorni invece di 180 | Trade Republic | avviso di scadenza (Fase 3) |
 
 Sulla mancanza di descrizioni di Trade Republic: è un **limite noto** della sua interfaccia PSD2,
 segnalato anche da altri progetti che usano Enable Banking. L'alternativa per avere i dettagli
 (titolo, ISIN, tipo di operazione) è l'**import del file di esportazione delle transazioni** che
 Trade Republic offre nell'app (Impostazioni → Estratti/Documenti → Esportazione transazioni) e, dal
-2026, anche dal sito web. È pianificato nella Fase 3.
+2026, anche dal sito web. Fatto nella Fase 3: `docs/31`.
 
 ---
 
