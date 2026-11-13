@@ -85,11 +85,16 @@ public class OverviewService {
         boolean isCurrent = month.equals(current);
         LocalDate day = isCurrent ? today : month.atEndOfMonth();
 
-        // 1. Una query sola: spese ed entrate, giorno per giorno, dal primo mese del solito a oggi.
+        // 1. Una query sola: spese ed entrate, giorno per giorno, dal primo mese del solito (o dal primo gennaio, se
+        //    viene prima: serve per il totale dell'anno) a oggi. La valuta si sceglie, come sempre, sui mesi del solito.
         YearMonth firstUsual = month.minusMonths(USUAL_MONTHS);
-        List<DailyTotal> rows = repository.sumByDay(firstUsual.atDay(1), day.plusDays(1));
-        String chosen = currency != null ? currency.toUpperCase(Locale.ROOT) : mainCurrency(rows);
-        List<String> currencies = new ArrayList<>(new TreeSet<>(rows.stream().map(DailyTotal::getCurrency).toList()));
+        LocalDate yearStart = LocalDate.of(month.getYear(), 1, 1);
+        LocalDate from = yearStart.isBefore(firstUsual.atDay(1)) ? yearStart : firstUsual.atDay(1);
+        List<DailyTotal> rows = repository.sumByDay(from, day.plusDays(1));
+        List<DailyTotal> recent = rows.stream().filter(r -> !r.getDay().isBefore(firstUsual.atDay(1))).toList();
+        String chosen = currency != null ? currency.toUpperCase(Locale.ROOT) : mainCurrency(recent);
+        List<String> currencies = new ArrayList<>(
+                new TreeSet<>(recent.stream().map(DailyTotal::getCurrency).toList()));
 
         List<Expense> expenses = new ArrayList<>();
         BigDecimal income = BigDecimal.ZERO;
@@ -110,9 +115,13 @@ public class OverviewService {
         int dayOfMonth = day.getDayOfMonth();
         List<YearMonth> usualMonths = MonthCurves.usualMonths(month, USUAL_MONTHS, repository.findFirstDate(chosen));
         List<BigDecimal> spentByDay = MonthCurves.cumulative(expenses, month, dayOfMonth);
+        BigDecimal spentYear = expenses.stream()
+                .filter(e -> !e.day().isBefore(yearStart))
+                .map(Expense::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new OverviewDto(month, day, month.lengthOfMonth(), chosen, currencies,
-                spentByDay.isEmpty() ? BigDecimal.ZERO : spentByDay.getLast(), income, spentByDay,
+                spentByDay.isEmpty() ? BigDecimal.ZERO : spentByDay.getLast(), spentYear, income, spentByDay,
                 usualMonths.size(),
                 MonthCurves.usualUpTo(expenses, usualMonths, dayOfMonth),
                 MonthCurves.usualUpTo(expenses, usualMonths, 31),

@@ -42,6 +42,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   conto di cui si vedono davvero soltanto i bonifici.
 - **La pagina Importa dice che cosa farà**: scegliendo il conto (manuale o collegato) vedi subito se aggiungerà tutte
   le righe o solo i mesi più vecchi; caricato il file, quante righe si aggiungono e perché le altre no.
+- **Il Riepilogo mostra anche quanto hai speso nell'anno**: accanto alla cifra del mese, in piccolo, il totale da inizio
+  anno. Guardando un mese passato conta fino alla fine di quel mese ("Gen–mar 2025", "Tutto il 2025").
+- **La guida di Trade Republic in Importa** è una scheda da aprire come quella di "Collega una banca", staccata dal
+  riquadro sotto.
 
 ## 1.2.7
 
