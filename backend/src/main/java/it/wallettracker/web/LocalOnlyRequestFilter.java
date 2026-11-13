@@ -59,12 +59,14 @@ public class LocalOnlyRequestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         // getServerName() è il nome nell'header Host, senza porta (es. "localhost").
+        //Legge il nome scritto nell’header Host, cioè il nome che hai digitato nel browser. Se non è nell’elenco, risponde 403. Questo serve contro il DNS rebinding;
         String host = request.getServerName();
         if (!isAllowed(host)) {
             reject(response, "Richiesta rifiutata: indirizzo " + host + " non consentito.");
             return;
         }
 
+        //Per le richieste che modificano dati (POST, PUT, DELETE…), anche il sito di partenza (header Origin) deve avere un nome dell’elenco. Questo serve contro il CSRF.
         String origin = request.getHeader("Origin");
         if (!SAFE_METHODS.contains(request.getMethod()) && origin != null && !isAllowed(hostOf(origin))) {
             reject(response, "Richiesta rifiutata: proviene da un altro sito (" + origin + ").");
