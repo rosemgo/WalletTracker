@@ -42,10 +42,19 @@
     <!-- Sul PC la colonna di sinistra: la cifra del mese con il grafico, e sotto la liquidità. -->
     <div class="overview-main">
       <section class="card hero">
-        <span class="secondary">{{ figure()?.label }}</span>
-        <span class="big-figure">{{
-          figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
-        }}</span>
+        <div class="hero-top">
+          <div class="hero-month">
+            <span class="secondary">{{ figure()?.label }}</span>
+            <span class="big-figure">{{
+              figure()?.value ?? o.spent | money: o.currency : 'symbol' : '1.0-0'
+            }}</span>
+          </div>
+          <!-- Il totale dell'anno, piccolo accanto alla cifra del mese: resta fermo anche scorrendo il grafico. -->
+          <div class="year-total" data-testid="year-total">
+            <span class="secondary">{{ yearLabel() }}</span>
+            <strong>{{ o.spentYear | money: o.currency : 'symbol' : '1.0-0' }}</strong>
+          </div>
+        </div>
         <p
           class="comparison"
           [class.trend-under]="trend() === 'under'"

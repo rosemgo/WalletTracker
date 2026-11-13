@@ -180,6 +180,20 @@ class OverviewServiceTest {
     }
 
     @Test
+    void theYearCountsFromTheFirstOfJanuaryToTheDayOfTheMonth() {
+        expense(LocalDate.of(2025, 12, 20), "-80.00", "SUPERMERCATO ALFA", "Spesa alimentare"); // l'anno prima
+
+        // Aprile-settembre, 242,99 € al mese, più i 170 € di ottobre fino a oggi; i dollari e dicembre 2025 no.
+        assertThat(overviewService.overview(OCTOBER, null, TODAY).spentYear()).isEqualByComparingTo("1627.94");
+        // Un mese passato: fino alla sua fine.
+        assertThat(overviewService.overview(YearMonth.of(2026, 9), null, TODAY).spentYear())
+                .isEqualByComparingTo("1457.94");
+        assertThat(overviewService.overview(YearMonth.of(2025, 12), null, TODAY).spentYear())
+                .isEqualByComparingTo("80.00");
+        assertThat(overviewService.overview(OCTOBER, "USD", TODAY).spentYear()).isEqualByComparingTo("20.00");
+    }
+
+    @Test
     void anotherCurrencyHasItsOwnNumbersAndNoUsualWithoutHistory() {
         OverviewDto dollars = overviewService.overview(OCTOBER, "usd", TODAY);
 

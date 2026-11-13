@@ -17,6 +17,7 @@ import java.util.List;
  * @param currency       la valuta dei numeri
  * @param currencies     le valute con movimenti nel periodo: con più di una, la pagina fa scegliere
  * @param spent          le spese dal giorno 1 a {@code day}
+ * @param spentYear      le spese dal primo gennaio dell'anno del mese a {@code day}: il totale dell'anno, finora
  * @param income         le entrate dal giorno 1 a {@code day}
  * @param spentByDay     la spesa accumulata, un valore per giorno dal giorno 1 a {@code day}
  * @param usualMonths    da quanti mesi è calcolato il solito (0 = nessun confronto possibile)
@@ -36,6 +37,7 @@ public record OverviewDto(
         String currency,
         List<String> currencies,
         BigDecimal spent,
+        BigDecimal spentYear,
         BigDecimal income,
         List<BigDecimal> spentByDay,
         int usualMonths,

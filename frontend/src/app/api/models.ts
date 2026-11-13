@@ -602,6 +602,7 @@ export interface Overview {
   currency: string;
   currencies: string[];
   spent: number;
+  spentYear: number; // le spese dal primo gennaio a "day": il totale dell'anno, finora
   income: number;
   spentByDay: number[]; // la spesa accumulata, dal giorno 1 a "day"
   usualMonths: number; // 0 = nessun confronto possibile

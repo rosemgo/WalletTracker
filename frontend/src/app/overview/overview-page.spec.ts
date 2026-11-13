@@ -14,6 +14,7 @@ import {
   comparisonSentence,
   monthOf,
   trendOf,
+  yearLabel,
 } from './overview-page';
 
 /** Un Riepilogo inventato del mese in corso: 1.284 € spesi, di solito 1.410 € allo stesso giorno. */
@@ -26,6 +27,7 @@ function overview(changes: Partial<Overview> = {}): Overview {
     currency: 'EUR',
     currencies: ['EUR'],
     spent: 1284,
+    spentYear: 14230,
     income: 2113,
     spentByDay: Array.from({ length: 25 }, (_, i) => Math.round(((i + 1) / 25) * 1284)),
     usualMonths: 6,
@@ -130,6 +132,12 @@ describe('OverviewPage', () => {
     expect(text).toContain('126 € in meno del solito a questo punto del mese.');
     expect(text).toContain('Un mese tipico (media di 6 mesi)');
     expect(text).toMatch(/Entrate finora: 2\.113\s€/);
+    // Il totale dell'anno, piccolo accanto alla cifra del mese.
+    const year = page.querySelector('[data-testid="year-total"]')!;
+    expect(year.querySelector('.secondary')?.textContent).toBe(
+      `Da inizio ${new Date().getFullYear()}`,
+    );
+    expect(year.querySelector('strong')?.textContent).toMatch(/14\.230\s€/);
     const chart = page.querySelector('svg.month-chart') as SVGElement;
     expect(chart.getAttribute('role')).toBe('img');
     expect(chart.getAttribute('aria-label')).toMatch(/contro 1\.410\s€ di un mese tipico/);
@@ -287,6 +295,13 @@ describe('OverviewPage', () => {
       '1 movimento',
     );
     expect(categoryNote(category('Shopping', 98, null), euros)).toBe('4 movimenti');
+  });
+
+  it('names the period of the year total', () => {
+    expect(yearLabel('2026-11', true, 'nov')).toBe('Da inizio 2026');
+    expect(yearLabel('2025-03', false, 'mar')).toBe('Gen–mar 2025');
+    expect(yearLabel('2025-01', false, 'gen')).toBe('Gen 2025');
+    expect(yearLabel('2025-12', false, 'dic')).toBe('Tutto il 2025');
   });
 
   it('counts months across the year', () => {

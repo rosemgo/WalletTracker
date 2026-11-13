@@ -143,6 +143,11 @@ export class OverviewPage implements OnInit {
     Math.max(1, ...this.topCategories().map((c) => c.amount)),
   );
 
+  /** L'etichetta del totale dell'anno: "Da inizio 2026", "Gen–mar 2025"... */
+  protected readonly yearLabel = computed(() =>
+    yearLabel(this.month(), this.isCurrent(), this.monthShort()),
+  );
+
   /** La descrizione del grafico per chi usa un lettore di schermo. */
   protected readonly chartDescription = computed(() => {
     const o = this.overview();
@@ -262,6 +267,23 @@ export function comparisonSentence(
   return difference < 0
     ? `${euros(-difference)} in meno del solito${when}.`
     : `${euros(difference)} più del solito${when}.`;
+}
+
+/**
+ * L'etichetta del totale dell'anno: "Da inizio 2026" nel mese in corso; per un mese passato il periodo che conta,
+ * "Gen–mar 2025" (o "Tutto il 2025" a dicembre, "Gen 2025" a gennaio).
+ *
+ * @param monthShort il mese abbreviato: "mar"
+ */
+export function yearLabel(month: string, isCurrent: boolean, monthShort: string): string {
+  const [year, m] = month.split('-').map(Number);
+  if (isCurrent) {
+    return `Da inizio ${year}`;
+  }
+  if (m === 12) {
+    return `Tutto il ${year}`;
+  }
+  return m === 1 ? `Gen ${year}` : `Gen–${monthShort} ${year}`;
 }
 
 /** La riga sotto una categoria. */
