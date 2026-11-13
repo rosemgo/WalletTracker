@@ -1873,6 +1873,44 @@ button.icon svg {
   }
 }
 
+/* In alto nella scheda: la cifra del mese a sinistra, il totale dell'anno, piccolo, a destra. Se non c'è posto, il
+   totale va sotto. */
+.hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.hero-month {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.year-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: right;
+}
+
+.year-total .secondary {
+  font-size: 0.75rem;
+}
+
+.year-total strong {
+  font-size: 1.05rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
 .comparison {
   margin: 4px 0 8px;
   color: var(--sec);
@@ -3873,14 +3911,16 @@ details.why-rules li + li {
 }
 
 /* Collega una banca e la pagina di ritorno (docs/modalita-ristretta.md): come aggiungere un conto in Enable Banking. */
-details.linked-accounts summary {
+details.linked-accounts summary,
+details.guide-card summary {
   width: fit-content;
   color: var(--acc);
   font-weight: 600;
   cursor: pointer;
 }
 
-details.linked-accounts[open] summary {
+details.linked-accounts[open] summary,
+details.guide-card[open] summary {
   margin-bottom: 10px;
 }
 
@@ -3891,6 +3931,30 @@ details.linked-accounts[open] summary {
 
 .linked-steps li + li {
   margin-top: 6px;
+}
+
+/* Importa, la guida di Trade Republic: la stessa scheda da aprire di Collega una banca. Il testo dentro è secondario,
+   come una spiegazione. */
+details.guide-card {
+  max-width: none;
+  color: var(--sec);
+}
+
+details.guide-card summary + p {
+  margin-top: 0;
+}
+
+details.guide-card ul,
+details.guide-card ol {
+  padding-left: 1.25rem;
+}
+
+details.guide-card li + li {
+  margin-top: 6px;
+}
+
+details.guide-card > :last-child {
+  margin-bottom: 0;
 }
 
 /* Le regole di partenza: una sezione da aprire, sotto le regole dell'utente. */
