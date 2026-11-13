@@ -46,6 +46,8 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   anno. Guardando un mese passato conta fino alla fine di quel mese ("Gen–mar 2025", "Tutto il 2025").
 - **La guida di Trade Republic in Importa** è una scheda da aprire come quella di "Collega una banca", staccata dal
   riquadro sotto.
+- **Cambiando mese, il grafico del Riepilogo si disegna una volta sola**: prima ripartiva due volte, la prima ancora con i
+  numeri del mese lasciato.
 
 ## 1.2.7
 
