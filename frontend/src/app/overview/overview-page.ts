@@ -82,9 +82,17 @@ export class OverviewPage implements OnInit {
     capitalized(formatDate(`${this.month()}-01`, 'MMMM y', this.locale)),
   );
 
+  /**
+   * Il mese dei dati mostrati. Con le frecce il titolo cambia subito, ma i numeri arrivano dopo: fino ad allora restano
+   * quelli del mese prima, e tutto ciò che li descrive (le date del grafico, l'etichetta dell'anno) deve restare con
+   * loro. Se seguisse il titolo, il grafico ripartirebbe due volte: con i dati vecchi al clic, con quelli nuovi
+   * all'arrivo.
+   */
+  private readonly shownMonth = computed(() => this.overview()?.month ?? this.month());
+
   /** "ott", per le date sotto il grafico. */
   protected readonly monthShort = computed(() =>
-    formatDate(`${this.month()}-01`, 'MMM', this.locale).replace('.', ''),
+    formatDate(`${this.shownMonth()}-01`, 'MMM', this.locale).replace('.', ''),
   );
 
   /** Sopra il titolo: "Domenica 25" per il mese in corso, "Tutto il mese" per uno passato. */
@@ -145,7 +153,7 @@ export class OverviewPage implements OnInit {
 
   /** L'etichetta del totale dell'anno: "Da inizio 2026", "Gen–mar 2025"... */
   protected readonly yearLabel = computed(() =>
-    yearLabel(this.month(), this.isCurrent(), this.monthShort()),
+    yearLabel(this.shownMonth(), this.shownMonth() === this.currentMonth, this.monthShort()),
   );
 
   /** La descrizione del grafico per chi usa un lettore di schermo. */

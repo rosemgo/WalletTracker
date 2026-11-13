@@ -3,7 +3,7 @@ import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { Investments, Overview, OverviewCategory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -229,6 +229,24 @@ describe('OverviewPage', () => {
     next.click();
     await fixture.whenStable();
     expect(requests.at(-1)?.[0]).toBe(current);
+  });
+
+  it('redraws the chart once per month: when the new numbers arrive, not at the click', async () => {
+    const pending = new Subject<Overview>();
+    const { fixture, page } = await render();
+    const previousMonth = addMonths(monthOf(new Date()), -1);
+    const drawn = () => page.querySelector('app-month-chart path.month');
+    const before = drawn();
+    respond = () => pending;
+
+    (page.querySelector('button.icon') as HTMLButtonElement).click(); // il mese prima
+    fixture.detectChanges();
+    // I numeri non sono ancora arrivati: il grafico è lo stesso, non riparte con i dati vecchi.
+    expect(drawn()).toBe(before);
+
+    pending.next(overview({ month: previousMonth, day: `${previousMonth}-28`, daysInMonth: 28 }));
+    fixture.detectChanges();
+    expect(drawn()).not.toBe(before); // arrivati: si ridisegna, una volta
   });
 
   it('lets choose the currency when there is more than one', async () => {
