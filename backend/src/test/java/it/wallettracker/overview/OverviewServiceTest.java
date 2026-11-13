@@ -182,6 +182,7 @@ class OverviewServiceTest {
     @Test
     void theYearCountsFromTheFirstOfJanuaryToTheDayOfTheMonth() {
         expense(LocalDate.of(2025, 12, 20), "-80.00", "SUPERMERCATO ALFA", "Spesa alimentare"); // l'anno prima
+        classificationService.classifyAll(); // il tipo che contano i totali lo scrive la classificazione
 
         // Aprile-settembre, 242,99 € al mese, più i 170 € di ottobre fino a oggi; i dollari e dicembre 2025 no.
         assertThat(overviewService.overview(OCTOBER, null, TODAY).spentYear()).isEqualByComparingTo("1627.94");
