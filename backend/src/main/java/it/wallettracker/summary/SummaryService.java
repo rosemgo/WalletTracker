@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Function;
 
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.summary.CurrencySummary.CategoryExpense;
 import it.wallettracker.transaction.BankTransactionRepository.CategoryTotal;
@@ -19,7 +20,6 @@ import it.wallettracker.transaction.TransactionType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Il riepilogo mese per mese: entrate, spese, risparmio.
@@ -52,11 +52,12 @@ public class SummaryService {
     public SummaryDto monthly(YearMonth from, YearMonth to) {
         long months = ChronoUnit.MONTHS.between(from, to) + 1;
         if (months < 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il mese iniziale viene dopo quello finale.");
+            // messaggio: Il mese iniziale viene dopo quello finale.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.months-reversed");
         }
         if (months > MAX_MONTHS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Puoi chiedere al massimo " + MAX_MONTHS + " mesi alla volta.");
+            // messaggio: Puoi chiedere al massimo {0} mesi alla volta.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.too-many-months", MAX_MONTHS);
         }
 
         // 1. Le righe già sommate dal database, divise per valuta. TreeMap tiene le valute in ordine alfabetico.

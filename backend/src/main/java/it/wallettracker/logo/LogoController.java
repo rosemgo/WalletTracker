@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 
+import it.wallettracker.message.ApiException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 /** Il logo di un conto (docs/loghi.md). */
 @RestController
@@ -37,8 +37,9 @@ public class LogoController {
      */
     @GetMapping
     public ResponseEntity<byte[]> get(@PathVariable Long id) {
-        AccountLogo logo = logoService.find(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "Questo conto non ha un logo."));
+        // messaggio: Questo conto non ha un logo.
+        AccountLogo logo = logoService.find(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                "logo.missing"));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(logo.getContentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
@@ -52,8 +53,8 @@ public class LogoController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void upload(@PathVariable Long id, @RequestPart("file") MultipartFile file) throws IOException {
         if (file.getSize() > LogoImage.MAX_BYTES) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il logo deve essere un'immagine PNG, JPEG o WebP, al massimo di 256 KB.");
+            // messaggio: Il logo deve essere un'immagine PNG, JPEG o WebP, al massimo di 256 KB.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "logo.invalid-image");
         }
         logoService.upload(id, file.getBytes(), Instant.now());
     }

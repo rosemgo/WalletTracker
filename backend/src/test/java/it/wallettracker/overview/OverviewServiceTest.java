@@ -1,5 +1,6 @@
 package it.wallettracker.overview;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -213,9 +214,9 @@ class OverviewServiceTest {
     void theFutureAndWrongRequestsAreRejected() {
         assertThatThrownBy(() -> overviewService.overview(YearMonth.of(2026, 11), null, TODAY))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("non è ancora cominciato");
+                .satisfies(says("non è ancora cominciato"));
         assertThatThrownBy(() -> overviewService.overview(YearMonth.of(2016, 9), null, TODAY))
-                .hasMessageContaining("al massimo di 120 mesi");
+                .satisfies(says("al massimo di 120 mesi"));
 
         assertThat(mvc.get().uri("/api/overview")).hasStatusOk().bodyJson()
                 .extractingPath("$.currency").isEqualTo("EUR");

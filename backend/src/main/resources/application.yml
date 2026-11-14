@@ -19,6 +19,16 @@ spring:
     ollama:
       base-url: ${OLLAMA_URL:http://localhost:11434}
 
+  # Le frasi per l'utente (messages.properties, in italiano: docs/lingue-1-messaggi-e-formati.md).
+  #  - always-use-message-format: ogni frase passa da MessageFormat, anche quelle senza parametri. Così la regola
+  #    è una sola: l'apostrofo si scrive sempre due volte (l''importo).
+  #  - fallback-to-system-locale: false. Se manca il file di una lingua si usa quello di base (l'italiano), non
+  #    quello della lingua del sistema operativo del server, che non c'entra con chi sta guardando la dashboard.
+  messages:
+    basename: messages
+    always-use-message-format: true
+    fallback-to-system-locale: false
+
   # I file caricati dalla dashboard (importazione CSV): al massimo 5 MB, un estratto conto di anni.
   # Un limite basso protegge il server da file enormi, per errore o apposta.
   servlet:

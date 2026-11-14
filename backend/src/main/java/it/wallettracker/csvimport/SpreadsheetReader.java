@@ -20,6 +20,8 @@ import java.util.zip.ZipInputStream;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageException;
 
 /**
  * Legge il primo foglio di un file Excel ({@code .xlsx}) come righe e colonne di testo, come {@link CsvReader} fa con
@@ -85,14 +87,15 @@ public final class SpreadsheetReader {
      * Le righe del primo foglio, ognuna come lista di testi. Le righe completamente vuote si saltano; una cella vuota
      * in mezzo resta, come testo vuoto, così le colonne restano al loro posto.
      *
-     * @throws IllegalArgumentException se il file non è un Excel leggibile (con un messaggio per l'utente)
+     * @throws MessageException se il file non è un Excel leggibile (con un messaggio per l'utente)
      */
     public static List<List<String>> read(byte[] content) {
         Map<String, byte[]> parts = unzip(content);
         String sheet = firstSheetPath(parts);
         byte[] sheetXml = parts.get(sheet);
         if (sheetXml == null) {
-            throw new IllegalArgumentException("Il file Excel non ha un foglio leggibile.");
+            // messaggio: Il file Excel non ha un foglio leggibile.
+            throw new MessageException(Message.of("import.excel.no-sheet"));
         }
         List<String> strings = parts.containsKey("xl/sharedStrings.xml")
                 ? sharedStrings(parts.get("xl/sharedStrings.xml")) : List.of();
@@ -109,7 +112,8 @@ public final class SpreadsheetReader {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
                 if (++entries > MAX_ENTRIES) {
-                    throw new IllegalArgumentException("Il file Excel ha troppe parti: non sembra un estratto conto.");
+                    // messaggio: Il file Excel ha troppe parti: non sembra un estratto conto.
+                    throw new MessageException(Message.of("import.excel.too-many-parts"));
                 }
                 String name = entry.getName();
                 if (entry.isDirectory() || !name.startsWith("xl/") || !name.endsWith(".xml") && !name.endsWith(".rels")) {
@@ -118,15 +122,18 @@ public final class SpreadsheetReader {
                 byte[] data = readLimited(zip);
                 total += data.length;
                 if (total > MAX_TOTAL_BYTES) {
-                    throw new IllegalArgumentException("Il file Excel, decompresso, è troppo grande.");
+                    // messaggio: Il file Excel, decompresso, è troppo grande.
+                    throw new MessageException(Message.of("import.excel.too-large"));
                 }
                 parts.put(name, data);
             }
         } catch (IOException e) {
-            throw new IllegalArgumentException("Il file non è un Excel (.xlsx) leggibile: è danneggiato?");
+            // messaggio: Il file non è un Excel (.xlsx) leggibile: è danneggiato?
+            throw new MessageException(Message.of("import.excel.damaged"));
         }
         if (!parts.containsKey("xl/workbook.xml")) {
-            throw new IllegalArgumentException("Il file non è un Excel (.xlsx) leggibile: manca l'elenco dei fogli.");
+            // messaggio: Il file non è un Excel (.xlsx) leggibile: manca l'elenco dei fogli.
+            throw new MessageException(Message.of("import.excel.no-sheet-list"));
         }
         return parts;
     }
@@ -140,7 +147,8 @@ public final class SpreadsheetReader {
         while ((read = in.read(buffer)) > 0) {
             size += read;
             if (size > MAX_ENTRY_BYTES) {
-                throw new IllegalArgumentException("Il file Excel, decompresso, è troppo grande.");
+                // messaggio: Il file Excel, decompresso, è troppo grande.
+                throw new MessageException(Message.of("import.excel.too-large"));
             }
             out.write(buffer, 0, read);
         }
@@ -158,7 +166,8 @@ public final class SpreadsheetReader {
                 }
             }
         } catch (XMLStreamException e) {
-            throw new IllegalArgumentException("Il file Excel ha un elenco dei fogli illeggibile.");
+            // messaggio: Il file Excel ha un elenco dei fogli illeggibile.
+            throw new MessageException(Message.of("import.excel.unreadable-sheet-list"));
         }
         byte[] rels = parts.get("xl/_rels/workbook.xml.rels");
         if (relationId != null && rels != null) {
@@ -172,7 +181,8 @@ public final class SpreadsheetReader {
                     }
                 }
             } catch (XMLStreamException e) {
-                throw new IllegalArgumentException("Il file Excel ha un elenco dei fogli illeggibile.");
+                // messaggio: Il file Excel ha un elenco dei fogli illeggibile.
+                throw new MessageException(Message.of("import.excel.unreadable-sheet-list"));
             }
         }
         return "xl/worksheets/sheet1.xml"; // il nome usato da quasi tutti i programmi
@@ -210,7 +220,8 @@ public final class SpreadsheetReader {
                 }
             }
         } catch (XMLStreamException e) {
-            throw new IllegalArgumentException("Il file Excel ha i testi illeggibili.");
+            // messaggio: Il file Excel ha i testi illeggibili.
+            throw new MessageException(Message.of("import.excel.unreadable-texts"));
         }
         return strings;
     }
@@ -314,7 +325,8 @@ public final class SpreadsheetReader {
                 }
             }
         } catch (XMLStreamException | NumberFormatException e) {
-            throw new IllegalArgumentException("Il foglio del file Excel non si legge.", e);
+            // messaggio: Il foglio del file Excel non si legge.
+            throw new MessageException(Message.of("import.excel.unreadable-sheet"), e);
         }
         return rows;
     }

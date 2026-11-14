@@ -735,8 +735,21 @@ export interface InvestmentMonth {
 }
 
 /** Una voce di un elenco delle rendite: "Cedole", o un titolo. */
+/**
+ * Che voce è (InvestmentDtos.GroupKind): una con il suo nome, oppure una di quelle che un nome non ce l'hanno
+ * ("Altre rendite", "Senza categoria"...). Per queste il backend non manda la frase: la scrive la dashboard
+ * (INVESTMENT_GROUP_LABELS), nella lingua di chi guarda.
+ */
+export type InvestmentGroupKind =
+  | 'NAMED'
+  | 'OTHER_INCOME'
+  | 'UNNAMED_SECURITY'
+  | 'UNMATCHED_WITHHOLDING'
+  | 'UNCATEGORIZED';
+
 export interface InvestmentGroup {
-  name: string;
+  name: string | null; // null per le voci senza nome: allora conta kind
+  kind: InvestmentGroupKind;
   amount: number;
   movements: number;
   accountId?: number | null; // quando la voce è un conto (una rendita senza il nome di un titolo)...

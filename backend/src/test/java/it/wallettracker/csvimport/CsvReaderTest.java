@@ -1,10 +1,12 @@
 package it.wallettracker.csvimport;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import it.wallettracker.message.MessageException;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -44,8 +46,8 @@ class CsvReaderTest {
     @Test
     void anUnclosedQuoteIsAnError() {
         assertThatThrownBy(() -> CsvReader.read("a;b\n\"aperta;1\n", ';'))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("non è un CSV valido");
+                .isInstanceOf(MessageException.class)
+                .satisfies(says("non è un CSV valido"));
     }
 
     @Test
@@ -91,7 +93,7 @@ class CsvReaderTest {
     @Test
     void textAfterTheClosingQuoteIsAnError() {
         assertThatThrownBy(() -> CsvReader.read("A;B\n\"ab\"c;2\n", ';'))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("non è un CSV valido");
+                .isInstanceOf(MessageException.class)
+                .satisfies(says("non è un CSV valido"));
     }
 }

@@ -1,5 +1,6 @@
 package it.wallettracker.sync;
 
+import static it.wallettracker.message.TestMessages.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -112,7 +113,7 @@ class SyncServiceTest {
         Round round = syncService.syncAllInBackground();
 
         assertThat(counts(round)).containsExactly(1, 1, 0);
-        assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
+        assertThat(text(reload(failing).getLastSyncError())).contains("troppe richieste");
         assertThat(reload(working).getLastSyncError()).isNull();
         assertThat(reload(working).getLastSyncAt()).isNotNull();
     }
@@ -136,7 +137,7 @@ class SyncServiceTest {
         assertThat(round.accounts()).containsExactlyInAnyOrder(
                 new AccountOutcome(failing.getId(), 0, 0, reload(failing).getLastSyncError()),
                 new AccountOutcome(working.getId(), 1, 1, null));
-        assertThat(reload(failing).getLastSyncError()).contains("troppe richieste");
+        assertThat(text(reload(failing).getLastSyncError())).contains("troppe richieste");
 
         // Un secondo giro subito dopo: niente di nuovo, e lo stesso movimento ancora in attesa.
         when(client.getTransactions(eq("uid-a"), any(), any(), any())).thenReturn(List.of());
@@ -187,7 +188,7 @@ class SyncServiceTest {
         assertThat(counts(round)).containsExactly(0, 1, 0);
         verify(client, never()).getTransactions(any(), any(), any(), any());
         assertThat(reload(excluded).getLastSyncAt()).isNull();
-        assertThat(reload(withExpiredConsent).getLastSyncError())
+        assertThat(text(reload(withExpiredConsent).getLastSyncError()))
                 .startsWith("consenso scaduto")
                 .endsWith("ricollega Banca Scaduta");
     }

@@ -10,11 +10,11 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
+import it.wallettracker.message.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Come si entra: la scelta "senza PIN", il PIN, il codice di recupero, il conteggio degli errori (docs/46, parte D).
@@ -100,7 +100,8 @@ public class PinService {
     @Transactional
     public void chooseWithoutPin() {
         if (repository.existsById(AppPin.ID)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La scelta è già stata fatta.");
+            // messaggio: La scelta è già stata fatta.
+            throw new ApiException(HttpStatus.CONFLICT, "auth.choice-already-made");
         }
         repository.save(AppPin.withoutPin(clock.instant()));
     }
@@ -121,7 +122,8 @@ public class PinService {
         }
         AppPin existing = saved.get();
         if (!existing.isWithoutPin()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Il PIN c'è già.");
+            // messaggio: Il PIN c'è già.
+            throw new ApiException(HttpStatus.CONFLICT, "auth.pin-already-set");
         }
         existing.changePin(encoder.encode(pin), encoder.encode(normalize(recoveryCode)), clock.instant());
         return new Created(recoveryCode, existing.generation());
@@ -144,8 +146,8 @@ public class PinService {
         requireValidPin(newPin);
         String normalized = normalize(code);
         if (!VALID_RECOVERY.matcher(normalized).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il codice di recupero è fatto di 16 lettere e cifre, come K7QM-2XPA-9RWD-4TNE.");
+            // messaggio: Il codice di recupero è fatto di 16 lettere e cifre, come K7QM-2XPA-9RWD-4TNE.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "auth.recovery-code-format");
         }
         String newCode = newRecoveryCode();
         Attempt result = attempt(normalized, AppPin::recoveryHash,
@@ -173,7 +175,8 @@ public class PinService {
             Consumer<AppPin> onSuccess) {
         AppPin saved = repository.findForUpdate()
                 .filter(pin -> !pin.isWithoutPin())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Il PIN non c'è."));
+                // messaggio: Il PIN non c'è.
+                .orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "auth.pin-not-set"));
         // Un solo istante per tutto il tentativo: letto due volte, a qualche millisecondo di distanza, la pausa di
         // un minuto appena iniziata risulterebbe di 59 secondi.
         Instant now = clock.instant();
@@ -210,7 +213,8 @@ public class PinService {
 
     private static void requireValidPin(String pin) {
         if (pin == null || !VALID_PIN.matcher(pin).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il PIN è fatto di cifre: da 6 a 10.");
+            // messaggio: Il PIN è fatto di cifre: da 6 a 10.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "auth.pin-format");
         }
     }
 }

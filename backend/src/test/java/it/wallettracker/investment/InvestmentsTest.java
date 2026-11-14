@@ -8,6 +8,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import it.wallettracker.investment.InvestmentDtos.Group;
+import it.wallettracker.investment.InvestmentDtos.GroupKind;
 import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.investment.Investments.Movement;
 import it.wallettracker.transaction.TransactionType;
@@ -120,9 +121,12 @@ class InvestmentsTest {
                 m("2025-06-01", "99", TransactionType.INVESTMENT_INCOME, false, "Cedole", "BTP Italia")); // prima
 
         List<Group> byType = Investments.incomeBy(movements, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31),
-                Movement::category, "Altre rendite");
+                Movement::category, GroupKind.OTHER_INCOME);
 
-        assertThat(byType).extracting(Group::name).containsExactly("Cedole", "Dividendi", "Altre rendite");
+        // La voce senza categoria non ha un nome: dice che voce è, e la frase ("Altre rendite") la scrive la dashboard.
+        assertThat(byType).extracting(Group::name).containsExactly("Cedole", "Dividendi", null);
+        assertThat(byType).extracting(Group::kind)
+                .containsExactly(GroupKind.NAMED, GroupKind.NAMED, GroupKind.OTHER_INCOME);
         assertThat(byType.get(0).amount()).isEqualByComparingTo("30");
         assertThat(byType.get(0).movements()).isEqualTo(2);
     }
@@ -144,7 +148,8 @@ class InvestmentsTest {
                 m("2026-10-02", "-3", TransactionType.INVESTMENT_TAX, true, null, null)),
                 LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31));
         // Dalla più pesante; le ritenute non ci sono.
-        assertThat(others).extracting(Group::name).containsExactly("Imposta di bollo", "Senza categoria");
+        assertThat(others).extracting(Group::name).containsExactly("Imposta di bollo", null);
+        assertThat(others).extracting(Group::kind).containsExactly(GroupKind.NAMED, GroupKind.UNCATEGORIZED);
     }
 
     @Test
@@ -199,14 +204,16 @@ class InvestmentsTest {
 
         List<Group> bySource = Investments.netIncomeBy(movements, from, to, false);
         assertThat(bySource).extracting(Group::name)
-                .containsExactly(bond, "Intesa Sanpaolo", Investments.UNMATCHED_WITHHOLDING);
+                .containsExactly(bond, "Intesa Sanpaolo", null);
+        assertThat(bySource.get(2).kind()).isEqualTo(GroupKind.UNMATCHED_WITHHOLDING);
         assertThat(bySource.get(0).amount()).isEqualByComparingTo("455"); // 520 − 65
         assertThat(bySource.get(0).movements()).isEqualTo(1); // la ritenuta non è una rendita in più
         assertThat(bySource.get(2).amount()).isEqualByComparingTo("-4");
 
         List<Group> byType = Investments.netIncomeBy(movements, from, to, true);
         assertThat(byType).extracting(Group::name)
-                .containsExactly("Cedole", "Dividendi", Investments.UNMATCHED_WITHHOLDING);
+                .containsExactly("Cedole", "Dividendi", null);
+        assertThat(byType.get(2).kind()).isEqualTo(GroupKind.UNMATCHED_WITHHOLDING);
         assertThat(byType.get(0).amount()).isEqualByComparingTo("455");
         // La somma dei gruppi è il netto: 520 − 65 + 247,91 − 4.
         assertThat(byType.stream().map(Group::amount).reduce(BigDecimal.ZERO, BigDecimal::add))
@@ -352,9 +359,9 @@ class InvestmentsTest {
                 LocalDate.of(2026, 12, 31), false);
         // Trade Republic resta 57,72 € netti: la ritenuta di Fineco ha lo stesso nome, ma è su un altro conto. Le due
         // ritenute senza la loro rendita vanno nella riga a parte, e la somma dei gruppi resta il netto.
-        assertThat(bySource).filteredOn(g -> g.name().equals("Enel")).singleElement()
+        assertThat(bySource).filteredOn(g -> "Enel".equals(g.name())).singleElement()
                 .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("57.72"));
-        assertThat(bySource).filteredOn(g -> g.name().equals(Investments.UNMATCHED_WITHHOLDING)).singleElement()
+        assertThat(bySource).filteredOn(g -> g.kind() == GroupKind.UNMATCHED_WITHHOLDING).singleElement()
                 .satisfies(g -> {
                     assertThat(g.amount()).isEqualByComparingTo("-37.22");
                     assertThat(g.movements()).isEqualTo(2);

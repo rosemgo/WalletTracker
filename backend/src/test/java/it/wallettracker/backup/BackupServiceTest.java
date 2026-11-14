@@ -1,5 +1,6 @@
 package it.wallettracker.backup;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -131,18 +132,18 @@ class BackupServiceTest {
     void aBackupIsRequestedOnlyOnceAndOnlyIfTheServiceCanDoIt() throws IOException {
         writeState(240, true, "");
         assertThatThrownBy(service::requestBackup).isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("non risponde");
+                .satisfies(says("non risponde"));
 
         writeState(30, false, "");
         assertThatThrownBy(service::requestBackup).isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Manca la password");
+                .satisfies(says("Manca la password"));
 
         writeState(30, true, "in-corso=\n");
         service.requestBackup();
         assertThat(state.resolve("richiesta")).exists();
         assertThat(service.status().inProgress()).isTrue();
         assertThatThrownBy(service::requestBackup).isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("già in corso");
+                .satisfies(says("già in corso"));
     }
 
     @Test
@@ -154,7 +155,7 @@ class BackupServiceTest {
         for (String name : new String[] {"../segreto.txt", "segreto.txt", "wallettracker-manuale-20261031-999999.backup",
                 "../backup/wallettracker-manuale-20261031-101500.backup", ".wallettracker-manuale-20261031-101500.backup"}) {
             assertThatThrownBy(() -> service.file(name)).as(name).isInstanceOf(ResponseStatusException.class)
-                    .hasMessageContaining("non trovato");
+                    .satisfies(says("non trovato"));
         }
     }
 }

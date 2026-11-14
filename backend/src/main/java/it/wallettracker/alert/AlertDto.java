@@ -2,6 +2,7 @@ package it.wallettracker.alert;
 
 import java.time.Instant;
 import java.util.List;
+import it.wallettracker.message.Message;
 
 /**
  * Un avviso per la dashboard.
@@ -18,7 +19,7 @@ import java.util.List;
  * @param date     la scadenza del consenso, altrimenti null
  * @param daysLeft i giorni che mancano alla scadenza (negativo = scaduto da tanti giorni), altrimenti null
  * @param items    le categorie dei budget superati, altrimenti vuoto
- * @param message  il motivo dell'errore di sincronizzazione, altrimenti null
+ * @param message  il motivo dell'errore di sincronizzazione (nella risposta: la sua frase), altrimenti null
  */
 public record AlertDto(
         AlertKind kind,
@@ -29,7 +30,7 @@ public record AlertDto(
         Instant date,
         Long daysLeft,
         List<String> items,
-        String message) {
+        Message message) {
 
     /** I tipi di avviso. */
     public enum AlertKind {

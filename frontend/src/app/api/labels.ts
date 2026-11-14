@@ -3,7 +3,14 @@
 // Record<K, V> è un tipo di TypeScript: un oggetto con una chiave per ogni valore di K. Se un giorno
 // aggiungessimo un ruolo o un tipo in models.ts dimenticando di tradurlo qui, la compilazione fallirebbe.
 
-import { AccountRole, AmountSign, MatchMode, TransactionType } from './models';
+import {
+  AccountRole,
+  AmountSign,
+  InvestmentGroup,
+  InvestmentGroupKind,
+  MatchMode,
+  TransactionType,
+} from './models';
 
 export const ROLE_LABELS: Record<AccountRole, string> = {
   UNASSIGNED: 'Da assegnare',
@@ -48,3 +55,18 @@ export const AMOUNT_SIGN_LABELS: Record<AmountSign, string> = {
 
 export const MATCH_MODES = Object.keys(MATCH_MODE_LABELS) as MatchMode[];
 export const AMOUNT_SIGNS = Object.keys(AMOUNT_SIGN_LABELS) as AmountSign[];
+
+/** Le voci degli elenchi di Investimenti che non hanno un nome loro: il backend dice quale voce è, qui c'è la frase. */
+export const INVESTMENT_GROUP_LABELS: Record<Exclude<InvestmentGroupKind, 'NAMED'>, string> = {
+  OTHER_INCOME: 'Altre rendite',
+  UNNAMED_SECURITY: 'Senza nome del titolo',
+  UNMATCHED_WITHHOLDING: 'Ritenute senza la loro rendita nel periodo',
+  UNCATEGORIZED: 'Senza categoria',
+};
+
+/** Il nome da mostrare per una voce: il suo, oppure la frase del suo tipo. */
+export function investmentGroupName(group: InvestmentGroup): string {
+  return group.kind === 'NAMED' || group.name !== null
+    ? (group.name ?? '')
+    : INVESTMENT_GROUP_LABELS[group.kind];
+}

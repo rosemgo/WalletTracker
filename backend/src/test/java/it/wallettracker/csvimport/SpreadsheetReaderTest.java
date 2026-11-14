@@ -1,5 +1,6 @@
 package it.wallettracker.csvimport;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import it.wallettracker.message.MessageException;
 import org.junit.jupiter.api.Test;
 
 /** Test del lettore dei file Excel (docs/importa-file.md, parte B). File costruiti da XlsxFixture, dati inventati. */
@@ -96,7 +98,7 @@ class SpreadsheetReaderTest {
         assertThat(SpreadsheetReader.isOldExcel(new byte[] {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, 0})).isTrue();
         // uno ZIP qualsiasi, senza l'elenco dei fogli
         assertThatThrownBy(() -> SpreadsheetReader.read(XlsxFixture.zip(Map.of("leggimi.txt", "ciao"))))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("manca l'elenco dei fogli");
+                .isInstanceOf(MessageException.class).satisfies(says("manca l'elenco dei fogli"));
     }
 
     @Test
@@ -112,7 +114,7 @@ class SpreadsheetReaderTest {
                 "xl/workbook.xml", "<workbook xmlns=\"" + MAIN + "\"><sheets><sheet name=\"A\"/></sheets></workbook>",
                 "xl/worksheets/sheet1.xml", sheet));
 
-        assertThatThrownBy(() -> SpreadsheetReader.read(file)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> SpreadsheetReader.read(file)).isInstanceOf(MessageException.class);
     }
 
     @Test
@@ -134,6 +136,6 @@ class SpreadsheetReaderTest {
         assertThat(out.size()).isLessThan(200_000);
 
         assertThatThrownBy(() -> SpreadsheetReader.read(out.toByteArray()))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("troppo grande");
+                .isInstanceOf(MessageException.class).satisfies(says("troppo grande"));
     }
 }

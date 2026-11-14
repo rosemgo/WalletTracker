@@ -1,15 +1,16 @@
 package it.wallettracker.bank.enablebanking;
 
+import it.wallettracker.message.ApiException;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Si prova a chiamare Enable Banking, ma le credenziali non sono ancora state configurate.
  * Diventa una risposta 409 Conflict ("non è possibile, nello stato attuale") con il motivo.
  */
-public class EnableBankingNotConfiguredException extends ResponseStatusException {
+public class EnableBankingNotConfiguredException extends ApiException {
 
     public EnableBankingNotConfiguredException() {
-        super(HttpStatus.CONFLICT, "Enable Banking non è ancora configurato: apri la pagina Impostazioni.");
+        // messaggio: Enable Banking non è ancora configurato: apri la pagina Impostazioni.
+        super(HttpStatus.CONFLICT, "enable-banking.not-configured");
     }
 }

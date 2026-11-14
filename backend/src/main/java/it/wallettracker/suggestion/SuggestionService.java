@@ -102,7 +102,8 @@ public class SuggestionService {
     @Transactional(readOnly = true)
     public UsedCategories usedCategoriesFor(Long transactionId) {
         BankTransaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new NotFoundException("Movimento", transactionId));
+                // messaggio: Movimento {0} non trovato
+                .orElseThrow(() -> new NotFoundException("not-found.transaction", transactionId));
         List<Set<String>> owners = owners();
         String word = MerchantKey.firstWord(
                 MerchantKey.of(transaction.getCounterparty(), transaction.getDescription(), owners));

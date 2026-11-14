@@ -77,11 +77,11 @@ function investments(period: InvestmentPeriod): Investments {
     otherTaxesInPeriod: -2,
     months,
     incomeByType: [
-      { name: 'Cedole', amount: 30, movements: 1 },
-      { name: 'Dividendi', amount: 12.5, movements: 1 },
+      { name: 'Cedole', kind: 'NAMED' as const, amount: 30, movements: 1 },
+      { name: 'Dividendi', kind: 'NAMED' as const, amount: 12.5, movements: 1 },
     ],
-    incomeBySource: [{ name: 'CED.SU BTP ITALIA', amount: 30, movements: 1 }],
-    otherTaxesByType: [{ name: 'Imposta di bollo', amount: -2, movements: 1 }],
+    incomeBySource: [{ name: 'CED.SU BTP ITALIA', kind: 'NAMED' as const, amount: 30, movements: 1 }],
+    otherTaxesByType: [{ name: 'Imposta di bollo', kind: 'NAMED' as const, amount: -2, movements: 1 }],
     trades: [
       movement(41, '2026-10-06', -200, 'NUOVO VERSAMENTO ROBO ADVISOR', 'SECURITIES_BUY'),
       movement(42, '2026-08-10', 300, 'SELL TRADE ETF MONDO', 'SECURITIES_SELL'),
@@ -238,10 +238,11 @@ describe('Investments', () => {
     answer = (period) => ({
       ...investments(period),
       incomeBySource: [
-        { name: 'ROMANIA-7OT45 6,5%', amount: 455, movements: 1 },
-        { name: 'Ritenute senza la loro rendita nel periodo', amount: -4, movements: 1 },
+        { name: 'ROMANIA-7OT45 6,5%', kind: 'NAMED' as const, amount: 455, movements: 1 },
+        { name: null, kind: 'UNMATCHED_WITHHOLDING' as const, amount: -4, movements: 1 },
         {
           name: 'Trade Republic',
+          kind: 'NAMED' as const,
           amount: 6.69,
           movements: 2,
           accountId: 9,
@@ -304,6 +305,7 @@ describe('Investments', () => {
   it('a long list of the column shows the first five, then all, then five again; a short one stays whole', async () => {
     const sources = Array.from({ length: 12 }, (_, i) => ({
       name: `TITOLO ${i + 1}`,
+      kind: 'NAMED' as const,
       amount: 100 - i,
       movements: 1,
     }));
@@ -337,6 +339,7 @@ describe('Investments', () => {
   it('a list opened with "Mostra tutti" closes again with another period', async () => {
     const sources = Array.from({ length: 9 }, (_, i) => ({
       name: `T${i}`,
+      kind: 'NAMED' as const,
       amount: 9 - i,
       movements: 1,
     }));

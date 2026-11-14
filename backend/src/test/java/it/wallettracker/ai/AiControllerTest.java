@@ -20,6 +20,7 @@ import it.wallettracker.account.AccountRole;
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.message.Message;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
@@ -148,7 +149,7 @@ class AiControllerTest {
         for (int i = 0; i < 50 && modelDownload.state().running(); i++) {
             Thread.sleep(100);
         }
-        assertThat(modelDownload.state().status()).isEqualTo("success");
+        assertThat(modelDownload.state().status()).isEqualTo(Message.verbatim("success"));
         assertThat(mvc.get().uri("/api/ai")).bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$.download.model").isEqualTo("gemma3:4b");
             json.assertThat().extractingPath("$.download.running").isEqualTo(false);

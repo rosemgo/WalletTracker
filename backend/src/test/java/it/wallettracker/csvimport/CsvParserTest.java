@@ -1,10 +1,12 @@
 package it.wallettracker.csvimport;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import it.wallettracker.message.MessageException;
 import org.junit.jupiter.api.Test;
 
 /** Test della versione didattica del lettore CSV (vedi CsvReaderTest per quella usata dall'importazione). */
@@ -41,7 +43,7 @@ class CsvParserTest {
     @Test
     void anUnclosedQuoteIsAnError() {
         assertThatThrownBy(() -> CsvParser.parse("a;b\n\"aperta;1\n", ';'))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("virgoletta aperta");
+                .isInstanceOf(MessageException.class)
+                .satisfies(says("virgoletta aperta"));
     }
 }

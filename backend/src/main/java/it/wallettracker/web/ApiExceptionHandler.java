@@ -1,5 +1,8 @@
 package it.wallettracker.web;
 
+import it.wallettracker.message.ApiException;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.Messages;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -34,17 +37,40 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
+    private final Messages messages;
+
+    public ApiExceptionHandler(Messages messages) {
+        this.messages = messages;
+    }
+
+    /**
+     * I nostri errori ({@link ApiException}): qui il codice diventa la frase, nella lingua della richiesta. Nel corpo
+     * c'è anche il codice ({@code "code": "category.duplicate"}), per chi volesse riconoscere l'errore senza leggerne
+     * le parole.
+     */
+    @ExceptionHandler(ApiException.class)
+    public ProblemDetail apiError(ApiException e) {
+        return problem(e.getStatusCode(), e.message());
+    }
+
     @ExceptionHandler(RestClientResponseException.class)
     public ProblemDetail enableBankingError(RestClientResponseException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
-                "Enable Banking ha risposto con un errore: HTTP " + e.getStatusCode().value() + " "
-                        + e.getResponseBodyAsString());
+        // messaggio: Enable Banking ha risposto con un errore: HTTP {0} {1}
+        return problem(HttpStatus.BAD_GATEWAY, Message.of("enable-banking.error", e.getStatusCode().value(),
+                e.getResponseBodyAsString()));
     }
 
     @ExceptionHandler(RestClientException.class)
     public ProblemDetail enableBankingUnreachable(RestClientException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY,
-                "Enable Banking non è raggiungibile: " + e.getMessage());
+        // messaggio: Enable Banking non è raggiungibile: {0}
+        return problem(HttpStatus.BAD_GATEWAY, Message.of("enable-banking.unreachable",
+                String.valueOf(e.getMessage())));
+    }
+
+    private ProblemDetail problem(HttpStatusCode status, Message message) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, messages.text(message));
+        problem.setProperty("code", message.code());
+        return problem;
     }
 
     /**
@@ -54,8 +80,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status,
-                "Il file è troppo grande: al massimo 5 MB. Esporta un periodo più breve.");
+        // messaggio: Il file è troppo grande: al massimo 5 MB. Esporta un periodo più breve.
+        ProblemDetail problem = problem(status, Message.of("upload.too-large"));
         return handleExceptionInternal(e, problem, headers, status, request);
     }
 }

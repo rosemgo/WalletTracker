@@ -1,5 +1,6 @@
 package it.wallettracker.sync;
 
+import static it.wallettracker.message.TestMessages.text;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
@@ -16,21 +17,21 @@ class SyncErrorsTest {
 
     @Test
     void theErrorsOfTheBankBecomeSentences() {
-        assertThat(SyncErrors.describe(error(HttpStatus.TOO_MANY_REQUESTS))).contains("troppe richieste");
-        assertThat(SyncErrors.describe(error(HttpStatus.UNAUTHORIZED))).contains("Ricollega la banca");
-        assertThat(SyncErrors.describe(error(HttpStatus.FORBIDDEN))).contains("consenso");
-        assertThat(SyncErrors.describe(HttpServerErrorException.create(HttpStatus.BAD_GATEWAY, "Bad Gateway", null,
-                "{}".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8))).contains("non rispondono");
-        assertThat(SyncErrors.describe(error(HttpStatus.UNPROCESSABLE_ENTITY))).contains("codice 422");
-        assertThat(SyncErrors.describe(new ResourceAccessException("Connection refused")))
+        assertThat(text(SyncErrors.describe(error(HttpStatus.TOO_MANY_REQUESTS)))).contains("troppe richieste");
+        assertThat(text(SyncErrors.describe(error(HttpStatus.UNAUTHORIZED)))).contains("Ricollega la banca");
+        assertThat(text(SyncErrors.describe(error(HttpStatus.FORBIDDEN)))).contains("consenso");
+        assertThat(text(SyncErrors.describe(HttpServerErrorException.create(HttpStatus.BAD_GATEWAY, "Bad Gateway", null,
+                "{}".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8)))).contains("non rispondono");
+        assertThat(text(SyncErrors.describe(error(HttpStatus.UNPROCESSABLE_ENTITY)))).contains("codice 422");
+        assertThat(text(SyncErrors.describe(new ResourceAccessException("Connection refused"))))
                 .contains("connessione a Internet");
     }
 
     @Test
     void ourOwnMessagesStayAndTheUnexpectedOnesPointToTheLog() {
-        String notConfigured = SyncErrors.describe(new EnableBankingNotConfiguredException());
+        String notConfigured = text(SyncErrors.describe(new EnableBankingNotConfiguredException()));
         assertThat(notConfigured).contains("Impostazioni").doesNotContain("Exception").doesNotContain("409");
-        assertThat(SyncErrors.describe(new IllegalStateException("boom")))
+        assertThat(text(SyncErrors.describe(new IllegalStateException("boom"))))
                 .isEqualTo("Errore imprevisto durante l'aggiornamento: i dettagli sono nel log del backend.");
     }
 

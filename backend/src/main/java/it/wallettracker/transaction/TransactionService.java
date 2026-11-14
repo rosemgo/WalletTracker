@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /** Le operazioni sui movimenti richieste dalla dashboard: elenco e correzione manuale. */
 @Service
@@ -50,17 +50,18 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public TransactionPageDto search(TransactionFilter filter, int page, int size) {
         if (filter.from() != null && filter.to() != null && filter.from().isAfter(filter.to())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La data di inizio è dopo quella di fine.");
+            // messaggio: La data di inizio è dopo quella di fine.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "search.dates-reversed");
         }
         String text = filter.text() == null ? "" : filter.text().strip();
         if (text.length() > MAX_SEARCH_LENGTH) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il testo da cercare è troppo lungo: al massimo " + MAX_SEARCH_LENGTH + " caratteri.");
+            // messaggio: Il testo da cercare è troppo lungo: al massimo {0} caratteri.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "search.text-too-long", MAX_SEARCH_LENGTH);
         }
         List<String> words = TransactionSearch.words(text);
         if (words.size() > TransactionSearch.MAX_WORDS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Troppe parole da cercare: al massimo " + TransactionSearch.MAX_WORDS + ".");
+            // messaggio: Troppe parole da cercare: al massimo {0}.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "search.too-many-words", TransactionSearch.MAX_WORDS);
         }
         // PageRequest dice a Spring Data quale pagina vogliamo e in che ordine (dal più recente; a parità di giorno,
         // dall'ultimo arrivato). Spring aggiunge da solo ORDER BY, LIMIT e OFFSET alla query, e fa una seconda query
@@ -85,7 +86,9 @@ public class TransactionService {
      */
     @Transactional
     public TransactionDto correctType(Long id, TransactionType manualType) {
-        BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
+        // messaggio: Movimento {0} non trovato
+        BankTransaction transaction = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.transaction", id));
         transaction.setManualType(manualType);
         classificationService.classifyAll();
         return TransactionDto.from(transaction);
@@ -97,7 +100,9 @@ public class TransactionService {
      */
     @Transactional
     public TransactionDto correctCategory(Long id, Long categoryId) {
-        BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
+        // messaggio: Movimento {0} non trovato
+        BankTransaction transaction = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.transaction", id));
         // La categoria dell'elenco con quell'id (400 se non esiste); null toglie la scelta.
         transaction.setManualCategory(categoryService.require(categoryId));
         // Riclassifichiamo per ritrovare la categoria della regola quando la scelta manuale viene tolta.
@@ -115,14 +120,17 @@ public class TransactionService {
      */
     @Transactional
     public TransactionDto changeNote(Long id, String note) {
-        BankTransaction transaction = repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
+        // messaggio: Movimento {0} non trovato
+        BankTransaction transaction = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.transaction", id));
         String cleaned = note == null ? "" : note.strip().replaceAll("\\s+", " ");
         if (CONTROL.matcher(cleaned).find()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nota contiene caratteri non validi.");
+            // messaggio: La nota contiene caratteri non validi.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "note.invalid-characters");
         }
         if (cleaned.length() > MAX_NOTE_LENGTH) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La nota è troppo lunga: al massimo " + MAX_NOTE_LENGTH + " caratteri.");
+            // messaggio: La nota è troppo lunga: al massimo {0} caratteri.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "note.too-long", MAX_NOTE_LENGTH);
         }
         transaction.setNote(cleaned.isEmpty() ? null : cleaned);
         return TransactionDto.from(transaction);

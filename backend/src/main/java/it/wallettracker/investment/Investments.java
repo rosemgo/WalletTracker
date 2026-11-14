@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import it.wallettracker.investment.InvestmentDtos.Group;
+import it.wallettracker.investment.InvestmentDtos.GroupKind;
 import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.transaction.TransactionType;
 
@@ -284,10 +285,10 @@ public final class Investments {
 
     /**
      * Le rendite del periodo raggruppate (per categoria o per titolo), dalla più alta. {@code name} dà il nome del
-     * gruppo; null diventa {@code missing}.
+     * gruppo; null diventa la voce senza nome {@code missing}.
      */
     public static List<Group> incomeBy(List<Movement> movements, LocalDate from, LocalDate to,
-            Function<Movement, String> name, String missing) {
+            Function<Movement, String> name, GroupKind missing) {
         return groupBy(movements, from, to, m -> m.type() == TransactionType.INVESTMENT_INCOME, name, missing, true);
     }
 
@@ -389,7 +390,30 @@ public final class Investments {
      * La riga delle ritenute senza la loro rendita nel periodo: di solito la cedola è nel periodo prima, o è più vecchia
      * della storia nell'app. Così la somma dei gruppi è sempre il netto (parte U).
      */
-    static final String UNMATCHED_WITHHOLDING = "Ritenute senza la loro rendita nel periodo";
+    static final GroupKind UNMATCHED_WITHHOLDING = GroupKind.UNMATCHED_WITHHOLDING;
+
+    /**
+     * Dentro i raggruppamenti le voci si distinguono per nome. Quelle senza nome ne hanno uno interno, che comincia con
+     * un carattere che nessun testo di una banca contiene: non si può confondere con una categoria o un titolo, e non
+     * esce mai da questa classe ({@link #group}).
+     */
+    private static String internalName(GroupKind kind) {
+        return "\u0000" + kind.name();
+    }
+
+    /** Il gruppo da restituire: con il suo nome, oppure (nome interno) con il suo tipo e senza nome. */
+    private static Group group(String name, BigDecimal amount, int movements, Long accountId, String search) {
+        for (GroupKind kind : GroupKind.values()) {
+            if (kind != GroupKind.NAMED && internalName(kind).equals(name)) {
+                return new Group(kind, amount, movements);
+            }
+        }
+        return new Group(name, amount, movements, accountId, search);
+    }
+
+    /** A parità di importo, in ordine di nome; le voci senza nome in fondo. */
+    private static final Comparator<Group> BY_NAME = Comparator.comparing(Group::name,
+            Comparator.nullsLast(Comparator.naturalOrder()));
 
     /**
      * Le rendite NETTE del periodo raggruppate per tipo ({@code byType}) o per titolo (docs/investimenti.md, parti M e
@@ -412,11 +436,12 @@ public final class Investments {
                 continue;
             }
             if (m.type() == TransactionType.INVESTMENT_INCOME) {
-                String type = m.category() == null ? "Altre rendite" : m.category();
+                String type = m.category() == null ? internalName(GroupKind.OTHER_INCOME) : m.category();
                 if (m.source() != null) {
                     typeOfSource.putIfAbsent(onAccount(m), type);
                 }
-                String name = byType ? type : (m.source() == null ? "Senza nome del titolo" : m.source());
+                String name = byType ? type
+                        : (m.source() == null ? internalName(GroupKind.UNNAMED_SECURITY) : m.source());
                 String key = lower(name);
                 nameOf.putIfAbsent(key, name);
                 amounts.merge(key, m.amount(), BigDecimal::add);
@@ -433,16 +458,16 @@ public final class Investments {
         }
         for (Movement m : withholdings) {
             String type = m.source() == null ? null : typeOfSource.get(onAccount(m));
-            String name = type == null ? UNMATCHED_WITHHOLDING : (byType ? type : m.source());
+            String name = type == null ? internalName(UNMATCHED_WITHHOLDING) : (byType ? type : m.source());
             String key = lower(name);
             nameOf.putIfAbsent(key, name);
             amounts.merge(key, m.amount(), BigDecimal::add);
             counts.merge(key, type == null ? 1 : 0, Integer::sum);
         }
         return amounts.entrySet().stream()
-                .map(e -> new Group(nameOf.get(e.getKey()), e.getValue(), counts.get(e.getKey()),
+                .map(e -> group(nameOf.get(e.getKey()), e.getValue(), counts.get(e.getKey()),
                         accounts.get(e.getKey()), searches.get(e.getKey())))
-                .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(Group::name))
+                .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(BY_NAME))
                 .toList();
     }
 
@@ -462,11 +487,11 @@ public final class Investments {
     /** Le altre tasse del periodo (bollo, capital gain...) per categoria, dalla più pesante. */
     public static List<Group> otherTaxesBy(List<Movement> movements, LocalDate from, LocalDate to) {
         return groupBy(movements, from, to, m -> otherTaxes(m).signum() != 0, Movement::category,
-                "Senza categoria", false);
+                GroupKind.UNCATEGORIZED, false);
     }
 
     private static List<Group> groupBy(List<Movement> movements, LocalDate from, LocalDate to,
-            java.util.function.Predicate<Movement> which, Function<Movement, String> name, String missing,
+            java.util.function.Predicate<Movement> which, Function<Movement, String> name, GroupKind missing,
             boolean highestFirst) {
         Map<String, BigDecimal> amounts = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
@@ -474,14 +499,14 @@ public final class Investments {
             if (!which.test(m) || m.date().isBefore(from) || m.date().isAfter(to)) {
                 continue;
             }
-            String key = name.apply(m) == null ? missing : name.apply(m);
+            String key = name.apply(m) == null ? internalName(missing) : name.apply(m);
             amounts.merge(key, m.amount(), BigDecimal::add);
             counts.merge(key, 1, Integer::sum);
         }
         Comparator<Group> byAmount = Comparator.comparing(Group::amount);
         return amounts.entrySet().stream()
-                .map(e -> new Group(e.getKey(), e.getValue(), counts.get(e.getKey())))
-                .sorted((highestFirst ? byAmount.reversed() : byAmount).thenComparing(Group::name))
+                .map(e -> group(e.getKey(), e.getValue(), counts.get(e.getKey()), null, null))
+                .sorted((highestFirst ? byAmount.reversed() : byAmount).thenComparing(BY_NAME))
                 .toList();
     }
 }

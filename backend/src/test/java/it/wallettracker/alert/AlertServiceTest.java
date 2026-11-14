@@ -20,6 +20,7 @@ import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
+import it.wallettracker.message.Message;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
@@ -104,15 +105,15 @@ class AlertServiceTest {
     void aFailedSyncIsReportedOnlyIfTheConsentIsStillValid() {
         Account valid = account(connection("ING", NOW.plus(100, ChronoUnit.DAYS)));
         Account expired = account(connection("BBVA", NOW.minus(1, ChronoUnit.DAYS)));
-        accountRepository.recordSync(valid.getId(), NOW, "HTTP 429 troppe letture");
-        accountRepository.recordSync(expired.getId(), NOW, "HTTP 401 sessione scaduta");
+        accountRepository.recordSync(valid.getId(), NOW, Message.verbatim("HTTP 429 troppe letture"));
+        accountRepository.recordSync(expired.getId(), NOW, Message.verbatim("HTTP 401 sessione scaduta"));
 
         List<AlertDto> alerts = alertService.alerts(NOW);
 
         assertThat(alerts).extracting(AlertDto::kind)
                 .containsExactly(AlertKind.CONSENT_EXPIRED, AlertKind.SYNC_FAILED); // niente doppione per BBVA
         assertThat(alerts.get(1).account()).isEqualTo(valid.label()); // come la dashboard mostra il conto
-        assertThat(alerts.get(1).message()).isEqualTo("HTTP 429 troppe letture");
+        assertThat(alerts.get(1).message()).isEqualTo(Message.verbatim("HTTP 429 troppe letture"));
     }
 
     @Test

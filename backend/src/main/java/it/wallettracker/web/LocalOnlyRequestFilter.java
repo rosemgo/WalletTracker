@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import it.wallettracker.message.Message;
+import it.wallettracker.message.Messages;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,8 +52,11 @@ public class LocalOnlyRequestFilter extends OncePerRequestFilter {
     private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
     private final Set<String> allowedHosts;
+    private final Messages messages;
 
-    public LocalOnlyRequestFilter(@Value("${wallettracker.allowed-hosts}") List<String> allowedHosts) {
+    public LocalOnlyRequestFilter(@Value("${wallettracker.allowed-hosts}") List<String> allowedHosts,
+            Messages messages) {
+        this.messages = messages;
         this.allowedHosts = Set.copyOf(allowedHosts.stream().map(h -> h.trim().toLowerCase(Locale.ROOT)).toList());
     }
 
@@ -62,14 +67,16 @@ public class LocalOnlyRequestFilter extends OncePerRequestFilter {
         //Legge il nome scritto nell’header Host, cioè il nome che hai digitato nel browser. Se non è nell’elenco, risponde 403. Questo serve contro il DNS rebinding;
         String host = request.getServerName();
         if (!isAllowed(host)) {
-            reject(response, "Richiesta rifiutata: indirizzo " + host + " non consentito.");
+            // messaggio: Richiesta rifiutata: indirizzo {0} non consentito.
+            reject(request, response, Message.of("request.host-not-allowed", host));
             return;
         }
 
         //Per le richieste che modificano dati (POST, PUT, DELETE…), anche il sito di partenza (header Origin) deve avere un nome dell’elenco. Questo serve contro il CSRF.
         String origin = request.getHeader("Origin");
         if (!SAFE_METHODS.contains(request.getMethod()) && origin != null && !isAllowed(hostOf(origin))) {
-            reject(response, "Richiesta rifiutata: proviene da un altro sito (" + origin + ").");
+            // messaggio: Richiesta rifiutata: proviene da un altro sito ({0}).
+            reject(request, response, Message.of("request.other-site", origin));
             return;
         }
 
@@ -90,8 +97,11 @@ public class LocalOnlyRequestFilter extends OncePerRequestFilter {
     }
 
     /** 403 Forbidden, con un corpo JSON nello stesso formato degli altri errori (Problem Details). */
-    private static void reject(HttpServletResponse response, String detail) throws IOException {
-        log.warn(detail);
+    private void reject(HttpServletRequest request, HttpServletResponse response, Message message)
+            throws IOException {
+        log.warn("Richiesta rifiutata: {}", message);
+        // Siamo prima di tutto il resto di Spring: la lingua si legge direttamente dalla richiesta.
+        String detail = messages.text(message, request.getLocale());
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/problem+json");
         response.setCharacterEncoding("UTF-8");

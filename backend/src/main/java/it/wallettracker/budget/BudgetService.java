@@ -14,13 +14,13 @@ import java.util.Map;
 import it.wallettracker.budget.BudgetDto.BudgetStatus;
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.CategoryTotal;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * I budget mensili: elenco con l'andamento del mese, creazione, modifica, cancellazione.
@@ -88,8 +88,8 @@ public class BudgetService {
         boolean sameAsCurrent = current != null
                 && current.getCategory().getId().equals(category.getId()) && current.getCurrency().equals(currency);
         if (!sameAsCurrent && budgetRepository.existsByCategoryAndCurrency(category, currency)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Esiste già un budget per \"" + category.getName() + "\" in " + currency + ".");
+            // messaggio: Esiste già un budget per "{0}" in {1}.
+            throw new ApiException(HttpStatus.CONFLICT, "budget.duplicate", category.getName(), currency);
         }
     }
 
@@ -149,6 +149,7 @@ public class BudgetService {
     }
 
     private Budget find(Long id) {
-        return budgetRepository.findById(id).orElseThrow(() -> new NotFoundException("Budget", id));
+        // messaggio: Budget {0} non trovato
+        return budgetRepository.findById(id).orElseThrow(() -> new NotFoundException("not-found.budget", id));
     }
 }

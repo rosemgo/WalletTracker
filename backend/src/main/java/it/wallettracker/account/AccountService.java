@@ -9,12 +9,12 @@ import java.util.List;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.logo.AccountLogo;
 import it.wallettracker.logo.AccountLogoRepository;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /** Le operazioni sui conti richieste dalla dashboard. */
 @Service
@@ -47,7 +47,9 @@ public class AccountService {
      */
     @Transactional
     public AccountDto changeRole(Long id, AccountRole role) {
-        Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
+        // messaggio: Conto {0} non trovato
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.account", id));
         account.changeRole(role);
         // Siamo nella stessa transazione: classifyAll vede già il nuovo ruolo, anche se non è ancora
         // scritto nel database (Hibernate lo scrive prima di eseguire le query che ne hanno bisogno).
@@ -58,7 +60,9 @@ public class AccountService {
     /** Dà al conto un nome scelto dall'utente; vuoto lo toglie (torna l'etichetta automatica). */
     @Transactional
     public AccountDto rename(Long id, String displayName) {
-        Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
+        // messaggio: Conto {0} non trovato
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.account", id));
         account.rename(displayName);
         return dtoOf(account);
     }
@@ -82,10 +86,12 @@ public class AccountService {
      */
     @Transactional
     public void deleteManual(Long id) {
-        Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
+        // messaggio: Conto {0} non trovato
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.account", id));
         if (!account.isManual()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Si possono eliminare solo i conti manuali (caricati da un file).");
+            // messaggio: Si possono eliminare solo i conti manuali (caricati da un file).
+            throw new ApiException(HttpStatus.BAD_REQUEST, "account.delete-only-manual");
         }
         transactionRepository.deleteByAccount(account);
         accountRepository.delete(account);
@@ -104,14 +110,16 @@ public class AccountService {
      */
     @Transactional
     public AccountDto changeBalance(Long id, BigDecimal balance, Instant now) {
-        Account account = accountRepository.findById(id).orElseThrow(() -> new NotFoundException("Conto", id));
+        // messaggio: Conto {0} non trovato
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.account", id));
         if (account.getRole() == AccountRole.CREDIT_CARD) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Per una carta di credito non c'è un saldo: si mostra il plafond disponibile.");
+            // messaggio: Per una carta di credito non c'è un saldo: si mostra il plafond disponibile.
+            throw new ApiException(HttpStatus.CONFLICT, "account.balance-credit-card");
         }
         if (account.getBalanceSource() == BalanceSource.BANK) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Il saldo di questo conto lo dà la banca, a ogni aggiornamento.");
+            // messaggio: Il saldo di questo conto lo dà la banca, a ogni aggiornamento.
+            throw new ApiException(HttpStatus.CONFLICT, "account.balance-from-bank");
         }
         LocalDate last = transactionRepository.lastBookingDate(account.getId());
         LocalDate start = last != null ? last : LocalDate.ofInstant(now, ZoneId.systemDefault());

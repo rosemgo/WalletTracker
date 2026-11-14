@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryRepository;
+import it.wallettracker.message.Message;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class AiAnswerJob {
      * @param done  quanti esercenti sono stati chiesti
      * @param found quante risposte con una categoria (le altre sono "non so")
      */
-    public record State(String model, boolean running, int done, int total, int found, String error) {
+    public record State(String model, boolean running, int done, int total, int found, Message error) {
     }
 
     private final CategoryModel categoryModel;

@@ -17,6 +17,7 @@ import it.wallettracker.category.CategoryService;
 import it.wallettracker.classification.ClassificationRule;
 import it.wallettracker.classification.ClassificationRuleRepository;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.subscription.MerchantKey;
 import it.wallettracker.suggestion.SuggestionService;
 import it.wallettracker.transaction.TransactionDetailDto.CategoryOrigin;
@@ -27,7 +28,6 @@ import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Il dettaglio di un movimento e le correzioni "in blocco" (docs/37): tutti i suoi dati, perché ha quella categoria,
@@ -128,20 +128,22 @@ public class TransactionDetailService {
     @Transactional
     public List<CategoryChange> changeCategories(List<CategoryChange> changes) {
         if (changes.isEmpty() || changes.size() > MAX_CHANGES) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Da 1 a " + MAX_CHANGES + " movimenti per volta.");
+            // messaggio: Da 1 a {0} movimenti per volta.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "transaction.too-many-changes", MAX_CHANGES);
         }
         Set<Long> ids = new HashSet<>();
         for (CategoryChange change : changes) {
             if (change.id() == null || !ids.add(change.id())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ogni movimento va indicato una volta sola.");
+                // messaggio: Ogni movimento va indicato una volta sola.
+                throw new ApiException(HttpStatus.BAD_REQUEST, "transaction.repeated");
             }
         }
         Map<Long, BankTransaction> transactions = new HashMap<>();
         repository.findAllById(ids).forEach(t -> transactions.put(t.getId(), t));
         for (Long id : ids) {
             if (!transactions.containsKey(id)) {
-                throw new NotFoundException("Movimento", id);
+                // messaggio: Movimento {0} non trovato
+                throw new NotFoundException("not-found.transaction", id);
             }
         }
         // Prima si controllano tutte le categorie (400 se una non esiste), poi si cambia: niente modifiche a metà.
@@ -206,6 +208,7 @@ public class TransactionDetailService {
     }
 
     private BankTransaction find(Long id) {
-        return repository.findById(id).orElseThrow(() -> new NotFoundException("Movimento", id));
+        // messaggio: Movimento {0} non trovato
+        return repository.findById(id).orElseThrow(() -> new NotFoundException("not-found.transaction", id));
     }
 }

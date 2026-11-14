@@ -97,7 +97,12 @@ class CategoryControllerTest {
 
         assertThat(save(null, "{\"name\": \"animali DOMESTICI\", \"kind\": \"EXPENSE\"}"))
                 .hasStatus(409)
-                .bodyJson().extractingPath("$.detail").isEqualTo("Esiste già una categoria \"Animali domestici\".");
+                .bodyJson().satisfies(json -> {
+                    // la frase, e il suo codice: lo stesso in ogni lingua
+                    json.assertThat().extractingPath("$.detail")
+                            .isEqualTo("Esiste già una categoria \"Animali domestici\".");
+                    json.assertThat().extractingPath("$.code").isEqualTo("category.duplicate");
+                });
         assertThat(save(null, "{\"name\": \" \", \"kind\": \"EXPENSE\"}")).hasStatus(400);
         assertThat(save(null, "{\"name\": \"Prova\", \"kind\": \"BOH\"}")).hasStatus(400);
     }

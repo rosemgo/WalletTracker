@@ -14,6 +14,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import it.wallettracker.message.ApiException;
 import it.wallettracker.overview.MonthCurves.Expense;
 import it.wallettracker.overview.OverviewDto.CategoryRow;
 import it.wallettracker.overview.OverviewDto.Upcoming;
@@ -26,7 +27,6 @@ import it.wallettracker.transaction.TransactionType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Il Riepilogo di un mese (docs/36): quanto hai speso finora e com'è rispetto al solito, dove vanno i soldi, che cosa
@@ -72,15 +72,16 @@ public class OverviewService {
     public OverviewDto overview(YearMonth month, String currency, LocalDate today) {
         YearMonth current = YearMonth.from(today);
         if (month.isAfter(current)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il mese " + month + " non è ancora cominciato.");
+            // messaggio: Il mese {0} non è ancora cominciato.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.month-not-started", month);
         }
         if (month.isBefore(current.minusMonths(MAX_MONTHS_BACK))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Puoi tornare indietro al massimo di " + MAX_MONTHS_BACK + " mesi.");
+            // messaggio: Puoi tornare indietro al massimo di {0} mesi.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.too-many-months-back", MAX_MONTHS_BACK);
         }
         if (currency != null && !CURRENCY.matcher(currency.toUpperCase(Locale.ROOT)).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La valuta è un codice di tre lettere, come EUR.");
+            // messaggio: La valuta è un codice di tre lettere, come EUR.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "currency.invalid");
         }
         boolean isCurrent = month.equals(current);
         LocalDate day = isCurrent ? today : month.atEndOfMonth();

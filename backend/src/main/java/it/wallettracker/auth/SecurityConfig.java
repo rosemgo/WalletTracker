@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Map;
 
+import it.wallettracker.message.Message;
+import it.wallettracker.message.Messages;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -47,7 +49,7 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository,
-            PinService pins) throws Exception {
+            PinService pins, Messages messages) throws Exception {
         http
                 .authorizeHttpRequests(requests -> requests
                         // Le pagine di errore interne di Spring (una richiesta già controllata che finisce in errore):
@@ -69,10 +71,13 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .exceptionHandling(errors -> errors
+                        // Qui siamo in un filtro, prima dei controller: la lingua si legge dalla richiesta.
+                        // messaggio: Inserisci il PIN.
                         .authenticationEntryPoint((request, response, e) -> problem(response, 401,
-                                "Inserisci il PIN."))
+                                messages.text(Message.of("auth.pin-required"), request.getLocale())))
+                        // messaggio: Richiesta rifiutata: ricarica la pagina e riprova.
                         .accessDeniedHandler((request, response, e) -> problem(response, 403,
-                                "Richiesta rifiutata: ricarica la pagina e riprova.")));
+                                messages.text(Message.of("auth.request-rejected"), request.getLocale()))));
         return http.build();
     }
 

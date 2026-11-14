@@ -10,13 +10,13 @@ import java.util.stream.Collectors;
 import it.wallettracker.budget.BudgetRepository;
 import it.wallettracker.category.CategoryDtos.CategoryDto;
 import it.wallettracker.category.CategoryDtos.CategoryRequest;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.CategoryUsage;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * L'elenco delle categorie: lettura, aggiunta, modifica, eliminazione, e il controllo che una categoria
@@ -83,8 +83,8 @@ public class CategoryService {
     public void delete(Long id) {
         Category category = find(id);
         if (budgetRepository.existsByCategory(category)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "C'è un budget per \"" + category.getName() + "\": eliminalo prima dalla pagina Budget.");
+            // messaggio: C'è un budget per "{0}": eliminalo prima dalla pagina Budget.
+            throw new ApiException(HttpStatus.CONFLICT, "category.has-budget", category.getName());
         }
         categoryRepository.delete(category);
     }
@@ -105,8 +105,8 @@ public class CategoryService {
             return null;
         }
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "La categoria " + id + " non esiste: forse è stata eliminata. Ricarica la pagina."));
+                // messaggio: La categoria {0} non esiste: forse è stata eliminata. Ricarica la pagina.
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "category.missing", id));
     }
 
     /** Il nome è libero? Maiuscole e minuscole non contano: "spesa" e "Spesa" sono lo stesso nome. */
@@ -114,12 +114,13 @@ public class CategoryService {
         categoryRepository.findByNameIgnoreCase(name)
                 .filter(existing -> current == null || !existing.getId().equals(current.getId()))
                 .ifPresent(existing -> {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT,
-                            "Esiste già una categoria \"" + existing.getName() + "\".");
+                    // messaggio: Esiste già una categoria "{0}".
+                    throw new ApiException(HttpStatus.CONFLICT, "category.duplicate", existing.getName());
                 });
     }
 
     private Category find(Long id) {
-        return categoryRepository.findById(id).orElseThrow(() -> new NotFoundException("Categoria", id));
+        // messaggio: Categoria {0} non trovato
+        return categoryRepository.findById(id).orElseThrow(() -> new NotFoundException("not-found.category", id));
     }
 }

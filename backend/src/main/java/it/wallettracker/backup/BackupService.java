@@ -15,11 +15,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import it.wallettracker.message.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * I backup visti dalla dashboard (Fase 4, passo 5: docs/48, parte Q).
@@ -151,25 +151,29 @@ public class BackupService {
     public void requestBackup() {
         Status status = status();
         if (!status.available() || !status.serviceRunning()) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Il servizio dei backup non risponde: dal server, controlla con  docker compose ps");
+            // messaggio: Il servizio dei backup non risponde: dal server, controlla con  docker compose ps
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "backup.service-down");
         }
         if (!status.automaticEnabled()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Manca la password dei backup: dal server, lancia lo script di installazione con -Backup (docs/48).");
+            // messaggio: Manca la password dei backup: dal server, lancia lo script di installazione con -Backup
+            //            (docs/48).
+            throw new ApiException(HttpStatus.CONFLICT, "backup.no-password");
         }
         if (status.inProgress()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un backup è già in corso: aspetta che finisca.");
+            // messaggio: Un backup è già in corso: aspetta che finisca.
+            throw new ApiException(HttpStatus.CONFLICT, "backup.in-progress");
         }
         try {
             // createFile fallisce se il file c'è già: due richieste nello stesso istante ne scrivono una sola.
             Files.createFile(stateDirectory.resolve(REQUEST_FILE));
             log.info("Backup chiesto dalla dashboard.");
         } catch (FileAlreadyExistsException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un backup è già in corso: aspetta che finisca.");
+            // messaggio: Un backup è già in corso: aspetta che finisca.
+            throw new ApiException(HttpStatus.CONFLICT, "backup.in-progress");
         } catch (IOException e) {
             log.warn("Non riesco a scrivere la richiesta di backup in {}", stateDirectory, e);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Non riesco a chiedere il backup.");
+            // messaggio: Non riesco a chiedere il backup.
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "backup.request-failed");
         }
     }
 
@@ -181,7 +185,8 @@ public class BackupService {
         Path file = directory.resolve(name).normalize();
         if (!NAME.matcher(name).matches() || !directory.normalize().equals(file.getParent())
                 || !Files.isRegularFile(file)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Backup non trovato.");
+            // messaggio: Backup non trovato.
+            throw new ApiException(HttpStatus.NOT_FOUND, "backup.not-found");
         }
         return file;
     }

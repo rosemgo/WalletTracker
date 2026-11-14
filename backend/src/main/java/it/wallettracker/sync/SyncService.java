@@ -19,6 +19,7 @@ import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.ConnectionService;
 import it.wallettracker.logo.LogoService;
+import it.wallettracker.message.Message;
 import it.wallettracker.transaction.TransactionImportService;
 import it.wallettracker.transaction.TransactionImportService.ImportResult;
 import org.slf4j.Logger;
@@ -83,7 +84,7 @@ public class SyncService {
      * L'esito dell'aggiornamento di un conto: il risultato dell'importazione se è andata bene,
      * altrimenti il motivo dell'errore.
      */
-    public record AccountSync(ImportResult result, String error) {
+    public record AccountSync(ImportResult result, Message error) {
 
         public boolean ok() {
             return error == null;
@@ -103,9 +104,9 @@ public class SyncService {
      * @param accountId il conto
      * @param inserted  i movimenti contabilizzati nuovi
      * @param pending   i movimenti in attesa che la banca dà adesso (si sostituiscono a ogni lettura)
-     * @param error     la frase dell'errore, o null se la lettura è riuscita
+     * @param error     il messaggio dell'errore (nella risposta diventa la sua frase), o null se la lettura è riuscita
      */
-    public record AccountOutcome(Long accountId, int inserted, int pending, String error) {
+    public record AccountOutcome(Long accountId, int inserted, int pending, Message error) {
     }
 
     /**
@@ -125,7 +126,7 @@ public class SyncService {
      * @param psu gli header dell'utente presente, oppure {@code null} per un aggiornamento in background
      */
     public AccountSync syncAccount(Account account, PsuHeaders psu) {
-        String error;
+        Message error;
         try {
             ImportResult result = importService.importAccount(account, psu);
             accountRepository.recordSync(account.getId(), Instant.now(), null);
@@ -200,9 +201,10 @@ public class SyncService {
                 }
                 if (!connection.isValid()) {
                     // Consenso scaduto: chiamare la banca darebbe solo errore. Lo segnaliamo e basta.
-                    String error = "consenso scaduto il "
-                            + LocalDate.ofInstant(connection.getValidUntil(), ZoneId.systemDefault())
-                            + ": ricollega " + connection.getAspspName();
+                    // messaggio: consenso scaduto il {0}: ricollega {1}
+                    Message error = Message.of("sync.consent-expired",
+                            LocalDate.ofInstant(connection.getValidUntil(), ZoneId.systemDefault()),
+                            connection.getAspspName());
                     accountRepository.recordSync(account.getId(), now, error);
                     log.warn("{}: {}", account.getName(), error);
                     outcomes.add(new AccountOutcome(account.getId(), 0, 0, error));

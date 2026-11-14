@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import it.wallettracker.message.Message;
 
 /**
  * Dagli errori delle librerie a messaggi che dicono che cosa fare. Le librerie (di Ollama, di Google) lanciano
@@ -28,12 +29,14 @@ public final class AiErrors {
     private AiErrors() {
     }
 
-    public static String describe(Throwable error, AiProvider provider) {
+    public static Message describe(Throwable error, AiProvider provider) {
         String name = provider.label;
         for (Throwable t = error; t != null; t = t.getCause()) {
             if (t instanceof IOException || t instanceof org.springframework.web.client.ResourceAccessException) {
-                return "Non riesco a raggiungere " + name + ": controlla la connessione a internet"
-                        + (provider == AiProvider.OLLAMA ? " (o se Ollama è avviato)." : ".");
+                // messaggio: Non riesco a raggiungere {0}: controlla la connessione a internet (o se Ollama è avviato).
+                // messaggio: Non riesco a raggiungere {0}: controlla la connessione a internet.
+                return Message.of(provider == AiProvider.OLLAMA ? "ai.error.unreachable-ollama" : "ai.error.unreachable",
+                        name);
             }
             if (INVALID_KEY.matcher(String.valueOf(t.getMessage())).find()) {
                 return invalidKey(name);
@@ -42,15 +45,20 @@ public final class AiErrors {
             if (code.find()) {
                 return switch (code.group(1)) {
                     case "401", "403" -> invalidKey(name);
-                    case "404" -> "Il modello non esiste per " + name + ": controlla il nome nelle Impostazioni.";
-                    case "429" -> name + " risponde \"troppe richieste\": hai raggiunto il limite del tuo piano (al "
-                            + "minuto o al giorno). Riprova più tardi: le risposte già avute restano salvate.";
-                    case "400" -> name + " ha rifiutato la domanda (richiesta non valida): " + shortly(t.getMessage());
-                    default -> name + " ha un problema temporaneo: riprova tra qualche minuto.";
+                    // messaggio: Il modello non esiste per {0}: controlla il nome nelle Impostazioni.
+                    case "404" -> Message.of("ai.error.model-not-found", name);
+                    // messaggio: {0} risponde "troppe richieste": hai raggiunto il limite del tuo piano (al minuto o
+                    //            al giorno). Riprova più tardi: le risposte già avute restano salvate.
+                    case "429" -> Message.of("ai.error.too-many-requests", name);
+                    // messaggio: {0} ha rifiutato la domanda (richiesta non valida): {1}
+                    case "400" -> Message.of("ai.error.bad-request", name, shortly(t.getMessage()));
+                    // messaggio: {0} ha un problema temporaneo: riprova tra qualche minuto.
+                    default -> Message.of("ai.error.temporary", name);
                 };
             }
         }
-        return name + " non ha risposto: " + shortly(error.getMessage());
+        // messaggio: {0} non ha risposto: {1}
+        return Message.of("ai.error.no-answer", name, shortly(error.getMessage()));
     }
 
     /** Il codice HTTP di errore nel messaggio dell'eccezione o delle sue cause (400, 429, 503...), se c'è. */
@@ -64,9 +72,10 @@ public final class AiErrors {
         return Optional.empty();
     }
 
-    private static String invalidKey(String name) {
-        return "La chiave di " + name + " non è valida, o non ha i permessi: controllala o creane una nuova, poi "
-                + "inseriscila di nuovo nelle Impostazioni.";
+    private static Message invalidKey(String name) {
+        // messaggio: La chiave di {0} non è valida, o non ha i permessi: controllala o creane una nuova, poi
+        //            inseriscila di nuovo nelle Impostazioni.
+        return Message.of("ai.error.invalid-key", name);
     }
 
     /** I messaggi delle librerie possono essere lunghissimi (tutto il JSON della risposta): bastano 200 caratteri. */

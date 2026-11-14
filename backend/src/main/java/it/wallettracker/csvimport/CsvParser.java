@@ -2,6 +2,8 @@ package it.wallettracker.csvimport;
 
 import java.util.ArrayList;
 import java.util.List;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageException;
 
 /**
  * <b>Versione didattica, non usata dall'importazione</b> (che usa {@link CsvReader}, con Apache Commons
@@ -27,7 +29,7 @@ public final class CsvParser {
     /**
      * Le righe del file, ognuna come lista di valori. Le righe completamente vuote vengono saltate.
      *
-     * @throws IllegalArgumentException se una virgoletta aperta non viene mai chiusa
+     * @throws MessageException se una virgoletta aperta non viene mai chiusa
      */
     public static List<List<String>> parse(String text, char delimiter) {
         List<List<String>> rows = new ArrayList<>();
@@ -68,7 +70,8 @@ public final class CsvParser {
             i++;
         }
         if (inQuotes) {
-            throw new IllegalArgumentException("Il file non è un CSV valido: una virgoletta aperta non viene mai chiusa.");
+            // messaggio: Il file non è un CSV valido: una virgoletta aperta non viene mai chiusa.
+            throw new MessageException(Message.of("import.csv.unclosed-quote"));
         }
         row.add(value.toString());
         addIfNotEmpty(rows, row);

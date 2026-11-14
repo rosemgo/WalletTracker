@@ -3,6 +3,7 @@ package it.wallettracker.csvimport;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import it.wallettracker.message.Message;
 
 /** I record delle API di importazione CSV. */
 public final class ImportDtos {
@@ -20,7 +21,7 @@ public final class ImportDtos {
      * @param parsedRows    le prime righe che verranno aggiunte, lette con la mappatura (se non se ne aggiunge
      *                      nessuna, le prime del file): così l'utente vede se è giusta
      * @param errorCount    quante righe non si possono leggere con questa mappatura
-     * @param errors        i primi errori, con il numero di riga
+     * @param errors        i primi errori, con il numero di riga (nella risposta: le loro frasi)
      * @param spreadsheet   true per un file Excel: il separatore non c'entra, e date e numeri hanno già un formato
      * @param linkedAccount true se il conto è collegato a una banca: si aggiungono solo le righe più vecchie
      * @param bankFrom      con un conto collegato, il primo giorno dei movimenti arrivati dalla banca (null se nessuno)
@@ -41,7 +42,7 @@ public final class ImportDtos {
      *                             sono (restano come sono). Vuota negli altri casi
      */
     public record Preview(List<String> headers, List<List<String>> sampleRows, int totalRows, ImportMapping mapping,
-            List<PreviewRow> parsedRows, int errorCount, List<String> errors, boolean spreadsheet,
+            List<PreviewRow> parsedRows, int errorCount, List<Message> errors, boolean spreadsheet,
             boolean linkedAccount, LocalDate bankFrom, int newRows, int duplicateRows, int coveredRows,
             boolean tradeRepublic, int skippedRows, int completeRows, List<FileRow> rowsWithoutMovement,
             List<Movement> movementsWithoutRow) {

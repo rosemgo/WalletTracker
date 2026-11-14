@@ -3,6 +3,7 @@ package it.wallettracker.account;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import it.wallettracker.message.Message;
 
 /**
  * Un conto come lo vede la dashboard: è quello che le API REST restituiscono in JSON.
@@ -25,7 +26,8 @@ import java.time.LocalDate;
  * @param consentValidUntil fino a quando vale il consenso dato alla banca; null per un conto manuale
  * @param connectionRemovedAt quando l'utente ha rimosso il collegamento (docs/rimuovere-un-collegamento.md): il conto
  *                    resta come storia, ma non si aggiorna più; null se non è stato rimosso
- * @param lastSyncError     il motivo dell'ultimo errore di importazione, null se è andata bene
+ * @param lastSyncError     il motivo dell'ultimo errore di importazione (nella risposta: la sua frase), null se è
+ *                          andata bene
  * @param balance           il saldo (docs/saldi.md): dalla banca, o scritto dall'utente per un conto manuale; null se
  *                          non si sa
  * @param availableCredit   solo per una carta di credito: il plafond che resta, dato dalla banca (V35); null se non si
@@ -46,7 +48,7 @@ public record AccountDto(
         Instant consentValidUntil,
         Instant connectionRemovedAt,
         Instant lastSyncAt,
-        String lastSyncError,
+        Message lastSyncError,
         CurrentBalance balance,
         AvailableCredit availableCredit,
         Long logoVersion) {

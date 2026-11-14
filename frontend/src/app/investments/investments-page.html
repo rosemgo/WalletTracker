@@ -215,12 +215,12 @@
             @if (d.incomeByType.length > 0) {
               <h3 #typeTitle>Per tipo</h3>
               <ul class="rows">
-                @for (g of rows('type', d.incomeByType); track g.name) {
+                @for (g of rows('type', d.incomeByType); track g.name ?? g.kind) {
                   <li>
-                    @if (g.name === unmatched) {
+                    @if (g.kind === 'UNMATCHED_WITHHOLDING') {
                       <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
                       <span>
-                        {{ g.name }}
+                        {{ groupName(g) }}
                         <span class="secondary">{{
                           g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
                         }}</span>
@@ -229,7 +229,7 @@
                     } @else {
                       <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
                         <span>
-                          {{ g.name }}
+                          {{ groupName(g) }}
                           <span class="secondary">{{
                             g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
                           }}</span>
@@ -256,12 +256,12 @@
               }
               <h3 #sourceTitle>Da dove</h3>
               <ul class="rows">
-                @for (g of rows('source', d.incomeBySource); track g.name) {
+                @for (g of rows('source', d.incomeBySource); track g.name ?? g.kind) {
                   <li>
-                    @if (g.name === unmatched) {
+                    @if (g.kind === 'UNMATCHED_WITHHOLDING') {
                       <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
                       <span>
-                        {{ g.name }}
+                        {{ groupName(g) }}
                         <span class="secondary">{{
                           g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
                         }}</span>
@@ -270,7 +270,7 @@
                     } @else {
                       <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
                         <span>
-                          {{ g.name | readable }}
+                          {{ groupName(g) | readable }}
                           <span class="secondary">{{
                             g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
                           }}</span>
@@ -304,11 +304,11 @@
             @if (d.otherTaxesByType.length > 0) {
               <h3 #taxesTitle>Altre tasse sugli investimenti</h3>
               <ul class="rows">
-                @for (g of rows('taxes', d.otherTaxesByType); track g.name) {
+                @for (g of rows('taxes', d.otherTaxesByType); track g.name ?? g.kind) {
                   <li>
                     <a routerLink="/movimenti" [queryParams]="taxQuery(d, g)">
                       <span>
-                        {{ g.name }}
+                        {{ groupName(g) }}
                         <span class="secondary">{{
                           g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
                         }}</span>

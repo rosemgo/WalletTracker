@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import it.wallettracker.message.TestMessages;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -122,7 +123,7 @@ class TradeRepublicCsvTest {
 
         TradeRepublicCsv.Reading reading = TradeRepublicCsv.read(all.getFirst(), all.subList(1, all.size()));
 
-        assertThat(reading.errors()).containsExactly("Riga 2: amount \"dieci\" non è un numero.",
+        assertThat(reading.errors()).extracting(TestMessages::text).containsExactly("Riga 2: amount \"dieci\" non è un numero.",
                 "Riga 3: date \"7 luglio\" non è una data.");
     }
 }

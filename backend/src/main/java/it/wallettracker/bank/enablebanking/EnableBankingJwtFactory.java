@@ -101,13 +101,15 @@ public class EnableBankingJwtFactory {
     /**
      * Legge la chiave privata dal TESTO di un file PEM (es. quello caricato dalla dashboard).
      *
-     * @param origin da dove arriva il testo, per i messaggi di errore (es. il nome del file)
+     * @param origin da dove arriva il testo, per il messaggio di errore che finisce nel log (es. il nome del file)
+     * @throws InvalidPrivateKeyException se il testo non è una chiave privata utilizzabile, con il motivo
      */
     public static PrivateKey parsePrivateKey(String pem, String origin) {
         if (!pem.contains("-----BEGIN PRIVATE KEY-----")) {
-            throw new IllegalStateException("La chiave " + origin + " non è in formato PKCS#8 "
-                    + "('-----BEGIN PRIVATE KEY-----'). Se inizia con 'BEGIN RSA PRIVATE KEY' convertila con: "
-                    + "openssl pkcs8 -topk8 -nocrypt -in vecchia.pem -out enable-banking.pem");
+            throw new InvalidPrivateKeyException(InvalidPrivateKeyException.Problem.NOT_PKCS8,
+                    "La chiave " + origin + " non è in formato PKCS#8 "
+                            + "('-----BEGIN PRIVATE KEY-----'). Se inizia con 'BEGIN RSA PRIVATE KEY' convertila con: "
+                            + "openssl pkcs8 -topk8 -nocrypt -in vecchia.pem -out enable-banking.pem", null);
         }
 
         String base64 = pem
@@ -118,7 +120,8 @@ public class EnableBankingJwtFactory {
             byte[] keyBytes = Base64.getDecoder().decode(base64);
             return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
         } catch (GeneralSecurityException | IllegalArgumentException e) {
-            throw new IllegalStateException("La chiave " + origin + " non contiene una chiave privata RSA valida", e);
+            throw new InvalidPrivateKeyException(InvalidPrivateKeyException.Problem.NOT_RSA,
+                    "La chiave " + origin + " non contiene una chiave privata RSA valida", e);
         }
     }
 }

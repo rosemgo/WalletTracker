@@ -28,6 +28,7 @@ import it.wallettracker.explore.ExploreDtos.MonthValue;
 import it.wallettracker.explore.ExploreDtos.Period;
 import it.wallettracker.explore.ExploreDtos.Series;
 import it.wallettracker.explore.Explorer.Movement;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.overview.MonthCurves;
 import it.wallettracker.subscription.MerchantKey;
 import it.wallettracker.transaction.BankTransaction;
@@ -37,7 +38,6 @@ import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Analisi (docs/38): le barre dell'esploratore, i movimenti di una barra raggruppati, la pagina di una categoria.
@@ -101,8 +101,8 @@ public class ExploreService {
         checkDate(from, today);
         LocalDate to = requestedTo.isAfter(today) ? today : requestedTo;
         if (from.isAfter(to) || ChronoUnit.DAYS.between(from, to) > MAX_GROUP_DAYS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il periodo va da un giorno a un altro più avanti, al massimo un anno.");
+            // messaggio: Il periodo va da un giorno a un altro più avanti, al massimo un anno.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.invalid-range");
         }
         YearMonth month = YearMonth.from(from);
         boolean isMonth = from.getDayOfMonth() == 1 && YearMonth.from(to).equals(month)
@@ -127,10 +127,13 @@ public class ExploreService {
     /** La pagina di una categoria nel mese {@code month}: il mese rispetto al solito, 12 mesi, dove, il budget. */
     @Transactional(readOnly = true)
     public CategoryOverview category(Long id, YearMonth month, LocalDate today) {
-        Category category = categoryRepository.findById(id).orElseThrow(() -> new NotFoundException("Categoria", id));
+        // messaggio: Categoria {0} non trovato
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("not-found.category", id));
         YearMonth current = YearMonth.from(today);
         if (month.isAfter(current)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il mese " + month + " non è ancora cominciato.");
+            // messaggio: Il mese {0} non è ancora cominciato.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.month-not-started", month);
         }
         Metric metric = category.getKind() == CategoryKind.INCOME ? Metric.INCOME : Metric.EXPENSES;
         LocalDate day = month.equals(current) ? today : month.atEndOfMonth();
@@ -164,8 +167,8 @@ public class ExploreService {
     /** Legge i movimenti del periodo nella valuta scelta (null = quella con più spese). */
     private Loaded load(LocalDate from, LocalDate to, String currency) {
         if (currency != null && !CURRENCY.matcher(currency.toUpperCase(Locale.ROOT)).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La valuta è un codice di tre lettere, come EUR.");
+            // messaggio: La valuta è un codice di tre lettere, come EUR.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "currency.invalid");
         }
         List<BankTransaction> transactions = repository.findMovementsBetween(from, to);
         String chosen = currency != null ? currency.toUpperCase(Locale.ROOT) : mainCurrency(transactions);
@@ -200,11 +203,12 @@ public class ExploreService {
 
     private static void checkDate(LocalDate date, LocalDate today) {
         if (date.isAfter(today)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il giorno " + date + " non è ancora arrivato.");
+            // messaggio: Il giorno {0} non è ancora arrivato.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.day-not-arrived", date);
         }
         if (date.isBefore(today.minusYears(MAX_YEARS_BACK))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Puoi tornare indietro al massimo di " + MAX_YEARS_BACK + " anni.");
+            // messaggio: Puoi tornare indietro al massimo di {0} anni.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "period.too-many-years-back", MAX_YEARS_BACK);
         }
     }
 

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import it.wallettracker.connection.BankConnection;
+import it.wallettracker.message.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -48,7 +49,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Modifying
     @Transactional
     @Query("UPDATE Account a SET a.lastSyncAt = :at, a.lastSyncError = :error WHERE a.id = :id")
-    void recordSync(@Param("id") Long id, @Param("at") Instant at, @Param("error") String error);
+    void recordSync(@Param("id") Long id, @Param("at") Instant at, @Param("error") Message error);
 
     /**
      * Salva il saldo dato dalla banca (V34), come {@link #recordSync}: solo queste colonne, in una transazione sua.

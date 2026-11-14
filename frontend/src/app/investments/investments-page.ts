@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { investmentGroupName } from '../api/labels';
 import { InvestmentGroup, InvestmentPeriod, Investments } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { BarChart } from '../explore/bar-chart';
@@ -21,12 +22,6 @@ import { CloseButton } from '../ui/close-button';
 import { DismissedNotices } from '../ui/dismissed-notices';
 import { InvestmentMovements } from './investment-movements';
 import { TrendChart } from './trend-chart';
-
-/**
- * La riga delle ritenute senza la loro rendita nel periodo (Investments.UNMATCHED_WITHHOLDING nel backend). Non ha un
- * link: Movimenti non sa mostrare solo quelle, e un link che mostra altro inganna (docs/investimenti.md, parte U).
- */
-const UNMATCHED_WITHHOLDING = 'Ritenute senza la loro rendita nel periodo';
 
 // Come in tutte le barre dei periodi (Analisi, il grafico di una categoria): prima "Quest'anno", poi "12 mesi".
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
@@ -83,7 +78,8 @@ export class InvestmentsPage implements OnInit {
   private readonly dismissed = inject(DismissedNotices);
 
   protected readonly periods = PERIODS;
-  protected readonly unmatched = UNMATCHED_WITHHOLDING;
+  /** Il nome di una voce: il suo, oppure la frase del suo tipo ("Altre rendite", "Senza categoria"...). */
+  protected readonly groupName = investmentGroupName;
 
   protected readonly period = signal<InvestmentPeriod>('YEAR_TO_DATE'); // di serie: Quest'anno
   protected readonly currency = signal<string | null>(null);
@@ -308,10 +304,10 @@ export class InvestmentsPage implements OnInit {
   /** "Per tipo": le rendite di quel tipo nel periodo (la ricerca trova anche il nome della categoria). */
   protected typeQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
     const range = this.periodRange(d);
-    if (g.name === 'Altre rendite') {
+    if (g.kind === 'OTHER_INCOME') {
       return { ...range, type: 'INVESTMENT_INCOME', uncategorized: 'true' };
     }
-    return { ...range, type: 'INVESTMENT_INCOME', text: g.name.toLowerCase() };
+    return { ...range, type: 'INVESTMENT_INCOME', text: this.groupName(g).toLowerCase() };
   }
 
   /** "Da dove": i movimenti di quel titolo nel periodo (rendite e ritenute), o di quel conto. */
@@ -328,15 +324,15 @@ export class InvestmentsPage implements OnInit {
       }
       return query;
     }
-    return { ...range, text: merchantSearch(g.name) };
+    return { ...range, text: merchantSearch(this.groupName(g)) };
   }
 
   /** "Altre tasse": le tasse di quella categoria nel periodo. */
   protected taxQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
     const range = this.periodRange(d);
-    return g.name === 'Senza categoria'
+    return g.kind === 'UNCATEGORIZED'
       ? { ...range, type: 'INVESTMENT_TAX', uncategorized: 'true' }
-      : { ...range, type: 'INVESTMENT_TAX', text: g.name.toLowerCase() };
+      : { ...range, type: 'INVESTMENT_TAX', text: this.groupName(g).toLowerCase() };
   }
 
   /** Le righe da mostrare: tutte se l'elenco è corto o è stato aperto, altrimenti le prime {@link FIRST_ROWS}. */
