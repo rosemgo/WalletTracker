@@ -80,8 +80,12 @@ function investments(period: InvestmentPeriod): Investments {
       { name: 'Cedole', kind: 'NAMED' as const, amount: 30, movements: 1 },
       { name: 'Dividendi', kind: 'NAMED' as const, amount: 12.5, movements: 1 },
     ],
-    incomeBySource: [{ name: 'CED.SU BTP ITALIA', kind: 'NAMED' as const, amount: 30, movements: 1 }],
-    otherTaxesByType: [{ name: 'Imposta di bollo', kind: 'NAMED' as const, amount: -2, movements: 1 }],
+    incomeBySource: [
+      { name: 'CED.SU BTP ITALIA', kind: 'NAMED' as const, amount: 30, movements: 1 },
+    ],
+    otherTaxesByType: [
+      { name: 'Imposta di bollo', kind: 'NAMED' as const, amount: -2, movements: 1 },
+    ],
     trades: [
       movement(41, '2026-10-06', -200, 'NUOVO VERSAMENTO ROBO ADVISOR', 'SECURITIES_BUY'),
       movement(42, '2026-08-10', 300, 'SELL TRADE ETF MONDO', 'SECURITIES_SELL'),

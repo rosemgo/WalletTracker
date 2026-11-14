@@ -1,22 +1,7 @@
 import { ExploreBar, ExplorePeriod, ExploreSeries } from '../api/models';
+import { formatLocalDate } from '../text/dates';
 
 // Le parole dell'esploratore (docs/38): funzioni pure, provate da explore-labels.spec.ts.
-
-const MONTHS = [
-  'gennaio',
-  'febbraio',
-  'marzo',
-  'aprile',
-  'maggio',
-  'giugno',
-  'luglio',
-  'agosto',
-  'settembre',
-  'ottobre',
-  'novembre',
-  'dicembre',
-];
-const WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 
 /** "2026-10-19" → la data, a mezzogiorno (così un cambio di ora legale non la sposta di giorno). */
 function dateOf(iso: string): Date {
@@ -33,28 +18,27 @@ export function barLabel(
   const from = dateOf(bar.from);
   switch (unit) {
     case 'DAY':
-      return WEEKDAYS[from.getDay()].charAt(0).toUpperCase();
+      return formatLocalDate(from, 'weekdayInitial').toUpperCase();
     case 'WEEK':
       return `${from.getDate()}–${dateOf(bar.to).getDate()}`;
     case 'MONTH':
       // Fino a 12 barre (12 mesi, quest'anno): l'iniziale; con 6, le prime tre lettere.
       return period === 'YEAR' || period === 'YEAR_TO_DATE'
-        ? MONTHS[from.getMonth()].charAt(0).toUpperCase()
-        : MONTHS[from.getMonth()].slice(0, 3);
+        ? formatLocalDate(from, 'monthInitial').toUpperCase()
+        : formatLocalDate(from, 'monthShort').replace('.', '');
   }
 }
 
 /** Il nome del periodo di una barra: "lunedì 19 ottobre", "1–7 ottobre", "ottobre 2026". */
 export function barName(bar: ExploreBar, unit: ExploreSeries['unit']): string {
   const from = dateOf(bar.from);
-  const month = MONTHS[from.getMonth()];
   switch (unit) {
     case 'DAY':
-      return `${WEEKDAYS[from.getDay()]} ${from.getDate()} ${month}`;
+      return formatLocalDate(from, 'weekday');
     case 'WEEK':
-      return `${from.getDate()}–${dateOf(bar.to).getDate()} ${month}`;
+      return `${from.getDate()}–${dateOf(bar.to).getDate()} ${formatLocalDate(from, 'month')}`;
     case 'MONTH':
-      return `${month} ${from.getFullYear()}`;
+      return formatLocalDate(from, 'monthYear');
   }
 }
 

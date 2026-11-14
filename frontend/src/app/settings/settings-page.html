@@ -194,7 +194,7 @@
     } @else if (update.checkEnabled && update.latestVersion) {
       <p class="hint" data-testid="update-latest">
         È l'ultima versione pubblicata (controllato il
-        {{ update.checkedAt | date: 'd MMMM y, HH:mm' }}).
+        {{ update.checkedAt | localDate: 'longTime' }}).
       </p>
     } @else if (!update.checkEnabled && update.currentVersion !== 'sviluppo') {
       <p class="hint">

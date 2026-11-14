@@ -94,9 +94,10 @@
             <a class="row-link" routerLink="/movimenti" [queryParams]="merchantQuery(m)">
               <span>
                 {{ m.name ?? 'Senza descrizione' }}
-                <span class="secondary">{{
-                  m.movements === 1 ? '1 volta' : m.movements + ' volte'
-                }}</span>
+                <span class="secondary" i18n>{m.movements, plural,
+                  =1 {1 volta}
+                  other {{{ m.movements }} volte}
+                }</span>
               </span>
               <strong>{{ m.amount | money: o.currency }}</strong>
             </a>

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -9,6 +8,7 @@ import { UpdateStore } from '../api/update-store';
 import { GUIDE_URL } from '../api/return-address';
 import { WalletApi } from '../api/wallet-api';
 import { BackupSection } from './backup-section';
+import { LocalDatePipe } from '../text/dates';
 import { ThemeSection } from '../theme/theme-section';
 import { FileDrop } from '../ui/file-drop';
 
@@ -28,7 +28,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     AccessSection,
     AiSettingsPanel,
     BackupSection,
-    DatePipe,
+    LocalDatePipe,
     FileDrop,
     RouterLink,
     ThemeSection,

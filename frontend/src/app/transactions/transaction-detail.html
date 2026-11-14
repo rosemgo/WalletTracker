@@ -25,7 +25,7 @@
         t.amount | money: t.currency
       }}</span>
       <span class="secondary"
-        >{{ t.bookingDate | date: 'EEEE d MMMM y' | upperFirst }} · {{ accountName() }}</span
+        >{{ t.bookingDate | localDate: 'full' | upperFirst }} · {{ accountName() }}</span
       >
       <span class="chip">{{ t.status === 'PENDING' ? 'In attesa' : 'Contabilizzato' }}</span>
     </section>
@@ -98,16 +98,15 @@
     @if (proposal(); as p) {
       <section class="card soft" role="status">
         <p>
-          {{
-            p.movements.length === 1
-              ? "C'è un altro movimento"
-              : 'Ci sono altri ' + p.movements.length + ' movimenti'
-          }}
+          <ng-container i18n>{p.movements.length, plural,
+            =1 {C'è un altro movimento}
+            other {Ci sono altri {{ p.movements.length }} movimenti}
+          }</ng-container>
           di questo esercente in «{{ p.from }}». Li sposti anche in «{{ p.to }}»?
         </p>
         <div class="buttons">
-          <button type="button" class="primary" (click)="moveSimilar()">
-            {{ p.movements.length === 1 ? 'Sposta anche quello' : 'Sposta anche quelli' }}
+          <button type="button" class="primary" (click)="moveSimilar()" i18n>
+            {p.movements.length, plural, =1 {Sposta anche quello} other {Sposta anche quelli}}
           </button>
           <button type="button" (click)="onlyThis()">Solo questo</button>
         </div>
@@ -135,7 +134,11 @@
       <section class="card">
         <h2>Lo stesso esercente</h2>
         <p>
-          {{ m.movements === 1 ? '1 movimento' : m.movements + ' movimenti' }} nell'ultimo anno ·
+          <ng-container i18n>{m.movements, plural,
+            =1 {1 movimento}
+            other {{{ m.movements }} movimenti}
+          }</ng-container>
+          nell'ultimo anno ·
           {{ m.total | money: t.currency }} in tutto
         </p>
         @if (m.recent.length > 0) {
@@ -144,7 +147,7 @@
               <li>
                 <a [routerLink]="['/movimenti', r.id]" queryParamsHandling="preserve">
                   <span>
-                    {{ r.bookingDate | date: 'EEEE d MMMM' | upperFirst }}
+                    {{ r.bookingDate | localDate: 'weekday' | upperFirst }}
                     <span class="secondary">{{ r.category ?? 'Senza categoria' }}</span>
                   </span>
                   <strong>{{ r.amount | money: r.currency }}</strong>
@@ -200,13 +203,13 @@
           <dd>{{ t.description }}</dd>
         }
         <dt>Data contabile</dt>
-        <dd>{{ t.bookingDate | date: 'EEEE d MMMM y' | upperFirst }}</dd>
+        <dd>{{ t.bookingDate | localDate: 'full' | upperFirst }}</dd>
         @if (t.valueDate && t.valueDate !== t.bookingDate) {
           <dt>Data valuta</dt>
-          <dd>{{ t.valueDate | date: 'EEEE d MMMM y' | upperFirst }}</dd>
+          <dd>{{ t.valueDate | localDate: 'full' | upperFirst }}</dd>
         }
         <dt>Arrivato</dt>
-        <dd>{{ origins[d.origin] }}, il {{ d.importedAt | date: 'd MMMM y' }}</dd>
+        <dd>{{ origins[d.origin] }}, il {{ d.importedAt | localDate: 'long' }}</dd>
       </dl>
       <button
         type="button"

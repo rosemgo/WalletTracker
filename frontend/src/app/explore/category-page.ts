@@ -1,4 +1,4 @@
-import { DecimalPipe, formatCurrency, formatDate } from '@angular/common';
+import { DecimalPipe, formatCurrency } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -7,6 +7,8 @@ import { CategoryOverview, ExploreGroup } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { capitalized, formatLocalDate } from '../text/dates';
+import { plural } from '../text/plural';
 import { merchantSearch } from '../transactions/merchant-search';
 import { BarChart } from './bar-chart';
 
@@ -51,7 +53,7 @@ export class CategoryPage implements OnInit {
   /** "ottobre": il mese guardato, in parole. */
   protected readonly monthName = computed(() => {
     const o = this.overview();
-    return o === null ? '' : formatDate(`${o.month}-01`, 'MMMM', this.locale);
+    return o === null ? '' : formatLocalDate(`${o.month}-01`, 'month', this.locale);
   });
 
   /** Il mese è quello in corso? (allora i numeri sono "finora") */
@@ -99,7 +101,7 @@ export class CategoryPage implements OnInit {
       over: b.status === 'OVER',
       text:
         daysLeft > 0
-          ? `${remaining} · ${daysLeft === 1 ? '1 giorno' : daysLeft + ' giorni'}`
+          ? `${remaining} · ${plural(daysLeft, { one: '1 giorno', other: `${daysLeft} giorni` })}`
           : remaining,
     };
   });
@@ -139,7 +141,7 @@ export class CategoryPage implements OnInit {
       return '';
     }
     const m = this.chartMonths()[i];
-    return `${formatDate(`${m.month}-01`, 'MMMM y', this.locale)}: ${this.euros(m.value, o.currency, 2)}`;
+    return `${formatLocalDate(`${m.month}-01`, 'monthYear', this.locale)}: ${this.euros(m.value, o.currency, 2)}`;
   });
 
   /** Il nome di ogni barra per il lettore di schermo: "ottobre 2026, 360 €". */
@@ -147,7 +149,7 @@ export class CategoryPage implements OnInit {
     const o = this.chart();
     return this.chartMonths().map(
       (m) =>
-        `${formatDate(`${m.month}-01`, 'MMMM y', this.locale)}, ${this.euros(m.value, o?.currency ?? 'EUR')}`,
+        `${formatLocalDate(`${m.month}-01`, 'monthYear', this.locale)}, ${this.euros(m.value, o?.currency ?? 'EUR')}`,
     );
   });
 
@@ -160,9 +162,13 @@ export class CategoryPage implements OnInit {
     if (o.month.slice(0, 4) === String(new Date().getFullYear())) {
       return "Quest'anno";
     }
-    return o.month.endsWith('-01')
-      ? formatDate(`${o.month}-01`, 'MMMM y', this.locale).replace(/^./, (c) => c.toUpperCase())
-      : `Gennaio–${formatDate(`${o.month}-01`, 'MMMM y', this.locale)}`;
+    const month = formatLocalDate(`${o.month}-01`, 'monthYear', this.locale);
+    if (o.month.endsWith('-01')) {
+      return capitalized(month);
+    }
+    // Da gennaio al mese guardato: il nome di gennaio lo dà la lingua dell'app.
+    const january = formatLocalDate(`${o.month.slice(0, 4)}-01-01`, 'month', this.locale);
+    return `${capitalized(january)}–${month}`;
   });
 
   protected readonly chartDescription = computed(() => {

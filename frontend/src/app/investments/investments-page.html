@@ -147,7 +147,7 @@
                       {{ c.account }}
                       <span class="secondary">
                         @if (c.balance; as b) {
-                          Al {{ b.date | date: 'd MMM y' }} ·
+                          Al {{ b.date | localDate: 'medium' }} ·
                           {{ b.source === 'BANK' ? 'dalla banca' : 'dal saldo che hai scritto' }}
                         } @else if (c.manual) {
                           Saldo non scritto: <a routerLink="/conti">scrivilo in Conti</a>
@@ -221,18 +221,20 @@
                       <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
                       <span>
                         {{ groupName(g) }}
-                        <span class="secondary">{{
-                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                        }}</span>
+                        <span class="secondary" i18n>{g.movements, plural,
+                          =1 {1 movimento}
+                          other {{{ g.movements }} movimenti}
+                        }</span>
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
                     } @else {
                       <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
                         <span>
                           {{ groupName(g) }}
-                          <span class="secondary">{{
-                            g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                          }}</span>
+                          <span class="secondary" i18n>{g.movements, plural,
+                            =1 {1 movimento}
+                            other {{{ g.movements }} movimenti}
+                          }</span>
                         </span>
                         <strong>{{ g.amount | money: d.currency }}</strong>
                       </a>
@@ -262,18 +264,20 @@
                       <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
                       <span>
                         {{ groupName(g) }}
-                        <span class="secondary">{{
-                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                        }}</span>
+                        <span class="secondary" i18n>{g.movements, plural,
+                          =1 {1 movimento}
+                          other {{{ g.movements }} movimenti}
+                        }</span>
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
                     } @else {
                       <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
                         <span>
                           {{ groupName(g) | readable }}
-                          <span class="secondary">{{
-                            g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                          }}</span>
+                          <span class="secondary" i18n>{g.movements, plural,
+                            =1 {1 movimento}
+                            other {{{ g.movements }} movimenti}
+                          }</span>
                         </span>
                         <strong>{{ g.amount | money: d.currency }}</strong>
                       </a>
@@ -309,9 +313,10 @@
                     <a routerLink="/movimenti" [queryParams]="taxQuery(d, g)">
                       <span>
                         {{ groupName(g) }}
-                        <span class="secondary">{{
-                          g.movements === 1 ? '1 movimento' : g.movements + ' movimenti'
-                        }}</span>
+                        <span class="secondary" i18n>{g.movements, plural,
+                          =1 {1 movimento}
+                          other {{{ g.movements }} movimenti}
+                        }</span>
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
                     </a>

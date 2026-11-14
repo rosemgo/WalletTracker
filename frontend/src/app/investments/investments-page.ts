@@ -1,4 +1,4 @@
-import { DatePipe, formatCurrency, formatDate } from '@angular/common';
+import { formatCurrency } from '@angular/common';
 import {
   Component,
   LOCALE_ID,
@@ -16,6 +16,7 @@ import { WalletApi } from '../api/wallet-api';
 import { BarChart } from '../explore/bar-chart';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { DateStyle, LocalDatePipe, formatLocalDate } from '../text/dates';
 import { ReadablePipe } from '../text/readable';
 import { merchantSearch } from '../transactions/merchant-search';
 import { CloseButton } from '../ui/close-button';
@@ -62,7 +63,7 @@ export const SHORTEN_FROM = 8;
   imports: [
     BarChart,
     CloseButton,
-    DatePipe,
+    LocalDatePipe,
     InvestmentMovements,
     MoneyPipe,
     ReadablePipe,
@@ -217,12 +218,13 @@ export class InvestmentsPage implements OnInit {
 
   /** I mesi abbreviati ("nov") per l'asse della linea. */
   protected readonly monthLabels = computed(
-    () => this.data()?.months.map((m) => this.monthName(m.month, 'MMM').replace('.', '')) ?? [],
+    () =>
+      this.data()?.months.map((m) => this.monthName(m.month, 'monthShort').replace('.', '')) ?? [],
   );
 
   /** I mesi per esteso ("ottobre 2026"). */
   protected readonly monthNames = computed(
-    () => this.data()?.months.map((m) => this.monthName(m.month, 'MMMM y')) ?? [],
+    () => this.data()?.months.map((m) => this.monthName(m.month, 'monthYear')) ?? [],
   );
 
   /** Le etichette delle barre: l'iniziale del mese; con più di 12 mesi, solo una ogni tanto. */
@@ -230,7 +232,9 @@ export class InvestmentsPage implements OnInit {
     const months = this.data()?.months ?? [];
     const every = Math.ceil(months.length / 12);
     return months.map((m, i) =>
-      (months.length - 1 - i) % every === 0 ? this.monthName(m.month, 'MMMMM').toUpperCase() : '',
+      (months.length - 1 - i) % every === 0
+        ? this.monthName(m.month, 'monthInitial').toUpperCase()
+        : '',
     );
   });
 
@@ -427,8 +431,8 @@ export class InvestmentsPage implements OnInit {
       : values.map((v, i) => `${this.monthNames()[i]}, ${this.euros(v, d.currency)}`);
   }
 
-  private monthName(month: string, format: string): string {
-    return formatDate(`${month}-01`, format, this.locale);
+  private monthName(month: string, style: DateStyle): string {
+    return formatLocalDate(`${month}-01`, style, this.locale);
   }
 
   /** Un importo senza decimali, con le cifre nascoste in modalità discreta (docs/42). */

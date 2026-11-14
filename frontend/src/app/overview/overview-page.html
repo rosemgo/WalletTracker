@@ -90,7 +90,11 @@
           @if (o.usualMonths > 0) {
             <span>
               <span class="key usual"></span>Un mese tipico (media di
-              {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
+              <ng-container i18n>{o.usualMonths, plural,
+                =1 {1 mese}
+                other {{{ o.usualMonths }} mesi}
+              }</ng-container
+              >)
             </span>
           }
         </div>
@@ -155,7 +159,7 @@
             <li>
               <span>
                 {{ u.name }}
-                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' | upperFirst }}</span>
+                <span class="secondary">{{ u.date | localDate: 'weekday' | upperFirst }}</span>
               </span>
               <strong>{{ u.amount | money: o.currency }}</strong>
             </li>
@@ -177,13 +181,19 @@
             [attr.aria-label]="toReviewLabel()"
           >
             <strong>{{ o.toReview }}</strong>
-            <span>{{ o.toReview === 1 ? 'movimento' : 'movimenti' }} da verificare</span>
+            <span i18n>{o.toReview, plural,
+              =1 {movimento da verificare}
+              other {movimenti da verificare}
+            }</span>
           </a>
         }
         @if (o.suggestions > 0) {
           <a routerLink="/movimenti" [attr.aria-label]="suggestionsLabel()">
             <strong>{{ o.suggestions }}</strong>
-            <span>{{ o.suggestions === 1 ? 'categoria suggerita' : 'categorie suggerite' }}</span>
+            <span i18n>{o.suggestions, plural,
+              =1 {categoria suggerita}
+              other {categorie suggerite}
+            }</span>
           </a>
         }
       </div>

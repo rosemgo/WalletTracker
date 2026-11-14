@@ -19,8 +19,12 @@
     </div>
   } @else {
     <p class="message">
-      <strong>{{ r.bank }}</strong> collegata: {{ r.accounts }}
-      {{ r.accounts === 1 ? 'conto' : 'conti' }}, {{ r.imported }} movimenti nuovi importati.
+      <strong>{{ r.bank }}</strong> collegata:
+      <ng-container i18n>{r.accounts, plural,
+        =1 {1 conto}
+        other {{{ r.accounts }} conti}
+      }</ng-container
+      >, {{ r.imported }} movimenti nuovi importati.
     </p>
     <details class="hint linked-accounts" data-testid="missing-account">
       <summary>Manca un conto che hai autorizzato?</summary>

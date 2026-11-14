@@ -26,13 +26,19 @@
               </span>
               <strong>{{ s.category }}</strong>
               <span class="secondary">
-                {{ s.transactions === 1 ? '1 movimento' : s.transactions + ' movimenti' }} senza
-                categoria ·
+                <ng-container i18n>{s.transactions, plural,
+                  =1 {1 movimento senza categoria}
+                  other {{{ s.transactions }} movimenti senza categoria}
+                }</ng-container>
+                ·
                 @if (s.model) {
                   suggerita dall'IA ({{ s.model }}): controlla prima di accettare
                 } @else {
                   l'hai scelta per
-                  {{ s.examples === 1 ? '1 movimento' : s.examples + ' movimenti' }}
+                  <ng-container i18n>{s.examples, plural,
+                    =1 {1 movimento}
+                    other {{{ s.examples }} movimenti}
+                  }</ng-container>
                 }
               </span>
             </span>
@@ -69,11 +75,10 @@
           }
         } @else if (a.toAsk > 0) {
           <p class="hint">
-            {{
-              a.toAsk === 1
-                ? "1 esercente senza categoria non è ancora stato chiesto all'IA"
-                : a.toAsk + " esercenti senza categoria non sono ancora stati chiesti all'IA"
-            }}
+            <ng-container i18n>{a.toAsk, plural,
+              =1 {1 esercente senza categoria non è ancora stato chiesto all'IA}
+              other {{{ a.toAsk }} esercenti senza categoria non sono ancora stati chiesti all'IA}
+            }</ng-container>
             ({{ a.model }}). Ogni risposta richiede qualche secondo: ne chiede al massimo 20 alla
             volta.
           </p>

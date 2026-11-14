@@ -68,7 +68,7 @@
           />
         } @else if (a.balance; as b) {
           <p>
-            <strong>{{ b.amount | money: a.currency }}</strong> al {{ b.date | date: 'd MMMM y' }}.
+            <strong>{{ b.amount | money: a.currency }}</strong> al {{ b.date | localDate: 'long' }}.
             @if (balanceSaved()) {
               Salvato: da qui si aggiorna con i movimenti che importerai.
             } @else {
@@ -177,7 +177,7 @@
             <li>
               <strong>Caricamento:</strong> vengono aggiunti i movimenti precedenti al primo
               ricevuto dalla banca{{
-                p.bankFrom ? ' (' + (p.bankFrom | date: 'd MMMM y') + ')' : ''
+                p.bankFrom ? ' (' + (p.bankFrom | localDate: 'long') + ')' : ''
               }}.
             </li>
           } @else {
@@ -195,11 +195,10 @@
             <li>
               <strong>Operazioni su titoli senza movimento di denaro</strong> (trasferimenti di
               azioni, diritti di opzione):
-              {{
-                p.skippedRows === 1
-                  ? '1 riga, non registrata tra i movimenti.'
-                  : p.skippedRows + ' righe, non registrate tra i movimenti.'
-              }}
+              <ng-container i18n>{p.skippedRows, plural,
+                =1 {1 riga, non registrata tra i movimenti.}
+                other {{{ p.skippedRows }} righe, non registrate tra i movimenti.}
+              }</ng-container>
             </li>
           }
         </ul>
@@ -356,9 +355,10 @@
         <div class="error" role="alert">
           @if (p.errorCount > 0) {
             <p>
-              {{
-                p.errorCount === 1 ? '1 riga non si legge' : p.errorCount + ' righe non si leggono'
-              }}
+              <ng-container i18n>{p.errorCount, plural,
+                =1 {1 riga non si legge}
+                other {{{ p.errorCount }} righe non si leggono}
+              }</ng-container>
               @if (p.tradeRepublic) {
                 nel file di Trade Republic. È stato modificato? Scaricalo di nuovo dall'app:
               } @else {
@@ -402,7 +402,7 @@
             <tbody>
               @for (row of p.parsedRows; track $index) {
                 <tr>
-                  <td>{{ row.date | date: 'dd/MM/yyyy' }}</td>
+                  <td>{{ row.date | localDate: 'numeric' }}</td>
                   <td>{{ row.description ?? '—' }}</td>
                   <td>{{ row.counterparty ?? '—' }}</td>
                   <td
@@ -443,7 +443,7 @@
                 <tbody>
                   @for (r of p.rowsWithoutMovement; track r.line) {
                     <tr>
-                      <td>{{ r.date | date: 'dd/MM/yyyy' }}</td>
+                      <td>{{ r.date | localDate: 'numeric' }}</td>
                       <td>{{ r.description ?? '—' }}</td>
                       <td class="amount">{{ r.amount | money: r.currency }}</td>
                     </tr>
@@ -469,7 +469,7 @@
                 <tbody>
                   @for (m of p.movementsWithoutRow; track m.id) {
                     <tr>
-                      <td>{{ m.date | date: 'dd/MM/yyyy' }}</td>
+                      <td>{{ m.date | localDate: 'numeric' }}</td>
                       <td class="amount">{{ m.amount | money: m.currency }}</td>
                     </tr>
                   }

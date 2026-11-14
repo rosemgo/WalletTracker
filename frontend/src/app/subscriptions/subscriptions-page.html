@@ -58,10 +58,10 @@
                 {{ s.monthlyCost | money: s.currency }}
               </td>
               <td data-label="Pagato il">
-                {{ s.lastDate ? (s.lastDate | date: 'dd/MM/yyyy') : '—' }}
+                {{ s.lastDate ? (s.lastDate | localDate: 'numeric') : '—' }}
               </td>
               <td data-label="Prossimo">
-                {{ s.nextDate && !s.late ? (s.nextDate | date: 'dd/MM/yyyy') : '—' }}
+                {{ s.nextDate && !s.late ? (s.nextDate | localDate: 'numeric') : '—' }}
               </td>
               <td data-label="">
                 <button
@@ -105,7 +105,7 @@
         <strong>{{ suggestion.typicalAmount | money: suggestion.currency }}</strong>
         {{ frequencyLabels[suggestion.frequency] }} · {{ suggestion.occurrences }} pagamenti ·
         ultimo il
-        {{ suggestion.lastDate | date: 'dd/MM/yyyy' }}
+        {{ suggestion.lastDate | localDate: 'numeric' }}
       </div>
       <div class="suggestion-actions">
         <button type="button" class="primary" (click)="confirm(suggestion, nameInput.value)">

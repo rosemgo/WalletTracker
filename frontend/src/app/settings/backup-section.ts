@@ -1,9 +1,10 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { formatNumber } from '@angular/common';
+import { Component, LOCALE_ID, OnInit, inject, signal } from '@angular/core';
 
 import { BackupStore } from '../api/backup-store';
 import { BackupFile } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { LocalDatePipe } from '../text/dates';
 
 /** I tipi di backup, come li vede chi usa l'app. */
 const TYPES: Record<BackupFile['type'], string> = {
@@ -19,7 +20,7 @@ const TYPES: Record<BackupFile['type'], string> = {
  */
 @Component({
   selector: 'app-backup-section',
-  imports: [DatePipe],
+  imports: [LocalDatePipe],
   // Sul telefono: un percorso lungo (D:/Backup/...) va a capo dove serve; un'opzione (-CartellaBackup) mai al trattino.
   styles: '.path { overflow-wrap: anywhere; } .option { white-space: nowrap; }',
   template: `
@@ -49,7 +50,7 @@ const TYPES: Record<BackupFile['type'], string> = {
         <p data-testid="last-backup">
           Ultimo backup:
           @if (status.lastSuccessAt) {
-            <strong>{{ status.lastSuccessAt | date: 'd MMMM y, HH:mm' }}</strong>
+            <strong>{{ status.lastSuccessAt | localDate: 'longTime' }}</strong>
           } @else {
             <strong>nessuno</strong>
           }
@@ -75,7 +76,7 @@ const TYPES: Record<BackupFile['type'], string> = {
             @for (file of shown(status.backups); track file.name) {
               <li>
                 <span class="backup-type">{{ type(file) }}</span>
-                <span>{{ file.createdAt | date: 'd MMM y, HH:mm' }}</span>
+                <span>{{ file.createdAt | localDate: 'mediumTime' }}</span>
                 <span class="hint">{{ size(file.sizeBytes) }}</span>
                 @if (status.canDownload) {
                   <a class="action" [href]="url(file)" download>Scarica</a>
@@ -138,6 +139,7 @@ export class BackupSection implements OnInit {
   private readonly firstRows = 5;
   protected readonly showAll = signal(false);
   private readonly api = inject(WalletApi);
+  private readonly locale = inject(LOCALE_ID);
 
   ngOnInit(): void {
     this.backups.refresh();
@@ -163,6 +165,7 @@ export class BackupSection implements OnInit {
     if (bytes < 1024 * 1024) {
       return `${Math.max(1, Math.round(bytes / 1024))} kB`;
     }
-    return `${(bytes / (1024 * 1024)).toLocaleString('it-IT', { maximumFractionDigits: 1 })} MB`;
+    // '1.0-1': almeno una cifra intera, al massimo un decimale; la virgola o il punto li mette la lingua.
+    return `${formatNumber(bytes / (1024 * 1024), this.locale, '1.0-1')} MB`;
   }
 }

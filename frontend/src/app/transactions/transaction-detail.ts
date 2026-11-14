@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -32,6 +31,7 @@ export { MAX_SEARCH_WORDS, merchantSearch } from './merchant-search';
 import { TransactionsChanged } from './transactions-changed';
 import { shortAccountName } from '../accounts/accounts-store';
 import { Avatar } from './avatar';
+import { LocalDatePipe } from '../text/dates';
 import { UpperFirstPipe } from '../text/upper-first.pipe';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
@@ -78,7 +78,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [Avatar, DatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
+  imports: [Avatar, LocalDatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {

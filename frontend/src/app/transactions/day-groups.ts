@@ -1,4 +1,5 @@
 import { Transaction } from '../api/models';
+import { capitalized, formatLocalDate } from '../text/dates';
 import { readable } from '../text/readable';
 import { isoDate } from './period';
 
@@ -10,22 +11,6 @@ export interface DayGroup {
   total: number | null; // null se nel giorno non ci sono né spese né entrate (solo giroconti, per esempio)
 }
 
-const WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
-const MONTHS = [
-  'gennaio',
-  'febbraio',
-  'marzo',
-  'aprile',
-  'maggio',
-  'giugno',
-  'luglio',
-  'agosto',
-  'settembre',
-  'ottobre',
-  'novembre',
-  'dicembre',
-];
-
 /**
  * Il titolo di un giorno: "Oggi · domenica 25 ottobre", "Ieri · sabato 24 ottobre", "Venerdì 23 ottobre"; l'anno
  * solo se non è quello di oggi. Funzione pura: `today` è un parametro, così i test scelgono il giorno.
@@ -33,7 +18,8 @@ const MONTHS = [
 export function dayLabel(date: string, today: Date): string {
   const [year, month, day] = date.split('-').map(Number);
   const when = new Date(year, month - 1, day);
-  const text = `${WEEKDAYS[when.getDay()]} ${day} ${MONTHS[month - 1]}${year === today.getFullYear() ? '' : ' ' + year}`;
+  // I nomi del giorno e del mese li dà la lingua dell'app (text/dates.ts): "domenica 25 ottobre", con l'anno "full".
+  const text = formatLocalDate(when, year === today.getFullYear() ? 'weekday' : 'full');
   const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
   if (date === isoDate(today)) {
     return `Oggi · ${text}`;
@@ -41,7 +27,7 @@ export function dayLabel(date: string, today: Date): string {
   if (date === isoDate(yesterday)) {
     return `Ieri · ${text}`;
   }
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  return capitalized(text);
 }
 
 /**

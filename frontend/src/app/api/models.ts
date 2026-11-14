@@ -741,11 +741,7 @@ export interface InvestmentMonth {
  * (INVESTMENT_GROUP_LABELS), nella lingua di chi guarda.
  */
 export type InvestmentGroupKind =
-  | 'NAMED'
-  | 'OTHER_INCOME'
-  | 'UNNAMED_SECURITY'
-  | 'UNMATCHED_WITHHOLDING'
-  | 'UNCATEGORIZED';
+  'NAMED' | 'OTHER_INCOME' | 'UNNAMED_SECURITY' | 'UNMATCHED_WITHHOLDING' | 'UNCATEGORIZED';
 
 export interface InvestmentGroup {
   name: string | null; // null per le voci senza nome: allora conta kind

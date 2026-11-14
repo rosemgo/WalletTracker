@@ -2,6 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, output, signal } from 
 
 import { AiSuggestionsStatus, CategorySuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { plural } from '../text/plural';
 import { ReadablePipe } from '../text/readable';
 
 /** Ogni quanto chiedere lo stato mentre l'IA risponde. */
@@ -71,7 +72,7 @@ export class SuggestionsPanel implements OnInit {
         this.done(
           suggestion,
           `${suggestion.merchantName}: "${suggestion.category}" assegnata a ` +
-            (updated === 1 ? '1 movimento.' : `${updated} movimenti.`) +
+            plural(updated, { one: '1 movimento.', other: `${updated} movimenti.` }) +
             ' Per i movimenti futuri puoi creare una regola dal movimento, qui sotto.',
         );
         this.accepted.emit();
@@ -160,9 +161,9 @@ export class SuggestionsPanel implements OnInit {
     } else if (wasRunning && job && !job.error) {
       const unsure = job.done - job.found;
       this.message.set(
-        `L'IA ha guardato ${job.done === 1 ? '1 esercente' : job.done + ' esercenti'}: ` +
-          (job.found === 1 ? '1 suggerimento' : `${job.found} suggerimenti`) +
-          (unsure > 0 ? `, per ${unsure === 1 ? '1' : unsure} non sa.` : '.'),
+        `L'IA ha guardato ${plural(job.done, { one: '1 esercente', other: `${job.done} esercenti` })}: ` +
+          plural(job.found, { one: '1 suggerimento', other: `${job.found} suggerimenti` }) +
+          (unsure > 0 ? `, per ${unsure} non sa.` : '.'),
       );
       this.api.categorySuggestions().subscribe({ next: (list) => this.suggestions.set(list) });
     }

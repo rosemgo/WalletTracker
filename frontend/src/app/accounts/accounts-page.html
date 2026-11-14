@@ -128,7 +128,9 @@
                   <div class="available-credit">
                     <span class="secondary">Plafond disponibile</span>
                     <strong>{{ c.amount | money: account.currency }}</strong>
-                    <span class="secondary">al {{ c.date | date: 'd MMM y' }} · dalla banca</span>
+                    <span class="secondary"
+                      >al {{ c.date | localDate: 'medium' }} · dalla banca</span
+                    >
                   </div>
                 } @else {
                   <!-- Non ancora letto (dopo un aggiornamento dell'app), o la banca non lo dà: si legge con "Aggiorna ora". -->
@@ -144,13 +146,14 @@
                 @if (account.balance; as b) {
                   <strong class="balance">{{ b.amount | money: account.currency }}</strong>
                   <div class="secondary">
-                    al {{ b.date | date: 'd MMM y' }} ·
+                    al {{ b.date | localDate: 'medium' }} ·
                     @if (b.source === 'BANK') {
                       dalla banca
                     } @else if (b.startDate === b.date) {
                       scritto da te
                     } @else {
-                      dal tuo saldo del {{ b.startDate | date: 'd MMM' }}, più i movimenti dopo
+                      dal tuo saldo del {{ b.startDate | localDate: 'dayMonth' }}, più i movimenti
+                      dopo
                     }
                   </div>
                 } @else if (account.source === 'MANUAL') {
@@ -233,12 +236,12 @@
                   <!-- docs/rimuovere-un-collegamento.md: resta come storia, non si aggiorna più. -->
                   <span class="secondary">collegamento rimosso: storico conservato</span>
                 } @else {
-                  {{ account.consentValidUntil | date: 'dd/MM/yyyy' }}
+                  {{ account.consentValidUntil | localDate: 'numeric' }}
                 }
               </td>
               <td data-label="Aggiornato">
                 @if (account.lastSyncAt) {
-                  {{ account.lastSyncAt | date: 'dd/MM/yyyy HH:mm' }}
+                  {{ account.lastSyncAt | localDate: 'numericTime' }}
                 } @else {
                   mai
                 }

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,6 +7,8 @@ import { Account, AccountOutcome, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isTradeRepublic } from '../import/trade-republic';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe } from '../text/dates';
+import { plural } from '../text/plural';
 import { AccountsStore, logoUrl } from './accounts-store';
 import { BalanceForm } from './balance-form';
 import { ConnectionsSection } from './connections-section';
@@ -28,7 +29,14 @@ import { ConnectionsSection } from './connections-section';
  */
 @Component({
   selector: 'app-accounts-page',
-  imports: [BalanceForm, ConnectionsSection, DatePipe, MoneyPipe, ReactiveFormsModule, RouterLink],
+  imports: [
+    BalanceForm,
+    ConnectionsSection,
+    LocalDatePipe,
+    MoneyPipe,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './accounts-page.html',
 })
 export class AccountsPage implements OnInit {
@@ -97,8 +105,10 @@ export class AccountsPage implements OnInit {
         const read = round.accounts.filter((o) => o.error === null);
         this.nothingArrived.set(read.length > 0 && read.every((o) => o.inserted + o.pending === 0));
         const failed = round.failed > 0 ? `, ${round.failed} con errori (vedi sotto)` : '';
-        const updated =
-          round.updated === 1 ? 'Aggiornato 1 conto' : `Aggiornati ${round.updated} conti`;
+        const updated = plural(round.updated, {
+          one: 'Aggiornato 1 conto',
+          other: `Aggiornati ${round.updated} conti`,
+        });
         this.message.set(`${updated}${failed}.`);
         this.loadAccounts();
       },
@@ -284,7 +294,10 @@ export function outcomeLine(outcome: AccountOutcome, name: string): string {
   const parts = [];
   if (outcome.inserted > 0) {
     parts.push(
-      outcome.inserted === 1 ? '1 movimento nuovo' : `${outcome.inserted} movimenti nuovi`,
+      plural(outcome.inserted, {
+        one: '1 movimento nuovo',
+        other: `${outcome.inserted} movimenti nuovi`,
+      }),
     );
   }
   if (outcome.pending > 0) {

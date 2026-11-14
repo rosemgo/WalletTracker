@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 
 import { Account, Transaction } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe } from '../text/dates';
 import { nameOf } from '../transactions/day-groups';
 
 /**
@@ -16,7 +16,7 @@ import { nameOf } from '../transactions/day-groups';
  */
 @Component({
   selector: 'app-balance-form',
-  imports: [DatePipe, MoneyPipe],
+  imports: [LocalDatePipe, MoneyPipe],
   template: `
     <div class="balance-form">
       @if (loaded()) {
@@ -24,7 +24,7 @@ import { nameOf } from '../transactions/day-groups';
           <p class="hint">
             Apri l'app della banca e cerca l'ultimo movimento che c'è qui:
             <strong
-              >{{ t.bookingDate | date: 'd MMMM y' }} · {{ nameOf(t) }} ·
+              >{{ t.bookingDate | localDate: 'long' }} · {{ nameOf(t) }} ·
               {{ t.amount | money: t.currency }}</strong
             >. Scrivi il saldo che la banca mostra <strong>dopo</strong> quel movimento.
           </p>

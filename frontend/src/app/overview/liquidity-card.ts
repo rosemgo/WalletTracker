@@ -1,10 +1,10 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { AccountsStore } from '../accounts/accounts-store';
 import { Account } from '../api/models';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe } from '../text/dates';
 
 /** Un conto della scheda, con il suo saldo. */
 interface Row {
@@ -35,7 +35,7 @@ interface Group {
  */
 @Component({
   selector: 'app-liquidity-card',
-  imports: [DatePipe, MoneyPipe, RouterLink],
+  imports: [LocalDatePipe, MoneyPipe, RouterLink],
   template: `
     @if (groups().length > 0) {
       <a class="card liquidity-card" routerLink="/conti">
@@ -50,9 +50,10 @@ interface Group {
             }}</strong>
           }
         </div>
-        <span class="secondary">{{
-          withBalance() === 1 ? 'Sul tuo conto, adesso' : 'Su ' + withBalance() + ' conti, adesso'
-        }}</span>
+        <span class="secondary" i18n>{withBalance(), plural,
+          =1 {Sul tuo conto, adesso}
+          other {Su {{ withBalance() }} conti, adesso}
+        }</span>
         @for (g of groups(); track g.currency) {
           @if (groups().length > 1) {
             <!-- Con più valute, i conti di ognuna sotto il suo codice (EUR, USD...). -->
@@ -63,7 +64,7 @@ interface Group {
               <li>
                 <span>
                   {{ r.account.label }}
-                  <span class="secondary">al {{ r.date | date: 'd MMM' }}</span>
+                  <span class="secondary">al {{ r.date | localDate: 'dayMonth' }}</span>
                 </span>
                 <strong>{{ r.amount | money: g.currency }}</strong>
               </li>
@@ -71,12 +72,11 @@ interface Group {
           </ul>
         }
         @if (withoutBalance() > 0) {
-          <p class="secondary missing">
-            {{
-              withoutBalance() === 1
-                ? '1 conto senza saldo non è nel totale'
-                : withoutBalance() + ' conti senza saldo non sono nel totale'
-            }}
+          <p class="secondary missing" i18n>
+            {withoutBalance(), plural,
+              =1 {1 conto senza saldo non è nel totale}
+              other {{{ withoutBalance() }} conti senza saldo non sono nel totale}
+            }
           </p>
         }
       </a>

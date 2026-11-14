@@ -13,7 +13,7 @@
           @switch (alert.kind) {
             @case ('CONSENT_EXPIRED') {
               <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
-              Dal {{ alert.date | date: 'dd/MM/yyyy' }} i movimenti non vengono più aggiornati.
+              Dal {{ alert.date | localDate: 'numeric' }} i movimenti non vengono più aggiornati.
               Ricollegala: conti, movimenti e correzioni restano.
               <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
                 >Ricollega {{ alert.bank }}</a
@@ -21,7 +21,7 @@
             }
             @case ('CONSENT_EXPIRING') {
               <strong>Il collegamento con {{ alert.bank }} scade {{ when(alert.daysLeft) }}</strong>
-              ({{ alert.date | date: 'dd/MM/yyyy' }}). Le regole europee (PSD2) chiedono di
+              ({{ alert.date | localDate: 'numeric' }}). Le regole europee (PSD2) chiedono di
               rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza, non
               perdi niente.
               <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"

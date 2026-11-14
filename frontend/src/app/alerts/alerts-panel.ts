@@ -1,9 +1,10 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Alert } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { LocalDatePipe } from '../text/dates';
+import { plural } from '../text/plural';
 import { CloseButton } from '../ui/close-button';
 import { DismissedNotices } from '../ui/dismissed-notices';
 
@@ -45,7 +46,7 @@ export function alertKey(alert: Alert, today: Date = new Date()): string {
  */
 @Component({
   selector: 'app-alerts-panel',
-  imports: [CloseButton, DatePipe, RouterLink],
+  imports: [CloseButton, LocalDatePipe, RouterLink],
   templateUrl: './alerts-panel.html',
 })
 export class AlertsPanel implements OnInit {
@@ -73,6 +74,6 @@ export class AlertsPanel implements OnInit {
     if (daysLeft === null || daysLeft <= 0) {
       return 'oggi';
     }
-    return daysLeft === 1 ? 'domani' : `tra ${daysLeft} giorni`;
+    return plural(daysLeft, { one: 'domani', other: `tra ${daysLeft} giorni` });
   }
 }

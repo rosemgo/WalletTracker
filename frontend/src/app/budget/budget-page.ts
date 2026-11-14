@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate } from '@angular/common';
+import { formatCurrency } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { Budget, BudgetStatus, Category } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { formatLocalDate } from '../text/dates';
 
 /** Come si presenta ogni stato: un'icona e un'etichetta, mai solo il colore. */
 const STATUS: Record<BudgetStatus, { icon: string; label: string }> = {
@@ -60,7 +61,7 @@ export class BudgetPage implements OnInit {
 
   /** "Ottobre 2026". */
   protected readonly monthTitle = computed(() => {
-    const text = formatDate(`${this.month()}-01`, 'MMMM y', this.locale);
+    const text = formatLocalDate(`${this.month()}-01`, 'monthYear', this.locale);
     return text.charAt(0).toUpperCase() + text.slice(1);
   });
 

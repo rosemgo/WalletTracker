@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Transaction } from '../api/models';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe } from '../text/dates';
 import { nameOf } from '../transactions/day-groups';
 import { Avatar } from '../transactions/avatar';
 
@@ -17,7 +17,7 @@ export const FIRST_MOVEMENTS = 8;
  */
 @Component({
   selector: 'app-investment-movements',
-  imports: [Avatar, DatePipe, MoneyPipe, RouterLink],
+  imports: [Avatar, LocalDatePipe, MoneyPipe, RouterLink],
   template: `
     @if (movements().length > 0) {
       <h2 class="days-title" #heading>{{ title() }}</h2>
@@ -29,7 +29,7 @@ export const FIRST_MOVEMENTS = 8;
                 <span class="avatar" [appAvatar]="t"></span>
                 <span class="movement-text">
                   <span class="name">{{ nameOf(t) }}</span>
-                  <span class="secondary">{{ t.bookingDate | date: 'd MMMM y' }}</span>
+                  <span class="secondary">{{ t.bookingDate | localDate: 'long' }}</span>
                 </span>
                 <span class="amount" [class.positive]="t.amount > 0">{{
                   t.amount | money: t.currency

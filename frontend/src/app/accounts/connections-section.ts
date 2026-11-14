@@ -1,8 +1,9 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, output, signal } from '@angular/core';
+import { Component, LOCALE_ID, OnInit, inject, output, signal } from '@angular/core';
 
 import { BankConnection, LinkedAccount } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { formatLocalDate } from '../text/dates';
+import { plural } from '../text/plural';
 
 /**
  * "Collegamenti alle banche", nella pagina Conti (docs/rimuovere-un-collegamento.md): ogni collegamento, anche
@@ -66,13 +67,17 @@ import { WalletApi } from '../api/wallet-api';
                   <p>
                     @if (c.accounts > 0) {
                       L'app smetterà di leggere
-                      {{ c.accounts === 1 ? 'il conto' : 'tutti i conti' }} di
+                      <ng-container i18n>{c.accounts, plural,
+                        =1 {il conto}
+                        other {tutti i conti}
+                      }</ng-container>
+                      di
                       {{ c.bank }} (<strong>{{ accountsText(c) }}</strong
                       >) e chiuderà il consenso su Enable Banking.
-                      <strong
-                        >{{ c.accounts === 1 ? 'Il conto' : 'I conti' }} e i movimenti
-                        restano</strong
-                      >
+                      <strong i18n>{c.accounts, plural,
+                        =1 {Il conto e i movimenti restano}
+                        other {I conti e i movimenti restano}
+                      }</strong>
                       come storia. Se un giorno ricolleghi la banca, tornano gli stessi, senza
                       doppioni.
                     } @else {
@@ -170,7 +175,7 @@ import { WalletApi } from '../api/wallet-api';
 })
 export class ConnectionsSection implements OnInit {
   private readonly api = inject(WalletApi);
-  private readonly datePipe = new DatePipe('it-IT');
+  private readonly locale = inject(LOCALE_ID);
 
   /** Dopo una rimozione: la pagina ricarica i conti (lo stato "collegamento rimosso"). */
   readonly changed = output<void>();
@@ -189,7 +194,7 @@ export class ConnectionsSection implements OnInit {
   /** "7 collegamenti", per il titolo della sezione chiusa. */
   protected connectionsLabel(): string {
     const n = this.connections().length;
-    return n === 1 ? '1 collegamento' : `${n} collegamenti`;
+    return plural(n, { one: '1 collegamento', other: `${n} collegamenti` });
   }
 
   /** "Credit Lombard ··0033", o solo il nome se il conto non ha IBAN (una carta). */
@@ -204,9 +209,10 @@ export class ConnectionsSection implements OnInit {
 
   /** "valido fino al 10/05/2027", "consenso scaduto il …", "rimosso il …: i conti restano come storia". */
   protected statusOf(c: BankConnection): string {
-    const date = (iso: string) => this.datePipe.transform(iso, 'dd/MM/yyyy') ?? '';
+    const date = (iso: string) => formatLocalDate(iso, 'numeric', this.locale);
     if (c.removedAt) {
-      return `rimosso il ${date(c.removedAt)}: ${c.accounts === 1 ? 'il conto resta' : 'i conti restano'} come storia`;
+      const kept = plural(c.accounts, { one: 'il conto resta', other: 'i conti restano' });
+      return `rimosso il ${date(c.removedAt)}: ${kept} come storia`;
     }
     if (new Date(c.validUntil).getTime() <= Date.now()) {
       return `consenso scaduto il ${date(c.validUntil)}`;
@@ -223,10 +229,10 @@ export class ConnectionsSection implements OnInit {
       next: (r) => {
         this.removing.set(false);
         this.confirming.set(null);
-        const kept =
-          r.accountsKept === 1
-            ? 'Il conto resta con i suoi movimenti.'
-            : 'I conti restano con i loro movimenti.';
+        const kept = plural(r.accountsKept, {
+          one: 'Il conto resta con i suoi movimenti.',
+          other: 'I conti restano con i loro movimenti.',
+        });
         const what =
           r.accountsKept === 0
             ? `${r.bank}: collegamento cancellato.`

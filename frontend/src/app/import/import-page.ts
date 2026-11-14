@@ -1,5 +1,4 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -16,6 +15,8 @@ import {
 import { BalanceForm } from '../accounts/balance-form';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe, formatLocalDate } from '../text/dates';
+import { plural } from '../text/plural';
 import { FileDrop } from '../ui/file-drop';
 import { isTradeRepublic } from './trade-republic';
 
@@ -40,6 +41,11 @@ export const DATE_FORMATS: { value: string; label: string }[] = [
 /** Oltre questa dimensione il backend rifiuta il file (spring.servlet.multipart.max-file-size). */
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
+/** "1 riga" oppure "75 righe": la forma per uno così com'è, quella per gli altri con il numero davanti. */
+function countOf(count: number, one: string, many: string): string {
+  return plural(count, { one, other: `${count} ${many}` });
+}
+
 /**
  * L'importazione dei movimenti da un file, CSV o Excel (docs/importa-file.md), in qualunque conto:
  * - un conto manuale (che Enable Banking non copre): si importano tutte le righe nuove;
@@ -60,7 +66,7 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
  */
 @Component({
   selector: 'app-import-page',
-  imports: [BalanceForm, DatePipe, FileDrop, MoneyPipe, ReactiveFormsModule, RouterLink],
+  imports: [BalanceForm, LocalDatePipe, FileDrop, MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './import-page.html',
 })
 export class ImportPage implements OnInit {
@@ -303,30 +309,32 @@ export class ImportPage implements OnInit {
       return this.tradeRepublicDoneMessage(done);
     }
     let text = this.linked()
-      ? done.imported === 1
-        ? '1 movimento aggiunto'
-        : `${done.imported} movimenti aggiunti`
-      : done.imported === 1
-        ? '1 movimento importato'
-        : `${done.imported} movimenti importati`;
+      ? plural(done.imported, {
+          one: '1 movimento aggiunto',
+          other: `${done.imported} movimenti aggiunti`,
+        })
+      : plural(done.imported, {
+          one: '1 movimento importato',
+          other: `${done.imported} movimenti importati`,
+        });
     if (done.covered > 0) {
-      text +=
-        done.covered === 1
-          ? '; 1 riga era nel periodo che porta la banca ed è stata saltata'
-          : `; ${done.covered} righe erano nel periodo che porta la banca e sono state saltate`;
+      text += plural(done.covered, {
+        one: '; 1 riga era nel periodo che porta la banca ed è stata saltata',
+        other: `; ${done.covered} righe erano nel periodo che porta la banca e sono state saltate`,
+      });
     }
     if (done.duplicates > 0) {
-      text +=
-        done.duplicates === 1
-          ? ' (1 riga era già presente ed è stata saltata)'
-          : ` (${done.duplicates} righe erano già presenti e sono state saltate)`;
+      text += plural(done.duplicates, {
+        one: ' (1 riga era già presente ed è stata saltata)',
+        other: ` (${done.duplicates} righe erano già presenti e sono state saltate)`,
+      });
     }
     if (done.completed > 0) {
       // Righe importate prima che si leggesse la seconda colonna della descrizione (docs/tinaba.md, parte H).
-      text +=
-        done.completed === 1
-          ? '; a 1 movimento già presente è stata completata la descrizione'
-          : `; a ${done.completed} movimenti già presenti è stata completata la descrizione`;
+      text += plural(done.completed, {
+        one: '; a 1 movimento già presente è stata completata la descrizione',
+        other: `; a ${done.completed} movimenti già presenti è stata completata la descrizione`,
+      });
     }
     return `${text}.`;
   }
@@ -336,8 +344,7 @@ export class ImportPage implements OnInit {
    * movimento caricato; 81 righe erano già presenti."
    */
   private tradeRepublicDoneMessage(done: ImportResult): string {
-    const n = (count: number, one: string, many: string) =>
-      count === 1 ? one : `${count} ${many}`;
+    const n = countOf;
     const parts = [
       done.completed === 0
         ? 'nessun movimento da completare'
@@ -358,12 +365,12 @@ export class ImportPage implements OnInit {
     return this.selected()?.label ?? '';
   }
 
-  private readonly datePipe = new DatePipe('it-IT');
+  private readonly locale = inject(LOCALE_ID);
 
   /** " (il 22 luglio 2026)": il primo giorno della banca, quando l'anteprima lo sa. */
   protected bankFromText(): string {
     const from = this.preview()?.bankFrom;
-    return from ? ` (il ${this.datePipe.transform(from, 'd MMMM y')})` : '';
+    return from ? ` (il ${formatLocalDate(from, 'long', this.locale)})` : '';
   }
 
   /**
@@ -371,8 +378,7 @@ export class ImportPage implements OnInit {
    * si aggiungono; 32 sono nel periodo che porta la banca." Conto manuale: "75 righe nuove, 3 già importate…".
    */
   protected summary(p: ImportPreview): string {
-    const n = (count: number, one: string, many: string) =>
-      count === 1 ? one : `${count} ${many}`;
+    const n = countOf;
     // Le operazioni sui titoli del file di Trade Republic: nel file, ma senza denaro sul conto.
     const skipped =
       p.skippedRows > 0
@@ -389,7 +395,7 @@ export class ImportPage implements OnInit {
       }
       return `${text}${skipped}.`;
     }
-    const from = this.datePipe.transform(p.bankFrom, 'd MMMM y');
+    const from = p.bankFrom ? formatLocalDate(p.bankFrom, 'long', this.locale) : null;
     if (p.tradeRepublic) {
       return this.tradeRepublicSummary(p, from ?? '');
     }
@@ -397,7 +403,7 @@ export class ImportPage implements OnInit {
       p.newRows === 0
         ? 'nessun movimento da aggiungere'
         : `${n(p.newRows, '1 movimento più vecchio', 'movimenti più vecchi')} del ${from} ` +
-          (p.newRows === 1 ? 'si aggiunge' : 'si aggiungono');
+          plural(p.newRows, { one: 'si aggiunge', other: 'si aggiungono' });
     let text = `Il file ha ${n(p.totalRows, '1 riga', 'righe')}: ${added}`;
     if (p.coveredRows > 0) {
       text += `; ${n(p.coveredRows, '1 è nel periodo che porta la banca', 'sono nel periodo che porta la banca')}`;
@@ -422,8 +428,7 @@ export class ImportPage implements OnInit {
    * denaro non vengono registrate."
    */
   private tradeRepublicSummary(p: ImportPreview, from: string): string {
-    const n = (count: number, one: string, many: string) =>
-      count === 1 ? one : `${count} ${many}`;
+    const n = countOf;
     const parts: string[] = [];
     if (p.completeRows > 0) {
       parts.push(
@@ -474,7 +479,10 @@ export class ImportPage implements OnInit {
   /** "Aggiungi 43 movimenti" (conto collegato) o "Importa 75 righe" (conto manuale). */
   protected importLabel(p: ImportPreview): string {
     if (p.linkedAccount && p.completeRows > 0) {
-      const complete = p.completeRows === 1 ? '1 movimento' : `${p.completeRows} movimenti`;
+      const complete = plural(p.completeRows, {
+        one: '1 movimento',
+        other: `${p.completeRows} movimenti`,
+      });
       return p.newRows === 0
         ? `Completa ${complete}`
         : `Aggiungi ${p.newRows} e completa ${complete}`;
@@ -483,10 +491,13 @@ export class ImportPage implements OnInit {
       if (p.newRows === 0) {
         return 'Niente da aggiungere';
       }
-      return p.newRows === 1 ? 'Aggiungi 1 movimento' : `Aggiungi ${p.newRows} movimenti`;
+      return plural(p.newRows, {
+        one: 'Aggiungi 1 movimento',
+        other: `Aggiungi ${p.newRows} movimenti`,
+      });
     }
     const rows = p.totalRows - p.skippedRows; // le operazioni sui titoli di Trade Republic non si importano
-    return rows === 1 ? 'Importa 1 riga' : `Importa ${rows} righe`;
+    return plural(rows, { one: 'Importa 1 riga', other: `Importa ${rows} righe` });
   }
 
   private requestPreview(mapping: ImportMapping | null): void {

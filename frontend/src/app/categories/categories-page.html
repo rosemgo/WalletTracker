@@ -73,7 +73,10 @@
                   routerLink="/movimenti"
                   [queryParams]="{ categoryId: category.id }"
                 >
-                  {{ category.uses }} {{ category.uses === 1 ? 'movimento' : 'movimenti' }}
+                  <ng-container i18n>{category.uses, plural,
+                    =1 {1 movimento}
+                    other {{{ category.uses }} movimenti}
+                  }</ng-container>
                 </a>
               } @else {
                 nessun movimento
@@ -97,9 +100,10 @@
                 <div class="confirm-delete">
                   <span class="secondary">
                     @if (category.uses > 0) {
-                      {{ category.uses }}
-                      {{ category.uses === 1 ? 'movimento resterà' : 'movimenti resteranno' }}
-                      senza categoria.
+                      <ng-container i18n>{category.uses, plural,
+                        =1 {1 movimento resterà senza categoria.}
+                        other {{{ category.uses }} movimenti resteranno senza categoria.}
+                      }</ng-container>
                     } @else {
                       Nessun movimento la usa.
                     }

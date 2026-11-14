@@ -150,8 +150,12 @@
   @if (preview(); as p) {
     <div class="preview">
       <p>
-        Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong>
-        {{ p.matches === 1 ? 'movimento' : 'movimenti' }}.
+        Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong
+        >&ngsp;<ng-container i18n>{p.matches, plural,
+          =1 {movimento}
+          other {movimenti}
+        }</ng-container
+        >.
         @if (p.matches > 0) {
           La regola ne classificherebbe <strong>{{ p.applies }}</strong
           >.
@@ -165,7 +169,7 @@
       <ul>
         @for (t of p.examples; track t.id) {
           <li>
-            {{ t.bookingDate | date: 'dd/MM/yyyy' }} · {{ t.description ?? t.counterparty }} ·
+            {{ t.bookingDate | localDate: 'numeric' }} · {{ t.description ?? t.counterparty }} ·
             {{ t.amount | money: t.currency }}
           </li>
         }
@@ -259,7 +263,9 @@
     <ul class="blockers">
       @for (b of asBlockers(list); track b.reason + (b.rule ?? '')) {
         <li>
-          <strong>{{ b.movements === 1 ? '1 movimento' : b.movements + ' movimenti' }}:</strong>
+          <strong i18n
+            >{b.movements, plural, =1 {1 movimento} other {{{ b.movements }} movimenti}}:</strong
+          >
           @switch (b.reason) {
             @case ('RULE') {
               vince la regola «{{ b.rule }}», che ha priorità {{ b.priority }}. Per far valere

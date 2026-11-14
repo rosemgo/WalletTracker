@@ -198,8 +198,8 @@ export class MonthChart {
     const step = STEPS.find((s) => max / s <= 2.5) ?? STEPS[STEPS.length - 1];
     const lines = [];
     for (let value = step; value < max; value += step) {
-      // A mano: in italiano toLocaleString non separa le migliaia sotto 10.000 ("1000 €").
-      const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
+      // "1.000 €": le migliaia separate e il simbolo della valuta del mese, come li scrive la lingua dell'app.
+      const label = this.euros(value);
       lines.push({ value, y: this.y(value), label });
     }
     return lines;

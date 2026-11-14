@@ -13,6 +13,7 @@ import {
   Transaction,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { plural } from '../text/plural';
 import { merchantSearch } from '../transactions/merchant-search';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
@@ -507,7 +508,10 @@ export class ExplorePage implements OnInit {
 
 /** La riga sotto un gruppo: la differenza dal solito, o quanti movimenti. Esportata per i test. */
 export function groupNote(group: ExploreGroup, euros: (v: number) => string): string {
-  const count = group.movements === 1 ? '1 movimento' : `${group.movements} movimenti`;
+  const count = plural(group.movements, {
+    one: '1 movimento',
+    other: `${group.movements} movimenti`,
+  });
   if (group.usual === null) {
     return count;
   }
