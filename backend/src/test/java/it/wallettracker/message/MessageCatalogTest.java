@@ -17,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import it.wallettracker.language.Language;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -111,10 +112,65 @@ class MessageCatalogTest {
         assertThat(TestMessages.text(Message.verbatim("can't parse {model}"))).isEqualTo("can't parse {model}");
     }
 
+    /**
+     * Ogni lingua ha le stesse frasi dell'italiano, con gli stessi parametri: una frase dimenticata resterebbe in
+     * italiano in mezzo all'inglese, e un parametro in meno ({1} che manca) farebbe sparire un pezzo di informazione.
+     */
+    @Test
+    void everyLanguageHasTheSameSentencesWithTheSameParameters() throws IOException {
+        Properties italian = catalog();
+        for (Language language : Language.values()) {
+            if (language == Language.IT) {
+                continue; // l'italiano è il catalogo di base
+            }
+            Properties translated = catalog("/messages_" + language.code() + ".properties");
+            assertThat(translated.stringPropertyNames()).as("le frasi in %s", language.code())
+                    .containsExactlyInAnyOrderElementsOf(italian.stringPropertyNames());
+            for (String code : italian.stringPropertyNames()) {
+                String sentence = translated.getProperty(code);
+                new MessageFormat(sentence, language.locale());
+                assertThat(sentence.replace("''", "")).as("un apostrofo solo in %s (%s)", code, language.code())
+                        .doesNotContain("'");
+                assertThat(parameters(sentence)).as("i parametri di %s in %s", code, language.code())
+                        .isEqualTo(parameters(italian.getProperty(code)));
+            }
+        }
+    }
+
+    @Test
+    void theEnglishSentencesAreWrittenWithTheirParametersAndPlurals() {
+        Messages messages = TestMessages.messages();
+        assertThat(messages.text(Message.of("category.duplicate", "Travel"), Locale.ENGLISH))
+                .isEqualTo("A category \"Travel\" already exists.");
+        assertThat(messages.text(Message.of("auth.wrong-pin", 1), Locale.ENGLISH))
+                .isEqualTo("Wrong PIN. 1 more attempt before a pause.");
+        assertThat(messages.text(Message.of("auth.wrong-pin", 4), Locale.ENGLISH))
+                .isEqualTo("Wrong PIN. 4 more attempts before a pause.");
+        assertThat(messages.text(Message.of("import.row-error", 3, Message.of("import.row.missing-date")),
+                Locale.ENGLISH)).isEqualTo("Row 3: the date is missing.");
+        // Con il paese (come lo manda un browser) vale la lingua; una lingua che non c'è si legge in italiano.
+        assertThat(messages.text(Message.of("duration.one-hour"), Locale.UK)).isEqualTo("1 hour");
+        assertThat(messages.text(Message.of("duration.one-hour"), Locale.GERMAN)).isEqualTo("1 ora");
+    }
+
+    /** I parametri di una frase, con il loro formato: "{0}", "{0,number,#}", "{0,choice". */
+    private static Set<String> parameters(String sentence) {
+        Set<String> parameters = new TreeSet<>();
+        Matcher matcher = Pattern.compile("\\{(\\d+)(,(number|choice))?").matcher(sentence);
+        while (matcher.find()) {
+            parameters.add(matcher.group(1) + (matcher.group(3) == null ? "" : "," + matcher.group(3)));
+        }
+        return parameters;
+    }
+
     private static Properties catalog() throws IOException {
+        return catalog("/messages.properties");
+    }
+
+    private static Properties catalog(String file) throws IOException {
         Properties properties = new Properties();
         try (Reader reader = new InputStreamReader(
-                MessageCatalogTest.class.getResourceAsStream("/messages.properties"), StandardCharsets.UTF_8)) {
+                MessageCatalogTest.class.getResourceAsStream(file), StandardCharsets.UTF_8)) {
             properties.load(reader);
         }
         return properties;

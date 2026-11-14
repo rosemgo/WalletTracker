@@ -101,7 +101,7 @@ public class LocalOnlyRequestFilter extends OncePerRequestFilter {
             throws IOException {
         log.warn("Richiesta rifiutata: {}", message);
         // Siamo prima di tutto il resto di Spring: la lingua si legge direttamente dalla richiesta.
-        String detail = messages.text(message, request.getLocale());
+        String detail = messages.text(message, request);
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType("application/problem+json");
         response.setCharacterEncoding("UTF-8");

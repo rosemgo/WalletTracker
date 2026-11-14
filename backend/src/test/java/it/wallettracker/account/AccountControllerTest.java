@@ -86,7 +86,7 @@ class AccountControllerTest {
 
     /**
      * Nel database l'errore dell'ultimo aggiornamento è un codice con i suoi parametri; la frase nasce nella risposta,
-     * nella lingua di chi la chiede. Oggi c'è solo l'italiano: anche a un browser in inglese arriva la frase italiana.
+     * nella lingua di chi la chiede: lo stesso errore salvato si legge in italiano e in inglese.
      */
     @Test
     void theSyncErrorIsSavedAsACodeAndAnsweredAsASentence() {
@@ -99,8 +99,9 @@ class AccountControllerTest {
         String sentence = "La banca ha risposto con un errore (codice 422): riproveremo al prossimo aggiornamento.";
         assertThat(mvc.get().uri("/api/accounts"))
                 .bodyJson().extractingPath("$[0].lastSyncError").isEqualTo(sentence);
-        assertThat(mvc.get().uri("/api/accounts").header("Accept-Language", "en-US"))
-                .bodyJson().extractingPath("$[0].lastSyncError").isEqualTo(sentence);
+        assertThat(mvc.get().uri("/api/accounts").header("Accept-Language", "en"))
+                .bodyJson().extractingPath("$[0].lastSyncError")
+                .isEqualTo("The bank answered with an error (code 422): we will try again at the next update.");
 
         // Un aggiornamento riuscito toglie l'errore.
         accountRepository.recordSync(account.getId(), Instant.now(), null);

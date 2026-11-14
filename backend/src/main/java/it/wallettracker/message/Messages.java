@@ -2,9 +2,11 @@ package it.wallettracker.message;
 
 import java.util.Locale;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.LocaleResolver;
 
 /**
  * Trasforma un {@link Message} nella sua frase, presa dal catalogo {@code messages.properties}.
@@ -20,9 +22,11 @@ import org.springframework.stereotype.Component;
 public class Messages {
 
     private final MessageSource source;
+    private final LocaleResolver localeResolver;
 
-    public Messages(MessageSource source) {
+    public Messages(MessageSource source, LocaleResolver localeResolver) {
         this.source = source;
+        this.localeResolver = localeResolver;
     }
 
     /** La frase nella lingua della richiesta in corso. */
@@ -35,7 +39,17 @@ public class Messages {
         return text(Message.of(code, args));
     }
 
-    /** La frase in una lingua precisa: per i filtri, che lavorano prima che Spring abbia letto quella della richiesta. */
+    /**
+     * La frase nella lingua di questa richiesta: per i filtri, che lavorano prima dei controller, quando Spring non ha
+     * ancora messo da parte la lingua della richiesta in corso. La regola è la stessa ({@code LanguageConfig}): la
+     * lingua chiesta se è una delle nostre, altrimenti l'italiano. Non {@code request.getLocale()}: senza l'header
+     * darebbe la lingua del sistema operativo del server.
+     */
+    public String text(Message message, HttpServletRequest request) {
+        return text(message, localeResolver.resolveLocale(request));
+    }
+
+    /** La frase in una lingua precisa. */
     public String text(Message message, Locale locale) {
         if (message.isVerbatim()) {
             return String.valueOf(message.args().getFirst());

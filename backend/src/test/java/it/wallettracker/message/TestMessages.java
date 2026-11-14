@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Locale;
 import java.util.function.Consumer;
 
+import it.wallettracker.language.LanguageConfig;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
 /**
@@ -15,7 +16,7 @@ import org.springframework.context.support.ResourceBundleMessageSource;
  */
 public final class TestMessages {
 
-    private static final Messages MESSAGES = new Messages(source());
+    private static final Messages MESSAGES = new Messages(source(), new LanguageConfig().localeResolver());
 
     private TestMessages() {
     }
