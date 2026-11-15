@@ -3114,6 +3114,20 @@ button.choice .check {
     0 2px 8px -2px rgb(16 24 40 / 0.12);
 }
 
+/* Una variante più piccola, dentro una scheda (Investimenti: gli elenchi delle rendite di tutto il periodo o del mese):
+   un interruttore secondario, che non deve pesare come quello del periodo in cima alla pagina. */
+.segmented.compact {
+  margin: 16px 0 4px;
+  padding: 3px;
+  border-radius: 12px;
+}
+
+.segmented.compact button {
+  min-height: 32px;
+  border-radius: 9px;
+  font-size: 0.86rem;
+}
+
 .explore.loading,
 .explore .card.loading {
   opacity: 0.6;

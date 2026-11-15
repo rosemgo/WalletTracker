@@ -1252,3 +1252,21 @@ comprende quel conto.
 
 **Le prove.** `InvestmentServiceTest`: un dossier come il ··3288 (giro titoli, cedola, ritenuta, prelievo) e uno con
 solo bollo e prelievo non hanno l'avviso; il fondo con il solo versamento sì.
+
+## Parte Y: gli elenchi delle rendite di un mese solo
+
+Richiesta dell'utente: nella scheda "Cedole, dividendi e interessi" poter vedere negli elenchi "Per tipo" e "Da dove"
+solo le rendite del mese della barra, e non sempre quelle di tutto il periodo.
+
+**L'API.** `GET /api/investments` ha un campo in più, `incomeByMonth`: per ogni mese del periodo con delle rendite, gli
+stessi due elenchi del periodo (`byType`, `bySource`), calcolati con la stessa funzione (`Investments.netIncomeBy`) sui
+giorni di quel mese. Sono quindi netti nello stesso modo: una ritenuta spostata sul giorno della sua cedola (parte U)
+conta nel mese della cedola. I mesi senza rendite non ci sono. Tutto in una risposta sola: cambiare mese è immediato,
+senza un'altra richiesta.
+
+**La pagina.** Sopra "Per tipo" un interruttore a due posizioni (`.segmented.compact`): il periodo scelto in cima
+("Da inizio anno") e il mese della barra in evidenza ("Luglio 2026"). Il secondo pulsante segue la barra: toccandone
+un'altra, gli elenchi cambiano mese. La cifra grande resta quella del periodo, e la riga sopra il grafico dice già la
+cifra del mese. Un mese senza rendite lo dice ("Nessuna rendita in agosto 2026."). Con il mese scelto, i collegamenti
+delle righe aprono Movimenti su quel mese. La scelta resta cambiando periodo o valuta: è un modo di guardare, non un
+dato.

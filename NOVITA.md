@@ -48,6 +48,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   riquadro sotto.
 - **Cambiando mese, il grafico del Riepilogo si disegna una volta sola**: prima ripartiva due volte, la prima ancora con i
   numeri del mese lasciato.
+- **Investimenti: le rendite di un mese solo.** Nella scheda "Cedole, dividendi e interessi", sopra gli elenchi "Per
+  tipo" e "Da dove", un interruttore sceglie se mostrare le rendite di tutto il periodo (come prima) o solo quelle del
+  mese della barra in evidenza. Toccando un'altra barra gli elenchi la seguono, e i collegamenti a Movimenti aprono
+  quel mese.
 
 ## 1.2.7
 

@@ -52,6 +52,13 @@ public final class InvestmentDtos {
     }
 
     /**
+     * Le rendite nette di un mese, per tipo e per titolo: gli stessi elenchi del periodo, per un mese solo. La pagina li
+     * mostra quando si sceglie di guardare il mese della barra invece di tutto il periodo.
+     */
+    public record IncomeMonth(YearMonth month, List<Group> byType, List<Group> bySource) {
+    }
+
+    /**
      * Tutto quello che mostrano la scheda del Riepilogo e la pagina Investimenti.
      *
      * @param investedTotal       l'investito netto in titoli (acquisti meno vendite) di tutta la storia, fino a oggi
@@ -68,6 +75,7 @@ public final class InvestmentDtos {
      * @param otherTaxesByType    le altre tasse del periodo per categoria
      * @param incomeByType        le rendite nette del periodo per categoria (Cedole, Dividendi, Interessi)
      * @param incomeBySource      le rendite nette del periodo per titolo (o per conto, se il titolo non ha nome)
+     * @param incomeByMonth       gli stessi due elenchi mese per mese, solo per i mesi del periodo con delle rendite
      * @param trades              gli acquisti e le vendite del periodo, dal più recente
      * @param transfers           i bonifici del periodo che fanno le barre (il lato dei conti di tutti i giorni), dal più
      *                            recente
@@ -80,7 +88,8 @@ public final class InvestmentDtos {
             BigDecimal transferredTotal, BigDecimal incomeThisYear, BigDecimal boughtInPeriod,
             BigDecimal soldInPeriod, BigDecimal transferredInPeriod, BigDecimal incomeInPeriod,
             BigDecimal withholdingInPeriod, BigDecimal otherTaxesInPeriod, List<Month> months,
-            List<Group> incomeByType, List<Group> incomeBySource, List<Group> otherTaxesByType,
+            List<Group> incomeByType, List<Group> incomeBySource, List<IncomeMonth> incomeByMonth,
+            List<Group> otherTaxesByType,
             List<TransactionDto> trades, List<TransactionDto> transfers, List<String> onlyTransfers,
             List<Cash> cash) {
     }

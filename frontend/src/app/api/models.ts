@@ -743,6 +743,13 @@ export interface InvestmentGroup {
   search?: string | null; // ...e le parole fisse del testo, per trovare proprio quei movimenti
 }
 
+/** Le rendite nette di un mese, per tipo e per titolo: gli elenchi del periodo, per un mese solo. */
+export interface InvestmentIncomeMonth {
+  month: string; // "2026-07"
+  byType: InvestmentGroup[];
+  bySource: InvestmentGroup[];
+}
+
 /**
  * GET /api/investments (docs/investimenti.md, parte I): quanto hai investito in titoli (acquisti meno vendite), i
  * bonifici verso i conti di investimento e le rendite. Non quanto valgono oggi gli investimenti.
@@ -767,6 +774,7 @@ export interface Investments {
   months: InvestmentMonth[];
   incomeByType: InvestmentGroup[];
   incomeBySource: InvestmentGroup[];
+  incomeByMonth: InvestmentIncomeMonth[]; // gli stessi due elenchi mese per mese (solo i mesi con delle rendite)
   otherTaxesByType: InvestmentGroup[]; // le altre tasse per categoria
   trades: Transaction[]; // acquisti e vendite del periodo, dal più recente
   transfers: Transaction[]; // i bonifici del periodo che fanno le barre, dal più recente

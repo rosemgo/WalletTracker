@@ -128,6 +128,7 @@ public class InvestmentService {
                 Investments.months(movements, first, current),
                 Investments.netIncomeBy(movements, from, today, true),
                 Investments.netIncomeBy(movements, from, today, false),
+                Investments.incomeByMonth(movements, first, today),
                 Investments.otherTaxesBy(movements, from, today),
                 trades, transfers, onlyTransfers(transactions), cash(chosen));
     }
