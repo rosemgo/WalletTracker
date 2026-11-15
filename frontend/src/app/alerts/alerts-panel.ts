@@ -72,8 +72,11 @@ export class AlertsPanel implements OnInit {
   /** "tra 5 giorni", "domani", "oggi". */
   protected when(daysLeft: number | null): string {
     if (daysLeft === null || daysLeft <= 0) {
-      return 'oggi';
+      return $localize`oggi`;
     }
-    return plural(daysLeft, { one: 'domani', other: `tra ${daysLeft} giorni` });
+    return plural(daysLeft, {
+      one: $localize`domani`,
+      other: $localize`tra ${daysLeft}:daysLeft: giorni`,
+    });
   }
 }

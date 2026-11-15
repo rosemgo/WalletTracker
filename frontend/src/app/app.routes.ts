@@ -12,56 +12,56 @@ import { OverviewPage } from './overview/overview-page';
  */
 export const routes: Routes = [
   { path: '', redirectTo: 'riepilogo', pathMatch: 'full' },
-  { path: 'riepilogo', component: OverviewPage, title: 'Riepilogo · WalletTracker' },
+  { path: 'riepilogo', component: OverviewPage, title: $localize`Riepilogo · WalletTracker` },
   {
     path: 'analisi',
     loadComponent: () => import('./explore/explore-page').then((m) => m.ExplorePage),
-    title: 'Analisi · WalletTracker',
+    title: $localize`Analisi · WalletTracker`,
   },
   {
     path: 'analisi/categoria/:id',
     loadComponent: () => import('./explore/category-page').then((m) => m.CategoryPage),
-    title: 'Categoria · WalletTracker',
+    title: $localize`Categoria · WalletTracker`,
   },
   {
     path: 'investimenti',
     loadComponent: () => import('./investments/investments-page').then((m) => m.InvestmentsPage),
-    title: 'Investimenti · WalletTracker',
+    title: $localize`Investimenti · WalletTracker`,
   },
   {
     path: 'budget',
     loadComponent: () => import('./budget/budget-page').then((m) => m.BudgetPage),
-    title: 'Budget · WalletTracker',
+    title: $localize`Budget · WalletTracker`,
   },
   {
     path: 'abbonamenti',
     loadComponent: () =>
       import('./subscriptions/subscriptions-page').then((m) => m.SubscriptionsPage),
-    title: 'Abbonamenti · WalletTracker',
+    title: $localize`Abbonamenti · WalletTracker`,
   },
   {
     path: 'movimenti',
     loadComponent: () => import('./transactions/transactions-page').then((m) => m.TransactionsPage),
-    title: 'Movimenti · WalletTracker',
+    title: $localize`Movimenti · WalletTracker`,
     // Il dettaglio è una pagina "figlia": si apre dentro l'elenco (nel suo <router-outlet>), che resta in vita.
     children: [
       {
         path: ':id',
         loadComponent: () =>
           import('./transactions/transaction-detail').then((m) => m.TransactionDetail),
-        title: 'Movimento · WalletTracker',
+        title: $localize`Movimento · WalletTracker`,
       },
     ],
   },
   {
     path: 'conti',
     loadComponent: () => import('./accounts/accounts-page').then((m) => m.AccountsPage),
-    title: 'Conti · WalletTracker',
+    title: $localize`Conti · WalletTracker`,
   },
   {
     path: 'importa',
     loadComponent: () => import('./import/import-page').then((m) => m.ImportPage),
-    title: 'Importa movimenti · WalletTracker',
+    title: $localize`Importa movimenti · WalletTracker`,
   },
   // "Completa i movimenti" è stata unita a Importa (docs/importa-file.md, parte J): il vecchio indirizzo, per esempio
   // da un segnalibro, porta lì (con ?conto=... se c'era).
@@ -69,34 +69,34 @@ export const routes: Routes = [
   {
     path: 'regole',
     loadComponent: () => import('./rules/rules-page').then((m) => m.RulesPage),
-    title: 'Regole · WalletTracker',
+    title: $localize`Regole · WalletTracker`,
   },
   {
     path: 'categorie',
     loadComponent: () => import('./categories/categories-page').then((m) => m.CategoriesPage),
-    title: 'Categorie · WalletTracker',
+    title: $localize`Categorie · WalletTracker`,
   },
   {
     path: 'collega',
     loadComponent: () => import('./link/link-page').then((m) => m.LinkPage),
-    title: 'Collega una banca · WalletTracker',
+    title: $localize`Collega una banca · WalletTracker`,
   },
   {
     path: 'impostazioni',
     loadComponent: () => import('./settings/settings-page').then((m) => m.SettingsPage),
-    title: 'Impostazioni · WalletTracker',
+    title: $localize`Impostazioni · WalletTracker`,
   },
   {
     path: 'altro',
     loadComponent: () => import('./more/more-page').then((m) => m.MorePage),
-    title: 'Altro · WalletTracker',
+    title: $localize`Altro · WalletTracker`,
   },
   // L'indirizzo di ritorno dopo il login sulla banca: deve coincidere con il "redirect URL"
   // registrato su Enable Banking (https://localhost:8443/callback).
   {
     path: 'callback',
     loadComponent: () => import('./link/callback-page').then((m) => m.CallbackPage),
-    title: 'Collegamento · WalletTracker',
+    title: $localize`Collegamento · WalletTracker`,
   },
   { path: '**', redirectTo: 'riepilogo' }, // qualsiasi altro indirizzo
 ];

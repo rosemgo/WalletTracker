@@ -22,10 +22,10 @@ export function dayLabel(date: string, today: Date): string {
   const text = formatLocalDate(when, year === today.getFullYear() ? 'weekday' : 'full');
   const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
   if (date === isoDate(today)) {
-    return `Oggi · ${text}`;
+    return $localize`Oggi · ${text}:text:`;
   }
   if (date === isoDate(yesterday)) {
-    return `Ieri · ${text}`;
+    return $localize`Ieri · ${text}:text:`;
   }
   return capitalized(text);
 }
@@ -62,7 +62,7 @@ export function groupByDay(items: Transaction[], today: Date): DayGroup[] {
  */
 export function nameOf(transaction: Transaction): string {
   const text = transaction.name || transaction.counterparty || transaction.description || '';
-  return readable(text.replace(/\s+/g, ' ').trim()) || '(nessuna descrizione)';
+  return readable(text.replace(/\s+/g, ' ').trim()) || $localize`(nessuna descrizione)`;
 }
 
 /** L'iniziale del nome, per il cerchio colorato: la prima lettera o cifra ("·" se non ce n'è). */

@@ -1,6 +1,6 @@
-<h1>Regole</h1>
+<h1 i18n>Regole</h1>
 
-<p class="hint">
+<p i18n class="hint">
   Una regola insegna all'app a riconoscere un movimento:
   <em
     >"se il testo contiene (o inizia con) queste parole, allora è una spesa, un'entrata… di questa
@@ -13,14 +13,14 @@
 
 <!-- Che cosa viene prima delle regole (ClassificationService): aperto solo da chi se lo chiede. -->
 <details class="hint why-rules" data-testid="why-rules">
-  <summary>Perché a volte una regola non vale?</summary>
-  <p>Prima delle regole l'app controlla due cose:</p>
+  <summary i18n>Perché a volte una regola non vale?</summary>
+  <p i18n>Prima delle regole l'app controlla due cose:</p>
   <ul>
-    <li>
+    <li i18n>
       <strong>se il movimento l'hai sistemato tu</strong>, cambiandogli tipo o categoria: vale la
       tua scelta, e nessuna regola la cambia;
     </li>
-    <li>
+    <li i18n>
       <strong>se sono soldi che passano da un tuo conto a un altro</strong> (dal conto corrente alla
       carta di credito, o al conto degli investimenti): li riconosce da sola, perché trova l'uscita
       su un conto e l'entrata uguale sull'altro. Non sono né una spesa né un'entrata, e le regole
@@ -38,7 +38,7 @@
 @if (savedBlockers(); as w) {
   <!-- Dopo "Salva": la regola è salvata, ma su alcuni movimenti vince qualcun altro (docs/investimenti.md, parte H). -->
   <div class="card warning" role="status">
-    <p>
+    <p i18n>
       Attenzione: la regola «{{ w.rule }}» è salvata, ma per alcuni movimenti che corrispondono al
       suo testo non vince lei.
     </p>
@@ -49,72 +49,78 @@
 <!-- Il modulo. [formGroup] lo collega a "form" nella classe; (ngSubmit) scatta premendo "Salva" o Invio.
      id: "Modifica" lo porta in vista (scrollIntoView), anche con un elenco lungo di regole. -->
 <form id="rule-form" class="card" [formGroup]="form" (ngSubmit)="save()">
-  <h2>{{ editing() ? 'Modifica la regola' : 'Nuova regola' }}</h2>
+  <h2>
+    <ng-container i18n>{!!editing(), select,
+      true {Modifica la regola}
+      other {Nuova regola}
+    }</ng-container>
+  </h2>
 
   <div class="form-grid">
-    <label>
-      Nome
-      <input formControlName="name" placeholder="es. Supermercato" />
+    <label
+      ><ng-container i18n> Nome </ng-container
+      ><input formControlName="name" placeholder="es. Supermercato" i18n-placeholder />
       @if (showError('name')) {
-        <span class="error">Scrivi un nome (massimo 100 caratteri).</span>
+        <span i18n class="error">Scrivi un nome (massimo 100 caratteri).</span>
       }
     </label>
 
-    <label>
-      Se il testo
-      <select formControlName="matchMode">
+    <label
+      ><ng-container i18n> Se il testo </ng-container
+      ><select formControlName="matchMode">
         @for (mode of matchModes; track mode) {
           <option [value]="mode">{{ matchModeLabels[mode] }}</option>
         }
       </select>
     </label>
 
-    <label>
-      queste parole
-      <input formControlName="pattern" placeholder="es. ESSELUNGA" />
+    <label
+      ><ng-container i18n> queste parole </ng-container
+      ><input formControlName="pattern" placeholder="es. ESSELUNGA" i18n-placeholder />
       @if (showError('pattern')) {
-        <span class="error">Almeno 2 caratteri.</span>
+        <span i18n class="error">Almeno 2 caratteri.</span>
       }
       <!-- Che cosa vuol dire la modalità scelta: la differenza tra le prime due non è ovvia. -->
       @switch (form.controls.matchMode.value) {
         @case ('CONTAINS') {
-          <span class="secondary">in quest'ordine e una dopo l'altra</span>
+          <span i18n class="secondary">in quest'ordine e una dopo l'altra</span>
         }
         @case ('ALL_WORDS') {
-          <span class="secondary"
+          <span i18n class="secondary"
             >parole intere, in qualsiasi ordine, anche con altre in mezzo</span
           >
         }
         @case ('STARTS_WITH') {
-          <span class="secondary">all'inizio del testo</span>
+          <span i18n class="secondary">all'inizio del testo</span>
         }
       }
     </label>
 
-    <label>
-      per
-      <select formControlName="amountSign">
+    <label
+      ><ng-container i18n> per </ng-container
+      ><select formControlName="amountSign">
         @for (sign of amountSigns; track sign) {
           <option [value]="sign">{{ amountSignLabels[sign] }}</option>
         }
       </select>
     </label>
 
-    <label>
-      allora il tipo è
-      <select formControlName="resultType">
+    <label
+      ><ng-container i18n> allora il tipo è </ng-container
+      ><select formControlName="resultType">
         @for (type of types; track type) {
           <option [value]="type">{{ typeLabels[type] }}</option>
         }
       </select>
     </label>
 
-    <label>
-      Categoria (facoltativa)
-      <!-- In cima le categorie che si addicono al tipo scelto qui sopra ("allora il tipo è"). -->
-      <!-- [ngValue] invece di [value]: il valore del campo resta un numero (o null), non diventa testo. -->
-      <select formControlName="categoryId">
-        <option [ngValue]="null">— nessuna —</option>
+    <label
+      ><ng-container i18n>
+        Categoria (facoltativa)
+        <!-- In cima le categorie che si addicono al tipo scelto qui sopra ("allora il tipo è"). -->
+        <!-- [ngValue] invece di [value]: il valore del campo resta un numero (o null), non diventa testo. --> </ng-container
+      ><select formControlName="categoryId">
+        <option i18n [ngValue]="null">— nessuna —</option>
         @for (group of categoryGroups(); track group.kind) {
           <optgroup [label]="group.label">
             @for (category of group.categories; track category.id) {
@@ -125,37 +131,34 @@
       </select>
     </label>
 
-    <label>
-      Priorità
-      <input type="number" formControlName="priority" />
+    <label
+      ><ng-container i18n> Priorità </ng-container
+      ><input type="number" formControlName="priority" />
       @if (showError('priority')) {
-        <span class="error">Un numero da 0 a 10000.</span>
+        <span i18n class="error">Un numero da 0 a 10000.</span>
       }
     </label>
 
     <label class="checkbox">
-      <input type="checkbox" formControlName="enabled" />
-      Attiva
-    </label>
+      <input type="checkbox" formControlName="enabled" /><ng-container i18n>
+        Attiva
+      </ng-container></label
+    >
   </div>
 
   <div class="toolbar">
-    <button type="button" (click)="tryRule()">Prova</button>
-    <button type="submit">Salva</button>
+    <button i18n type="button" (click)="tryRule()">Prova</button>
+    <button i18n type="submit">Salva</button>
     @if (editing()) {
-      <button type="button" class="link" (click)="cancel()">Annulla</button>
+      <button i18n type="button" class="link" (click)="cancel()">Annulla</button>
     }
   </div>
 
   @if (preview(); as p) {
     <div class="preview">
-      <p>
+      <p i18n>
         Il testo di questa regola corrisponde a <strong>{{ p.matches }}</strong
-        >&ngsp;<ng-container i18n>{p.matches, plural,
-          =1 {movimento}
-          other {movimenti}
-        }</ng-container
-        >.
+        >&ngsp;{p.matches, plural, =1 {movimento} other {movimenti}}.
         @if (p.matches > 0) {
           La regola ne classificherebbe <strong>{{ p.applies }}</strong
           >.
@@ -164,7 +167,7 @@
       <!-- Chi vince sugli altri (docs/investimenti.md, parte H): senza, "corrisponde a 4" sembrava "vale per 4". -->
       <ng-container *ngTemplateOutlet="blockersList; context: { $implicit: p.blockers }" />
       @if (p.matches > 0) {
-        <p class="secondary">I più recenti:</p>
+        <p i18n class="secondary">I più recenti:</p>
       }
       <ul>
         @for (t of p.examples; track t.id) {
@@ -187,48 +190,49 @@
     <table class="cards">
       <thead>
         <tr>
-          <th>Priorità</th>
-          <th>Nome</th>
-          <th>Condizione</th>
-          <th>Risultato</th>
-          <th class="amount">Usata</th>
-          <th>Attiva</th>
+          <th i18n>Priorità</th>
+          <th i18n>Nome</th>
+          <th i18n>Condizione</th>
+          <th i18n>Risultato</th>
+          <th i18n class="amount">Usata</th>
+          <th i18n>Attiva</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         @for (rule of asRules(list); track rule.id) {
           <tr [class.disabled]="!rule.enabled">
-            <td data-label="Priorità">{{ rule.priority }}</td>
+            <td data-label="Priorità" i18n-data-label>{{ rule.priority }}</td>
             <td class="card-title">
               {{ rule.name }}
               @if (rule.builtin) {
-                <div class="secondary">Regola di partenza</div>
+                <div i18n class="secondary">Regola di partenza</div>
               }
             </td>
-            <td data-label="Condizione">
+            <td data-label="Condizione" i18n-data-label>
               {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
               <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
             </td>
-            <td data-label="Risultato">
+            <td data-label="Risultato" i18n-data-label>
               {{ typeLabels[rule.resultType] }}
               @if (rule.category) {
                 <div class="secondary">{{ rule.category }}</div>
               }
             </td>
-            <td data-label="Usata" class="amount">{{ rule.uses }}</td>
-            <td data-label="Attiva">
+            <td data-label="Usata" i18n-data-label class="amount">{{ rule.uses }}</td>
+            <td data-label="Attiva" i18n-data-label>
               <input
                 type="checkbox"
                 [checked]="rule.enabled"
-                [attr.aria-label]="'Attiva ' + rule.name"
+                aria-label="Attiva {{ rule.name }}"
+                i18n-aria-label
                 (change)="toggle(rule)"
               />
             </td>
             <td data-label="">
-              <button type="button" class="link" (click)="edit(rule)">Modifica</button>
+              <button i18n type="button" class="link" (click)="edit(rule)">Modifica</button>
               @if (!rule.builtin) {
-                · <button type="button" class="link" (click)="remove(rule)">Elimina</button>
+                · <button i18n type="button" class="link" (click)="remove(rule)">Elimina</button>
               }
             </td>
           </tr>
@@ -238,19 +242,19 @@
   </div>
 </ng-template>
 
-<h2 class="section-title">Le tue regole</h2>
+<h2 i18n class="section-title">Le tue regole</h2>
 @if (ownRules().length > 0) {
   <ng-container *ngTemplateOutlet="rulesTable; context: { $implicit: ownRules() }" />
 } @else {
-  <p class="secondary">
+  <p i18n class="secondary">
     Nessuna regola tua: creane una qui sopra, oppure da un movimento ("Crea una regola" nella sua
     scheda).
   </p>
 }
 
 <details class="builtin-rules">
-  <summary>Regole di partenza ({{ builtinRules().length }})</summary>
-  <p class="hint">
+  <summary i18n>Regole di partenza ({{ builtinRules().length }})</summary>
+  <p i18n class="hint">
     Vengono con l'app e riconoscono i movimenti tipici di banche e investimenti. Puoi disattivarle o
     cambiarne la priorità; non si eliminano.
   </p>
@@ -268,16 +272,22 @@
           >
           @switch (b.reason) {
             @case ('RULE') {
-              vince la regola «{{ b.rule }}», che ha priorità {{ b.priority }}. Per far valere
-              questa, dalle una priorità più bassa di {{ b.priority }}.
+              <ng-container i18n>
+                vince la regola «{{ b.rule }}», che ha priorità {{ b.priority }}. Per far valere
+                questa, dalle una priorità più bassa di {{ b.priority }}.
+              </ng-container>
             }
             @case ('MANUAL') {
-              il tipo è stato scelto a mano, e una scelta a mano vince sempre sulle regole.
+              <ng-container i18n>
+                il tipo è stato scelto a mano, e una scelta a mano vince sempre sulle regole.
+              </ng-container>
             }
             @default {
-              sono trasferimenti tra i tuoi conti (abbinati, o con l'IBAN di un tuo conto): vengono
-              prima delle regole. Per un conto di investimento, dagli il ruolo Investimenti in
-              Conti.
+              <ng-container i18n>
+                sono trasferimenti tra i tuoi conti (abbinati, o con l'IBAN di un tuo conto):
+                vengono prima delle regole. Per un conto di investimento, dagli il ruolo
+                Investimenti in Conti.
+              </ng-container>
             }
           }
         </li>

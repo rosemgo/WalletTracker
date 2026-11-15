@@ -9,8 +9,8 @@ import { ReadablePipe, readable } from '../text/readable';
 import { merchantSearch } from '../transactions/merchant-search';
 
 export const FREQUENCY_LABELS: Record<Frequency, string> = {
-  MONTHLY: 'al mese',
-  YEARLY: "all'anno",
+  MONTHLY: $localize`al mese`,
+  YEARLY: $localize`all'anno`,
 };
 
 /**
@@ -52,7 +52,7 @@ export class SubscriptionsPage implements OnInit {
         expectedAmount: suggestion.typicalAmount,
       })
       .subscribe({
-        next: () => this.done(`"${chosenName}" aggiunto agli abbonamenti.`),
+        next: () => this.done($localize`"${chosenName}:chosenName:" aggiunto agli abbonamenti.`),
         error: (response) => this.fail(response),
       });
   }
@@ -65,15 +65,25 @@ export class SubscriptionsPage implements OnInit {
     this.api
       .dismissSubscription(suggestion.merchantKey, suggestion.currency, suggestion.typicalAmount)
       .subscribe({
-        next: () => this.done(`"${readable(suggestion.name)}" non verrà più suggerito.`),
+        next: () =>
+          this.done($localize`"${readable(suggestion.name)}:name:" non verrà più suggerito.`),
         error: (response) => this.fail(response),
       });
   }
 
+  /** Le frasi di conferma di {@link remove}, intere: così chi traduce le vede per quello che sono. */
+  protected removedText(name: string): string {
+    return $localize`${name}:name: tolto dagli abbonamenti: fatto.`;
+  }
+
+  protected suggestableAgainText(merchant: string): string {
+    return $localize`${merchant}:merchant: potrà essere suggerito di nuovo: fatto.`;
+  }
+
   /** Toglie un abbonamento dall'elenco, o annulla un "non suggerire più". */
-  remove(id: number, what: string): void {
+  remove(id: number, doneText: string): void {
     this.api.deleteSubscription(id).subscribe({
-      next: () => this.done(`${what}: fatto.`),
+      next: () => this.done(doneText),
       error: (response) => this.fail(response),
     });
   }
@@ -85,13 +95,14 @@ export class SubscriptionsPage implements OnInit {
   }
 
   private fail(response: { error?: { detail?: string } }): void {
-    this.error.set(response.error?.detail ?? 'Operazione non riuscita.');
+    this.error.set(response.error?.detail ?? $localize`Operazione non riuscita.`);
   }
 
   private load(): void {
     this.api.subscriptions().subscribe({
       next: (overview) => this.overview.set(overview),
-      error: () => this.error.set('Impossibile caricare gli abbonamenti: il backend è avviato?'),
+      error: () =>
+        this.error.set($localize`Impossibile caricare gli abbonamenti: il backend è avviato?`),
     });
     this.api.subscriptionSuggestions().subscribe({
       next: (suggestions) => this.suggestions.set(suggestions),

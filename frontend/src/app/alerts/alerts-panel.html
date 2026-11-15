@@ -1,5 +1,5 @@
 @if (alerts().length > 0) {
-  <section class="alerts" aria-label="Avvisi">
+  <section class="alerts" aria-label="Avvisi" i18n-aria-label>
     @for (alert of alerts(); track alert) {
       <!-- Lo stato: icona + testo, come nei budget. CRITICAL = rosso ✕, WARNING = giallo !. -->
       <div class="alert" [class]="'alert ' + alert.severity.toLowerCase()">
@@ -12,34 +12,44 @@
         <div class="alert-body">
           @switch (alert.kind) {
             @case ('CONSENT_EXPIRED') {
-              <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
-              Dal {{ alert.date | localDate: 'numeric' }} i movimenti non vengono più aggiornati.
-              Ricollegala: conti, movimenti e correzioni restano.
-              <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
-                >Ricollega {{ alert.bank }}</a
-              >
+              <ng-container i18n>
+                <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
+                Dal {{ alert.date | localDate: 'numeric' }} i movimenti non vengono più aggiornati.
+                Ricollegala: conti, movimenti e correzioni restano.
+                <a
+                  routerLink="/collega"
+                  [queryParams]="{ bank: alert.bank, country: alert.country }"
+                  >Ricollega {{ alert.bank }}</a
+                >
+              </ng-container>
             }
             @case ('CONSENT_EXPIRING') {
-              <strong>Il collegamento con {{ alert.bank }} scade {{ when(alert.daysLeft) }}</strong>
-              ({{ alert.date | localDate: 'numeric' }}). Le regole europee (PSD2) chiedono di
-              rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza, non
-              perdi niente.
-              <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
-                >Ricollega {{ alert.bank }}</a
-              >
+              <ng-container i18n>
+                <strong
+                  >Il collegamento con {{ alert.bank }} scade {{ when(alert.daysLeft) }}</strong
+                >
+                ({{ alert.date | localDate: 'numeric' }}). Le regole europee (PSD2) chiedono di
+                rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza,
+                non perdi niente.
+                <a
+                  routerLink="/collega"
+                  [queryParams]="{ bank: alert.bank, country: alert.country }"
+                  >Ricollega {{ alert.bank }}</a
+                >
+              </ng-container>
             }
             @case ('SYNC_FAILED') {
-              <strong>Aggiornamento non riuscito: {{ alert.account }}.</strong>
+              <strong i18n>Aggiornamento non riuscito: {{ alert.account }}.</strong>
               {{ alert.message }}
-              <a routerLink="/conti">Vai ai conti</a>
+              <a i18n routerLink="/conti">Vai ai conti</a>
             }
             @case ('BUDGET_OVER') {
-              <strong>Budget superati questo mese:</strong> {{ alert.items.join(', ') }}.
-              <a routerLink="/budget">Vai ai budget</a>
+              <strong i18n>Budget superati questo mese:</strong> {{ alert.items.join(', ') }}.
+              <a i18n routerLink="/budget">Vai ai budget</a>
             }
           }
         </div>
-        <app-close-button label="Chiudi questo avviso" (closed)="close(alert)" />
+        <app-close-button label="Chiudi questo avviso" i18n-label (closed)="close(alert)" />
       </div>
     }
   </section>

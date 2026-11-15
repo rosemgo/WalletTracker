@@ -9,6 +9,7 @@ import { UpdateStore } from './api/update-store';
 import { SetupStore } from './api/setup-store';
 import { AuthStore } from './auth/auth-store';
 import { PinPage } from './auth/pin-page';
+import { LanguageStore } from './language/language-store';
 import { MORE_PAGES, NavItem } from './more/more-pages';
 import { PrivacyStore } from './privacy/privacy-store';
 import { AppStatus } from './pwa/app-status';
@@ -23,14 +24,14 @@ import { DismissedNotices } from './ui/dismissed-notices';
 export const MAIN_SECTIONS: NavItem[] = [
   {
     path: '/riepilogo',
-    label: 'Riepilogo',
+    label: $localize`Riepilogo`,
     icon: 'M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z',
   },
-  { path: '/movimenti', label: 'Movimenti', icon: 'M4 7h16M4 12h16M4 17h10' },
-  { path: '/analisi', label: 'Analisi', icon: 'M5 20V11M12 20V5M19 20v-6' },
+  { path: '/movimenti', label: $localize`Movimenti`, icon: 'M4 7h16M4 12h16M4 17h10' },
+  { path: '/analisi', label: $localize`Analisi`, icon: 'M5 20V11M12 20V5M19 20v-6' },
   {
     path: '/budget',
-    label: 'Budget',
+    label: $localize`Budget`,
     icon: 'M6 5h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM4 10h16',
   },
 ];
@@ -38,7 +39,7 @@ export const MAIN_SECTIONS: NavItem[] = [
 /** "Altro": sul telefono porta all'elenco delle pagine di servizio; sul PC quelle pagine sono già nella colonna. */
 export const MORE_SECTION: NavItem = {
   path: '/altro',
-  label: 'Altro',
+  label: $localize`Altro`,
   icon: 'M5.5 12h.01M12 12h.01M18.5 12h.01',
 };
 
@@ -78,18 +79,20 @@ export class App implements OnInit {
       return null;
     }
     if (!status.serviceRunning) {
-      return 'Backup: il servizio dei backup non risponde.';
+      return $localize`Backup: il servizio dei backup non risponde.`;
     }
     if (!status.automaticEnabled) {
-      return 'Backup: il backup automatico è spento (manca la password dei backup).';
+      return $localize`Backup: il backup automatico è spento (manca la password dei backup).`;
     }
     if (status.lastError) {
-      return "Backup: l'ultimo backup non è riuscito.";
+      return $localize`Backup: l'ultimo backup non è riuscito.`;
     }
-    return 'Backup: nessun backup negli ultimi due giorni.';
+    return $localize`Backup: nessun backup negli ultimi due giorni.`;
   });
   /** La modalità discreta: l'occhio in alto (docs/42, parte B). */
   protected readonly privacy = inject(PrivacyStore);
+  protected readonly showAmounts = $localize`Mostra gli importi`;
+  protected readonly hideAmounts = $localize`Nascondi gli importi`;
   /** La rete e le versioni nuove dell'app installabile (docs/42, parte E). */
   protected readonly status = inject(AppStatus);
   protected readonly sections = MAIN_SECTIONS;
@@ -121,6 +124,8 @@ export class App implements OnInit {
   constructor() {
     // Applica subito il tema ricordato (la classe lo fa quando viene creata).
     inject(ThemeStore);
+    // Tiene la lingua di questa pagina allineata a quella dell'installazione (anche qui: basta crearla).
+    inject(LanguageStore);
 
     // Appena si entra (PIN giusto, o sessione ancora aperta) si chiede lo stato di Enable Banking: prima il backend
     // risponderebbe 401.

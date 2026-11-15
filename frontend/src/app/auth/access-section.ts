@@ -19,12 +19,12 @@ import { RecoveryCodeView } from './recovery-code';
       <app-recovery-code [code]="code" (saved)="newCode.set(null)" />
     } @else if (auth.status(); as status) {
       @if (status.pinSet) {
-        <p class="message">✓ L'app è protetta da un PIN: lo chiede su ogni dispositivo.</p>
+        <p i18n class="message">✓ L'app è protetta da un PIN: lo chiede su ogni dispositivo.</p>
         @if (status.local) {
           <form class="form-grid" (ngSubmit)="remove()">
-            <label>
-              PIN di adesso
-              <input
+            <label
+              ><ng-container i18n> PIN di adesso </ng-container
+              ><input
                 type="password"
                 inputmode="numeric"
                 autocomplete="current-password"
@@ -34,25 +34,25 @@ import { RecoveryCodeView } from './recovery-code';
               />
             </label>
             <div class="form-button">
-              <button type="submit" [disabled]="busy()">Togli il PIN</button>
+              <button i18n type="submit" [disabled]="busy()">Togli il PIN</button>
             </div>
           </form>
-          <p class="hint">
+          <p i18n class="hint">
             Senza PIN si entra solo dal server; dai dispositivi remoti non si entrerà più, finché
             non ne crei uno nuovo.
           </p>
         } @else {
-          <p class="hint">
+          <p i18n class="hint">
             Il PIN si toglie solo dal server, il computer su cui è installata l'app.
           </p>
         }
       } @else {
-        <p>L'app è aperta senza PIN, solo dal server. Dai dispositivi remoti non si entra.</p>
+        <p i18n>L'app è aperta senza PIN, solo dal server. Dai dispositivi remoti non si entra.</p>
         @if (status.local) {
           <form class="form-grid" (ngSubmit)="add()">
-            <label>
-              PIN
-              <input
+            <label
+              ><ng-container i18n> PIN </ng-container
+              ><input
                 type="password"
                 inputmode="numeric"
                 autocomplete="new-password"
@@ -61,9 +61,9 @@ import { RecoveryCodeView } from './recovery-code';
                 [(ngModel)]="pin"
               />
             </label>
-            <label>
-              Ripeti il PIN
-              <input
+            <label
+              ><ng-container i18n> Ripeti il PIN </ng-container
+              ><input
                 type="password"
                 inputmode="numeric"
                 autocomplete="new-password"
@@ -73,10 +73,10 @@ import { RecoveryCodeView } from './recovery-code';
               />
             </label>
             <div class="form-button">
-              <button type="submit" [disabled]="busy()">Proteggi con un PIN</button>
+              <button i18n type="submit" [disabled]="busy()">Proteggi con un PIN</button>
             </div>
           </form>
-          <p class="hint">
+          <p i18n class="hint">
             Da 6 a 10 cifre. Da quel momento lo chiederemo su ogni dispositivo, anche sul server.
           </p>
         }
@@ -98,11 +98,11 @@ export class AccessSection {
 
   protected add(): void {
     if (!VALID_PIN.test(this.pin)) {
-      this.error.set('Il PIN è fatto di cifre: da 6 a 10.');
+      this.error.set($localize`Il PIN è fatto di cifre: da 6 a 10.`);
       return;
     }
     if (this.pin !== this.repeat) {
-      this.error.set('I due PIN non sono uguali: riscrivili.');
+      this.error.set($localize`I due PIN non sono uguali: riscrivili.`);
       return;
     }
     this.run(() =>
@@ -115,7 +115,7 @@ export class AccessSection {
 
   protected remove(): void {
     if (!VALID_PIN.test(this.pin)) {
-      this.error.set('Il PIN è fatto di cifre: da 6 a 10.');
+      this.error.set($localize`Il PIN è fatto di cifre: da 6 a 10.`);
       return;
     }
     this.run(() =>
@@ -143,6 +143,6 @@ export class AccessSection {
     this.busy.set(false);
     this.pin = '';
     this.repeat = '';
-    this.error.set(reason(error, 'Il server non risponde: riprova.'));
+    this.error.set(reason(error, $localize`Il server non risponde: riprova.`));
   }
 }

@@ -26,10 +26,10 @@ import { TrendChart } from './trend-chart';
 
 // Come in tutte le barre dei periodi (Analisi, il grafico di una categoria): prima "Quest'anno", poi "12 mesi".
 const PERIODS: { value: InvestmentPeriod; label: string }[] = [
-  { value: 'YEAR_TO_DATE', label: "Quest'anno" }, // da gennaio a oggi (YTD): la scelta di serie
-  { value: 'YEAR', label: '12 mesi' },
-  { value: 'TWO_YEARS', label: '2 anni' },
-  { value: 'ALL', label: 'Tutto' },
+  { value: 'YEAR_TO_DATE', label: $localize`Quest'anno` }, // da gennaio a oggi (YTD): la scelta di serie
+  { value: 'YEAR', label: $localize`12 mesi` },
+  { value: 'TWO_YEARS', label: $localize`2 anni` },
+  { value: 'ALL', label: $localize`Tutto` },
 ];
 
 /**
@@ -196,7 +196,7 @@ export class InvestmentsPage implements OnInit {
     const i = this.incomeBar();
     return d === null || i === null || !d.months[i]
       ? ''
-      : `${this.monthNames()[i]}: ${this.euros(this.income()[i], d.currency, 2)} netti`;
+      : $localize`${this.monthNames()[i]}:value:: ${this.euros(this.income()[i], d.currency, 2)}:amount: netti`;
   });
 
   /** "ottobre 2026: 1.200 €", per la barra in evidenza dei bonifici. */
@@ -255,12 +255,15 @@ export class InvestmentsPage implements OnInit {
     const names = this.monthNames();
     if (i !== null && d.months[i]) {
       return {
-        label: i === 0 ? `Investito a ${names[0]}` : `Investito da ${names[0]} a ${names[i]}`,
+        label:
+          i === 0
+            ? $localize`Investito a ${names[0]}:value:`
+            : $localize`Investito da ${names[0]}:value: a ${names[i]}:value2:`,
         value: this.invested()[i],
       };
     }
     return {
-      label: `Investito in titoli · ${this.periodLabel(d.period)}`,
+      label: $localize`Investito in titoli · ${this.periodLabel(d.period)}:periodLabel:`,
       value: this.investedInPeriod(),
     };
   });
@@ -271,31 +274,31 @@ export class InvestmentsPage implements OnInit {
     if (d === null) {
       return '';
     }
-    const month = `${this.euros(d.investedThisMonth, d.currency)} questo mese`;
+    const month = $localize`${this.euros(d.investedThisMonth, d.currency)}:amount: questo mese`;
     return d.period === 'YEAR_TO_DATE'
       ? month
-      : `${this.euros(d.investedThisYear, d.currency)} quest'anno · ${month}`;
+      : $localize`${this.euros(d.investedThisYear, d.currency)}:amount: quest'anno · ${month}:month:`;
   });
 
   protected readonly lineDescription = computed(() => {
     const d = this.data();
     return d === null
       ? ''
-      : `Investito in titoli, acquisti meno vendite, mese per mese: ${this.euros(this.investedInPeriod(), d.currency)} ${this.periodLabel(d.period)}`;
+      : $localize`Investito in titoli, acquisti meno vendite, mese per mese: ${this.euros(this.investedInPeriod(), d.currency)}:amount: ${this.periodLabel(d.period)}:periodLabel:`;
   });
 
   protected readonly transferDescription = computed(() => {
     const d = this.data();
     return d === null
       ? ''
-      : `Bonifici verso i conti di investimento, mese per mese: ${this.euros(d.transferredInPeriod, d.currency)} nel periodo`;
+      : $localize`Bonifici verso i conti di investimento, mese per mese: ${this.euros(d.transferredInPeriod, d.currency)}:amount: nel periodo`;
   });
 
   protected readonly incomeDescription = computed(() => {
     const d = this.data();
     return d === null
       ? ''
-      : `Cedole, dividendi e interessi netti, mese per mese: ${this.euros(this.netIncome(), d.currency)} nel periodo`;
+      : $localize`Cedole, dividendi e interessi netti, mese per mese: ${this.euros(this.netIncome(), d.currency)}:amount: nel periodo`;
   });
 
   /** Il periodo guardato, per i filtri di Movimenti: dal primo giorno del primo mese all'ultimo dell'ultimo. */
@@ -376,13 +379,13 @@ export class InvestmentsPage implements OnInit {
   protected periodLabel(period: InvestmentPeriod): string {
     switch (period) {
       case 'YEAR':
-        return 'ultimi 12 mesi';
+        return $localize`ultimi 12 mesi`;
       case 'YEAR_TO_DATE':
-        return 'da inizio anno';
+        return $localize`da inizio anno`;
       case 'TWO_YEARS':
-        return 'ultimi 2 anni';
+        return $localize`ultimi 2 anni`;
       default:
-        return 'da sempre';
+        return $localize`da sempre`;
     }
   }
 
@@ -412,7 +415,7 @@ export class InvestmentsPage implements OnInit {
       },
       error: () => {
         if (request === this.lastRequest) {
-          this.error.set('Impossibile caricare gli investimenti: il backend è avviato?');
+          this.error.set($localize`Impossibile caricare gli investimenti: il backend è avviato?`);
           this.loading.set(false);
         }
       },
@@ -421,7 +424,9 @@ export class InvestmentsPage implements OnInit {
 
   private averageLabel(value: number | null): string {
     const d = this.data();
-    return d === null || value === null ? '' : `media ${this.euros(value, d.currency)} al mese`;
+    return d === null || value === null
+      ? ''
+      : $localize`media ${this.euros(value, d.currency)}:amount: al mese`;
   }
 
   private barNames(values: number[]): string[] {

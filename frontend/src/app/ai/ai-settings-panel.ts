@@ -1,7 +1,9 @@
+import { formatNumber } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 
 import { AiProvider, AiStatus } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { APP_LOCALE } from '../text/locale';
 import { CLOUD_INFO, CloudAiSection } from './cloud-ai-section';
 
 /** Ogni quanto chiedere lo stato mentre il modello si scarica o la misura è in corso. */
@@ -24,16 +26,16 @@ export interface RecommendedModel {
 export const RECOMMENDED_MODELS: RecommendedModel[] = [
   {
     name: 'gemma3:4b',
-    note: 'consigliato, per computer con almeno 8 GB di memoria',
-    download: '3,3 GB',
-    memory: 'circa 3 GB',
-    precision: '76%, 82% con le tue scelte come esempi',
+    note: $localize`consigliato, per computer con almeno 8 GB di memoria`,
+    download: $localize`3,3 GB`,
+    memory: $localize`circa 3 GB`,
+    precision: $localize`76%, 82% con le tue scelte come esempi`,
   },
   {
     name: 'llama3.2:3b',
-    note: 'circa tre volte più veloce, ma sbaglia di più: per computer lenti',
-    download: '2,0 GB',
-    memory: 'circa 3 GB',
+    note: $localize`circa tre volte più veloce, ma sbaglia di più: per computer lenti`,
+    download: $localize`2,0 GB`,
+    memory: $localize`circa 3 GB`,
     precision: '57%',
   },
 ];
@@ -93,7 +95,7 @@ export class AiSettingsPanel implements OnInit {
     }
     const targets = (s.ollamaReachable ? s.installedModels : []).map((m) => ({
       value: `OLLAMA|${m}`,
-      label: `${m} (sul tuo computer)`,
+      label: $localize`${m}:m: (sul tuo computer)`,
     }));
     if (s.gemini.keySet && s.gemini.consent) {
       targets.push({
@@ -150,7 +152,7 @@ export class AiSettingsPanel implements OnInit {
           this.saving.set(false);
           this.error.set(
             response.error?.detail ??
-              'Impostazioni non salvate: controlla il nome del modello (es. gemma3:4b).',
+              $localize`Impostazioni non salvate: controlla il nome del modello (es. gemma3:4b).`,
           );
         },
       });
@@ -161,7 +163,7 @@ export class AiSettingsPanel implements OnInit {
     this.api.downloadAiModel().subscribe({
       next: (status) => this.show(status, false),
       error: (response) =>
-        this.error.set(response.error?.detail ?? 'Lo scaricamento non è partito.'),
+        this.error.set(response.error?.detail ?? $localize`Lo scaricamento non è partito.`),
     });
   }
 
@@ -176,7 +178,7 @@ export class AiSettingsPanel implements OnInit {
     this.api.evaluateAi(provider, model, this.samples()).subscribe({
       next: (status) => this.show(status, false),
       error: (response) =>
-        this.evaluationError.set(response.error?.detail ?? 'La misura non è partita.'),
+        this.evaluationError.set(response.error?.detail ?? $localize`La misura non è partita.`),
     });
   }
 
@@ -187,7 +189,7 @@ export class AiSettingsPanel implements OnInit {
     }
     const gb = bytes / 1024 ** 3;
     return gb >= 1
-      ? `${gb.toFixed(1).replace('.', ',')} GB`
+      ? `${formatNumber(gb, APP_LOCALE, '1.1-1')} GB` // "3,3 GB": la virgola o il punto li mette la lingua
       : `${Math.round(bytes / 1024 ** 2)} MB`;
   }
 
@@ -222,7 +224,9 @@ export class AiSettingsPanel implements OnInit {
     this.api.aiStatus().subscribe({
       next: (status) => this.show(status, form),
       error: () =>
-        this.error.set("Impossibile leggere le impostazioni dell'IA: il backend è avviato?"),
+        this.error.set(
+          $localize`Impossibile leggere le impostazioni dell'IA: il backend è avviato?`,
+        ),
     });
   }
 }
@@ -231,10 +235,10 @@ export class AiSettingsPanel implements OnInit {
 function savedMessage(status: AiStatus): string {
   switch (status.provider) {
     case 'NONE':
-      return "Suggerimenti con l'IA spenti.";
+      return $localize`Suggerimenti con l'IA spenti.`;
     case 'OLLAMA':
-      return `Suggerimenti con l'IA accesi, con il modello ${status.ollamaModel}.`;
+      return $localize`Suggerimenti con l'IA accesi, con il modello ${status.ollamaModel}:ollamaModel:.`;
     case 'GEMINI':
-      return `Suggerimenti con l'IA accesi: ${CLOUD_INFO.GEMINI.label}, modello ${status.gemini.model}.`;
+      return $localize`Suggerimenti con l'IA accesi: ${CLOUD_INFO.GEMINI.label}:label:, modello ${status.gemini.model}:model:.`;
   }
 }

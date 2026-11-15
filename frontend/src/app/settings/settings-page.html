@@ -1,42 +1,43 @@
-<h1>Impostazioni</h1>
+<h1 i18n>Impostazioni</h1>
 
-<h2>Enable Banking</h2>
+<h2 i18n>Enable Banking</h2>
 
 @if (setup.status(); as status) {
   @if (status.configured) {
-    <p class="message">
+    <p i18n class="message">
       ✓ Configurato
-      {{ status.source === 'DASHBOARD' ? 'da questa pagina' : 'dal file .env' }} · Application ID
+      {status.source === 'DASHBOARD', select, true {da questa pagina} other {dal file .env}}
+      · Application ID
       <code>{{ status.applicationId }}</code>
     </p>
-    <p class="hint">
+    <p i18n class="hint">
       Puoi sostituire le credenziali in qualsiasi momento ripetendo i passi qui sotto.
     </p>
   } @else {
-    <p class="error">Non ancora configurato: segui i tre passi qui sotto.</p>
+    <p i18n class="error">Non ancora configurato: segui i tre passi qui sotto.</p>
   }
 
   <div class="card">
-    <h2>1. Crea la tua applicazione su Enable Banking</h2>
-    <p class="hint">
+    <h2 i18n>1. Crea la tua applicazione su Enable Banking</h2>
+    <p i18n class="hint">
       Enable Banking è il servizio autorizzato (PSD2) che legge i conti dalle banche. L'uso per i
       <strong>tuoi</strong> conti è gratuito. I nomi delle voci sul sito potrebbero cambiare
       leggermente.
     </p>
     <ol>
-      <li>
+      <li i18n>
         Vai su
         <a href="https://enablebanking.com" target="_blank" rel="noopener">enablebanking.com</a>,
         crea un account e apri il pannello di controllo (<em>Control Panel</em>).
       </li>
-      <li>
+      <li i18n>
         Registra una nuova applicazione (<em>Applications</em>), ambiente
         <strong>Production</strong>.
       </li>
       <li>
         @if (status.redirectUrls.length === 0) {
           <!-- Nessun indirizzo di ritorno (installazione da ZIP, docs/47 parte Q): serve prima Tailscale. -->
-          <div class="needs-tailscale" data-testid="needs-tailscale">
+          <div i18n class="needs-tailscale" data-testid="needs-tailscale">
             <strong>Prima prepara Tailscale.</strong> Come indirizzo di ritorno (<em
               >Redirect URL</em
             >) Enable Banking accetta solo indirizzi <strong>https</strong>, e quello di
@@ -46,26 +47,34 @@
           </div>
         } @else {
           @if (status.redirectUrls.length > 1) {
-            Come indirizzi di ritorno (<em>Redirect URLs</em>) inseriscili tutti, esattamente così:
+            <ng-container i18n>
+              Come indirizzi di ritorno (<em>Redirect URLs</em>) inseriscili tutti, esattamente
+              così:
+            </ng-container>
           } @else {
-            Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
+            <ng-container i18n>
+              Come indirizzo di ritorno (<em>Redirect URL</em>) inserisci esattamente:
+            </ng-container>
           }
           @for (url of status.redirectUrls; track url) {
             <span class="redirect-url">
               <code>{{ url }}</code>
               <button type="button" class="link" (click)="copyRedirectUrl(url)">
-                {{ copied() === url ? 'Copiato ✓' : 'Copia' }}
+                <ng-container i18n>{copied() === url, select,
+                  true {Copiato ✓}
+                  other {Copia}
+                }</ng-container>
               </button>
             </span>
           }
         }
       </li>
-      <li>
+      <li i18n>
         Alla fine il browser scarica un file <code>.pem</code>: è la tua
         <strong>chiave privata</strong>. Conservalo con cura e non condividerlo con nessuno. Il nome
         del file è l'Application ID.
       </li>
-      <li>
+      <li i18n>
         <strong>Attiva l'applicazione collegando i tuoi conti</strong>: nella sua pagina premi
         <strong>Link accounts</strong>, scegli la banca e seleziona
         <strong>tutti i conti</strong> che vuoi leggere con WalletTracker. L'applicazione resta in
@@ -77,39 +86,44 @@
   </div>
 
   <div class="card">
-    <h2>2. Inserisci le credenziali</h2>
+    <h2 i18n>2. Inserisci le credenziali</h2>
     <div class="form-grid">
       <app-file-drop
         class="wide"
         accept=".pem"
         title="Scegli il file della chiave privata (.pem)"
+        i18n-title
         (picked)="onFile($event)"
       />
-      <label>
-        Application ID
-        <input
+      <label
+        ><ng-container i18n> Application ID </ng-container
+        ><input
           [value]="applicationId()"
           (input)="onApplicationId($event)"
           placeholder="es. cf589be3-3755-465b-a8df-a90a16a31403"
+          i18n-placeholder
         />
         @if (fileName() && applicationId() === '') {
-          <span class="secondary">
+          <span i18n class="secondary">
             Il nome del file non contiene l'Application ID: copialo dal sito di Enable Banking.
           </span>
         }
       </label>
     </div>
 
-    <h2>3. Verifica e salva</h2>
-    <p class="hint">
+    <h2 i18n>3. Verifica e salva</h2>
+    <p i18n class="hint">
       WalletTracker prova le credenziali con Enable Banking e le salva solo se vengono accettate.
     </p>
     <button type="button" [disabled]="saving()" (click)="save()">
-      {{ saving() ? 'Verifica in corso...' : 'Verifica e salva' }}
+      <ng-container i18n>{!!saving(), select,
+        true {Verifica in corso...}
+        other {Verifica e salva}
+      }</ng-container>
     </button>
 
     @if (message()) {
-      <p class="message">
+      <p i18n class="message">
         {{ message() }} Ora puoi <a routerLink="/collega">collegare la tua prima banca</a>.
       </p>
     }
@@ -118,53 +132,58 @@
     }
   </div>
 } @else {
-  <p>Caricamento... (se resta così, controlla che il backend sia avviato)</p>
+  <p i18n>Caricamento... (se resta così, controlla che il backend sia avviato)</p>
 }
 
 <app-ai-settings-panel />
 
 <!-- I backup (docs/48, parte Q): lo stato, "Fai un backup adesso", e lo scaricamento solo dal server. -->
-<h2 id="backup">Backup</h2>
+<h2 i18n id="backup">Backup</h2>
 <div class="card">
   <app-backup-section />
 </div>
 
 <!-- Come si entra nell'app (docs/46): con il PIN o senza, solo dal server. -->
-<h2 id="accesso">Accesso</h2>
+<h2 i18n id="accesso">Accesso</h2>
 <div class="card">
   <app-access-section />
 </div>
 
 <!-- In fondo: la configurazione della banca, la prima cosa da fare, resta in cima. -->
-<h2>Aspetto</h2>
+<h2 i18n id="lingua">Lingua</h2>
+<div class="card">
+  <app-language-section />
+</div>
+
+<h2 i18n>Aspetto</h2>
 <div class="card">
   <app-theme-section />
 </div>
 
 <!-- Quale versione è installata (docs/50, parte B): serve per sapere se ce n'è una nuova, e per chiedere aiuto. -->
-<h2 id="informazioni">Informazioni</h2>
+<h2 i18n id="informazioni">Informazioni</h2>
 <div class="card">
   @if (version(); as current) {
     @if (current === 'sviluppo') {
-      <p data-testid="version">
+      <p i18n data-testid="version">
         WalletTracker, <strong>versione di sviluppo</strong>: costruita dal codice, non da una
         versione pubblicata.
       </p>
     } @else {
-      <p data-testid="version">
+      <p i18n data-testid="version">
         WalletTracker, versione <strong>{{ current }}</strong
         >.
       </p>
     }
   } @else {
-    <p class="hint">Versione: il server non risponde.</p>
+    <p i18n class="hint">Versione: il server non risponde.</p>
   }
 
   <!-- Le versioni nuove (docs/50, parte J): il backend chiede a GitHub una volta al giorno. -->
   @if (updates.status(); as update) {
     @if (update.available) {
       <div class="release-news" data-testid="update-available">
-        <p>
+        <p i18n>
           È disponibile la versione <strong>{{ update.latestVersion }}</strong
           >.
           @if (update.releaseUrl) {
@@ -176,28 +195,28 @@
         @if (update.notes) {
           <p class="notes" data-testid="update-notes">{{ update.notes }}</p>
         }
-        <p>
+        <p i18n>
           Per aggiornare, sul <strong>server</strong> (il computer con Docker), nella cartella di
           WalletTracker:
         </p>
         <ul class="commands">
-          <li>
+          <li i18n>
             Windows: <code>powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna</code>
           </li>
-          <li>Mac e Linux: <code>./installa.sh --aggiorna</code></li>
+          <li i18n>Mac e Linux: <code>./installa.sh --aggiorna</code></li>
         </ul>
-        <p class="hint">
+        <p i18n class="hint">
           Prima di cambiare qualcosa fa un backup; se la versione nuova non parte, torna da solo a
           quella di adesso, con i dati di prima.
         </p>
       </div>
     } @else if (update.checkEnabled && update.latestVersion) {
-      <p class="hint" data-testid="update-latest">
+      <p i18n class="hint" data-testid="update-latest">
         È l'ultima versione pubblicata (controllato il
         {{ update.checkedAt | localDate: 'longTime' }}).
       </p>
     } @else if (!update.checkEnabled && update.currentVersion !== 'sviluppo') {
-      <p class="hint">
+      <p i18n class="hint">
         Il controllo delle versioni nuove è spento (<code>WALLETTRACKER_UPDATE_CHECK=false</code>
         nel .env).
       </p>

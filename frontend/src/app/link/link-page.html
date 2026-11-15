@@ -1,23 +1,23 @@
-<h1>Collega una banca</h1>
+<h1 i18n>Collega una banca</h1>
 
 <ol class="hint">
-  <li>
+  <li i18n>
     <strong>La prima volta per un conto:</strong> aggiungilo alla tua applicazione Enable Banking
     (passi qui sotto). Poi non serve più.
   </li>
-  <li>Scegli la tua banca e premi <strong>Collega</strong>.</li>
-  <li>Verrai portato sul sito della banca: accedi e autorizza la lettura dei conti.</li>
-  <li>Alla fine tornerai qui, e i movimenti verranno importati in automatico.</li>
+  <li i18n>Scegli la tua banca e premi <strong>Collega</strong>.</li>
+  <li i18n>Verrai portato sul sito della banca: accedi e autorizza la lettura dei conti.</li>
+  <li i18n>Alla fine tornerai qui, e i movimenti verranno importati in automatico.</li>
 </ol>
 
 <!-- La modalità ristretta di Enable Banking (docs/modalita-ristretta.md): un conto nuovo va prima aggiunto alla lista. -->
 <details class="card linked-accounts" data-testid="linked-accounts">
-  <summary>Un conto nuovo? Prima aggiungilo in Enable Banking</summary>
+  <summary i18n>Un conto nuovo? Prima aggiungilo in Enable Banking</summary>
   <app-linked-accounts-steps />
 </details>
 
 @if (renewing()) {
-  <p class="message">
+  <p i18n class="message">
     Per rinnovare il collegamento con <strong>{{ renewing() }}</strong
     >, premi <strong>Collega</strong> qui sotto e accedi alla banca. I conti, i movimenti e le tue
     correzioni restano: WalletTracker riconosce i conti e li sposta sul nuovo collegamento.
@@ -25,19 +25,20 @@
 }
 
 <div class="filters">
-  <label>
-    Paese
-    <select (change)="onCountry($event)">
+  <label
+    ><ng-container i18n> Paese </ng-container
+    ><select (change)="onCountry($event)">
       @for (c of countries; track c.code) {
         <option [value]="c.code" [selected]="c.code === country()">{{ c.name }}</option>
       }
     </select>
   </label>
-  <label>
-    Cerca
-    <input
+  <label
+    ><ng-container i18n> Cerca </ng-container
+    ><input
       type="search"
       placeholder="es. ING, Revolut"
+      i18n-placeholder
       [value]="search()"
       (input)="onSearch($event)"
     />
@@ -52,13 +53,13 @@
 <!-- Dove tornerà la banca (docs/47, parte Q): detto prima, perché dopo il consenso è tardi. -->
 @if (returnAddress() === null) {
   <div class="card warning" data-testid="needs-tailscale">
-    <h2>Per collegare una banca serve Tailscale</h2>
-    <p>
+    <h2 i18n>Per collegare una banca serve Tailscale</h2>
+    <p i18n>
       Dopo il consenso, la banca rimanda il tuo browser a un indirizzo <strong>https</strong> di
       WalletTracker (Enable Banking non ne accetta altri), e quello lo dà Tailscale: è anche quello
       che apre l'app dal telefono.
     </p>
-    <p>
+    <p i18n>
       Prepara Tailscale seguendo la
       <a [href]="guideUrl" target="_blank" rel="noopener noreferrer">guida</a>
       (capitolo «Tailscale»), registra su Enable Banking l'indirizzo che comparirà in
@@ -68,13 +69,13 @@
 } @else if (devReturnElsewhere()) {
   <!-- Sviluppo (ng serve): la banca tornerebbe all'app in Docker, non a questo backend. -->
   <div class="card warning" data-testid="dev-return-elsewhere">
-    <h2>Sviluppo: la banca non tornerebbe qui</h2>
-    <p>
+    <h2 i18n>Sviluppo: la banca non tornerebbe qui</h2>
+    <p i18n>
       Al ritorno la banca andrà su <strong>{{ returnAddress()?.url }}</strong
       >, cioè all'app in Docker (è lei che risponde su Tailscale), non al backend di
       <code>./mvnw</code> che avvia il collegamento: il collegamento non si completerebbe.
     </p>
-    <p>
+    <p i18n>
       Aggiungi <code>https://localhost:8443/callback</code> a
       <code>ENABLE_BANKING_REDIRECT_URL</code> nel <code>.env</code> (separato da una virgola),
       registralo anche su Enable Banking, e riavvia <code>./mvnw</code>.
@@ -82,12 +83,12 @@
   </div>
 } @else if (returnAddress(); as r) {
   @if (!r.samePage) {
-    <p class="message" data-testid="return-elsewhere">
+    <p i18n class="message" data-testid="return-elsewhere">
       Al ritorno dalla banca si aprirà <strong>{{ r.url.replace('/callback', '') }}</strong
       >, l'indirizzo di Tailscale: lì l'app ti chiederà il PIN, poi finirà il collegamento da sola.
     </p>
     @if (needsPin()) {
-      <p class="error" data-testid="needs-pin">
+      <p i18n class="error" data-testid="needs-pin">
         Prima crea un PIN in
         <a routerLink="/impostazioni" fragment="accesso">Impostazioni → Accesso</a>: dall'indirizzo
         di Tailscale, senza PIN, l'app non si apre.
@@ -99,7 +100,7 @@
 @if (returnAddress() === null) {
   <!-- Senza un indirizzo di ritorno "Collega" non potrebbe funzionare: l'elenco delle banche non serve. -->
 } @else if (loading()) {
-  <p>Caricamento delle banche...</p>
+  <p i18n>Caricamento delle banche...</p>
 } @else {
   <div class="table-scroll">
     <table>
@@ -109,18 +110,21 @@
             <td>
               {{ bank.name }}
               @if (bank.maxConsentDays) {
-                <div class="secondary">Consenso fino a {{ bank.maxConsentDays }} giorni</div>
+                <div i18n class="secondary">Consenso fino a {{ bank.maxConsentDays }} giorni</div>
               }
             </td>
             <td class="amount">
               <button type="button" [disabled]="starting() !== null" (click)="connect(bank)">
-                {{ starting() === bank.name ? 'Apertura della banca...' : 'Collega' }}
+                <ng-container i18n>{starting() === bank.name, select,
+                  true {Apertura della banca...}
+                  other {Collega}
+                }</ng-container>
               </button>
             </td>
           </tr>
         } @empty {
           <tr>
-            <td>Nessuna banca trovata.</td>
+            <td i18n>Nessuna banca trovata.</td>
           </tr>
         }
       </tbody>

@@ -145,7 +145,7 @@ export class RulesPage implements OnInit {
     // L'id deve essere un numero intero positivo; se non c'è nell'elenco, il backend risponde 400.
     const categoryId = Number(params.get('categoryId'));
     this.form.patchValue({
-      name: `Movimenti con "${pattern}"`.slice(0, 100),
+      name: $localize`Movimenti con "${pattern}:pattern:"`.slice(0, 100),
       pattern: pattern.slice(0, 200),
       ...(this.types.includes(resultType) ? { resultType } : {}),
       ...(this.amountSigns.includes(amountSign) ? { amountSign } : {}),
@@ -155,8 +155,8 @@ export class RulesPage implements OnInit {
     // movimento ancora senza categoria, che allora va scelta qui.
     this.message.set(
       Number.isInteger(categoryId) && categoryId > 0
-        ? 'Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.'
-        : 'Modulo compilato dal movimento: scegli la categoria, accorcia il testo da cercare se serve, controlla la prova e salva.',
+        ? $localize`Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.`
+        : $localize`Modulo compilato dal movimento: scegli la categoria, accorcia il testo da cercare se serve, controlla la prova e salva.`,
     );
     this.tryRule();
   }
@@ -199,7 +199,7 @@ export class RulesPage implements OnInit {
     }
     this.api.previewRule(this.form.getRawValue(), this.editing()?.id ?? null).subscribe({
       next: (preview) => this.preview.set(preview),
-      error: (response) => this.error.set(response.error?.detail ?? 'Prova non riuscita.'),
+      error: (response) => this.error.set(response.error?.detail ?? $localize`Prova non riuscita.`),
     });
   }
 
@@ -219,7 +219,9 @@ export class RulesPage implements OnInit {
     this.savedBlockers.set(null);
     saved$.subscribe({
       next: (rule) => {
-        this.message.set(`Regola "${rule.name}" salvata: ora classifica ${rule.uses} movimenti.`);
+        this.message.set(
+          $localize`Regola "${rule.name}:name:" salvata: ora classifica ${rule.uses}:uses: movimenti.`,
+        );
         this.cancel();
         this.loadRules();
         // La prova, rifatta da sola: se su qualche movimento vince un'altra regola, lo diciamo subito.
@@ -231,7 +233,7 @@ export class RulesPage implements OnInit {
         });
       },
       error: (response) =>
-        this.error.set(response.error?.detail ?? 'La regola non è stata salvata.'),
+        this.error.set(response.error?.detail ?? $localize`La regola non è stata salvata.`),
     });
   }
 
@@ -241,18 +243,18 @@ export class RulesPage implements OnInit {
     const { id, category, builtin, uses, ...request } = rule;
     this.api.updateRule(id, { ...request, enabled: !rule.enabled }).subscribe({
       next: () => this.loadRules(),
-      error: () => this.error.set('La regola non è stata aggiornata.'),
+      error: () => this.error.set($localize`La regola non è stata aggiornata.`),
     });
   }
 
   remove(rule: Rule): void {
     this.api.deleteRule(rule.id).subscribe({
       next: () => {
-        this.message.set(`Regola "${rule.name}" cancellata.`);
+        this.message.set($localize`Regola "${rule.name}:name:" cancellata.`);
         this.loadRules();
       },
       error: (response) =>
-        this.error.set(response.error?.detail ?? 'La regola non è stata cancellata.'),
+        this.error.set(response.error?.detail ?? $localize`La regola non è stata cancellata.`),
     });
   }
 
@@ -270,7 +272,7 @@ export class RulesPage implements OnInit {
   private loadRules(): void {
     this.api.rules().subscribe({
       next: (rules) => this.rules.set(rules),
-      error: () => this.error.set('Impossibile caricare le regole: il backend è avviato?'),
+      error: () => this.error.set($localize`Impossibile caricare le regole: il backend è avviato?`),
     });
   }
 }

@@ -97,6 +97,12 @@ jobs:
       - name: Compila
         run: npm run build
 
+      # Le traduzioni (docs/lingue-2-inglese.md, parte E): ogni testo dell'app deve avere la sua traduzione in
+      # src/locale. Un testo aggiunto o cambiato senza aggiornare l'inglese fa fallire qui, non davanti a chi usa
+      # l'app in inglese e si ritrova una frase in italiano.
+      - name: Controlla le traduzioni
+        run: npm run i18n:check
+
   # L'installazione vera (Fase 4, docs/44 e docs/45): lo script installa.sh crea il .env con una password a caso,
   # costruisce le immagini e avvia i container, come sul PC di chi installa. Poi controlliamo che l'app risponda,
   # cambiamo la password del database e ricontrolliamo. Se un Dockerfile, la configurazione di nginx o lo script

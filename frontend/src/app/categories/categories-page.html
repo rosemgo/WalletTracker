@@ -1,6 +1,6 @@
-<h1>Categorie</h1>
+<h1 i18n>Categorie</h1>
 
-<p class="hint">
+<p i18n class="hint">
   La categoria dice <strong>per che cosa</strong> sono i soldi (Spesa alimentare, Stipendio e
   pensione...); il tipo del movimento dice <strong>che cos'è</strong> (spesa, entrata,
   trasferimento). Ogni categoria sta in un gruppo: nei menu compaiono per prime le categorie del
@@ -16,25 +16,30 @@
 }
 
 <form class="card" [formGroup]="form" (ngSubmit)="add()">
-  <h2>Nuova categoria</h2>
+  <h2 i18n>Nuova categoria</h2>
   <div class="form-grid">
-    <label>
-      Nome
-      <input formControlName="name" maxlength="100" placeholder="es. Animali domestici" />
+    <label
+      ><ng-container i18n> Nome </ng-container
+      ><input
+        formControlName="name"
+        maxlength="100"
+        placeholder="es. Animali domestici"
+        i18n-placeholder
+      />
       @if (showNameError()) {
-        <span class="error">Scrivi un nome (al massimo 100 caratteri).</span>
+        <span i18n class="error">Scrivi un nome (al massimo 100 caratteri).</span>
       }
     </label>
-    <label>
-      Gruppo
-      <select formControlName="kind">
+    <label
+      ><ng-container i18n> Gruppo </ng-container
+      ><select formControlName="kind">
         @for (kind of kinds; track kind) {
           <option [value]="kind">{{ kindLabels[kind] }}</option>
         }
       </select>
     </label>
   </div>
-  <button type="submit">Aggiungi</button>
+  <button i18n type="submit">Aggiungi</button>
 </form>
 
 @for (group of groups(); track group.kind) {
@@ -52,21 +57,26 @@
                     #nameInput
                     [value]="category.name"
                     maxlength="100"
-                    [attr.aria-label]="'Nuovo nome di ' + category.name"
+                    aria-label="Nuovo nome di {{ category.name }}"
+                    i18n-aria-label
                     (keydown.enter)="rename(category, nameInput.value)"
                     (keydown.escape)="renaming.set(null)"
                   />
-                  <button type="button" (click)="rename(category, nameInput.value)">Salva</button>
-                  <button type="button" class="link" (click)="renaming.set(null)">Annulla</button>
+                  <button i18n type="button" (click)="rename(category, nameInput.value)">
+                    Salva
+                  </button>
+                  <button i18n type="button" class="link" (click)="renaming.set(null)">
+                    Annulla
+                  </button>
                 </div>
               } @else {
                 {{ category.name }}
                 @if (category.builtin) {
-                  <span class="secondary">· di partenza</span>
+                  <span i18n class="secondary">· di partenza</span>
                 }
               }
             </td>
-            <td data-label="Movimenti" class="amount secondary">
+            <td data-label="Movimenti" i18n-data-label class="amount secondary">
               @if (category.uses > 0) {
                 <a
                   class="action"
@@ -79,12 +89,13 @@
                   }</ng-container>
                 </a>
               } @else {
-                nessun movimento
+                <ng-container i18n> nessun movimento </ng-container>
               }
             </td>
-            <td data-label="Gruppo" class="group">
+            <td data-label="Gruppo" i18n-data-label class="group">
               <select
-                [attr.aria-label]="'Gruppo di ' + category.name"
+                aria-label="Gruppo di {{ category.name }}"
+                i18n-aria-label
                 (change)="changeKind(category, $any($event.target).value)"
               >
                 @for (kind of kinds; track kind) {
@@ -105,22 +116,25 @@
                         other {{{ category.uses }} movimenti resteranno senza categoria.}
                       }</ng-container>
                     } @else {
-                      Nessun movimento la usa.
+                      <ng-container i18n> Nessun movimento la usa. </ng-container>
                     }
                   </span>
                   <div class="confirm-buttons">
-                    <button type="button" class="danger" (click)="remove(category)">Elimina</button>
-                    <button type="button" class="link" (click)="confirmingDelete.set(null)">
+                    <button i18n type="button" class="danger" (click)="remove(category)">
+                      Elimina
+                    </button>
+                    <button i18n type="button" class="link" (click)="confirmingDelete.set(null)">
                       Annulla
                     </button>
                   </div>
                 </div>
               } @else {
                 <div class="row-actions">
-                  <button type="button" class="link" (click)="renaming.set(category.id)">
+                  <button i18n type="button" class="link" (click)="renaming.set(category.id)">
                     Rinomina
                   </button>
                   <button
+                    i18n
                     type="button"
                     class="link danger"
                     (click)="confirmingDelete.set(category.id)"

@@ -29,7 +29,8 @@ const STEPS = [
       [class.scrubbing]="index() !== null"
       tabindex="0"
       role="slider"
-      [attr.aria-label]="description() + '. Con le frecce si scorrono i mesi.'"
+      aria-label="{{ description() }}. Con le frecce si scorrono i mesi."
+      i18n-aria-label
       [attr.aria-valuemin]="1"
       [attr.aria-valuemax]="values().length"
       [attr.aria-valuenow]="(index() ?? values().length - 1) + 1"
@@ -141,7 +142,8 @@ export class TrendChart {
     const step = STEPS.find((s) => max / s <= 2.5) ?? STEPS[STEPS.length - 1];
     const lines = [];
     for (let value = step; value < max; value += step) {
-      const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
+      // "1.000 €": le migliaia separate e il simbolo della valuta, come li scrive la lingua dell'app.
+      const label = this.privacy.hide(this.amount(value));
       lines.push({ value, y: this.y(value), label });
     }
     return lines;
@@ -170,15 +172,7 @@ export class TrendChart {
     }
     const value = this.values()[i] ?? 0;
     const x = this.x(i);
-    const amount = this.privacy.hide(
-      formatCurrency(
-        value,
-        this.locale,
-        this.currency() === 'EUR' ? '€' : this.currency(),
-        this.currency(),
-        '1.0-0',
-      ),
-    );
+    const amount = this.privacy.hide(this.amount(value));
     return {
       x,
       y: this.y(value),
@@ -218,5 +212,17 @@ export class TrendChart {
       this.index.set(index);
       this.scrubbed.emit(index);
     }
+  }
+
+  /** Un importo senza decimali, con il simbolo della valuta: "1.000 €". */
+  private amount(value: number): string {
+    const currency = this.currency();
+    return formatCurrency(
+      value,
+      this.locale,
+      currency === 'EUR' ? '€' : currency,
+      currency,
+      '1.0-0',
+    );
   }
 }

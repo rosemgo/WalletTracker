@@ -1,6 +1,6 @@
 <div class="movements" [class.with-detail]="detailOpen()">
   <div class="movements-list">
-    <h1>Movimenti</h1>
+    <h1 i18n>Movimenti</h1>
 
     <!-- Accettando un suggerimento alcuni movimenti ricevono la categoria: ricarichiamo l'elenco. -->
     <app-suggestions-panel (accepted)="load()" />
@@ -11,24 +11,26 @@
         <circle cx="11" cy="11" r="6" />
         <path d="M20 20l-4.5-4.5" />
       </svg>
-      <span class="visually-hidden">Cerca</span>
+      <span i18n class="visually-hidden">Cerca</span>
       <input
         type="search"
         [value]="text()"
         (input)="onSearch($event)"
         maxlength="100"
         placeholder="Cerca: esercente, categoria, nota, importo"
+        i18n-placeholder
       />
     </label>
 
     <!-- I filtri come "pillole" che scorrono di lato: acceso = pieno. -->
-    <div class="pills" role="group" aria-label="Filtri">
+    <div class="pills" role="group" aria-label="Filtri" i18n-aria-label>
       @if (category(); as c) {
         <button
           type="button"
           class="pill on"
           (click)="clearCategory()"
-          [attr.aria-label]="'Togli il filtro ' + c.name"
+          aria-label="Togli il filtro {{ c.name }}"
+          i18n-aria-label
         >
           {{ c.name }} ✕
         </button>
@@ -37,6 +39,7 @@
         class="pill"
         [class.on]="period() !== 'ALL'"
         aria-label="Periodo"
+        i18n-aria-label
         (change)="onPeriod($event)"
       >
         @for (p of periods; track p) {
@@ -44,6 +47,7 @@
         }
       </select>
       <button
+        i18n
         type="button"
         class="pill"
         [class.on]="type() === 'TO_REVIEW'"
@@ -53,6 +57,7 @@
         Da verificare
       </button>
       <button
+        i18n
         type="button"
         class="pill"
         [class.on]="uncategorized()"
@@ -65,9 +70,10 @@
         class="pill"
         [class.on]="accountId() !== null"
         aria-label="Conto"
+        i18n-aria-label
         (change)="onAccountFilter($event)"
       >
-        <option value="">Tutti i conti</option>
+        <option i18n value="">Tutti i conti</option>
         @for (account of accounts(); track account.id) {
           <option [value]="account.id" [selected]="account.id === accountId()">
             {{ account.label }}
@@ -78,9 +84,10 @@
         class="pill"
         [class.on]="type() !== null"
         aria-label="Tipo"
+        i18n-aria-label
         (change)="onTypeFilter($event)"
       >
-        <option value="">Tutti i tipi</option>
+        <option i18n value="">Tutti i tipi</option>
         @for (t of types; track t) {
           <option [value]="t" [selected]="t === type()">{{ typeLabels[t] }}</option>
         }
@@ -90,18 +97,18 @@
     @if (period() === 'CUSTOM') {
       <!-- type="date": il browser mostra il suo calendario. Il valore è sempre "2026-10-01". -->
       <div class="dates">
-        <label>
-          Dal
-          <input
+        <label
+          ><ng-container i18n> Dal </ng-container
+          ><input
             type="date"
             [value]="from() ?? ''"
             [max]="to() ?? ''"
             (change)="onDate('from', $event)"
           />
         </label>
-        <label>
-          Al
-          <input
+        <label
+          ><ng-container i18n> Al </ng-container
+          ><input
             type="date"
             [value]="to() ?? ''"
             [min]="from() ?? ''"
@@ -154,23 +161,25 @@
         } @empty {
           <p class="card empty">
             @if (text().trim() !== '') {
-              Nessun movimento trovato per "{{ text().trim() }}" con questi filtri.
+              <ng-container i18n>
+                Nessun movimento trovato per "{{ text().trim() }}" con questi filtri.
+              </ng-container>
             } @else {
-              Nessun movimento con questi filtri.
+              <ng-container i18n> Nessun movimento con questi filtri. </ng-container>
             }
           </p>
         }
         @if (hasMore()) {
-          <button type="button" class="more" (click)="loadMore()" [disabled]="loading()">
+          <button i18n type="button" class="more" (click)="loadMore()" [disabled]="loading()">
             Mostra altri
           </button>
         }
         @if (items().length > 0) {
-          <p class="secondary count">{{ items().length }} di {{ totalItems() }} movimenti</p>
+          <p i18n class="secondary count">{{ items().length }} di {{ totalItems() }} movimenti</p>
         }
       </div>
     } @else if (loading()) {
-      <p>Caricamento...</p>
+      <p i18n>Caricamento...</p>
     }
   </div>
 

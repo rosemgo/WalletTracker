@@ -45,7 +45,10 @@ export const FIRST_MOVEMENTS = 8;
             [attr.aria-expanded]="all()"
             (click)="toggle(heading)"
           >
-            {{ all() ? 'Mostra meno' : 'Mostra tutti (' + movements().length + ')' }}
+            <ng-container i18n>{!!all(), select,
+              true {Mostra meno}
+              other {Mostra tutti ({{ movements().length }})}
+            }</ng-container>
           </button>
         }
       </section>

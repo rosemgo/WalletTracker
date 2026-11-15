@@ -1,6 +1,6 @@
-<h1>Importa movimenti da un file</h1>
+<h1 i18n>Importa movimenti da un file</h1>
 
-<p class="hint">
+<p i18n class="hint">
   Esporta i movimenti dalla banca in un file <strong>CSV</strong> o <strong>Excel</strong> e
   caricalo qui. Il programma propone come leggere le colonne; tu controlli l'anteprima e, se serve,
   correggi. Che cosa viene aggiunto dipende dal conto che scegli: lo vedi qui sotto prima di
@@ -9,29 +9,29 @@
 <!-- Trade Republic: come esportare il file e che cosa succede (docs/importa-file.md, parte J). Prima era la pagina
      "Completa i movimenti". -->
 <details class="card guide-card" data-testid="trade-republic-guide">
-  <summary>Trade Republic: esportazione delle transazioni</summary>
-  <p>
+  <summary i18n>Trade Republic: esportazione delle transazioni</summary>
+  <p i18n>
     L'esportazione delle transazioni di Trade Republic viene riconosciuta automaticamente: non
     occorre impostare le colonne.
   </p>
   <ul>
-    <li>
+    <li i18n>
       <strong>In ogni caso</strong> vengono caricati i movimenti non ancora presenti: in un conto
       manuale tutti, in un conto collegato quelli precedenti allo storico trasmesso dalla banca.
     </li>
-    <li>
+    <li i18n>
       <strong>Se il conto è collegato</strong>, i movimenti già ricevuti dalla banca vengono
       completati con causale e controparte: tramite il collegamento Trade Republic trasmette
       soltanto data e importo.
     </li>
   </ul>
-  <p>Per ottenere il file:</p>
+  <p i18n>Per ottenere il file:</p>
   <ol>
-    <li>
+    <li i18n>
       nell'app di Trade Republic (o su app.traderepublic.com) apri il profilo, poi i documenti;
     </li>
-    <li>scegli «Esportazione transazioni», il periodo e il formato CSV;</li>
-    <li>carica il file così com'è, senza modificarlo.</li>
+    <li i18n>scegli «Esportazione transazioni», il periodo e il formato CSV;</li>
+    <li i18n>carica il file così com'è, senza modificarlo.</li>
   </ol>
 </details>
 
@@ -40,18 +40,18 @@
 }
 
 @if (loading()) {
-  <p>Caricamento...</p>
+  <p i18n>Caricamento...</p>
 } @else if (accounts().length === 0) {
-  <p>
+  <p i18n>
     Non hai ancora nessun conto: collega una banca (<a routerLink="/collega">Collega una banca</a>)
     oppure crea un conto manuale nella pagina <a routerLink="/conti">Conti</a>, poi torna qui.
   </p>
 } @else if (result(); as done) {
   <!-- Fatto: il riepilogo e i passi successivi. -->
   <div class="card">
-    <h2>Importazione completata</h2>
+    <h2 i18n>Importazione completata</h2>
     <p class="message">{{ accountName() }}: {{ doneMessage(done) }}</p>
-    <p>
+    <p i18n>
       I movimenti sono stati classificati come quelli arrivati dalla banca.
       <a routerLink="/movimenti">Vai ai movimenti</a>, filtra per questo conto e controlla quelli
       "Da verificare": molti file non hanno causale, e senza testo il programma non indovina.
@@ -59,7 +59,7 @@
     @if (importedAccount(); as a) {
       <!-- Il saldo del conto (docs/saldi.md, parte C): da confrontare con la banca, o da scrivere. -->
       <section class="balance-check">
-        <h3>Il saldo del conto</h3>
+        <h3 i18n>Il saldo del conto</h3>
         @if (editingBalance()) {
           <app-balance-form
             [account]="a"
@@ -68,44 +68,49 @@
           />
         } @else if (a.balance; as b) {
           <p>
-            <strong>{{ b.amount | money: a.currency }}</strong> al {{ b.date | localDate: 'long' }}.
+            <ng-container i18n>
+              <strong>{{ b.amount | money: a.currency }}</strong> al
+              {{ b.date | localDate: 'long' }}.
+            </ng-container>
             @if (balanceSaved()) {
-              Salvato: da qui si aggiorna con i movimenti che importerai.
+              <ng-container i18n>
+                Salvato: da qui si aggiorna con i movimenti che importerai.
+              </ng-container>
             } @else {
-              È quello che vedi nell'app della banca?
-              <button type="button" class="link" (click)="editingBalance.set(true)">
+              <ng-container i18n> È quello che vedi nell'app della banca? </ng-container
+              ><button i18n type="button" class="link" (click)="editingBalance.set(true)">
                 No, correggilo
               </button>
             }
           </p>
         } @else {
           <p class="hint">
-            Senza saldo il conto non mostra quanti soldi ci sono.
-            <button type="button" class="link" (click)="editingBalance.set(true)">
+            <ng-container i18n> Senza saldo il conto non mostra quanti soldi ci sono. </ng-container
+            ><button i18n type="button" class="link" (click)="editingBalance.set(true)">
               Scrivi il saldo
             </button>
           </p>
         }
       </section>
     }
-    <button type="button" (click)="restart()">Importa un altro file</button>
+    <button i18n type="button" (click)="restart()">Importa un altro file</button>
   </div>
 } @else {
   <div class="card">
-    <h2>1. Conto e file</h2>
+    <h2 i18n>1. Conto e file</h2>
     <div class="form-grid">
-      <label>
-        Conto
-        <select [formControl]="account">
+      <label
+        ><ng-container i18n> Conto </ng-container
+        ><select [formControl]="account">
           @if (manualAccounts().length > 0) {
-            <optgroup label="Conti manuali (non collegati a una banca)">
+            <optgroup label="Conti manuali (non collegati a una banca)" i18n-label>
               @for (a of manualAccounts(); track a.id) {
                 <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
               }
             </optgroup>
           }
           @if (linkedAccounts().length > 0) {
-            <optgroup label="Conti collegati con Enable Banking">
+            <optgroup label="Conti collegati con Enable Banking" i18n-label>
               @for (a of linkedAccounts(); track a.id) {
                 <option [ngValue]="a.id">{{ a.label }} ({{ a.currency }})</option>
               }
@@ -117,24 +122,24 @@
       <div class="import-mode wide" data-testid="import-mode">
         @if (selectedIsTradeRepublic()) {
           <!-- Un conto Trade Republic collegato: il suo file completa i movimenti e carica quelli più vecchi. -->
-          <p data-testid="trade-republic-hint">
+          <p i18n data-testid="trade-republic-hint">
             <strong>Conto Trade Republic collegato.</strong> Tramite il collegamento Trade Republic
             trasmette soltanto data e importo dei movimenti. Caricando l'esportazione delle
             transazioni:
           </p>
           <ul data-testid="trade-republic-linked">
-            <li>
+            <li i18n>
               i movimenti già ricevuti dalla banca vengono <strong>completati</strong> con causale e
               controparte;
             </li>
-            <li>
+            <li i18n>
               i movimenti precedenti al primo ricevuto dalla banca{{ bankFromText() }} vengono
               <strong>caricati</strong>.
             </li>
           </ul>
-          <p>Date e importi trasmessi dalla banca non vengono modificati.</p>
+          <p i18n>Date e importi trasmessi dalla banca non vengono modificati.</p>
         } @else if (linked()) {
-          <p>
+          <p i18n>
             <strong>Completa lo storico di un conto collegato.</strong> I movimenti di questo conto
             arrivano dalla banca, ma solo da quando l'hai collegato: la banca dà uno storico
             limitato. Dal file aggiungo <strong>solo i movimenti più vecchi</strong> del primo
@@ -142,7 +147,7 @@
             farebbe doppioni.
           </p>
         } @else {
-          <p>
+          <p i18n>
             <strong>Importa i movimenti di un conto manuale</strong>, uno che Enable Banking non
             copre. Aggiungo tutte le righe del file; quelle già importate (lo stesso file, o un file
             che si sovrappone al precedente) si saltano.
@@ -153,6 +158,7 @@
         class="wide"
         accept=".csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         title="Scegli il file (CSV o Excel)"
+        i18n-title
         hint="o trascinalo qui · al massimo 5 MB"
         (picked)="onFile($event)"
       />
@@ -163,97 +169,97 @@
     @if (p.tradeRepublic) {
       <!-- Il file di Trade Republic si legge da solo: niente mappatura (docs/importa-file.md, parte H). -->
       <div class="card" data-testid="trade-republic-file">
-        <h2>2. Esportazione Trade Republic riconosciuta</h2>
-        <p>
+        <h2 i18n>2. Esportazione Trade Republic riconosciuta</h2>
+        <p i18n>
           Il file è l'<strong>esportazione delle transazioni</strong> di Trade Republic: le colonne
           vengono lette automaticamente, senza impostazioni.
         </p>
         <ul>
           @if (p.linkedAccount) {
-            <li data-testid="trade-republic-complete">
+            <li i18n data-testid="trade-republic-complete">
               <strong>Completamento:</strong> i movimenti già ricevuti dalla banca ricevono causale
               e controparte dal file. Data e importo restano quelli trasmessi dalla banca.
             </li>
-            <li>
+            <li i18n>
               <strong>Caricamento:</strong> vengono aggiunti i movimenti precedenti al primo
               ricevuto dalla banca{{
                 p.bankFrom ? ' (' + (p.bankFrom | localDate: 'long') + ')' : ''
               }}.
             </li>
           } @else {
-            <li>
+            <li i18n>
               <strong>Caricamento:</strong> vengono aggiunti tutti i movimenti del file; quelli già
               importati in precedenza sono riconosciuti e non vengono duplicati.
             </li>
           }
-          <li>
+          <li i18n>
             <strong>Importi netti:</strong> viene registrato l'importo effettivamente accreditato o
             addebitato: interessi e dividendi al netto delle ritenute, acquisti comprensivi di
             commissioni e imposte, imposta di bollo per il suo importo effettivo.
           </li>
           @if (p.skippedRows > 0) {
-            <li>
+            <li i18n>
               <strong>Operazioni su titoli senza movimento di denaro</strong> (trasferimenti di
               azioni, diritti di opzione):
-              <ng-container i18n>{p.skippedRows, plural,
+              {p.skippedRows, plural,
                 =1 {1 riga, non registrata tra i movimenti.}
                 other {{{ p.skippedRows }} righe, non registrate tra i movimenti.}
-              }</ng-container>
+              }
             </li>
           }
         </ul>
       </div>
     } @else {
       <form class="card" [formGroup]="mapping">
-        <h2>2. Come leggere le colonne</h2>
-        <p class="hint">
+        <h2 i18n>2. Come leggere le colonne</h2>
+        <p i18n class="hint">
           Proposta in base ai nomi delle colonne e alle prime righe: controllala. Ogni modifica
           aggiorna l'anteprima qui sotto.
         </p>
         <div class="form-grid">
           @if (!p.spreadsheet) {
             <!-- In un file Excel le colonne sono già separate: il separatore non c'entra. -->
-            <label>
-              Separatore
-              <select formControlName="delimiter">
+            <label
+              ><ng-container i18n> Separatore </ng-container
+              ><select formControlName="delimiter">
                 @for (d of delimiters; track d.value) {
                   <option [ngValue]="d.value">{{ d.label }}</option>
                 }
               </select>
             </label>
           }
-          <label>
-            Data
-            <select formControlName="dateColumn">
-              <option [ngValue]="null">— scegli —</option>
+          <label
+            ><ng-container i18n> Data </ng-container
+            ><select formControlName="dateColumn">
+              <option i18n [ngValue]="null">— scegli —</option>
               @for (c of columns(); track c.index) {
                 <option [ngValue]="c.index">{{ c.label }}</option>
               }
             </select>
           </label>
-          <label>
-            Formato della data
-            <select formControlName="dateFormat">
+          <label
+            ><ng-container i18n> Formato della data </ng-container
+            ><select formControlName="dateFormat">
               @for (f of dateFormats; track f.value) {
                 <option [ngValue]="f.value">{{ f.label }}</option>
               }
             </select>
           </label>
-          <label>
-            Importo
-            <select formControlName="amountMode">
-              <option [ngValue]="'SINGLE'">Una colonna, con il segno (-12,50)</option>
-              <option [ngValue]="'SPLIT'">Due colonne: entrate e uscite</option>
-              <option [ngValue]="'UNSIGNED'">
+          <label
+            ><ng-container i18n> Importo </ng-container
+            ><select formControlName="amountMode">
+              <option i18n [ngValue]="'SINGLE'">Una colonna, con il segno (-12,50)</option>
+              <option i18n [ngValue]="'SPLIT'">Due colonne: entrate e uscite</option>
+              <option i18n [ngValue]="'UNSIGNED'">
                 Una colonna senza segno: il verso si capisce dal testo
               </option>
             </select>
           </label>
           @if (mapping.controls.amountMode.value !== 'SPLIT') {
-            <label>
-              Colonna dell'importo
-              <select formControlName="amountColumn">
-                <option [ngValue]="null">— scegli —</option>
+            <label
+              ><ng-container i18n> Colonna dell'importo </ng-container
+              ><select formControlName="amountColumn">
+                <option i18n [ngValue]="null">— scegli —</option>
                 @for (c of columns(); track c.index) {
                   <option [ngValue]="c.index">{{ c.label }}</option>
                 }
@@ -262,84 +268,86 @@
           }
           @if (mapping.controls.amountMode.value === 'UNSIGNED') {
             <!-- Senza segno (Tinaba, docs/tinaba.md): sono entrate le righe con una di queste parole, le altre uscite. -->
-            <label>
-              Cerca le parole delle entrate nella colonna
-              <select formControlName="signColumn">
-                <option [ngValue]="null">— scegli —</option>
+            <label
+              ><ng-container i18n> Cerca le parole delle entrate nella colonna </ng-container
+              ><select formControlName="signColumn">
+                <option i18n [ngValue]="null">— scegli —</option>
                 @for (c of columns(); track c.index) {
                   <option [ngValue]="c.index">{{ c.label }}</option>
                 }
               </select>
             </label>
-            <label>
-              Parole delle entrate, separate da virgole
-              <input
+            <label
+              ><ng-container i18n> Parole delle entrate, separate da virgole </ng-container
+              ><input
                 type="text"
                 formControlName="incomeWords"
                 placeholder="es. ricevuto, accredito"
+                i18n-placeholder
               />
-              <span class="hint"
+              <span i18n class="hint"
                 >Le righe che ne contengono una sono entrate; tutte le altre, uscite.</span
               >
             </label>
           } @else if (mapping.controls.amountMode.value === 'SPLIT') {
-            <label>
-              Colonna delle entrate
-              <select formControlName="incomeColumn">
-                <option [ngValue]="null">— scegli —</option>
+            <label
+              ><ng-container i18n> Colonna delle entrate </ng-container
+              ><select formControlName="incomeColumn">
+                <option i18n [ngValue]="null">— scegli —</option>
                 @for (c of columns(); track c.index) {
                   <option [ngValue]="c.index">{{ c.label }}</option>
                 }
               </select>
             </label>
-            <label>
-              Colonna delle uscite
-              <select formControlName="expenseColumn">
-                <option [ngValue]="null">— scegli —</option>
+            <label
+              ><ng-container i18n> Colonna delle uscite </ng-container
+              ><select formControlName="expenseColumn">
+                <option i18n [ngValue]="null">— scegli —</option>
                 @for (c of columns(); track c.index) {
                   <option [ngValue]="c.index">{{ c.label }}</option>
                 }
               </select>
             </label>
           }
-          <label>
-            Decimali
-            <select formControlName="decimalSeparator">
-              <option [ngValue]="'COMMA'">Virgola (1.234,56)</option>
-              <option [ngValue]="'DOT'">Punto (1,234.56)</option>
+          <label
+            ><ng-container i18n> Decimali </ng-container
+            ><select formControlName="decimalSeparator">
+              <option i18n [ngValue]="'COMMA'">Virgola (1.234,56)</option>
+              <option i18n [ngValue]="'DOT'">Punto (1,234.56)</option>
             </select>
           </label>
-          <label>
-            Descrizione (facoltativa)
-            <select formControlName="descriptionColumn">
-              <option [ngValue]="null">— nessuna —</option>
+          <label
+            ><ng-container i18n> Descrizione (facoltativa) </ng-container
+            ><select formControlName="descriptionColumn">
+              <option i18n [ngValue]="null">— nessuna —</option>
               @for (c of columns(); track c.index) {
                 <option [ngValue]="c.index">{{ c.label }}</option>
               }
             </select>
           </label>
-          <label>
-            Altro testo da aggiungere alla descrizione (facoltativo)
-            <select formControlName="detailColumn">
-              <option [ngValue]="null">— nessuno —</option>
+          <label
+            ><ng-container i18n>
+              Altro testo da aggiungere alla descrizione (facoltativo) </ng-container
+            ><select formControlName="detailColumn">
+              <option i18n [ngValue]="null">— nessuno —</option>
               @for (c of columns(); track c.index) {
                 <option [ngValue]="c.index">{{ c.label }}</option>
               }
             </select>
           </label>
-          <label>
-            Controparte (facoltativa)
-            <select formControlName="counterpartyColumn">
-              <option [ngValue]="null">— nessuna —</option>
+          <label
+            ><ng-container i18n> Controparte (facoltativa) </ng-container
+            ><select formControlName="counterpartyColumn">
+              <option i18n [ngValue]="null">— nessuna —</option>
               @for (c of columns(); track c.index) {
                 <option [ngValue]="c.index">{{ c.label }}</option>
               }
             </select>
           </label>
-          <label>
-            Valuta (facoltativa)
-            <select formControlName="currencyColumn">
-              <option [ngValue]="null">— quella del conto —</option>
+          <label
+            ><ng-container i18n> Valuta (facoltativa) </ng-container
+            ><select formControlName="currencyColumn">
+              <option i18n [ngValue]="null">— quella del conto —</option>
               @for (c of columns(); track c.index) {
                 <option [ngValue]="c.index">{{ c.label }}</option>
               }
@@ -350,7 +358,7 @@
     }
 
     <div class="card">
-      <h2>3. Anteprima</h2>
+      <h2 i18n>3. Anteprima</h2>
       @if (p.errorCount > 0 || p.errors.length > 0) {
         <div class="error" role="alert">
           @if (p.errorCount > 0) {
@@ -360,9 +368,13 @@
                 other {{{ p.errorCount }} righe non si leggono}
               }</ng-container>
               @if (p.tradeRepublic) {
-                nel file di Trade Republic. È stato modificato? Scaricalo di nuovo dall'app:
+                <ng-container i18n>
+                  nel file di Trade Republic. È stato modificato? Scaricalo di nuovo dall'app:
+                </ng-container>
               } @else {
-                con queste impostazioni. Correggi la mappatura (o il file) per poter importare:
+                <ng-container i18n>
+                  con queste impostazioni. Correggi la mappatura (o il file) per poter importare:
+                </ng-container>
               }
             </p>
           }
@@ -381,22 +393,24 @@
 
       @if (p.parsedRows.length > 0) {
         <p class="secondary">
-          {{
-            p.completeRows > 0
-              ? 'I movimenti che cambiano (aggiunti o completati), per data:'
-              : p.newRows > 0
-                ? 'Le prime righe, come verranno aggiunte:'
-                : 'Le prime righe del file, come si leggono:'
-          }}
+          @if (p.completeRows > 0) {
+            <ng-container i18n>
+              I movimenti che cambiano (aggiunti o completati), per data:
+            </ng-container>
+          } @else if (p.newRows > 0) {
+            <ng-container i18n> Le prime righe, come verranno aggiunte: </ng-container>
+          } @else {
+            <ng-container i18n> Le prime righe del file, come si leggono: </ng-container>
+          }
         </p>
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Descrizione</th>
-                <th>Controparte</th>
-                <th class="amount">Importo</th>
+                <th i18n>Data</th>
+                <th i18n>Descrizione</th>
+                <th i18n>Controparte</th>
+                <th i18n class="amount">Importo</th>
               </tr>
             </thead>
             <tbody>
@@ -422,10 +436,10 @@
       @if (p.rowsWithoutMovement.length > 0 || p.movementsWithoutRow.length > 0) {
         <!-- Trade Republic in un conto collegato: le anomalie, una per una (prima nella pagina "Completa i movimenti"). -->
         <section class="import-anomalies" data-testid="import-anomalies">
-          <h3>Da verificare</h3>
+          <h3 i18n>Da verificare</h3>
           @if (p.rowsWithoutMovement.length > 0) {
-            <h4>Righe del file senza un movimento della banca</h4>
-            <p class="secondary">
+            <h4 i18n>Righe del file senza un movimento della banca</h4>
+            <p i18n class="secondary">
               Rientrano nel periodo coperto dalla banca, ma la banca non ha trasmesso un movimento
               dello stesso importo entro 3 giorni. Non vengono aggiunte, per evitare duplicati: le
               più recenti arriveranno con il prossimo aggiornamento del conto; per le altre verifica
@@ -435,9 +449,9 @@
               <table data-testid="rows-without-movement">
                 <thead>
                   <tr>
-                    <th>Data</th>
-                    <th>Descrizione</th>
-                    <th class="amount">Importo</th>
+                    <th i18n>Data</th>
+                    <th i18n>Descrizione</th>
+                    <th i18n class="amount">Importo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -453,8 +467,8 @@
             </div>
           }
           @if (p.movementsWithoutRow.length > 0) {
-            <h4>Movimenti della banca assenti dal file</h4>
-            <p class="secondary">
+            <h4 i18n>Movimenti della banca assenti dal file</h4>
+            <p i18n class="secondary">
               Movimenti ricevuti dalla banca nel periodo del file che il file non contiene: restano
               invariati, senza causale.
             </p>
@@ -462,8 +476,8 @@
               <table data-testid="movements-without-row">
                 <thead>
                   <tr>
-                    <th>Data</th>
-                    <th class="amount">Importo</th>
+                    <th i18n>Data</th>
+                    <th i18n class="amount">Importo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -480,7 +494,7 @@
         </section>
       }
 
-      <p class="secondary">Il file, così com'è (prime righe):</p>
+      <p i18n class="secondary">Il file, così com'è (prime righe):</p>
       <div class="table-scroll">
         <table>
           <thead>
@@ -505,7 +519,7 @@
       <div class="toolbar">
         <button type="button" [disabled]="!canImport()" (click)="importFile()">
           @if (importing()) {
-            Importazione in corso...
+            <ng-container i18n> Importazione in corso... </ng-container>
           } @else {
             {{ importLabel(p) }}
           }

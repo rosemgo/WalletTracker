@@ -10,6 +10,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './auth/auth-interceptor';
+import { languageInterceptor } from './language/language-interceptor';
 import { APP_LOCALE } from './text/locale';
 
 /**
@@ -24,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     // HttpClient, usato da WalletApi. L'intercettore si accorge delle sessioni scadute (docs/46). La protezione CSRF
     // di Angular è accesa di serie: legge il cookie XSRF-TOKEN e lo rimanda nell'header X-XSRF-TOKEN delle richieste
     // che modificano qualcosa, proprio come vuole Spring Security.
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([languageInterceptor, authInterceptor])),
     // La lingua dell'app, per le pipe e le funzioni di Angular (date "10/10/2026", importi "-630,39 €"): text/locale.ts.
     { provide: LOCALE_ID, useValue: APP_LOCALE },
     // Il service worker dell'app installabile (docs/42, parte C): solo nella build di produzione (con ng serve

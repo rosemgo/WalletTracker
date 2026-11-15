@@ -25,16 +25,16 @@ const SPARK_HEIGHT = 48;
     @if (shown(); as d) {
       <a class="card investments-card" routerLink="/investimenti">
         <div class="card-head">
-          <h2>Investito</h2>
-          <span aria-hidden="true">Vedi tutto ›</span>
+          <h2 i18n>Investito</h2>
+          <span i18n aria-hidden="true">Vedi tutto ›</span>
         </div>
         <div class="figures">
           <div>
-            <span class="secondary">Investito in titoli quest'anno</span>
+            <span i18n class="secondary">Investito in titoli quest'anno</span>
             <strong>{{ d.investedThisYear | money: d.currency : 'symbol' : '1.0-0' }}</strong>
           </div>
           <div>
-            <span class="secondary">Rendite quest'anno</span>
+            <span i18n class="secondary">Rendite quest'anno</span>
             <strong>{{ d.incomeThisYear | money: d.currency : 'symbol' : '1.0-0' }}</strong>
           </div>
         </div>

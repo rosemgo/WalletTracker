@@ -6,8 +6,12 @@
   <app-pin-page />
 } @else {
   <div class="shell">
-    <nav class="app-nav" aria-label="Sezioni">
-      <span class="brand"><img class="brand-mark" src="icons/icon.svg" alt="" />WalletTracker</span>
+    <nav class="app-nav" aria-label="Sezioni" i18n-aria-label>
+      <span class="brand"
+        ><img class="brand-mark" src="icons/icon.svg" alt="" /><ng-container i18n
+          >WalletTracker</ng-container
+        ></span
+      >
       @for (section of sections; track section.path) {
         <a
           class="section"
@@ -49,12 +53,12 @@
         (click)="privacy.toggle()"
       >
         <span class="nav-icon"><ng-container *ngTemplateOutlet="eyeIcon" /></span>
-        <span>Modalità discreta</span>
+        <span i18n>Modalità discreta</span>
         <span class="switch" aria-hidden="true"></span>
       </button>
       <!-- Esci: chiude la sessione, e l'app chiederà di nuovo il PIN (sul telefono è nella pagina "Altro"). -->
       @if (auth.status()?.pinSet) {
-        <button type="button" class="nav-logout" (click)="auth.logout()">Esci</button>
+        <button i18n type="button" class="nav-logout" (click)="auth.logout()">Esci</button>
       }
     </nav>
 
@@ -66,15 +70,18 @@
     -->
       <header class="top-bar">
         <span class="top-brand"
-          ><img class="brand-mark" src="icons/icon.svg" alt="" />WalletTracker</span
+          ><img class="brand-mark" src="icons/icon.svg" alt="" /><ng-container i18n
+            >WalletTracker</ng-container
+          ></span
         >
         <button
           type="button"
           class="icon eye"
           role="switch"
           aria-label="Modalità discreta: nasconde gli importi"
+          i18n-aria-label
           [attr.aria-checked]="privacy.discreet()"
-          [title]="privacy.discreet() ? 'Mostra gli importi' : 'Nascondi gli importi'"
+          [title]="privacy.discreet() ? showAmounts : hideAmounts"
           (click)="privacy.toggle()"
         >
           <ng-container *ngTemplateOutlet="eyeIcon" />
@@ -85,24 +92,26 @@
          di schermo leggono l'avviso quando compare, senza spostare il punto in cui si trova chi li usa. -->
       @if (!status.online() && !dismissed.isDismissed('offline')) {
         <div class="banner offline dismissible" role="status">
-          <span>
+          <span i18n>
             Senza rete: stai vedendo gli ultimi dati scaricati, e per ora non si possono fare
             modifiche.
           </span>
           <app-close-button
             label="Chiudi l'avviso senza rete"
+            i18n-label
             (closed)="dismissed.dismissForNow('offline')"
           />
         </div>
       }
       @if (status.updateReady() && !dismissed.isDismissed('update-ready')) {
         <div class="banner update dismissible" role="status">
-          <span>
-            È pronta una nuova versione di WalletTracker.
-            <button type="button" class="link" (click)="status.reload()">Aggiorna</button>
+          <span
+            ><ng-container i18n> È pronta una nuova versione di WalletTracker. </ng-container
+            ><button i18n type="button" class="link" (click)="status.reload()">Aggiorna</button>
           </span>
           <app-close-button
             label="Chiudi l'avviso della versione pronta"
+            i18n-label
             (closed)="dismissed.dismissForNow('update-ready')"
           />
         </div>
@@ -110,7 +119,7 @@
       <!-- Una versione nuova pubblicata (docs/50, parte J): si chiude, e ricompare al prossimo ingresso nell'app. -->
       @if (updates.bannerVersion(); as latest) {
         <div class="banner release dismissible" role="status" data-testid="release-banner">
-          <span>
+          <span i18n>
             È disponibile WalletTracker <strong>{{ latest }}</strong
             >.
             <a routerLink="/impostazioni" fragment="informazioni"
@@ -119,6 +128,7 @@
           </span>
           <app-close-button
             label="Chiudi l'avviso della versione nuova"
+            i18n-label
             (closed)="updates.dismiss()"
           />
         </div>
@@ -129,10 +139,11 @@
           <div class="banner dismissible" role="status" data-testid="backup-banner">
             <span>
               {{ warning }}
-              <a routerLink="/impostazioni" fragment="backup">Apri le Impostazioni</a>.
+              <a i18n routerLink="/impostazioni" fragment="backup">Apri le Impostazioni</a>.
             </span>
             <app-close-button
               label="Chiudi l'avviso dei backup"
+              i18n-label
               (closed)="dismissed.dismiss('backup:' + warning)"
             />
           </div>
@@ -140,12 +151,13 @@
       }
       @if (setup.status()?.configured === false && !dismissed.isDismissed('setup-not-configured')) {
         <div class="banner dismissible" data-testid="setup-banner">
-          <span>
+          <span i18n>
             Per iniziare, configura il collegamento con Enable Banking:
             <a routerLink="/impostazioni">apri le Impostazioni</a>.
           </span>
           <app-close-button
             label="Chiudi l'avviso della configurazione"
+            i18n-label
             (closed)="dismissed.dismiss('setup-not-configured')"
           />
         </div>

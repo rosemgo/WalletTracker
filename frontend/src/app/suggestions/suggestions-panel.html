@@ -6,9 +6,9 @@
 }
 
 @if (visible()) {
-  <section class="card" aria-label="Suggerimenti di categoria">
-    <h2>Suggerimenti di categoria</h2>
-    <p class="hint">
+  <section class="card" aria-label="Suggerimenti di categoria" i18n-aria-label>
+    <h2 i18n>Suggerimenti di categoria</h2>
+    <p i18n class="hint">
       Dalle categorie che hai già scelto a mano e, se l'hai accesa, dall'intelligenza artificiale
       (segno "IA"). Finché non accetti, i movimenti restano senza categoria.
     </p>
@@ -21,7 +21,13 @@
               <span>
                 {{ s.merchantName | readable }}
                 @if (s.model) {
-                  <span class="ai-tag" title="Suggerito dall'intelligenza artificiale">IA</span>
+                  <span
+                    i18n
+                    class="ai-tag"
+                    title="Suggerito dall'intelligenza artificiale"
+                    i18n-title
+                    >IA</span
+                  >
                 }
               </span>
               <strong>{{ s.category }}</strong>
@@ -32,22 +38,23 @@
                 }</ng-container>
                 ·
                 @if (s.model) {
-                  suggerita dall'IA ({{ s.model }}): controlla prima di accettare
+                  <ng-container i18n>
+                    suggerita dall'IA ({{ s.model }}): controlla prima di accettare
+                  </ng-container>
                 } @else {
-                  l'hai scelta per
-                  <ng-container i18n>{s.examples, plural,
-                    =1 {1 movimento}
-                    other {{{ s.examples }} movimenti}
-                  }</ng-container>
+                  <ng-container i18n>
+                    l'hai scelta per
+                    {s.examples, plural, =1 {1 movimento} other {{{ s.examples }} movimenti}}
+                  </ng-container>
                 }
               </span>
             </span>
             <span class="buttons">
               <!-- Si disattivano solo i pulsanti di questo esercente, mentre il backend risponde. -->
-              <button type="button" class="primary" [disabled]="isBusy(s)" (click)="accept(s)">
+              <button i18n type="button" class="primary" [disabled]="isBusy(s)" (click)="accept(s)">
                 Accetta
               </button>
-              <button type="button" [disabled]="isBusy(s)" (click)="dismiss(s)">No</button>
+              <button i18n type="button" [disabled]="isBusy(s)" (click)="dismiss(s)">No</button>
             </span>
           </li>
         }
@@ -57,7 +64,7 @@
     @if (ai(); as a) {
       @if (a.enabled) {
         @if (a.job?.running) {
-          <p>
+          <p i18n>
             L'IA ({{ a.job!.model }}) sta guardando gli esercenti: {{ a.job!.done }} di
             {{ a.job!.total }}...
           </p>
@@ -65,24 +72,25 @@
             [value]="a.job!.done"
             [max]="a.job!.total"
             aria-label="Avanzamento dell'IA"
+            i18n-aria-label
           ></progress>
           @if (a.job!.done === 0) {
-            <p class="hint">
+            <p i18n class="hint">
               La prima risposta può richiedere di più: Ollama carica il modello in memoria (qualche
               secondo, o qualche minuto se il computer è appena stato acceso). Le altre sono più
               veloci.
             </p>
           }
         } @else if (a.toAsk > 0) {
-          <p class="hint">
-            <ng-container i18n>{a.toAsk, plural,
+          <p i18n class="hint">
+            {a.toAsk, plural,
               =1 {1 esercente senza categoria non è ancora stato chiesto all'IA}
               other {{{ a.toAsk }} esercenti senza categoria non sono ancora stati chiesti all'IA}
-            }</ng-container>
+            }
             ({{ a.model }}). Ogni risposta richiede qualche secondo: ne chiede al massimo 20 alla
             volta.
           </p>
-          <button type="button" [disabled]="busy().size > 0" (click)="askAi()">
+          <button i18n type="button" [disabled]="busy().size > 0" (click)="askAi()">
             Chiedi all'IA
           </button>
         }

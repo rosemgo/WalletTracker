@@ -276,6 +276,16 @@ export class WalletApi {
 
   /** GET /api/setup */
   /** GET /api/auth/status: lo stato del PIN. Dà anche il cookie XSRF-TOKEN, che Angular rimanda da solo. */
+  /** GET /api/language: la lingua dell'installazione (null se nessuno l'ha ancora scelta). Risponde anche senza PIN. */
+  language(): Observable<{ language: string | null; supported: string[] }> {
+    return this.http.get<{ language: string | null; supported: string[] }>('/api/language');
+  }
+
+  /** PUT /api/language: cambia la lingua dell'installazione; le categorie di partenza non rinominate la seguono. */
+  chooseLanguage(language: string): Observable<unknown> {
+    return this.http.put('/api/language', { language });
+  }
+
   authStatus(): Observable<AuthStatus> {
     return this.http.get<AuthStatus>('/api/auth/status');
   }

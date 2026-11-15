@@ -35,20 +35,19 @@ import { Component, input, output, signal } from '@angular/core';
       </span>
       <span class="file-drop-text">
         <strong>{{ fileName() ?? title() }}</strong>
-        <span class="secondary">{{
-          fileName() === null ? hint() : 'Tocca per scegliere un altro file'
-        }}</span>
+        <span class="secondary">{{ fileName() === null ? hint() : anotherFile }}</span>
       </span>
     </label>
   `,
 })
 export class FileDrop {
+  protected readonly anotherFile = $localize`Tocca per scegliere un altro file`;
   /** I tipi di file accettati, come nell'attributo accept: ".csv,text/csv". */
   readonly accept = input('');
   /** La scritta principale: "Scegli il file CSV". */
   readonly title = input.required<string>();
   /** La scritta sotto: "o trascinalo qui · al massimo 5 MB". */
-  readonly hint = input('o trascinalo qui');
+  readonly hint = input($localize`o trascinalo qui`);
 
   readonly picked = output<Event>();
 

@@ -1,8 +1,8 @@
 <div class="detail-top">
-  <a class="icon-link" routerLink="/analisi" aria-label="Torna ad Analisi">
+  <a class="icon-link" routerLink="/analisi" aria-label="Torna ad Analisi" i18n-aria-label>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
   </a>
-  <span class="secondary">Categoria</span>
+  <span i18n class="secondary">Categoria</span>
 </div>
 
 @if (error()) {
@@ -19,43 +19,31 @@
       @if (budget(); as b) {
         <div class="budget-pace">
           <div class="budget-pace-head">
-            <span>Budget {{ b.amount | money: o.currency : 'symbol' : '1.0-0' }}</span>
+            <span i18n>Budget {{ b.amount | money: o.currency : 'symbol' : '1.0-0' }}</span>
             <span class="secondary">{{ b.text }}</span>
           </div>
-          <div
-            class="pace-track"
-            role="img"
-            [attr.aria-label]="
-              'Budget usato al ' +
-              (b.used | number: '1.0-0') +
-              ' per cento' +
-              (b.pace !== null
-                ? '; a questo punto del mese il ritmo regolare è al ' +
-                  (b.pace | number: '1.0-0') +
-                  ' per cento'
-                : '')
-            "
-          >
+          <div class="pace-track" role="img" [attr.aria-label]="paceLabel(b.used, b.pace)">
             <span class="pace-fill" [class.over]="b.over" [style.width.%]="b.used"></span>
             @if (b.pace !== null) {
               <span class="pace-mark" [style.left.%]="b.pace"></span>
             }
           </div>
           @if (b.pace !== null) {
-            <span class="secondary"
+            <span i18n class="secondary"
               >La tacca è dove dovresti essere oggi, spendendo in modo regolare.</span
             >
           }
         </div>
       } @else {
-        <a routerLink="/budget" class="action">Imposta un budget per questa categoria</a>
+        <a i18n routerLink="/budget" class="action">Imposta un budget per questa categoria</a>
       }
     </section>
 
     <section class="card">
       <h2>{{ chartTitle() }}</h2>
-      <div class="segmented" role="group" aria-label="Periodo del grafico">
+      <div class="segmented" role="group" aria-label="Periodo del grafico" i18n-aria-label>
         <button
+          i18n
           type="button"
           [attr.aria-pressed]="chartPeriod() === 'YEAR_TO_DATE'"
           (click)="chartPeriod.set('YEAR_TO_DATE')"
@@ -63,6 +51,7 @@
           Quest'anno
         </button>
         <button
+          i18n
           type="button"
           [attr.aria-pressed]="chartPeriod() === 'YEAR'"
           (click)="chartPeriod.set('YEAR')"
@@ -86,14 +75,17 @@
     </section>
 
     <section class="card">
-      <h2>Dove, {{ isCurrent() ? 'questo mese' : 'a ' + monthName() }}</h2>
+      <h2 i18n>
+        Dove,
+        {!!isCurrent(), select, true {questo mese} other {a {{ monthName() }}}}
+      </h2>
       <ul class="rows">
         @for (m of o.merchants; track m.key) {
           <li>
             <!-- Toccando un esercente, i suoi movimenti di questa categoria nel mese. -->
             <a class="row-link" routerLink="/movimenti" [queryParams]="merchantQuery(m)">
               <span>
-                {{ m.name ?? 'Senza descrizione' }}
+                {{ m.name ?? noDescription }}
                 <span class="secondary" i18n>{m.movements, plural,
                   =1 {1 volta}
                   other {{{ m.movements }} volte}
@@ -103,22 +95,28 @@
             </a>
           </li>
         } @empty {
-          <li class="secondary">Nessun movimento in questo mese.</li>
+          <li i18n class="secondary">Nessun movimento in questo mese.</li>
         }
       </ul>
     </section>
 
     <div class="buttons wide">
       <a
+        i18n
         class="button primary"
         routerLink="/movimenti"
         [queryParams]="{ categoryId: o.categoryId }"
       >
         Vedi i movimenti
       </a>
-      <a class="button" routerLink="/budget">{{ o.budget ? 'Cambia il budget' : 'I budget' }}</a>
+      <a class="button" routerLink="/budget"
+        ><ng-container i18n>{!!o.budget, select,
+          true {Cambia il budget}
+          other {I budget}
+        }</ng-container></a
+      >
     </div>
   </div>
 } @else if (!error()) {
-  <p>Caricamento...</p>
+  <p i18n>Caricamento...</p>
 }

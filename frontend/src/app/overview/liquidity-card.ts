@@ -40,8 +40,8 @@ interface Group {
     @if (groups().length > 0) {
       <a class="card liquidity-card" routerLink="/conti">
         <div class="card-head">
-          <h2>Liquidità</h2>
-          <span aria-hidden="true">Vedi i conti ›</span>
+          <h2 i18n>Liquidità</h2>
+          <span i18n aria-hidden="true">Vedi i conti ›</span>
         </div>
         <div class="liquidity-totals">
           @for (g of groups(); track g.currency) {
@@ -64,7 +64,7 @@ interface Group {
               <li>
                 <span>
                   {{ r.account.label }}
-                  <span class="secondary">al {{ r.date | localDate: 'dayMonth' }}</span>
+                  <span i18n class="secondary">al {{ r.date | localDate: 'dayMonth' }}</span>
                 </span>
                 <strong>{{ r.amount | money: g.currency }}</strong>
               </li>

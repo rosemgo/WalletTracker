@@ -11,9 +11,9 @@ import { formatLocalDate } from '../text/dates';
 
 /** Come si presenta ogni stato: un'icona e un'etichetta, mai solo il colore. */
 const STATUS: Record<BudgetStatus, { icon: string; label: string }> = {
-  OK: { icon: '✓', label: 'Nei limiti' },
-  WARNING: { icon: '!', label: 'Quasi esaurito' },
-  OVER: { icon: '✕', label: 'Superato' },
+  OK: { icon: '✓', label: $localize`Nei limiti` },
+  WARNING: { icon: '!', label: $localize`Quasi esaurito` },
+  OVER: { icon: '✕', label: $localize`Superato` },
 };
 
 /** L'ordine delle schede: prima quello che chiede attenzione (superati, poi quasi esauriti). */
@@ -94,7 +94,7 @@ export class BudgetPage implements OnInit {
       ...total,
       sentence: this.isCurrentMonth()
         ? paceSentence(total.spent, total.expectedSoFar, (v) => this.euros(v, total.currency))
-        : `Rispettati ${total.kept} su ${total.count}.`,
+        : $localize`Rispettati ${total.kept}:kept: su ${total.count}:count:.`,
     };
   });
 
@@ -151,7 +151,7 @@ export class BudgetPage implements OnInit {
     const euros = (v: number) => this.euros(v, budget.currency);
     return this.isCurrentMonth()
       ? paceSentence(budget.spent, budget.expectedSoFar, euros)
-      : `Nei tre mesi prima, in media ${euros(budget.averageLast3Months)}.`;
+      : $localize`Nei tre mesi prima, in media ${euros(budget.averageLast3Months)}:amount:.`;
   }
 
   edit(budget: Budget): void {
@@ -195,22 +195,22 @@ export class BudgetPage implements OnInit {
     this.error.set(null);
     saved$.subscribe({
       next: (budget) => {
-        this.message.set(`Budget "${budget.category}" salvato.`);
+        this.message.set($localize`Budget "${budget.category}:category:" salvato.`);
         this.cancel();
         this.load();
       },
       error: (response) =>
-        this.error.set(response.error?.detail ?? 'Il budget non è stato salvato.'),
+        this.error.set(response.error?.detail ?? $localize`Il budget non è stato salvato.`),
     });
   }
 
   remove(budget: Budget): void {
     this.api.deleteBudget(budget.id).subscribe({
       next: () => {
-        this.message.set(`Budget "${budget.category}" eliminato.`);
+        this.message.set($localize`Budget "${budget.category}:category:" eliminato.`);
         this.load();
       },
-      error: () => this.error.set('Il budget non è stato eliminato.'),
+      error: () => this.error.set($localize`Il budget non è stato eliminato.`),
     });
   }
 
@@ -234,7 +234,7 @@ export class BudgetPage implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Impossibile caricare i budget: il backend è avviato?');
+        this.error.set($localize`Impossibile caricare i budget: il backend è avviato?`);
         this.loading.set(false);
       },
     });
@@ -263,9 +263,9 @@ export function paceSentence(
 ): string {
   const difference = spent - expected;
   if (Math.abs(difference) < SAME_PACE) {
-    return 'In linea con il ritmo di oggi.';
+    return $localize`In linea con il ritmo di oggi.`;
   }
   return difference > 0
-    ? `${euros(difference)} sopra il ritmo di oggi: rallenta per restare nel budget.`
-    : `${euros(-difference)} sotto il ritmo di oggi.`;
+    ? $localize`${euros(difference)}:amount: sopra il ritmo di oggi: rallenta per restare nel budget.`
+    : $localize`${euros(-difference)}:amount: sotto il ritmo di oggi.`;
 }

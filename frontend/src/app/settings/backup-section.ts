@@ -8,10 +8,10 @@ import { LocalDatePipe } from '../text/dates';
 
 /** I tipi di backup, come li vede chi usa l'app. */
 const TYPES: Record<BackupFile['type'], string> = {
-  manuale: 'Fatto a mano',
-  automatico: 'Automatico',
-  'prima-del-ripristino': 'Prima di un ripristino',
-  'prima-dell-aggiornamento': 'Prima di un aggiornamento',
+  manuale: $localize`Fatto a mano`,
+  automatico: $localize`Automatico`,
+  'prima-del-ripristino': $localize`Prima di un ripristino`,
+  'prima-dell-aggiornamento': $localize`Prima di un aggiornamento`,
 };
 
 /**
@@ -26,28 +26,28 @@ const TYPES: Record<BackupFile['type'], string> = {
   template: `
     @if (backups.status(); as status) {
       @if (!status.available) {
-        <p class="hint">
+        <p i18n class="hint">
           I backup li fa l'app installata con Docker (lo script di installazione, docs/48): qui non
           ci sono.
         </p>
       } @else {
         @if (!status.serviceRunning) {
-          <p class="error">
+          <p i18n class="error">
             Il servizio dei backup non risponde: dal server, controlla con
             <code>docker compose ps</code>.
           </p>
         }
         @if (status.automaticEnabled) {
-          <p class="message">
+          <p i18n class="message">
             ✓ Backup automatico acceso: uno al giorno, dalle {{ status.backupTime }}.
           </p>
         } @else {
-          <p class="error">
+          <p i18n class="error">
             Backup automatico spento: manca la password dei backup. Dal server, lancia lo script di
             installazione con <code>-Backup</code> (Windows) o <code>--backup</code> (docs/48).
           </p>
         }
-        <p data-testid="last-backup">
+        <p i18n data-testid="last-backup">
           Ultimo backup:
           @if (status.lastSuccessAt) {
             <strong>{{ status.lastSuccessAt | localDate: 'longTime' }}</strong>
@@ -64,7 +64,10 @@ const TYPES: Record<BackupFile['type'], string> = {
             [disabled]="status.inProgress || !status.serviceRunning || !status.automaticEnabled"
             (click)="backups.backupNow()"
           >
-            {{ status.inProgress ? 'Backup in corso…' : 'Fai un backup adesso' }}
+            <ng-container i18n>{!!status.inProgress, select,
+              true {Backup in corso…}
+              other {Fai un backup adesso}
+            }</ng-container>
           </button>
         </div>
         @if (backups.error(); as message) {
@@ -79,7 +82,7 @@ const TYPES: Record<BackupFile['type'], string> = {
                 <span>{{ file.createdAt | localDate: 'mediumTime' }}</span>
                 <span class="hint">{{ size(file.sizeBytes) }}</span>
                 @if (status.canDownload) {
-                  <a class="action" [href]="url(file)" download>Scarica</a>
+                  <a i18n class="action" [href]="url(file)" download>Scarica</a>
                 }
               </li>
             }
@@ -91,27 +94,34 @@ const TYPES: Record<BackupFile['type'], string> = {
               [attr.aria-expanded]="showAll()"
               (click)="showAll.set(!showAll())"
             >
-              {{ showAll() ? 'Mostra meno' : 'Mostra tutti (' + status.backups.length + ')' }}
+              <ng-container i18n>{!!showAll(), select,
+                true {Mostra meno}
+                other {Mostra tutti ({{ status.backups.length }})}
+              }</ng-container>
             </button>
           }
           <!-- Quanti se ne tengono (docs/48, parte G2): li cancella il container dei backup, non l'app. -->
           <p class="hint" data-testid="backup-keep">
             @if (status.keepManual > 0) {
-              Si tengono gli ultimi {{ status.keep }} automatici, {{ status.keepManual }} fatti a
-              mano e {{ status.keepBefore }} di prima di ogni aggiornamento o ripristino: i più
-              vecchi si cancellano da soli. Per tenerne uno per sempre, scaricalo.
+              <ng-container i18n>
+                Si tengono gli ultimi {{ status.keep }} automatici, {{ status.keepManual }} fatti a
+                mano e {{ status.keepBefore }} di prima di ogni aggiornamento o ripristino: i più
+                vecchi si cancellano da soli. Per tenerne uno per sempre, scaricalo.
+              </ng-container>
             } @else {
-              Si tengono gli ultimi {{ status.keep }} backup automatici.
+              <ng-container i18n>
+                Si tengono gli ultimi {{ status.keep }} backup automatici.
+              </ng-container>
             }
           </p>
           @if (!status.canDownload) {
-            <p class="hint">
+            <p i18n class="hint">
               I backup si scaricano solo dal server (<code>http://localhost:8000</code>): sono
               cifrati, ma sono tutti i tuoi dati.
             </p>
           }
         }
-        <p data-testid="backup-folder">
+        <p i18n data-testid="backup-folder">
           I backup sono in:
           @if (status.serverDirectory) {
             <code class="path">{{ status.serverDirectory }}</code>
@@ -119,7 +129,7 @@ const TYPES: Record<BackupFile['type'], string> = {
             la cartella <code>backup</code> di WalletTracker, sul server
           }
         </p>
-        <p class="hint">
+        <p i18n class="hint">
           Per cambiarla (un disco esterno, Google Drive) lancia dal server lo script di
           installazione con <code class="option">-CartellaBackup</code> (Windows) o
           <code class="option">--cartella-backup</code>. Il ripristino si fa dal server, con
@@ -127,7 +137,7 @@ const TYPES: Record<BackupFile['type'], string> = {
         </p>
       }
     } @else {
-      <p class="hint">Caricamento…</p>
+      <p i18n class="hint">Caricamento…</p>
     }
   `,
 })

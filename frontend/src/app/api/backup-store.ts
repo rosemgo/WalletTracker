@@ -41,7 +41,8 @@ export class BackupStore {
         this.polls = 0;
         this.pollWhileInProgress(status);
       },
-      error: (error: unknown) => this.error.set(reason(error, 'Il server non risponde: riprova.')),
+      error: (error: unknown) =>
+        this.error.set(reason(error, $localize`Il server non risponde: riprova.`)),
     });
   }
 

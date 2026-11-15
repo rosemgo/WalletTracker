@@ -44,7 +44,9 @@ export function barName(bar: ExploreBar, unit: ExploreSeries['unit']): string {
 
 /** "al giorno", "a settimana", "al mese". */
 export function perUnit(unit: ExploreSeries['unit']): string {
-  return { DAY: 'al giorno', WEEK: 'a settimana', MONTH: 'al mese' }[unit];
+  return { DAY: $localize`al giorno`, WEEK: $localize`a settimana`, MONTH: $localize`al mese` }[
+    unit
+  ];
 }
 
 /** La barra da mostrare all'inizio: l'ultima già successa (la settimana, il mese in corso). */

@@ -1,4 +1,4 @@
-<h1>Abbonamenti</h1>
+<h1 i18n>Abbonamenti</h1>
 
 @if (message()) {
   <p class="message">{{ message() }}</p>
@@ -11,9 +11,9 @@
   <!-- Il totale: quanto costano tutti gli abbonamenti attivi. Una cifra grande (al mese), l'anno sotto. -->
   @for (total of o.totals; track total.currency) {
     <section class="card hero">
-      <span class="secondary">Gli abbonamenti costano, al mese</span>
+      <span i18n class="secondary">Gli abbonamenti costano, al mese</span>
       <span class="big-figure tile-value">{{ total.monthly | money: total.currency }}</span>
-      <p class="comparison">{{ total.yearly | money: total.currency }} all'anno</p>
+      <p i18n class="comparison">{{ total.yearly | money: total.currency }} all'anno</p>
     </section>
   }
 
@@ -22,11 +22,11 @@
       <table class="cards">
         <thead>
           <tr>
-            <th>Abbonamento</th>
-            <th class="amount">Importo</th>
-            <th class="amount">Al mese</th>
-            <th>Ultimo pagamento</th>
-            <th>Prossimo</th>
+            <th i18n>Abbonamento</th>
+            <th i18n class="amount">Importo</th>
+            <th i18n class="amount">Al mese</th>
+            <th i18n>Ultimo pagamento</th>
+            <th i18n>Prossimo</th>
             <th></th>
           </tr>
         </thead>
@@ -39,36 +39,32 @@
                   s.name | readable
                 }}</a>
                 @if (s.priceChanged) {
-                  <div class="secondary">
+                  <div i18n class="secondary">
                     <!-- Un rincaro si nota: era l'importo al momento della conferma. -->
                     prezzo cambiato: prima {{ s.expectedAmount | money: s.currency }}
                   </div>
                 }
                 @if (s.late) {
-                  <div class="secondary">
+                  <div i18n class="secondary">
                     ! nessun pagamento recente: forse l'hai disdetto? Non conta nel totale.
                   </div>
                 }
               </td>
-              <td data-label="Importo" class="amount">
+              <td data-label="Importo" i18n-data-label class="amount">
                 {{ s.lastAmount ?? s.expectedAmount | money: s.currency }}
                 {{ frequencyLabels[s.frequency] }}
               </td>
-              <td data-label="Al mese" class="amount">
+              <td data-label="Al mese" i18n-data-label class="amount">
                 {{ s.monthlyCost | money: s.currency }}
               </td>
-              <td data-label="Pagato il">
+              <td data-label="Pagato il" i18n-data-label>
                 {{ s.lastDate ? (s.lastDate | localDate: 'numeric') : '—' }}
               </td>
-              <td data-label="Prossimo">
+              <td data-label="Prossimo" i18n-data-label>
                 {{ s.nextDate && !s.late ? (s.nextDate | localDate: 'numeric') : '—' }}
               </td>
               <td data-label="">
-                <button
-                  type="button"
-                  class="link"
-                  (click)="remove(s.id, s.name + ' tolto dagli abbonamenti')"
-                >
+                <button i18n type="button" class="link" (click)="remove(s.id, removedText(s.name))">
                   Togli
                 </button>
               </td>
@@ -78,11 +74,11 @@
       </table>
     </div>
   } @else {
-    <p>Nessun abbonamento confermato. Confermali dai suggerimenti qui sotto.</p>
+    <p i18n>Nessun abbonamento confermato. Confermali dai suggerimenti qui sotto.</p>
   }
 
-  <h2 class="section-title">Suggerimenti</h2>
-  <p class="hint">
+  <h2 i18n class="section-title">Suggerimenti</h2>
+  <p i18n class="hint">
     WalletTracker cerca tra le spese degli ultimi 13 mesi i pagamenti allo stesso esercente che si
     ripetono ogni mese (almeno 3 volte) o ogni anno, con importi simili. Sono solo suggerimenti:
     conferma quelli giusti, ignora gli altri.
@@ -92,49 +88,53 @@
     track suggestion.merchantKey + suggestion.currency + suggestion.typicalAmount
   ) {
     <div class="card suggestion">
-      <label class="suggestion-name">
-        Nome
-        <input
+      <label class="suggestion-name"
+        ><ng-container i18n> Nome </ng-container
+        ><input
           #nameInput
           [value]="suggestion.name | readable"
           maxlength="100"
-          [attr.aria-label]="'Nome di ' + (suggestion.name | readable)"
+          aria-label="Nome di {{ suggestion.name | readable }}"
+          i18n-aria-label
         />
       </label>
-      <div>
+      <div i18n>
         <strong>{{ suggestion.typicalAmount | money: suggestion.currency }}</strong>
         {{ frequencyLabels[suggestion.frequency] }} · {{ suggestion.occurrences }} pagamenti ·
         ultimo il
         {{ suggestion.lastDate | localDate: 'numeric' }}
       </div>
       <div class="suggestion-actions">
-        <button type="button" class="primary" (click)="confirm(suggestion, nameInput.value)">
+        <button i18n type="button" class="primary" (click)="confirm(suggestion, nameInput.value)">
           È un abbonamento
         </button>
-        <button type="button" (click)="dismiss(suggestion)">No, non suggerirlo più</button>
+        <button i18n type="button" (click)="dismiss(suggestion)">No, non suggerirlo più</button>
       </div>
     </div>
   } @empty {
-    <p class="secondary">Nessun suggerimento al momento.</p>
+    <p i18n class="secondary">Nessun suggerimento al momento.</p>
   }
 
   @if (o.dismissed.length > 0) {
     <details class="dismissed">
-      <summary>Pagamenti che hai detto di non suggerire più ({{ o.dismissed.length }})</summary>
+      <summary i18n>
+        Pagamenti che hai detto di non suggerire più ({{ o.dismissed.length }})
+      </summary>
       <ul>
         @for (d of o.dismissed; track d.id) {
           <li>
             {{ d.merchantKey }} ·
             @if (d.amount !== null) {
-              circa {{ d.amount | money: d.currency }}
+              <ng-container i18n> circa {{ d.amount | money: d.currency }} </ng-container>
             } @else {
-              tutti gli importi ({{ d.currency }})
+              <ng-container i18n> tutti gli importi ({{ d.currency }}) </ng-container>
             }
             ·
             <button
+              i18n
               type="button"
               class="link"
-              (click)="remove(d.id, d.merchantKey + ' potrà essere suggerito di nuovo')"
+              (click)="remove(d.id, suggestableAgainText(d.merchantKey))"
             >
               Suggeriscilo di nuovo
             </button>

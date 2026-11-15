@@ -14,7 +14,9 @@ describe('formatLocalDate', () => {
     expect(formatLocalDate(day, 'monthYear')).toBe('ottobre 2026');
     expect(formatLocalDate(day, 'monthInitial')).toBe('O');
     expect(formatLocalDate(day, 'weekdayInitial')).toBe('S');
-    expect(formatLocalDate(new Date(2026, 9, 10, 8, 30), 'longTime')).toBe('10 ottobre 2026, 08:30');
+    expect(formatLocalDate(new Date(2026, 9, 10, 8, 30), 'longTime')).toBe(
+      '10 ottobre 2026, 08:30',
+    );
   });
 
   it('capitalizes the names that the language writes in lower case', () => {

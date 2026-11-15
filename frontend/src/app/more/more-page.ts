@@ -12,7 +12,7 @@ import { MORE_PAGES } from './more-pages';
   selector: 'app-more-page',
   imports: [RouterLink],
   template: `
-    <h1>Altro</h1>
+    <h1 i18n>Altro</h1>
     <ul class="link-list">
       @for (page of pages; track page.path) {
         <li>
@@ -29,7 +29,7 @@ import { MORE_PAGES } from './more-pages';
     <!-- Esci: chiude la sessione, e l'app chiederà di nuovo il PIN (docs/46). Solo con il PIN: senza, dal PC si
          rientrerebbe subito. Sul PC è in fondo alla colonna. -->
     @if (auth.status()?.pinSet) {
-      <button type="button" class="logout" (click)="auth.logout()">Esci</button>
+      <button i18n type="button" class="logout" (click)="auth.logout()">Esci</button>
     }
   `,
 })
