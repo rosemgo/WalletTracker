@@ -412,10 +412,13 @@ export class WalletApi {
     });
   }
 
-  /** GET /api/accounts/balance-history?currency=EUR: la liquidità giorno per giorno (docs/saldi.md, parte L). */
-  balanceHistory(currency: string): Observable<BalanceHistory> {
+  /**
+   * GET /api/accounts/balance-history?currency=EUR: la liquidità giorno per giorno (docs/saldi.md, parte L); con un conto,
+   * di quel conto solo.
+   */
+  balanceHistory(currency: string, accountId: number | null = null): Observable<BalanceHistory> {
     return this.http.get<BalanceHistory>('/api/accounts/balance-history', {
-      params: { currency },
+      params: accountId === null ? { currency } : { currency, accountId },
     });
   }
 

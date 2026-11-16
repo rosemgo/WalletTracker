@@ -452,10 +452,16 @@ La C non tradisce la parte A: una stima parte sempre da un saldo **vero** (una f
 grafico la disegna diversa, tratteggiata, con la parola "stima" quando la si guarda.
 
 **Le fotografie (`V41`, tabella `balance_snapshot`).** Un conto, un giorno, un importo. `BalanceSnapshotScheduler` ogni
-ora (mentre l'app è accesa) salva il saldo di ogni conto che conta nella liquidità, lo stesso della pagina Conti
-(`AccountService.currentBalance`), **sotto il giorno a cui è vero** (`trueOn`): per un saldo della banca il giorno che
-dice lei, per uno scritto a mano oggi (segue già ogni movimento importato, parte C). Nello stesso giorno l'ultima
-fotografia sostituisce la precedente.
+ora (mentre l'app è accesa) salva il saldo **della banca** di ogni conto che conta nella liquidità, lo stesso della
+pagina Conti (`AccountService.currentBalance`), **sotto il giorno a cui è vero** (`trueOn`): il giorno che dice la banca.
+Nello stesso giorno l'ultima fotografia sostituisce la precedente.
+
+**I saldi scritti a mano non si fotografano** (Trade Republic, i conti caricati da file, parti C e G). Il loro saldo è
+quello scritto più i movimenti importati dopo: fotografato ogni giorno, un conto aggiornato con un file una volta alla
+settimana avrebbe avuto sei giorni "veri" senza i movimenti non ancora caricati, e una fotografia vince sulla stima.
+Invece si ricalcola a ogni richiesta con gli stessi movimenti: dal giorno del saldo scritto in poi ogni giorno è il saldo
+scritto più i movimenti fino a quel giorno, esatto quanto il saldo del conto, e **non è una stima** (`Anchor.trustedFrom`);
+prima di quel giorno sì. Un file caricato dopo corregge da solo anche i giorni passati.
 
 Perché non semplicemente "oggi": in background la banca si rilegge al massimo ogni 20 ore (parte B, regola 3), mentre i
 movimenti arrivano ogni 6. Il saldo letto ieri sera non contiene i movimenti di oggi: salvato come "saldo di oggi"
@@ -486,15 +492,21 @@ la linea dei dollari piatta sul fondo, e un cambio servirebbe un servizio estern
 fotografie si salvano per tutti i conti, in ogni valuta. Con più valute, sopra il grafico dei pulsanti (uno per ogni
 valuta dei conti con un saldo, nell'ordine della scheda) scelgono quale tracciare, ognuna con la sua scala; di partenza
 la principale. Scorrendo, cambia il totale della valuta del grafico, gli altri restano quelli di adesso. Una valuta che
-non ha ancora due giorni da disegnare lo dice, e i pulsanti restano.
+non ha ancora due giorni da disegnare mostra "Storico non ancora disponibile per CHF", e i pulsanti restano.
 
 **Nella scheda Liquidità del Riepilogo.** Sotto il totale, il grafico della valuta scelta (di partenza la prima della scheda),
 con il componente degli investimenti (`TrendChart`), a cui si sono aggiunti due parametri: `estimated` (per ogni giorno,
 se è stimato: un tratto tra due giorni veri è pieno, ogni altro tratteggiato, anche un buco in mezzo ai giorni salvati)
 e `zeroBased` (qui false: la scala parte poco sotto il valore più basso, altrimenti con
 10.000 € sul conto le variazioni sarebbero una riga piatta). Scorrendolo, il totale mostra quel giorno, e sotto "Il 20
-luglio 2026 · stima dai movimenti". Una legenda distingue "Saldi salvati" e "Stima dai movimenti". Finché l'unico giorno
-salvato è oggi, una riga spiega che la linea piena crescerà giorno per giorno. Con meno di due giorni il grafico non
+luglio 2026 · stima dai movimenti". La legenda ha "Stima dai movimenti" se c'è un tratto stimato, e "Saldi salvati" solo se c'è
+un tratto pieno (due giorni salvati di fila). Nessuna spiegazione sotto il grafico: i testi della scheda sono per chi
+usa l'app, e la legenda basta. Con meno di due giorni il grafico non
 c'è. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto Conti): a Conti porta
 "Vedi i conti" in alto.
 
+**Un conto alla volta.** Toccando un conto nell'elenco della scheda, il grafico mostra solo quel conto
+(`GET /api/accounts/balance-history?currency=EUR&accountId=7`); sopra il grafico il suo nome, il saldo del giorno scelto
+scorrendo, e "Tutti i conti" per tornare al totale (anche toccando di nuovo il conto, o una valuta). Il totale in cima
+resta quello di adesso. Serve a confrontare la linea di un conto con il suo estratto: se il totale non torna, si trova
+subito il conto i cui movimenti nell'app non tornano con quelli della banca (un doppione, un movimento mancante).

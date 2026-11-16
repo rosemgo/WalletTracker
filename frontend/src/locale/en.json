@@ -3033,6 +3033,10 @@
       "it": "Valuta del grafico",
       "en": "Currency of the chart"
     },
+    "4967050096275237981": {
+      "it": " Tutti i conti ",
+      "en": "All accounts"
+    },
     "876522556398186445": {
       "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Saldi salvati",
       "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Saved balances"
@@ -3041,13 +3045,9 @@
       "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Stima dai movimenti",
       "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Estimated from the transactions"
     },
-    "1582109335242515934": {
-      "it": " Da oggi l'app salva i saldi ogni giorno: la linea piena crescerà. Gli altri giorni sono stimati dai movimenti, e valgono solo se nell'app ci sono tutti. ",
-      "en": "From today the app saves the balances every day: the solid line will grow. The other days are estimated from the transactions, and are right only if all of them are in the app."
-    },
-    "3779031875516971350": {
-      "it": " Per {$INTERPOLATION} non c'è ancora uno storico da disegnare: comincia da oggi. ",
-      "en": "For {$INTERPOLATION} there is no history to draw yet: it starts from today."
+    "7132938759682315519": {
+      "it": " Storico non ancora disponibile per {$INTERPOLATION}. ",
+      "en": "History not available yet for {$INTERPOLATION}."
     },
     "4188840551952738445": {
       "it": "al {$INTERPOLATION}",
@@ -3061,6 +3061,14 @@
       "it": "{VAR_PLURAL, plural, =1 {1 conto senza saldo non è nel totale} other {{INTERPOLATION} conti senza saldo non sono nel totale}}",
       "en": "{VAR_PLURAL, plural, =1 {1 account without a balance is not in the total} other {{INTERPOLATION} accounts without a balance are not in the total}}"
     },
+    "3506952562998536004": {
+      "it": "Il {$day} · stima dai movimenti",
+      "en": "On {$day} · estimated from the transactions"
+    },
+    "6588707462483089966": {
+      "it": "Il {$day}",
+      "en": "On {$day}"
+    },
     "7479578550281236217": {
       "it": "{$day} · stima",
       "en": "{$day} · estimate"
@@ -3069,13 +3077,9 @@
       "it": "Liquidità in {$currency} giorno per giorno, dal {$day} a oggi. Le parti tratteggiate sono stimate dai movimenti.",
       "en": "Cash in {$currency} day by day, from {$day} to today. The dashed parts are estimated from the transactions."
     },
-    "3506952562998536004": {
-      "it": "Il {$day} · stima dai movimenti",
-      "en": "On {$day} · estimated from the transactions"
-    },
-    "6588707462483089966": {
-      "it": "Il {$day}",
-      "en": "On {$day}"
+    "9099833423739740185": {
+      "it": "{$account} in {$currency} giorno per giorno, dal {$day} a oggi. Le parti tratteggiate sono stimate dai movimenti.",
+      "en": "{$account} in {$currency} day by day, from {$day} to today. The dashed parts are estimated from the transactions."
     },
     "8153525948990570064": {
       "it": "{$INTERPOLATION}. Con le frecce si scorrono i giorni.",

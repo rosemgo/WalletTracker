@@ -144,13 +144,14 @@ describe('the app in English', () => {
             provide: WalletApi,
             useValue: {
               accounts: () => of(accounts),
-              // Lo storico della liquidità: un giorno stimato e uno salvato, per il grafico.
+              // Lo storico della liquidità: un giorno stimato e due salvati di fila, per il grafico e la sua legenda.
               balanceHistory: (currency: string) =>
                 of({
                   currency,
                   accounts: 2,
                   points: [
-                    { date: '2026-10-09', amount: 140, estimated: true },
+                    { date: '2026-10-08', amount: 140, estimated: true },
+                    { date: '2026-10-09', amount: 145, estimated: false },
                     { date: '2026-10-10', amount: 150, estimated: false },
                   ],
                 }),
@@ -178,6 +179,6 @@ describe('the app in English', () => {
     // Il grafico dello storico, e la sua descrizione per chi legge con un lettore di schermo.
     expect(many).toContain('Saved balances');
     expect(many).toContain('Estimated from the transactions');
-    expect(many).toContain('Cash in EUR day by day, from 9 October 2026 to today.');
+    expect(many).toContain('Cash in EUR day by day, from 8 October 2026 to today.');
   });
 });
