@@ -59,6 +59,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   volta, senza conversioni). Toccando un conto dell'elenco il grafico mostra solo quel conto, per confrontarlo con il
   suo estratto. A Conti si va con "Vedi i conti", in alto nella scheda.
 
+- **Il saldo dei conti collegati è sempre aggiornato**: la banca dà il saldo al massimo una volta al giorno, i movimenti
+  più spesso. Ora un movimento arrivato dopo l'ultimo saldo (per esempio una cedola) si aggiunge subito al saldo nella
+  pagina Conti, nel Riepilogo e nel grafico della liquidità, invece di aspettare che la banca ridia il saldo.
+
 ## 1.2.7
 
 - **Cedole e dividendi davvero netti, titolo per titolo**: le ritenute di Fineco ("Rit.ced.su", "Rit.div.su") non si

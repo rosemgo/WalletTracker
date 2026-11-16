@@ -14,19 +14,24 @@ import java.time.LocalDate;
 public record CurrentBalance(BigDecimal amount, LocalDate date, BalanceSource source, LocalDate startDate) {
 
     /**
-     * Il saldo di oggi, da quello salvato. Per la banca è quello e basta. Per un conto manuale si parte dal saldo
-     * scritto dall'utente e si aggiungono i movimenti importati dopo ({@code after}): il giorno diventa l'ultimo
-     * movimento ({@code lastMovement}), se è più recente. Null se il conto non ha un saldo.
+     * Il saldo di oggi, da quello salvato: il saldo (della banca o scritto dall'utente) più i movimenti importati dopo
+     * ({@code after}); il giorno diventa l'ultimo movimento ({@code lastMovement}), se è più recente. Null se il conto
+     * non ha un saldo.
+     *
+     * <p>Anche per la banca (docs/saldi.md, parte M): in background la banca si rilegge al massimo ogni 20 ore, i
+     * movimenti ogni 6. Una cedola arrivata dopo l'ultima lettura non è nel saldo della banca, e senza aggiungerla la
+     * pagina Conti mostrerebbe un saldo vecchio fino alla lettura successiva. Quando la banca ridà il saldo, si riparte da
+     * quello.
      */
     static CurrentBalance of(Account account, BigDecimal after, LocalDate lastMovement) {
         if (account.getBalance() == null || account.getBalanceSource() == null) {
             return null;
         }
-        if (account.getBalanceSource() == BalanceSource.BANK) {
-            return new CurrentBalance(account.getBalance(), account.getBalanceDate(), BalanceSource.BANK, null);
-        }
         LocalDate start = account.getBalanceDate();
-        LocalDate date = lastMovement != null && lastMovement.isAfter(start) ? lastMovement : start;
-        return new CurrentBalance(account.getBalance().add(after), date, BalanceSource.MANUAL, start);
+        LocalDate date = lastMovement != null && (start == null || lastMovement.isAfter(start)) ? lastMovement : start;
+        BigDecimal amount = account.getBalance().add(after == null ? BigDecimal.ZERO : after);
+        return account.getBalanceSource() == BalanceSource.BANK
+                ? new CurrentBalance(amount, date, BalanceSource.BANK, null)
+                : new CurrentBalance(amount, date, BalanceSource.MANUAL, start);
     }
 }

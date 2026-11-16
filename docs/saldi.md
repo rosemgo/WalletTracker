@@ -510,3 +510,30 @@ c'è. Per il grafico la scheda non è più tutta un collegamento (un tocco per s
 scorrendo, e "Tutti i conti" per tornare al totale (anche toccando di nuovo il conto, o una valuta). Il totale in cima
 resta quello di adesso. Serve a confrontare la linea di un conto con il suo estratto: se il totale non torna, si trova
 subito il conto i cui movimenti nell'app non tornano con quelli della banca (un doppione, un movimento mancante).
+
+## Parte M: il saldo della banca segue i movimenti arrivati dopo
+
+**Il caso, trovato con il grafico della liquidità.** Il 16 novembre la linea di Fineco ··3288 stava circa 1.500 € sotto
+l'estratto da marzo a ottobre. I movimenti nell'app erano giusti, uno per uno. Il motivo: Fineco aveva dato il saldo,
+2.595,30 € "al 16 novembre", **prima** che arrivasse la cedola di quel giorno (+1.666,86 €, −208,36 € di ritenuta). La
+sincronizzazione scarica i movimenti ogni 6 ore ma rilegge il saldo al massimo ogni 20 (parte B, regola 3): la cedola è
+arrivata, il saldo no. Lo storico prendeva 2.595,30 € per il valore di fine giornata e, andando indietro, toglieva la
+cedola da tutti i giorni prima; la pagina Conti e la scheda Liquidità mostravano un saldo vecchio di 1.458,50 €.
+
+**La regola, la stessa dei saldi scritti a mano (parte C).** Il saldo di adesso è il saldo dato dalla banca più i
+movimenti contabilizzati arrivati **dopo** la sua lettura: quelli con una data successiva al giorno del saldo, e quelli
+dello stesso giorno importati dopo il momento della lettura (`balance_updated_at`). `AccountService.currentBalance` fa
+la stessa somma (`sumAfter`) per i due tipi di saldo; il giorno mostrato diventa quello dell'ultimo movimento, se è più
+recente. Quando la banca ridà il saldo, il suo valore prende il posto del calcolo e si riparte da lì.
+
+Un movimento con una data **precedente** al giorno del saldo, arrivato dopo, non si aggiunge: la banca lo aveva già nel
+suo saldo (era contabilizzato prima), ed è l'app che l'ha scaricato in ritardo.
+
+**Nello storico** (`BalanceHistoryService.anchorOf`): il valore vero è quello di fine del giorno del saldo, cioè il saldo
+di adesso meno i movimenti con una data successiva. Per Fineco il 16 novembre: 2.595,30 + 1.458,50 = 4.053,80 €; il 15,
+2.595,30 €. Le fotografie salvano questo valore, aggiornato a ogni ora se arriva un altro movimento di quel giorno.
+
+**Le prove.** `AccountBalanceTest.aBankBalanceFollowsTheMovementsThatArriveAfterItWasRead` (il caso di Fineco, un
+movimento vecchio arrivato tardi, la nuova lettura che riparte da sé) e
+`BalanceHistoryServiceTest.aMovementArrivedAfterTheBankBalanceBelongsToItsDayNotToTheDaysBefore`.
+

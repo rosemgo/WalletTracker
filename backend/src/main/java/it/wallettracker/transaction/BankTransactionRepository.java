@@ -281,6 +281,18 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             """)
     BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
 
+    /**
+     * La somma dei movimenti contabilizzati di un conto con una data successiva a {@code date}: per portare il saldo di
+     * adesso alla fine del giorno {@code date} (lo storico dei saldi, docs/saldi.md parte M).
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND t.bookingDate > :date
+            """)
+    BigDecimal sumBookedAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date);
+
     /** Il giorno dell'ultimo movimento contabilizzato di un conto, o null se non ne ha. */
     @Query("""
             SELECT MAX(t.bookingDate) FROM BankTransaction t

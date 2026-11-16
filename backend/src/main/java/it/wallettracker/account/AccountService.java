@@ -124,13 +124,14 @@ public class AccountService {
      * saldi, per la fotografia del giorno. Dentro una transazione.
      */
     CurrentBalance currentBalance(Account account) {
-        if (account.getBalanceSource() == BalanceSource.MANUAL && account.getBalance() != null) {
-            return CurrentBalance.of(account,
-                    transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
-                            account.getBalanceUpdatedAt()),
-                    transactionRepository.lastBookingDate(account.getId()));
+        if (account.getBalanceSource() == null || account.getBalance() == null) {
+            return null;
         }
-        return CurrentBalance.of(account, BigDecimal.ZERO, null);
+        // Della banca o scritto a mano, lo stesso: il saldo più i movimenti arrivati dopo (docs/saldi.md, parti C e M).
+        return CurrentBalance.of(account,
+                transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
+                        account.getBalanceUpdatedAt()),
+                transactionRepository.lastBookingDate(account.getId()));
     }
 
     /** Il conto per la dashboard, con il saldo di oggi. Dentro una transazione. */
