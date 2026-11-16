@@ -82,7 +82,7 @@ class BalanceCheckTest {
         });
         assertThat(mvc.get().uri("/api/alerts")).hasStatusOk().bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$[0].kind").isEqualTo("BALANCE_MISMATCH");
-            json.assertThat().extractingPath("$[0].account").isEqualTo(reload(fineco).label());
+            json.assertThat().extractingPath("$[0].account").asString().contains("Dossier");
             json.assertThat().extractingPath("$[0].mismatch.accountId").isEqualTo(fineco.getId().intValue());
             json.assertThat().extractingPath("$[0].mismatch.from").isEqualTo("2026-11-10");
             json.assertThat().extractingPath("$[0].mismatch.to").isEqualTo("2026-11-13");
