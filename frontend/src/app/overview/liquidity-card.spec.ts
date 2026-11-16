@@ -172,6 +172,34 @@ describe('LiquidityCard', () => {
     );
   });
 
+  it('dashes every estimated stretch, also a gap between saved days', async () => {
+    accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
+    const day = (d: number, estimated: boolean) => ({
+      date: `2026-11-${String(d).padStart(2, '0')}`,
+      amount: 900 + d,
+      estimated,
+    });
+    // Salvati il 10 e l'11, l'app spenta il 12 e il 13, di nuovo salvati il 14 e il 15, oggi stimato.
+    history = {
+      currency: 'EUR',
+      accounts: 1,
+      points: [
+        day(10, false),
+        day(11, false),
+        day(12, true),
+        day(13, true),
+        day(14, false),
+        day(15, false),
+        day(16, true),
+      ],
+    };
+    const page = await render();
+    const solid = page.querySelectorAll('app-trend-chart path.month');
+    const dashed = page.querySelectorAll('app-trend-chart path.estimate');
+    expect(solid).toHaveLength(2); // 10-11 e 14-15
+    expect(dashed).toHaveLength(2); // 11-14 e 15-16
+  });
+
   it('says that the line becomes solid day by day when only today is saved', async () => {
     accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
     history = {

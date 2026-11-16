@@ -17,8 +17,9 @@ public record BalanceHistory(String currency, int accounts, List<Point> points) 
      * Un giorno.
      *
      * @param amount    la somma dei saldi dei conti a fine giornata
-     * @param estimated true se almeno un conto, quel giorno, non ha una fotografia: il suo saldo è stimato togliendo i
-     *                  movimenti dal valore vero successivo
+     * @param estimated true se almeno un conto, quel giorno, non ha un valore vero (una fotografia, o il saldo di adesso
+     *                  al giorno a cui è vero): il suo saldo è stimato dai movimenti, partendo dal valore vero
+     *                  successivo (o, dopo l'ultimo, da quello precedente)
      */
     public record Point(LocalDate date, BigDecimal amount, boolean estimated) {
     }

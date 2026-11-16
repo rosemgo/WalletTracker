@@ -452,24 +452,39 @@ La C non tradisce la parte A: una stima parte sempre da un saldo **vero** (una f
 grafico la disegna diversa, tratteggiata, con la parola "stima" quando la si guarda.
 
 **Le fotografie (`V41`, tabella `balance_snapshot`).** Un conto, un giorno, un importo. `BalanceSnapshotScheduler` ogni
-ora (mentre l'app è accesa) salva il saldo di oggi di ogni conto che conta nella liquidità, lo stesso della pagina Conti
-(`AccountService.currentBalance`): nello stesso giorno l'ultima fotografia sostituisce la precedente. Ogni ora e non
+ora (mentre l'app è accesa) salva il saldo di ogni conto che conta nella liquidità, lo stesso della pagina Conti
+(`AccountService.currentBalance`), **sotto il giorno a cui è vero** (`trueOn`): per un saldo della banca il giorno che
+dice lei, per uno scritto a mano oggi (segue già ogni movimento importato, parte C). Nello stesso giorno l'ultima
+fotografia sostituisce la precedente.
+
+Perché non semplicemente "oggi": in background la banca si rilegge al massimo ogni 20 ore (parte B, regola 3), mentre i
+movimenti arrivano ogni 6. Il saldo letto ieri sera non contiene i movimenti di oggi: salvato come "saldo di oggi"
+sarebbe stato un valore vero sbagliato. Salvato sotto ieri è esatto, e oggi si stima (vedi sotto). Ogni ora e non
 una volta al giorno perché il computer può essere spento: basta che l'app sia accesa un momento perché il giorno abbia
 il suo valore. Eliminando un conto manuale se ne vanno anche le sue fotografie. Nei test il timer è spento
 (`wallettracker.balance-history.enabled`), come la sincronizzazione.
 
 **La storia (`BalanceHistoryService`, `GET /api/accounts/balance-history?currency=EUR`).** Contano gli stessi conti
 della scheda Liquidità (parte K): niente carte di credito né conti esclusi, solo quelli con un saldo, una valuta alla
-volta. Da quando: il primo movimento (o la prima fotografia) di uno dei conti, al massimo un anno fa. Per ogni conto si
-cammina all'indietro da oggi: il valore di un giorno è la sua fotografia, se c'è, altrimenti il valore del giorno dopo
-meno i movimenti contabilizzati del giorno dopo. Il saldo di oggi vale come fotografia di oggi. Prima del primo
-movimento di un conto il suo saldo resta fermo: non sappiamo niente di diverso. Un giorno è **stimato** se almeno un
-conto, quel giorno, non ha la fotografia. Il calcolo è una funzione senza database (`reconstruct`), provata da
+volta. Da quando: il primo movimento (o la prima fotografia, o il giorno di un saldo) di uno dei conti, al massimo un
+anno fa. Per ogni conto i valori veri sono le fotografie e il saldo di adesso, al giorno a cui è vero. Ogni altro giorno
+si stima con i movimenti contabilizzati:
+
+- **prima** dell'ultimo valore vero, all'indietro: il valore del giorno dopo meno i movimenti del giorno dopo (oppure la
+  fotografia di quel giorno, se c'è). Prima del primo movimento di un conto il suo saldo resta fermo: non sappiamo
+  niente di diverso;
+- **dopo** l'ultimo valore vero (il saldo della banca è di ieri), in avanti: il giorno prima più i movimenti del giorno.
+
+Esempio: oggi 1.000 €, ieri lo stipendio (+1.500), l'altro ieri una spesa (−200). Ieri sera: 1.000 €; l'altro ieri sera
+1.000 − 1.500 = −500 €; il giorno prima −500 + 200 = −300 €. Un giorno è **stimato** se almeno un conto, quel giorno, non
+ha un valore vero. La stima resta per i giorni prima di questa funzione, per quelli con l'app spenta tutto il giorno, e
+per i giorni dopo l'ultimo saldo letto dalla banca. Il calcolo è una funzione senza database (`reconstruct`), provata da
 `BalanceHistoryReconstructTest`; `BalanceHistoryServiceTest` prova fotografie, conti contati ed endpoint.
 
 **Nella scheda Liquidità del Riepilogo.** Sotto il totale, il grafico della valuta principale (la prima della scheda),
-con il componente degli investimenti (`TrendChart`), a cui si sono aggiunti due parametri: `estimatedUntil` (il tratto
-iniziale stimato, tratteggiato) e `zeroBased` (qui false: la scala parte poco sotto il valore più basso, altrimenti con
+con il componente degli investimenti (`TrendChart`), a cui si sono aggiunti due parametri: `estimated` (per ogni giorno,
+se è stimato: un tratto tra due giorni veri è pieno, ogni altro tratteggiato, anche un buco in mezzo ai giorni salvati)
+e `zeroBased` (qui false: la scala parte poco sotto il valore più basso, altrimenti con
 10.000 € sul conto le variazioni sarebbero una riga piatta). Scorrendolo, il totale mostra quel giorno, e sotto "Il 20
 luglio 2026 · stima dai movimenti". Una legenda distingue "Saldi salvati" e "Stima dai movimenti". Finché l'unico giorno
 salvato è oggi, una riga spiega che la linea piena crescerà giorno per giorno. Con meno di due giorni il grafico non

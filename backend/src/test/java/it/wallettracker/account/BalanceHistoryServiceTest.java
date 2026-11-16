@@ -91,6 +91,19 @@ class BalanceHistoryServiceTest {
         assertThat(history.points()).extracting(p -> p.amount().intValue()).containsExactly(-500, 1000, 1000);
         assertThat(history.points()).extracting(Point::estimated).containsExactly(true, true, false);
 
+        // Un saldo della banca di ieri: la fotografia va sotto ieri, e oggi si stima con i movimenti arrivati dopo.
+        snapshotRepository.deleteAll();
+        accountRepository.recordBalance(main.getId(), new BigDecimal("1000.00"), TODAY.minusDays(1),
+                BalanceSource.BANK, Instant.now());
+        movement(main, "2026-11-16", "-30");
+        historyService.recordToday(TODAY);
+        assertThat(snapshotRepository.findAll()).filteredOn(shot -> shot.getAccountId().equals(main.getId()))
+                .extracting(BalanceSnapshot::getDate).containsExactly(TODAY.minusDays(1));
+        assertThat(historyService.history("EUR", TODAY).points()).last().satisfies(p -> {
+            assertThat(p.amount()).isEqualByComparingTo("970.00");
+            assertThat(p.estimated()).isTrue();
+        });
+
         assertThat(mvc.get().uri("/api/accounts/balance-history?currency=EUR")).hasStatusOk().bodyJson()
                 .satisfies(json -> json.assertThat().extractingPath("$.currency").isEqualTo("EUR"));
         assertThat(mvc.get().uri("/api/accounts/balance-history?currency=EURO")).hasStatus(400);

@@ -57,7 +57,10 @@ public class BalanceHistoryService {
         return account.getRole() != AccountRole.CREDIT_CARD && account.getRole() != AccountRole.EXCLUDED;
     }
 
-    /** La fotografia di oggi: il saldo di ogni conto che conta e ne ha uno. Restituisce quanti conti ha salvato. */
+    /**
+     * Le fotografie: il saldo di ogni conto che conta e ne ha uno, sotto il giorno a cui è vero ({@link #trueOn}).
+     * Restituisce quanti conti ha salvato.
+     */
     @Transactional
     public int recordToday(LocalDate today) {
         int saved = 0;
@@ -67,23 +70,33 @@ public class BalanceHistoryService {
             }
             CurrentBalance balance = accountService.currentBalance(account);
             if (balance != null) {
-                snapshotRepository.upsert(account.getId(), today, balance.amount());
+                snapshotRepository.upsert(account.getId(), trueOn(balance, today), balance.amount());
                 saved++;
             }
         }
         return saved;
     }
 
+    /**
+     * Il giorno a cui un saldo è vero. Quello della banca è vero al giorno che dice lei: in background la banca si
+     * rilegge al massimo ogni 20 ore (docs/saldi.md, parte B), e il saldo letto ieri non contiene i movimenti di oggi.
+     * Quello scritto a mano segue già ogni movimento importato (parte C): è vero oggi. Mai dopo oggi.
+     */
+    static LocalDate trueOn(CurrentBalance balance, LocalDate today) {
+        LocalDate date = balance.source() == BalanceSource.BANK ? balance.date() : today;
+        return date == null || date.isAfter(today) ? today : date;
+    }
+
     /** La liquidità in {@code currency}, giorno per giorno, dall'inizio della storia (al massimo un anno) a oggi. */
     @Transactional(readOnly = true)
     public BalanceHistory history(String currency, LocalDate today) {
         String chosen = currency.toUpperCase(Locale.ROOT);
-        Map<Long, BigDecimal> current = new LinkedHashMap<>();
+        Map<Long, Anchor> current = new LinkedHashMap<>();
         for (Account account : accountRepository.findAll()) {
             if (counts(account) && chosen.equals(account.getCurrency())) {
                 CurrentBalance balance = accountService.currentBalance(account);
                 if (balance != null) {
-                    current.put(account.getId(), balance.amount());
+                    current.put(account.getId(), new Anchor(trueOn(balance, today), balance.amount()));
                 }
             }
         }
@@ -104,6 +117,11 @@ public class BalanceHistoryService {
                 start = s.getDate();
             }
         }
+        for (Anchor anchor : current.values()) {
+            if (anchor.date().isBefore(start)) {
+                start = anchor.date(); // un saldo della banca di ieri, senza movimenti né fotografie: da ieri
+            }
+        }
         if (start.isBefore(earliest)) {
             start = earliest;
         }
@@ -119,36 +137,72 @@ public class BalanceHistoryService {
         return new BalanceHistory(chosen, current.size(), reconstruct(start, today, current, photos, movements));
     }
 
+    /** Il saldo di adesso di un conto, con il giorno a cui è vero ({@link #trueOn}). */
+    record Anchor(LocalDate date, BigDecimal amount) {
+    }
+
     /**
-     * Il calcolo, senza database (per i test). Per ogni conto si cammina all'indietro da oggi: il valore di un giorno è
-     * la sua fotografia, se c'è, altrimenti il valore del giorno dopo meno i movimenti del giorno dopo. Il saldo di oggi
-     * vale come fotografia di oggi (ed è più recente di quella dell'ultima ora). Prima del primo movimento di un conto il
-     * suo saldo resta quindi fermo: non sappiamo niente di diverso, ed è una stima come le altre.
+     * Il calcolo, senza database (per i test). Per ogni conto, i valori veri sono le fotografie e il saldo di adesso
+     * (al giorno a cui è vero, che vince su una fotografia dello stesso giorno: è più recente). Ogni altro giorno è una
+     * stima:
+     * <ul>
+     *   <li>prima dell'ultimo valore vero, all'indietro: il valore del giorno dopo meno i movimenti del giorno dopo.
+     *       Prima del primo movimento di un conto il suo saldo resta quindi fermo: non sappiamo niente di diverso;</li>
+     *   <li>dopo l'ultimo valore vero (un saldo della banca di ieri, oggi), in avanti: l'ultimo valore vero più i
+     *       movimenti arrivati dopo.</li>
+     * </ul>
      *
-     * @param current   il saldo di oggi di ogni conto
+     * @param current   il saldo di adesso di ogni conto, con il suo giorno
      * @param photos    le fotografie, per conto e per giorno
      * @param movements la somma dei movimenti, per conto e per giorno
      */
-    static List<Point> reconstruct(LocalDate start, LocalDate today, Map<Long, BigDecimal> current,
+    static List<Point> reconstruct(LocalDate start, LocalDate today, Map<Long, Anchor> current,
             Map<Long, Map<LocalDate, BigDecimal>> photos, Map<Long, Map<LocalDate, BigDecimal>> movements) {
         int days = (int) (today.toEpochDay() - start.toEpochDay()) + 1;
         BigDecimal[] totals = new BigDecimal[days];
         boolean[] estimated = new boolean[days];
         Arrays.fill(totals, BigDecimal.ZERO);
-        current.forEach((accountId, balance) -> {
-            Map<LocalDate, BigDecimal> shots = photos.getOrDefault(accountId, Map.of());
+        current.forEach((accountId, anchor) -> {
+            Map<LocalDate, BigDecimal> shots = new HashMap<>(photos.getOrDefault(accountId, Map.of()));
+            shots.put(anchor.date(), anchor.amount());
             Map<LocalDate, BigDecimal> moved = movements.getOrDefault(accountId, Map.of());
-            BigDecimal value = balance;
-            for (int i = days - 1; i >= 0; i--) {
-                LocalDate day = start.plusDays(i);
-                BigDecimal shot = i == days - 1 ? balance : shots.get(day);
-                if (shot != null) {
-                    value = shot;
-                } else {
-                    estimated[i] = true;
+            BigDecimal[] values = new BigDecimal[days];
+            // Il punto di partenza: il giorno del saldo di adesso. Se è più vecchio dell'inizio del grafico (una banca
+            // che non lo aggiorna da molto), si porta all'inizio aggiungendo i movimenti nel mezzo: è una stima.
+            int last = (int) (anchor.date().toEpochDay() - start.toEpochDay());
+            if (last < 0) {
+                BigDecimal value = anchor.amount();
+                for (LocalDate d = anchor.date().plusDays(1); !d.isAfter(start); d = d.plusDays(1)) {
+                    value = value.add(moved.getOrDefault(d, BigDecimal.ZERO));
                 }
-                totals[i] = totals[i].add(value);
-                value = value.subtract(moved.getOrDefault(day, BigDecimal.ZERO)); // la fine del giorno prima
+                last = 0;
+                values[0] = value;
+                estimated[0] = true;
+            } else {
+                values[last] = anchor.amount();
+            }
+            // All'indietro: una fotografia, o il giorno dopo meno i suoi movimenti.
+            for (int k = last - 1; k >= 0; k--) {
+                BigDecimal shot = shots.get(start.plusDays(k));
+                if (shot != null) {
+                    values[k] = shot;
+                } else {
+                    values[k] = values[k + 1].subtract(moved.getOrDefault(start.plusDays(k + 1), BigDecimal.ZERO));
+                    estimated[k] = true;
+                }
+            }
+            // In avanti: una fotografia, o il giorno prima più i movimenti del giorno.
+            for (int k = last + 1; k < days; k++) {
+                BigDecimal shot = shots.get(start.plusDays(k));
+                if (shot != null) {
+                    values[k] = shot;
+                } else {
+                    values[k] = values[k - 1].add(moved.getOrDefault(start.plusDays(k), BigDecimal.ZERO));
+                    estimated[k] = true;
+                }
+            }
+            for (int k = 0; k < days; k++) {
+                totals[k] = totals[k].add(values[k]);
             }
         });
         List<Point> points = new ArrayList<>(days);

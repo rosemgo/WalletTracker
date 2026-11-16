@@ -81,20 +81,20 @@ interface Group {
             [names]="c.names"
             [description]="c.description"
             [currency]="c.currency"
-            [estimatedUntil]="c.estimatedUntil"
+            [estimated]="c.estimated"
             [zeroBased]="false"
             (scrubbed)="scrub.set($event)"
           />
           <div class="chart-keys">
             <span><span class="key"></span>Saldi salvati</span>
-            @if (c.estimatedUntil > 0) {
+            @if (c.someEstimated) {
               <span><span class="key estimate"></span>Stima dai movimenti</span>
             }
           </div>
           @if (c.onlyToday) {
             <p class="secondary history-note">
-              Da oggi l'app salva i saldi ogni giorno: la linea piena crescerà. Prima è stimata
-              togliendo i movimenti dal saldo di oggi, e vale solo se nell'app ci sono tutti.
+              Da oggi l'app salva i saldi ogni giorno: la linea piena crescerà. Gli altri giorni
+              sono stimati dai movimenti, e valgono solo se nell'app ci sono tutti.
             </p>
           }
         }
@@ -184,7 +184,7 @@ export class LiquidityCard implements OnInit {
 
   /**
    * Il grafico: un valore per giorno, le date sotto (giorno e mese, o mese e anno se la storia è lunga), il nome di
-   * ogni giorno per lo scorrimento ("3 agosto 2026 · stima"), quanti giorni all'inizio sono stimati. Null con meno
+   * ogni giorno per lo scorrimento ("3 agosto 2026 · stima"), quali giorni sono stimati. Null con meno
    * di due giorni: una linea di un punto non dice niente.
    */
   protected readonly chart = computed(() => {
@@ -194,8 +194,8 @@ export class LiquidityCard implements OnInit {
     }
     const points = h.points;
     const long = points.length > 62;
-    const firstTrue = points.findIndex((p) => !p.estimated);
-    const estimatedUntil = firstTrue === -1 ? points.length - 1 : firstTrue;
+    const estimated = points.map((p) => p.estimated);
+    const trueDays = estimated.filter((e) => !e).length;
     const values = points.map((p) => p.amount);
     return {
       currency: h.currency,
@@ -206,11 +206,12 @@ export class LiquidityCard implements OnInit {
       names: points.map(
         (p) => formatDate(p.date, 'd MMMM y', this.locale) + (p.estimated ? ' · stima' : ''),
       ),
-      estimatedUntil,
-      onlyToday: estimatedUntil >= points.length - 1,
+      estimated,
+      someEstimated: trueDays < points.length,
+      onlyToday: trueDays <= 1,
       description:
         `Liquidità in ${h.currency} giorno per giorno, dal ${formatDate(points[0].date, 'd MMMM y', this.locale)} ` +
-        `a oggi. La parte tratteggiata è stimata dai movimenti.`,
+        `a oggi. Le parti tratteggiate sono stimate dai movimenti.`,
     };
   });
 

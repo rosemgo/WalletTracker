@@ -64,11 +64,14 @@ const STEPS = [
           <path class="area" [attr.d]="areaPath()" />
         </svg>
         <svg class="month-chart layer line-layer" [attr.viewBox]="'0 0 ' + width + ' ' + height">
-          @if (estimatePath()) {
-            <!-- La parte stimata (parametro estimatedUntil): tratteggiata, prima di quella vera. -->
-            <path class="estimate" [attr.d]="estimatePath()" />
+          <!-- I tratti stimati (parametro estimated) tratteggiati, quelli veri pieni. -->
+          @for (seg of segments(); track $index) {
+            @if (seg.estimated) {
+              <path class="estimate" [attr.d]="seg.path" />
+            } @else {
+              <path class="month" pathLength="1" [attr.d]="seg.path" />
+            }
           }
-          <path class="month" pathLength="1" [attr.d]="linePath()" />
           @if (tip(); as t) {
             <line class="guide" [attr.x1]="t.x" [attr.x2]="t.x" [attr.y1]="top" [attr.y2]="base" />
             <circle class="today" [attr.cx]="t.x" [attr.cy]="t.y" r="5" />
@@ -96,10 +99,10 @@ export class TrendChart {
   readonly description = input.required<string>();
   readonly currency = input('EUR');
   /**
-   * Quanti valori, dall'inizio, sono stimati e non veri (lo storico della liquidità, docs/saldi.md parte L): quel
-   * tratto si disegna tratteggiato. 0 = tutti veri.
+   * Per ogni valore, se è stimato e non vero (lo storico della liquidità, docs/saldi.md parte L): un tratto tra due
+   * valori veri si disegna pieno, ogni altro tratteggiato. Vuoto (il solito) = tutti veri.
    */
-  readonly estimatedUntil = input(0);
+  readonly estimated = input<readonly boolean[]>([]);
   /**
    * true (il solito): la scala parte da zero, come per l'investito. false: parte poco sotto il valore più basso, per
    * vedere come cambia una cifra che non va mai vicino allo zero (la liquidità).
@@ -145,15 +148,27 @@ export class TrendChart {
     this.values().map((v, i) => ({ x: this.x(i), y: this.y(v) })),
   );
 
-  /** La linea vera: da dove finisce la stima (o dall'inizio) all'ultimo valore. */
-  protected readonly linePath = computed(() =>
-    smoothPath(this.points().slice(Math.min(this.estimatedUntil(), this.values().length - 1))),
-  );
-
-  /** Il tratto stimato, fino al primo valore vero compreso (così le due linee si toccano); vuoto senza stima. */
-  protected readonly estimatePath = computed(() => {
-    const until = this.estimatedUntil();
-    return until > 0 ? smoothPath(this.points().slice(0, until + 1)) : '';
+  /**
+   * La linea, in pezzi: ogni pezzo è una serie di tratti dello stesso tipo, vero (tra due valori veri) o stimato. Due
+   * pezzi vicini hanno in comune il punto dove si toccano, così la linea è continua. Senza stime, un pezzo solo.
+   */
+  protected readonly segments = computed(() => {
+    const points = this.points();
+    const estimated = this.estimated();
+    if (points.length < 2) {
+      return points.length === 1 ? [{ estimated: false, path: smoothPath(points) }] : [];
+    }
+    const kind = (t: number) => Boolean(estimated[t] || estimated[t + 1]); // il tratto dal punto t a t+1
+    const segments: { estimated: boolean; path: string }[] = [];
+    let from = 0; // il primo tratto del pezzo in corso
+    for (let t = 1; t <= points.length - 1; t++) {
+      // Finiti i tratti, o il tratto t è di un altro tipo: il pezzo va dal punto "from" al punto t.
+      if (t === points.length - 1 || kind(t) !== kind(from)) {
+        segments.push({ estimated: kind(from), path: smoothPath(points.slice(from, t + 1)) });
+        from = t;
+      }
+    }
+    return segments;
   });
 
   /** L'area sotto tutta la linea, stima compresa. */
