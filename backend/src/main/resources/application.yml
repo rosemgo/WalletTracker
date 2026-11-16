@@ -144,6 +144,11 @@ wallettracker:
     state-directory: ${WALLETTRACKER_BACKUP_STATE_DIR:../.data/backup-stato}
     # La cartella dei backup come si chiama sul server (BACKUP_DIR nel .env), solo da mostrare in Impostazioni → Backup.
     server-directory: ${WALLETTRACKER_BACKUP_DIR_ON_SERVER:}
+  # Le fotografie dei saldi per il grafico della liquidità (docs/saldi.md, parte L): ogni ora, mentre l'app è accesa.
+  balance-history:
+    enabled: true
+    every: 1h
+    initial-delay: 2m
   sync:
     enabled: true
     # Ogni conto viene aggiornato al massimo ogni 6 ore: 4 letture al giorno, il limite PSD2 in background.

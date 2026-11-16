@@ -43,6 +43,8 @@ export const DATE_FORMATS = {
   monthInitial: 'MMMMM',
   /** ottobre 2026 */
   monthYear: 'MMMM y',
+  /** ott 26: sotto un grafico lungo, dove lo spazio è poco. */
+  monthShortYear: 'MMM yy',
 } as const;
 
 export type DateStyle = keyof typeof DATE_FORMATS;

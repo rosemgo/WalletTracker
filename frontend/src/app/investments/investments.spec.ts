@@ -86,6 +86,21 @@ function investments(period: InvestmentPeriod): Investments {
     otherTaxesByType: [
       { name: 'Imposta di bollo', kind: 'NAMED' as const, amount: -2, movements: 1 },
     ],
+    // Gli stessi elenchi mese per mese: aprile la cedola (netta), giugno il dividendo.
+    incomeByMonth: [
+      {
+        month: '2026-04',
+        byType: [{ name: 'Cedole', kind: 'NAMED' as const, amount: 26.1, movements: 1 }],
+        bySource: [
+          { name: 'CED.SU BTP ITALIA', kind: 'NAMED' as const, amount: 26.1, movements: 1 },
+        ],
+      },
+      {
+        month: '2026-06',
+        byType: [{ name: 'Dividendi', kind: 'NAMED' as const, amount: 12.5, movements: 1 }],
+        bySource: [{ name: 'ENEL', kind: 'NAMED' as const, amount: 12.5, movements: 1 }],
+      },
+    ],
     trades: [
       movement(41, '2026-10-06', -200, 'NUOVO VERSAMENTO ROBO ADVISOR', 'SECURITIES_BUY'),
       movement(42, '2026-08-10', 300, 'SELL TRADE ETF MONDO', 'SECURITIES_SELL'),
@@ -115,6 +130,7 @@ const NOTHING: Investments = {
   })),
   incomeByType: [],
   incomeBySource: [],
+  incomeByMonth: [],
   otherTaxesByType: [],
   trades: [],
   transfers: [],
@@ -236,6 +252,57 @@ describe('Investments', () => {
     expect(incomeCard.querySelectorAll('app-bar-chart path.bar')[5].classList.contains('on')).toBe(
       true,
     );
+  });
+
+  it('the lists of the income show the whole period or only the month of the bar', async () => {
+    const { fixture, page: p } = await page();
+    const incomeCard = Array.from(p.querySelectorAll('section.card')).find((c) =>
+      c.textContent?.includes('Cedole, dividendi e interessi'),
+    ) as HTMLElement;
+    const [whole, month] = Array.from(
+      incomeCard.querySelectorAll<HTMLButtonElement>('[data-testid="income-scope"] button'),
+    );
+    // I due elenchi delle rendite, "Per tipo" e "Da dove" (sotto, nella stessa scheda, ci sono le altre tasse).
+    const names = () =>
+      Array.from(incomeCard.querySelectorAll('ul.rows'))
+        .slice(0, 2)
+        .flatMap((ul) => Array.from(ul.querySelectorAll('li')))
+        .map((li) => li.textContent?.replace(/\s+/g, ' ').trim());
+    const href = (text: string) =>
+      Array.from(incomeCard.querySelectorAll<HTMLAnchorElement>('ul.rows a'))
+        .find((a) => a.textContent?.includes(text))
+        ?.getAttribute('href');
+
+    // Come sempre: tutto il periodo. Il secondo pulsante è il mese della barra in evidenza.
+    expect(whole.textContent?.trim()).toBe('Da inizio anno');
+    expect(whole.getAttribute('aria-pressed')).toBe('true');
+    expect(month.textContent?.trim()).toBe('Giugno 2026');
+    expect(names().some((n) => n?.startsWith('Cedole'))).toBe(true);
+
+    month.click();
+    await fixture.whenStable();
+    expect(names()).toEqual([
+      expect.stringMatching(/^Dividendi 1 movimento ?12,50\s€$/),
+      expect.stringMatching(/^Enel 1 movimento ?12,50\s€$/),
+    ]);
+    // I collegamenti a Movimenti guardano quel mese.
+    expect(href('Dividendi')).toBe(
+      '/movimenti?from=2026-06-01&to=2026-06-30&type=INVESTMENT_INCOME&text=dividendi',
+    );
+
+    // Toccando un'altra barra gli elenchi la seguono; un mese senza rendite lo dice.
+    const bars = incomeCard.querySelectorAll('app-bar-chart rect.hit');
+    (bars[5] as SVGElement).dispatchEvent(new MouseEvent('click'));
+    await fixture.whenStable();
+    expect(month.textContent?.trim()).toBe('Aprile 2026');
+    expect(names()[0]).toMatch(/^Cedole 1 movimento ?26,10\s€$/);
+    (bars[0] as SVGElement).dispatchEvent(new MouseEvent('click'));
+    await fixture.whenStable();
+    expect(incomeCard.textContent).toContain('Nessuna rendita in novembre 2025.');
+
+    whole.click();
+    await fixture.whenStable();
+    expect(names().some((n) => n?.startsWith('Dividendi'))).toBe(true);
   });
 
   it('the rows of the income and of the taxes lead to their movements', async () => {

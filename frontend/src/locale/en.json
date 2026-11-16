@@ -2633,9 +2633,13 @@
       "it": "Netti: quello che è arrivato sul conto",
       "en": "Net: what arrived on the account"
     },
-    "6053914077280683169": {
-      "it": " Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese. Alcune banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a parte (tipo \"Ritenute sulle rendite\"), che qui si toglie dalla rendita dello stesso titolo; altre (come Trade Republic) accreditano già il netto. ",
-      "en": "Everything is net, the bars and the lists: tap a bar for the figure of the month. Some banks (like Fineco) pay the gross amount and withhold the tax with a separate transaction (type \"Withholding tax on income\"), which is taken off the income of the same security here; others (like Trade Republic) already credit the net amount."
+    "5569869196002559560": {
+      "it": " Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese, e scegli qui sotto se gli elenchi mostrano tutto il periodo o solo quel mese. Alcune banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a parte (tipo \"Ritenute sulle rendite\"), che qui si toglie dalla rendita dello stesso titolo; altre (come Trade Republic) accreditano già il netto. ",
+      "en": "Everything is net, the bars and the lists: tap a bar for the figure of the month, and choose below whether the lists show the whole period or only that month. Some banks (like Fineco) pay the gross amount and withhold the tax with a separate transaction (type \"Withholding tax on income\"), which is taken off the income of the same security here; others (like Trade Republic) already credit the net amount."
+    },
+    "4169823336069588437": {
+      "it": "Rendite negli elenchi",
+      "en": "Income in the lists"
     },
     "2219326806415181082": {
       "it": "Per tipo",
@@ -2644,10 +2648,6 @@
     "3353426987174450179": {
       "it": "Da dove",
       "en": "From where"
-    },
-    "8395586720313419039": {
-      "it": "Nessuna rendita in questo periodo.",
-      "en": "No income in this period."
     },
     "2892748668921717883": {
       "it": " Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito. ",
@@ -2676,6 +2676,14 @@
     "5889572172563723393": {
       "it": "{$value}: {$amount} netti",
       "en": "{$value}: {$amount} net"
+    },
+    "7383435095616373618": {
+      "it": "Nessuna rendita in {$month}.",
+      "en": "No income in {$month}."
+    },
+    "8395586720313419039": {
+      "it": "Nessuna rendita in questo periodo.",
+      "en": "No income in this period."
     },
     "7737969341577807794": {
       "it": "Investito a {$value}",
@@ -3021,6 +3029,26 @@
       "it": "{VAR_PLURAL, plural, =1 {Sul tuo conto, adesso} other {Su {INTERPOLATION} conti, adesso}}",
       "en": "{VAR_PLURAL, plural, =1 {On your account, now} other {On {INTERPOLATION} accounts, now}}"
     },
+    "6397894164536703905": {
+      "it": "Valuta del grafico",
+      "en": "Currency of the chart"
+    },
+    "876522556398186445": {
+      "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Saldi salvati",
+      "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Saved balances"
+    },
+    "8550815096719227346": {
+      "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Stima dai movimenti",
+      "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Estimated from the transactions"
+    },
+    "1582109335242515934": {
+      "it": " Da oggi l'app salva i saldi ogni giorno: la linea piena crescerà. Gli altri giorni sono stimati dai movimenti, e valgono solo se nell'app ci sono tutti. ",
+      "en": "From today the app saves the balances every day: the solid line will grow. The other days are estimated from the transactions, and are right only if all of them are in the app."
+    },
+    "3779031875516971350": {
+      "it": " Per {$INTERPOLATION} non c'è ancora uno storico da disegnare: comincia da oggi. ",
+      "en": "For {$INTERPOLATION} there is no history to draw yet: it starts from today."
+    },
     "4188840551952738445": {
       "it": "al {$INTERPOLATION}",
       "en": "on {$INTERPOLATION}"
@@ -3032,6 +3060,22 @@
     "3378065843231399950": {
       "it": "{VAR_PLURAL, plural, =1 {1 conto senza saldo non è nel totale} other {{INTERPOLATION} conti senza saldo non sono nel totale}}",
       "en": "{VAR_PLURAL, plural, =1 {1 account without a balance is not in the total} other {{INTERPOLATION} accounts without a balance are not in the total}}"
+    },
+    "7479578550281236217": {
+      "it": "{$day} · stima",
+      "en": "{$day} · estimate"
+    },
+    "325354694424296750": {
+      "it": "Liquidità in {$currency} giorno per giorno, dal {$day} a oggi. Le parti tratteggiate sono stimate dai movimenti.",
+      "en": "Cash in {$currency} day by day, from {$day} to today. The dashed parts are estimated from the transactions."
+    },
+    "3506952562998536004": {
+      "it": "Il {$day} · stima dai movimenti",
+      "en": "On {$day} · estimated from the transactions"
+    },
+    "6588707462483089966": {
+      "it": "Il {$day}",
+      "en": "On {$day}"
     },
     "8153525948990570064": {
       "it": "{$INTERPOLATION}. Con le frecce si scorrono i giorni.",

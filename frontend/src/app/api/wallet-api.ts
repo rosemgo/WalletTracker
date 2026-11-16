@@ -6,6 +6,7 @@ import {
   BankConnection,
   ConnectionRemoval,
   Account,
+  BalanceHistory,
   AiCloudProvider,
   AuthStatus,
   RecoveryCode,
@@ -408,6 +409,13 @@ export class WalletApi {
   investments(period: InvestmentPeriod, currency: string | null = null): Observable<Investments> {
     return this.http.get<Investments>('/api/investments', {
       params: currency ? { period, currency } : { period },
+    });
+  }
+
+  /** GET /api/accounts/balance-history?currency=EUR: la liquidità giorno per giorno (docs/saldi.md, parte L). */
+  balanceHistory(currency: string): Observable<BalanceHistory> {
+    return this.http.get<BalanceHistory>('/api/accounts/balance-history', {
+      params: { currency },
     });
   }
 

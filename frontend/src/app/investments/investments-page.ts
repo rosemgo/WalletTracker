@@ -16,12 +16,13 @@ import { WalletApi } from '../api/wallet-api';
 import { BarChart } from '../explore/bar-chart';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
-import { DateStyle, LocalDatePipe, formatLocalDate } from '../text/dates';
+import { DateStyle, LocalDatePipe, capitalized, formatLocalDate } from '../text/dates';
 import { ReadablePipe } from '../text/readable';
 import { merchantSearch } from '../transactions/merchant-search';
 import { CloseButton } from '../ui/close-button';
 import { DismissedNotices } from '../ui/dismissed-notices';
 import { InvestmentMovements } from './investment-movements';
+import { UpperFirstPipe } from '../text/upper-first.pipe';
 import { TrendChart } from './trend-chart';
 
 // Come in tutte le barre dei periodi (Analisi, il grafico di una categoria): prima "Quest'anno", poi "12 mesi".
@@ -58,6 +59,16 @@ export const FIRST_ROWS = 5;
 /** Un elenco si accorcia solo se è più lungo di così: nascondere una o due righe sarebbe solo un clic in più. */
 export const SHORTEN_FROM = 8;
 
+/** Gli elenchi delle rendite: di tutto il periodo, o del mese della barra in evidenza. */
+export type IncomeScope = 'period' | 'month';
+
+/** Dal primo giorno del mese {@code from} all'ultimo del mese {@code to}: "2026-07", "2026-07" → 1-31 luglio. */
+export function monthRange(from: string, to: string): { from: string; to: string } {
+  const [year, month] = to.split('-').map(Number);
+  const last = new Date(year, month, 0).getDate();
+  return { from: `${from}-01`, to: `${to}-${String(last).padStart(2, '0')}` };
+}
+
 @Component({
   selector: 'app-investments-page',
   imports: [
@@ -69,6 +80,7 @@ export const SHORTEN_FROM = 8;
     ReadablePipe,
     RouterLink,
     TrendChart,
+    UpperFirstPipe,
   ],
   templateUrl: './investments-page.html',
 })
@@ -208,6 +220,52 @@ export class InvestmentsPage implements OnInit {
       : `${this.monthNames()[i]}: ${this.euros(d.months[i].transferred, d.currency, 2)}`;
   });
 
+  /**
+   * Che cosa mostrano "Per tipo" e "Da dove": le rendite di tutto il periodo (come sempre), o solo quelle del mese della
+   * barra in evidenza. Resta com'è cambiando periodo o valuta: è un modo di guardare, non un dato.
+   */
+  protected readonly incomeScope = signal<IncomeScope>('period');
+
+  /** Il mese della barra in evidenza, "2026-07" (null senza rendite nel periodo). */
+  private readonly incomeMonth = computed(() => {
+    const i = this.incomeBar();
+    return i === null ? null : (this.data()?.months[i]?.month ?? null);
+  });
+
+  /** L'etichetta del secondo pulsante: "Luglio 2026", il mese della barra. */
+  protected readonly incomeMonthLabel = computed(() => {
+    const i = this.incomeBar();
+    const name = i === null ? '' : (this.monthNames()[i] ?? '');
+    return capitalized(name);
+  });
+
+  /**
+   * Gli elenchi delle rendite da mostrare, con il periodo che coprono (per i collegamenti a Movimenti) e le parole per
+   * dire "niente": tutto il periodo, o il mese della barra.
+   */
+  protected readonly incomeLists = computed(() => {
+    const d = this.data();
+    const month = this.incomeMonth();
+    if (d === null) {
+      return null;
+    }
+    if (this.incomeScope() === 'month' && month !== null) {
+      const found = (d.incomeByMonth ?? []).find((m) => m.month === month);
+      return {
+        byType: found?.byType ?? [],
+        bySource: found?.bySource ?? [],
+        range: monthRange(month, month),
+        empty: $localize`Nessuna rendita in ${this.monthName(month, 'monthYear')}:month:.`,
+      };
+    }
+    return {
+      byType: d.incomeByType,
+      bySource: d.incomeBySource,
+      range: monthRange(d.from, d.to),
+      empty: $localize`Nessuna rendita in questo periodo.`,
+    };
+  });
+
   /** La media al mese delle barre, per la linea tratteggiata: un riferimento per leggere le altezze. */
   protected readonly incomeAverage = computed(() => average(this.income()));
   protected readonly transferAverage = computed(() => average(this.transferred()));
@@ -303,23 +361,24 @@ export class InvestmentsPage implements OnInit {
 
   /** Il periodo guardato, per i filtri di Movimenti: dal primo giorno del primo mese all'ultimo dell'ultimo. */
   private periodRange(d: Investments): { from: string; to: string } {
-    const [year, month] = d.to.split('-').map(Number);
-    const last = new Date(year, month, 0).getDate();
-    return { from: `${d.from}-01`, to: `${d.to}-${String(last).padStart(2, '0')}` };
+    return monthRange(d.from, d.to);
   }
 
-  /** "Per tipo": le rendite di quel tipo nel periodo (la ricerca trova anche il nome della categoria). */
-  protected typeQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
-    const range = this.periodRange(d);
+  /**
+   * "Per tipo": le rendite di quel tipo (la ricerca trova anche il nome della categoria), nel periodo degli elenchi:
+   * tutto il periodo, o il mese della barra.
+   */
+  protected typeQuery(g: InvestmentGroup): Record<string, string> {
+    const range = this.incomeLists()?.range ?? {};
     if (g.kind === 'OTHER_INCOME') {
       return { ...range, type: 'INVESTMENT_INCOME', uncategorized: 'true' };
     }
     return { ...range, type: 'INVESTMENT_INCOME', text: this.groupName(g).toLowerCase() };
   }
 
-  /** "Da dove": i movimenti di quel titolo nel periodo (rendite e ritenute), o di quel conto. */
-  protected sourceQuery(d: Investments, g: InvestmentGroup): Record<string, string> {
-    const range = this.periodRange(d);
+  /** "Da dove": i movimenti di quel titolo (rendite e ritenute), o di quel conto, nel periodo degli elenchi. */
+  protected sourceQuery(g: InvestmentGroup): Record<string, string> {
+    const range = this.incomeLists()?.range ?? {};
     if (g.accountId) {
       const query: Record<string, string> = {
         ...range,

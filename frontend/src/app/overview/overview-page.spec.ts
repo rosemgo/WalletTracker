@@ -84,6 +84,7 @@ const NO_INVESTMENTS = {
   months: [],
   incomeByType: [],
   incomeBySource: [],
+  incomeByMonth: [],
   otherTaxesByType: [],
   trades: [],
   transfers: [],

@@ -127,17 +127,23 @@ public class AccountService {
         return dtoOf(account);
     }
 
-    /** Il conto per la dashboard, con il saldo di oggi. Dentro una transazione. */
-    private AccountDto dtoOf(Account account) {
-        CurrentBalance balance = null;
+    /**
+     * Il saldo di oggi di un conto, come lo mostra la pagina Conti (null se non ne ha uno). Lo usa anche lo storico dei
+     * saldi, per la fotografia del giorno. Dentro una transazione.
+     */
+    CurrentBalance currentBalance(Account account) {
         if (account.getBalanceSource() == BalanceSource.MANUAL && account.getBalance() != null) {
-            balance = CurrentBalance.of(account,
+            return CurrentBalance.of(account,
                     transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
                             account.getBalanceUpdatedAt()),
                     transactionRepository.lastBookingDate(account.getId()));
-        } else {
-            balance = CurrentBalance.of(account, BigDecimal.ZERO, null);
         }
+        return CurrentBalance.of(account, BigDecimal.ZERO, null);
+    }
+
+    /** Il conto per la dashboard, con il saldo di oggi. Dentro una transazione. */
+    private AccountDto dtoOf(Account account) {
+        CurrentBalance balance = currentBalance(account);
         Long logoVersion = logoRepository.findById(account.getId())
                 .filter(AccountLogo::hasImage)
                 .map(l -> l.getCheckedAt().toEpochMilli())

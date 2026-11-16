@@ -10,7 +10,7 @@ partenza, quello che scrive l'utente (categorie rinominate, note, nomi dei conti
 
 ## Parte A: di chi è la lingua
 
-La lingua è un'impostazione **dell'installazione**, salvata nel database (`app_settings.language`, V41), non del
+La lingua è un'impostazione **dell'installazione**, salvata nel database (`app_settings.language`, V42), non del
 singolo browser. I motivi:
 
 - l'app è di una persona sola, che la apre dal computer e dal telefono e la vuole uguale;
@@ -19,7 +19,7 @@ singolo browser. I motivi:
 
 | Situazione | In che lingua si apre |
 |---|---|
-| Chi usa già l'app (aggiorna da una versione precedente) | italiano: la migrazione V41 lo scrive nel database |
+| Chi usa già l'app (aggiorna da una versione precedente) | italiano: la migrazione V42 lo scrive nel database |
 | Installazione nuova, prima schermata | quella del browser (italiano o inglese; un browser tedesco → inglese) |
 | Installazione nuova, dopo la prima schermata | quella della prima schermata, che diventa la lingua dell'installazione |
 | Un altro dispositivo | quella dell'installazione, anche se il browser è in un'altra lingua |
@@ -29,7 +29,7 @@ gli altri dispositivi se ne accorgono alla prossima apertura e si ricaricano da 
 
 ## Parte B: le categorie di partenza
 
-Le 29 categorie di partenza (V12) hanno ora una **chiave fissa** (`category.builtin_key`, V41: `GROCERIES`,
+Le 29 categorie di partenza (V12) hanno ora una **chiave fissa** (`category.builtin_key`, V42: `GROCERIES`,
 `EATING_OUT`...) che dice quale categoria di partenza è, in ogni lingua. Il nome resta un dato dell'utente.
 
 Cambiando lingua (`LanguageSwitch`, `CategoryService.translateBuiltin`):
@@ -84,7 +84,7 @@ I testi sono marcati nel codice: attributo `i18n` nei template, `` $localize`...
 elencare tutti e dà a ognuno un identificativo, calcolato dal testo.
 
 `frontend/src/locale/en.json` ha, per ogni identificativo, la frase italiana (`it`, solo per chi traduce) e la
-traduzione (`en`). Oggi sono **1071 testi**.
+traduzione (`en`). Oggi sono **1082 testi**.
 
 ```bash
 npm run i18n
@@ -110,10 +110,10 @@ un testo aggiunto senza traduzione fa fallire la build, invece di comparire in i
 
 ## Parte F: le prove
 
-- **Backend**: 494 test (tra cui `LanguageControllerTest`: lettura senza PIN, modifica con il PIN, categorie
-  rinominate, nomi già presi, regole e budget che seguono, frasi nella lingua della richiesta) e `V41LinguaTest` per la
+- **Backend**: 503 test (tra cui `LanguageControllerTest`: lettura senza PIN, modifica con il PIN, categorie
+  rinominate, nomi già presi, regole e budget che seguono, frasi nella lingua della richiesta) e `V42LinguaTest` per la
   migrazione.
-- **Dashboard**: 343 test. Girano isolati file per file (`isolate` in angular.json), perché le frasi si scrivono una
+- **Dashboard**: 350 test. Girano isolati file per file (`isolate` in angular.json), perché le frasi si scrivono una
   volta sola, quando il file viene caricato: `english.spec.ts` apre l'app in inglese e controlla etichette, date,
   importi, plurali e una pagina intera.
 - **Dal vero**, con backend, database e browser veri (Playwright): un'installazione nuova scelta in inglese dalla prima
@@ -129,9 +129,11 @@ Se ci si accorgesse di uno sbaglio, si può tornare alla versione di prima di qu
 
 - **nel codice**: tutto il lavoro sulle lingue sta in commit suoi, dopo `015560d` (l'ultimo commit di `main` prima di
   cominciare). Finché non è unito a `main`, `main` non cambia; dopo, si annulla con un `git revert` del merge;
-- **nel database**: la V41 aggiunge solo una tabella (`app_settings`) e una colonna (`category.builtin_key`), senza
+- **nel database**: la V42 (la V41 è lo storico dei saldi, arrivato da `main`) aggiunge solo una tabella (`app_settings`) e una colonna (`category.builtin_key`), senza
   togliere né cambiare niente di quello che c'era. **Provato**: la versione di prima, avviata su un database già
-  migrato dalla V41, parte (Flyway avvisa che il database è "più nuovo", ma non si ferma) e mostra le stesse pagine.
+  migrato dalla V42, parte (Flyway avvisa che il database è "più nuovo", ma non si ferma) e mostra le stesse pagine.
+  E nel verso opposto: un database creato dalla versione di prima, con i suoi dati, passa alla nuova (V41 e V42) e
+  resta in italiano, con le 29 categorie di partenza riconosciute.
 
 Un'avvertenza: **prima di tornare indietro, rimetti la lingua in italiano** da Impostazioni. La versione di prima non sa
 tradurre le categorie: se l'installazione fosse in inglese, resterebbero con i nomi inglesi ("Groceries").

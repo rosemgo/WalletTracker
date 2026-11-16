@@ -140,14 +140,31 @@ describe('the app in English', () => {
       TestBed.configureTestingModule({
         providers: [
           provideRouter([]),
-          { provide: WalletApi, useValue: { accounts: () => of(accounts) } },
+          {
+            provide: WalletApi,
+            useValue: {
+              accounts: () => of(accounts),
+              // Lo storico della liquidità: un giorno stimato e uno salvato, per il grafico.
+              balanceHistory: (currency: string) =>
+                of({
+                  currency,
+                  accounts: 2,
+                  points: [
+                    { date: '2026-10-09', amount: 140, estimated: true },
+                    { date: '2026-10-10', amount: 150, estimated: false },
+                  ],
+                }),
+            },
+          },
           { provide: LOCALE_ID, useValue: 'en-GB' },
         ],
       });
       const fixture = TestBed.createComponent(LiquidityCard);
       await fixture.whenStable();
       fixture.detectChanges();
-      return (fixture.nativeElement as HTMLElement).textContent ?? '';
+      const card = fixture.nativeElement as HTMLElement;
+      const chart = card.querySelector('[aria-label]')?.getAttribute('aria-label') ?? '';
+      return (card.textContent ?? '') + ' ' + chart;
     };
 
     const one = await render([account(1, 100)]);
@@ -158,5 +175,9 @@ describe('the app in English', () => {
     expect(many).toContain('1 account without a balance is not in the total');
     expect(many).toContain('on 10 Oct');
     expect(many).toMatch(/€150/);
+    // Il grafico dello storico, e la sua descrizione per chi legge con un lettore di schermo.
+    expect(many).toContain('Saved balances');
+    expect(many).toContain('Estimated from the transactions');
+    expect(many).toContain('Cash in EUR day by day, from 9 October 2026 to today.');
   });
 });

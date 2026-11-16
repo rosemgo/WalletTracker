@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 
 import it.wallettracker.investment.InvestmentDtos.Group;
 import it.wallettracker.investment.InvestmentDtos.GroupKind;
+import it.wallettracker.investment.InvestmentDtos.IncomeMonth;
 import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.transaction.TransactionType;
 
@@ -469,6 +470,22 @@ public final class Investments {
                         accounts.get(e.getKey()), searches.get(e.getKey())))
                 .sorted(Comparator.comparing(Group::amount).reversed().thenComparing(BY_NAME))
                 .toList();
+    }
+
+    /**
+     * Le rendite nette mese per mese, dal mese {@code first} a quello di {@code today}: per ogni mese gli elenchi di
+     * {@link #netIncomeBy}, per tipo e per titolo. I mesi senza rendite (né ritenute) non ci sono.
+     */
+    public static List<IncomeMonth> incomeByMonth(List<Movement> movements, YearMonth first, LocalDate today) {
+        List<IncomeMonth> result = new ArrayList<>();
+        for (YearMonth month = first; !month.isAfter(YearMonth.from(today)); month = month.plusMonths(1)) {
+            LocalDate end = month.atEndOfMonth().isAfter(today) ? today : month.atEndOfMonth();
+            List<Group> byType = netIncomeBy(movements, month.atDay(1), end, true);
+            if (!byType.isEmpty()) {
+                result.add(new IncomeMonth(month, byType, netIncomeBy(movements, month.atDay(1), end, false)));
+            }
+        }
+        return result;
     }
 
     private static String lower(String text) {
