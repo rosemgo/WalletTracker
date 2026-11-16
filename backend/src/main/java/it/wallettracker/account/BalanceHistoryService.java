@@ -58,8 +58,8 @@ public class BalanceHistoryService {
     }
 
     /**
-     * Le fotografie: il saldo di ogni conto che conta e ne ha uno, sotto il giorno a cui è vero ({@link #trueOn}).
-     * Restituisce quanti conti ha salvato.
+     * Le fotografie: il saldo della banca di ogni conto che conta e ne ha uno, sotto il giorno a cui è vero
+     * ({@link #trueOn}). Restituisce quanti conti ha salvato.
      */
     @Transactional
     public int recordToday(LocalDate today) {
@@ -69,7 +69,9 @@ public class BalanceHistoryService {
                 continue;
             }
             CurrentBalance balance = accountService.currentBalance(account);
-            if (balance != null) {
+            // Solo i saldi della banca. Uno scritto a mano più i movimenti si ricalcola ogni volta (vedi reconstruct):
+            // fotografato, resterebbe senza i movimenti di un file caricato dopo.
+            if (balance != null && balance.source() == BalanceSource.BANK) {
                 snapshotRepository.upsert(account.getId(), trueOn(balance, today), balance.amount());
                 saved++;
             }
@@ -96,7 +98,10 @@ public class BalanceHistoryService {
             if (counts(account) && chosen.equals(account.getCurrency())) {
                 CurrentBalance balance = accountService.currentBalance(account);
                 if (balance != null) {
-                    current.put(account.getId(), new Anchor(trueOn(balance, today), balance.amount()));
+                    // Un saldo scritto a mano è vero dal suo giorno di partenza in poi: da lì è il saldo scritto più i
+                    // movimenti, come nella pagina Conti.
+                    LocalDate trustedFrom = balance.source() == BalanceSource.MANUAL ? balance.startDate() : null;
+                    current.put(account.getId(), new Anchor(trueOn(balance, today), balance.amount(), trustedFrom));
                 }
             }
         }
@@ -128,6 +133,9 @@ public class BalanceHistoryService {
 
         Map<Long, Map<LocalDate, BigDecimal>> photos = new HashMap<>();
         for (BalanceSnapshot s : snapshots) {
+            if (current.get(s.getAccountId()).trustedFrom() != null) {
+                continue; // un conto con il saldo scritto a mano: le fotografie non contano (vedi recordToday)
+            }
             photos.computeIfAbsent(s.getAccountId(), id -> new HashMap<>()).put(s.getDate(), s.getAmount());
         }
         Map<Long, Map<LocalDate, BigDecimal>> movements = new HashMap<>();
@@ -137,8 +145,19 @@ public class BalanceHistoryService {
         return new BalanceHistory(chosen, current.size(), reconstruct(start, today, current, photos, movements));
     }
 
-    /** Il saldo di adesso di un conto, con il giorno a cui è vero ({@link #trueOn}). */
-    record Anchor(LocalDate date, BigDecimal amount) {
+    /**
+     * Il saldo di adesso di un conto, con il giorno a cui è vero ({@link #trueOn}).
+     *
+     * @param trustedFrom per un saldo scritto a mano, il suo giorno di partenza: da lì in poi ogni giorno è il saldo
+     *                    scritto più i movimenti, esatto quanto il saldo del conto, e non è una stima. Null per un saldo
+     *                    della banca: per lei sono veri solo i giorni con un valore della banca
+     */
+    record Anchor(LocalDate date, BigDecimal amount, LocalDate trustedFrom) {
+
+        /** Un saldo della banca. */
+        Anchor(LocalDate date, BigDecimal amount) {
+            this(date, amount, null);
+        }
     }
 
     /**
@@ -151,6 +170,9 @@ public class BalanceHistoryService {
      *   <li>dopo l'ultimo valore vero (un saldo della banca di ieri, oggi), in avanti: l'ultimo valore vero più i
      *       movimenti arrivati dopo.</li>
      * </ul>
+     * Per un saldo scritto a mano ({@code trustedFrom}) il calcolo è lo stesso, ma i giorni dal suo giorno di partenza in
+     * poi non sono stime: sono il saldo scritto più i movimenti, come il saldo del conto. Si ricalcolano a ogni
+     * richiesta, quindi un file caricato dopo corregge anche i giorni passati.
      *
      * @param current   il saldo di adesso di ogni conto, con il suo giorno
      * @param photos    le fotografie, per conto e per giorno
@@ -167,6 +189,7 @@ public class BalanceHistoryService {
             shots.put(anchor.date(), anchor.amount());
             Map<LocalDate, BigDecimal> moved = movements.getOrDefault(accountId, Map.of());
             BigDecimal[] values = new BigDecimal[days];
+            boolean[] guessed = new boolean[days];
             // Il punto di partenza: il giorno del saldo di adesso. Se è più vecchio dell'inizio del grafico (una banca
             // che non lo aggiorna da molto), si porta all'inizio aggiungendo i movimenti nel mezzo: è una stima.
             int last = (int) (anchor.date().toEpochDay() - start.toEpochDay());
@@ -177,7 +200,7 @@ public class BalanceHistoryService {
                 }
                 last = 0;
                 values[0] = value;
-                estimated[0] = true;
+                guessed[0] = true;
             } else {
                 values[last] = anchor.amount();
             }
@@ -188,7 +211,7 @@ public class BalanceHistoryService {
                     values[k] = shot;
                 } else {
                     values[k] = values[k + 1].subtract(moved.getOrDefault(start.plusDays(k + 1), BigDecimal.ZERO));
-                    estimated[k] = true;
+                    guessed[k] = true;
                 }
             }
             // In avanti: una fotografia, o il giorno prima più i movimenti del giorno.
@@ -198,11 +221,14 @@ public class BalanceHistoryService {
                     values[k] = shot;
                 } else {
                     values[k] = values[k - 1].add(moved.getOrDefault(start.plusDays(k), BigDecimal.ZERO));
-                    estimated[k] = true;
+                    guessed[k] = true;
                 }
             }
+            LocalDate trustedFrom = anchor.trustedFrom();
             for (int k = 0; k < days; k++) {
                 totals[k] = totals[k].add(values[k]);
+                boolean guess = trustedFrom != null ? start.plusDays(k).isBefore(trustedFrom) : guessed[k];
+                estimated[k] = estimated[k] || guess;
             }
         });
         List<Point> points = new ArrayList<>(days);

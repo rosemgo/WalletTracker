@@ -96,4 +96,15 @@ class BalanceHistoryReconstructTest {
         assertThat(BalanceHistoryService.trueOn(written, TODAY)).isEqualTo(TODAY);
         assertThat(BalanceHistoryService.trueOn(future, TODAY)).isEqualTo(TODAY);
     }
+
+    @Test
+    void aWrittenBalanceIsTrueFromItsStartAndFollowsTheMovementsImportedLater() {
+        // Saldo scritto il 13; oggi 1.000 € con un movimento del 15 (+200) caricato da un file dopo.
+        List<Point> points = BalanceHistoryService.reconstruct(day(12), TODAY,
+                Map.of(1L, new BalanceHistoryService.Anchor(TODAY, eur("1000"), day(13))), Map.of(),
+                Map.of(1L, Map.of(day(15), eur("200"))));
+        assertThat(points).extracting(p -> p.amount().intValue()).containsExactly(800, 800, 800, 1000, 1000);
+        // Prima del giorno di partenza è una stima; da lì in poi no.
+        assertThat(points).extracting(Point::estimated).containsExactly(true, false, false, false, false);
+    }
 }

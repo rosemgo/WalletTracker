@@ -452,10 +452,16 @@ La C non tradisce la parte A: una stima parte sempre da un saldo **vero** (una f
 grafico la disegna diversa, tratteggiata, con la parola "stima" quando la si guarda.
 
 **Le fotografie (`V41`, tabella `balance_snapshot`).** Un conto, un giorno, un importo. `BalanceSnapshotScheduler` ogni
-ora (mentre l'app è accesa) salva il saldo di ogni conto che conta nella liquidità, lo stesso della pagina Conti
-(`AccountService.currentBalance`), **sotto il giorno a cui è vero** (`trueOn`): per un saldo della banca il giorno che
-dice lei, per uno scritto a mano oggi (segue già ogni movimento importato, parte C). Nello stesso giorno l'ultima
-fotografia sostituisce la precedente.
+ora (mentre l'app è accesa) salva il saldo **della banca** di ogni conto che conta nella liquidità, lo stesso della
+pagina Conti (`AccountService.currentBalance`), **sotto il giorno a cui è vero** (`trueOn`): il giorno che dice la banca.
+Nello stesso giorno l'ultima fotografia sostituisce la precedente.
+
+**I saldi scritti a mano non si fotografano** (Trade Republic, i conti caricati da file, parti C e G). Il loro saldo è
+quello scritto più i movimenti importati dopo: fotografato ogni giorno, un conto aggiornato con un file una volta alla
+settimana avrebbe avuto sei giorni "veri" senza i movimenti non ancora caricati, e una fotografia vince sulla stima.
+Invece si ricalcola a ogni richiesta con gli stessi movimenti: dal giorno del saldo scritto in poi ogni giorno è il saldo
+scritto più i movimenti fino a quel giorno, esatto quanto il saldo del conto, e **non è una stima** (`Anchor.trustedFrom`);
+prima di quel giorno sì. Un file caricato dopo corregge da solo anche i giorni passati.
 
 Perché non semplicemente "oggi": in background la banca si rilegge al massimo ogni 20 ore (parte B, regola 3), mentre i
 movimenti arrivano ogni 6. Il saldo letto ieri sera non contiene i movimenti di oggi: salvato come "saldo di oggi"
