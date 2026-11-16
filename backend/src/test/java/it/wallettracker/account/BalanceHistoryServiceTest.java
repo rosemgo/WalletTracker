@@ -1,6 +1,7 @@
 package it.wallettracker.account;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -107,7 +108,39 @@ class BalanceHistoryServiceTest {
         assertThat(mvc.get().uri("/api/accounts/balance-history?currency=EUR")).hasStatusOk().bodyJson()
                 .satisfies(json -> json.assertThat().extractingPath("$.currency").isEqualTo("EUR"));
         assertThat(mvc.get().uri("/api/accounts/balance-history?currency=EURO")).hasStatus(400);
+        // Un conto solo: il conto in euro è lo stesso del totale; la carta e il conto in dollari, in euro, niente.
+        assertThat(historyService.history("EUR", main.getId(), TODAY).points()).last()
+                .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("970.00"));
+        assertThat(historyService.history("EUR", card.getId(), TODAY).points()).isEmpty();
+        assertThat(historyService.history("EUR", dollars.getId(), TODAY).points()).isEmpty();
+        assertThat(mvc.get().uri("/api/accounts/balance-history?currency=USD&accountId={id}", dollars.getId()))
+                .hasStatusOk().bodyJson()
+                .satisfies(json -> json.assertThat().extractingPath("$.accounts").isEqualTo(1));
         assertThat(historyService.history("GBP", TODAY).points()).isEmpty();
+    }
+
+    @Test
+    void aWrittenBalanceHasNoPhotosAndIsTrueFromItsStart() {
+        Account wallet = accountRepository.save(Account.manual("Tinaba", "Wallet", null, "EUR", AccountRole.MAIN));
+        movement(wallet, "2026-11-10", "-40");
+        accountRepository.recordBalance(wallet.getId(), new BigDecimal("500.00"), LocalDate.of(2026, 11, 14),
+                BalanceSource.MANUAL, Instant.parse("2026-11-14T10:00:00Z"));
+        movement(wallet, "2026-11-15", "25"); // caricato dopo, da un file
+
+        assertThat(historyService.recordToday(TODAY)).isZero();
+        assertThat(snapshotRepository.count()).isZero();
+
+        BalanceHistory history = historyService.history("EUR", TODAY);
+        // Dal primo movimento (il 10): prima del 14 stima, dal 14 il saldo scritto più i movimenti.
+        assertThat(history.points()).first().satisfies(p -> {
+            assertThat(p.date()).isEqualTo(LocalDate.of(2026, 11, 10));
+            assertThat(p.estimated()).isTrue();
+        });
+        assertThat(history.points()).filteredOn(p -> !p.date().isBefore(LocalDate.of(2026, 11, 14)))
+                .extracting(p -> p.amount().intValue(), Point::estimated)
+                .containsExactly(tuple(500, false),
+                        tuple(525, false),
+                        tuple(525, false));
     }
 
     @Test

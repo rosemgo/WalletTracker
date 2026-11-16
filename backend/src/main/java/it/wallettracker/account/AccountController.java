@@ -55,13 +55,14 @@ public class AccountController {
 
     /**
      * {@code GET /api/accounts/balance-history?currency=EUR}: la liquidità giorno per giorno in quella valuta
-     * (docs/saldi.md, parte L).
+     * (docs/saldi.md, parte L). Con {@code &accountId=7}, di quel conto solo.
      */
     @GetMapping("/balance-history")
     public BalanceHistory balanceHistory(
             @RequestParam @Pattern(regexp = "[A-Za-z]{3}", message = "La valuta è un codice di tre lettere, come EUR.")
-            String currency) {
-        return historyService.history(currency, LocalDate.now());
+            String currency,
+            @RequestParam(required = false) Long accountId) {
+        return historyService.history(currency, accountId, LocalDate.now());
     }
 
     /**

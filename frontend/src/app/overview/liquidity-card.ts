@@ -45,7 +45,8 @@ interface Group {
  * totale, e la scheda lo dice. Senza nessun saldo la scheda non compare.
  *
  * Sotto il totale, il grafico della liquidità giorno per giorno (docs/saldi.md, parte L), nella valuta principale; con più
- * valute, dei pulsanti scelgono quale tracciare (una alla volta, ognuna con la sua scala, senza conversioni):
+ * valute, dei pulsanti scelgono quale tracciare (una alla volta, ognuna con la sua scala, senza conversioni). Toccando un
+ * conto dell'elenco il grafico mostra solo lui, per confrontarlo con il suo estratto:
  * pieno dove ci sono i saldi salvati dall'app, tratteggiato dove è stimato dai movimenti. Scorrendolo, il totale
  * mostra quel giorno. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto
  * Conti): ci porta "Vedi i conti" in alto.
@@ -64,13 +65,15 @@ interface Group {
           @for (g of groups(); track g.currency) {
             <!-- Scorrendo il grafico, il totale della valuta del grafico mostra quel giorno. -->
             <strong class="liquidity-total" data-testid="liquidity-total">{{
-              (g.currency === chartCurrency() ? (scrubbed()?.amount ?? g.total) : g.total)
-                | money: g.currency : 'symbol' : '1.0-0'
+              (g.currency === chartCurrency() && !chartAccount()
+                ? (scrubbed()?.amount ?? g.total)
+                : g.total
+              ) | money: g.currency : 'symbol' : '1.0-0'
             }}</strong>
           }
         </div>
         <span class="secondary">{{
-          scrubbed()?.label ??
+          (chartAccount() ? null : scrubbed()?.label) ??
             (withBalance() === 1
               ? 'Sul tuo conto, adesso'
               : 'Su ' + withBalance() + ' conti, adesso')
@@ -87,11 +90,28 @@ interface Group {
               <button
                 type="button"
                 [attr.aria-pressed]="g.currency === chartCurrency()"
-                (click)="chosenCurrency.set(g.currency)"
+                (click)="chooseCurrency(g.currency)"
               >
                 {{ g.currency }}
               </button>
             }
+          </div>
+        }
+        @if (chartAccount(); as a) {
+          <!-- Un conto solo: il suo nome, il saldo del giorno scelto scorrendo, e il ritorno al totale. -->
+          <div class="liquidity-account" data-testid="chart-account">
+            <span>
+              <strong>{{ a.account.label }}</strong>
+              @if (scrubbed(); as s) {
+                <span class="secondary">
+                  {{ s.amount | money: a.account.currency : 'symbol' : '1.0-0' }} ·
+                  {{ s.day }}</span
+                >
+              }
+            </span>
+            <button type="button" class="link" (click)="chosenAccount.set(null)">
+              Tutti i conti
+            </button>
           </div>
         }
         @if (chart(); as c) {
@@ -106,20 +126,17 @@ interface Group {
             (scrubbed)="scrub.set($event)"
           />
           <div class="chart-keys">
-            <span><span class="key"></span>Saldi salvati</span>
+            @if (c.someSaved) {
+              <span><span class="key"></span>Saldi salvati</span>
+            }
             @if (c.someEstimated) {
               <span><span class="key estimate"></span>Stima dai movimenti</span>
             }
           </div>
-          @if (c.onlyToday) {
-            <p class="secondary history-note">
-              Da oggi l'app salva i saldi ogni giorno: la linea piena crescerà. Gli altri giorni
-              sono stimati dai movimenti, e valgono solo se nell'app ci sono tutti.
-            </p>
-          }
-        } @else if (groups().length > 1 && history()?.currency === chartCurrency()) {
+        } @else if (historyReady() && (groups().length > 1 || chartAccount())) {
           <p class="secondary history-note">
-            Per {{ chartCurrency() }} non c'è ancora uno storico da disegnare: comincia da oggi.
+            Storico non ancora disponibile per
+            {{ chartAccount()?.account?.label ?? chartCurrency() }}.
           </p>
         }
         @for (g of groups(); track g.currency) {
@@ -130,11 +147,19 @@ interface Group {
           <ul class="rows">
             @for (r of g.rows; track r.account.id) {
               <li>
-                <span>
-                  {{ r.account.label }}
-                  <span class="secondary">al {{ r.date | date: 'd MMM' }}</span>
-                </span>
-                <strong>{{ r.amount | money: g.currency }}</strong>
+                <!-- Toccando un conto il grafico mostra solo lui; toccandolo di nuovo, tutti. -->
+                <button
+                  type="button"
+                  class="liquidity-row"
+                  [attr.aria-pressed]="r.account.id === chartAccount()?.account?.id"
+                  (click)="chooseAccount(r.account.id)"
+                >
+                  <span>
+                    {{ r.account.label }}
+                    <span class="secondary">al {{ r.date | date: 'd MMM' }}</span>
+                  </span>
+                  <strong>{{ r.amount | money: g.currency }}</strong>
+                </button>
               </li>
             }
           </ul>
@@ -157,33 +182,79 @@ export class LiquidityCard implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly locale = inject(LOCALE_ID);
 
-  /** Lo storico della valuta principale (null finché non arriva, o se la richiesta non riesce: niente grafico). */
+  /** Lo storico da disegnare (null finché non arriva, o se la richiesta non riesce: niente grafico). */
   protected readonly history = signal<BalanceHistory | null>(null);
   /** Il giorno su cui si scorre nel grafico (indice), o null. */
   protected readonly scrub = signal<number | null>(null);
 
   constructor() {
-    // La valuta del grafico è la prima della scheda (quella con più conti): lo storico si chiede quando la si conosce.
-    // Dipende solo dalla valuta (un computed: una stringa uguale non lo riaccende), non dalla lista dei conti, che si
-    // aggiorna più volte (all'apertura del Riepilogo, a ogni refresh): lo storico non si richiede per niente.
+    // Lo storico si chiede quando si sa che cosa disegnare: la valuta e, se scelto, il conto. Dipende solo da questa
+    // chiave (un computed: una stringa uguale non lo riaccende), non dalla lista dei conti, che si aggiorna più volte
+    // (all'apertura del Riepilogo, a ogni refresh): lo storico non si richiede per niente.
     effect(() => {
-      const currency = this.chartCurrency();
-      untracked(() => this.loadHistory(currency));
+      const key = this.historyKey();
+      untracked(() => this.loadHistory(key));
     });
   }
 
   /** La valuta scelta con i pulsanti sopra il grafico (null = nessuna scelta: la principale). */
   protected readonly chosenCurrency = signal<string | null>(null);
+  /** Il conto scelto toccandolo nell'elenco (null = tutti i conti della valuta). */
+  protected readonly chosenAccount = signal<number | null>(null);
+
+  /** Il conto del grafico: quello scelto, se ha ancora un saldo nella scheda; altrimenti nessuno (tutti). */
+  protected readonly chartAccount = computed(() => {
+    const id = this.chosenAccount();
+    return id === null
+      ? null
+      : (this.groups()
+          .flatMap((g) => g.rows)
+          .find((r) => r.account.id === id) ?? null);
+  });
 
   /**
-   * La valuta del grafico: quella scelta, se c'è ancora un conto con un saldo in quella valuta, altrimenti la prima
-   * della scheda, quella con più conti (null senza saldi).
+   * La valuta del grafico: quella del conto scelto; altrimenti quella scelta, se c'è ancora un conto con un saldo in
+   * quella valuta; altrimenti la prima della scheda, quella con più conti (null senza saldi).
    */
   protected readonly chartCurrency = computed(() => {
+    const account = this.chartAccount();
+    if (account !== null) {
+      return account.account.currency;
+    }
     const currencies = this.groups().map((g) => g.currency);
     const chosen = this.chosenCurrency();
     return chosen !== null && currencies.includes(chosen) ? chosen : (currencies[0] ?? null);
   });
+
+  /** Che cosa disegnare: "EUR" (tutti i conti in euro) o "EUR|7" (il conto 7); null senza saldi. */
+  private readonly historyKey = computed(() => {
+    const currency = this.chartCurrency();
+    const account = this.chartAccount();
+    return currency === null
+      ? null
+      : account === null
+        ? currency
+        : `${currency}|${account.account.id}`;
+  });
+
+  /** La chiave dello storico arrivato: il grafico si mostra solo se è quella di adesso. */
+  private readonly loadedKey = signal<string | null>(null);
+
+  /** Lo storico arrivato è quello da disegnare (non quello di una scelta di prima, ancora in viaggio). */
+  protected readonly historyReady = computed(
+    () => this.history() !== null && this.loadedKey() === this.historyKey(),
+  );
+
+  /** Una valuta: il grafico torna al totale di quella valuta. */
+  protected chooseCurrency(currency: string): void {
+    this.chosenAccount.set(null);
+    this.chosenCurrency.set(currency);
+  }
+
+  /** Un conto: il grafico mostra solo lui; toccandolo di nuovo, si torna a tutti. */
+  protected chooseAccount(id: number): void {
+    this.chosenAccount.set(this.chosenAccount() === id ? null : id);
+  }
 
   /** I conti che contano: niente carte di credito né conti esclusi. */
   private readonly counted = computed(() =>
@@ -228,8 +299,8 @@ export class LiquidityCard implements OnInit {
    */
   protected readonly chart = computed(() => {
     const h = this.history();
-    // Cambiando valuta, finché lo storico nuovo non arriva quello di prima non si mostra sotto il pulsante sbagliato.
-    if (h === null || h.currency !== this.chartCurrency() || h.points.length < 2) {
+    // Cambiando valuta o conto, finché lo storico nuovo non arriva quello di prima non si mostra sotto la scelta nuova.
+    if (h === null || !this.historyReady() || h.points.length < 2) {
       return null;
     }
     const points = h.points;
@@ -248,35 +319,44 @@ export class LiquidityCard implements OnInit {
       ),
       estimated,
       someEstimated: trueDays < points.length,
-      onlyToday: trueDays <= 1,
+      // Un tratto pieno c'è solo tra due giorni salvati di fila: senza, la voce della legenda non avrebbe niente.
+      someSaved: estimated.some((e, i) => !e && i + 1 < estimated.length && !estimated[i + 1]),
       description:
-        `Liquidità in ${h.currency} giorno per giorno, dal ${formatDate(points[0].date, 'd MMMM y', this.locale)} ` +
-        `a oggi. Le parti tratteggiate sono stimate dai movimenti.`,
+        `${this.chartAccount()?.account?.label ?? 'Liquidità'} in ${h.currency} giorno per giorno, dal ` +
+        `${formatDate(points[0].date, 'd MMMM y', this.locale)} a oggi. Le parti tratteggiate sono stimate dai movimenti.`,
     };
   });
 
-  /** Il giorno scelto scorrendo: la sua cifra e la riga sotto il totale ("Il 3 agosto 2026 · stima"). */
+  /**
+   * Il giorno scelto scorrendo: la sua cifra, il giorno ("3 agosto 2026 · stima") e la riga sotto il totale ("Il 3
+   * agosto 2026 · stima dai movimenti").
+   */
   protected readonly scrubbed = computed(() => {
     const i = this.scrub();
-    const point = i === null ? undefined : this.history()?.points[i];
+    const point = i === null || !this.historyReady() ? undefined : this.history()?.points[i];
     if (point === undefined) {
       return null;
     }
     const day = formatDate(point.date, 'd MMMM y', this.locale);
     return {
       amount: point.amount,
+      day: day + (point.estimated ? ' · stima' : ''),
       label: `Il ${day}` + (point.estimated ? ' · stima dai movimenti' : ''),
     };
   });
 
-  private loadHistory(currency: string | null): void {
+  private loadHistory(key: string | null): void {
     this.scrub.set(null);
-    if (currency === null) {
+    if (key === null) {
       this.history.set(null);
       return;
     }
-    this.api.balanceHistory(currency).subscribe({
-      next: (history) => this.history.set(history),
+    const [currency, account] = key.split('|');
+    this.api.balanceHistory(currency, account ? Number(account) : null).subscribe({
+      next: (history) => {
+        this.history.set(history);
+        this.loadedKey.set(key);
+      },
       error: () => this.history.set(null), // senza storico la scheda resta com'era
     });
   }
