@@ -72,7 +72,8 @@ public class BalanceHistoryService {
             // Solo i saldi della banca. Uno scritto a mano più i movimenti si ricalcola ogni volta (vedi reconstruct):
             // fotografato, resterebbe senza i movimenti di un file caricato dopo.
             if (balance != null && balance.source() == BalanceSource.BANK) {
-                snapshotRepository.upsert(account.getId(), trueOn(balance, today), balance.amount());
+                Anchor anchor = anchorOf(account, balance, today);
+                snapshotRepository.upsert(account.getId(), anchor.date(), anchor.amount());
                 saved++;
             }
         }
@@ -80,13 +81,25 @@ public class BalanceHistoryService {
     }
 
     /**
-     * Il giorno a cui un saldo è vero. Quello della banca è vero al giorno che dice lei: in background la banca si
-     * rilegge al massimo ogni 20 ore (docs/saldi.md, parte B), e il saldo letto ieri non contiene i movimenti di oggi.
-     * Quello scritto a mano segue già ogni movimento importato (parte C): è vero oggi. Mai dopo oggi.
+     * Il giorno a cui un saldo è vero. Quello della banca è vero al giorno che dice lei ({@code bankDate}): in background
+     * la banca si rilegge al massimo ogni 20 ore (docs/saldi.md, parte B), e il saldo letto ieri non contiene i movimenti
+     * di oggi. Quello scritto a mano segue già ogni movimento importato (parte C): è vero oggi. Mai dopo oggi.
      */
-    static LocalDate trueOn(CurrentBalance balance, LocalDate today) {
-        LocalDate date = balance.source() == BalanceSource.BANK ? balance.date() : today;
+    static LocalDate trueOn(BalanceSource source, LocalDate bankDate, LocalDate today) {
+        LocalDate date = source == BalanceSource.BANK ? bankDate : today;
         return date == null || date.isAfter(today) ? today : date;
+    }
+
+    /**
+     * Il valore vero di un conto: a fine del giorno a cui il saldo è vero ({@link #trueOn}), cioè il saldo di adesso meno
+     * i movimenti con una data successiva. Per la banca è il suo saldo più i movimenti di quel giorno arrivati dopo la
+     * lettura (parte M): la cedola di oggi, scaricata dopo il saldo, è di oggi e non di domani.
+     */
+    private Anchor anchorOf(Account account, CurrentBalance balance, LocalDate today) {
+        LocalDate date = trueOn(balance.source(), account.getBalanceDate(), today);
+        BigDecimal amount = balance.amount().subtract(transactionRepository.sumBookedAfter(account.getId(), date));
+        LocalDate trustedFrom = balance.source() == BalanceSource.MANUAL ? balance.startDate() : null;
+        return new Anchor(date, amount, trustedFrom);
     }
 
     /** La liquidità in {@code currency}, giorno per giorno, dall'inizio della storia (al massimo un anno) a oggi. */
@@ -112,9 +125,8 @@ public class BalanceHistoryService {
                 CurrentBalance balance = accountService.currentBalance(account);
                 if (balance != null) {
                     // Un saldo scritto a mano è vero dal suo giorno di partenza in poi: da lì è il saldo scritto più i
-                    // movimenti, come nella pagina Conti.
-                    LocalDate trustedFrom = balance.source() == BalanceSource.MANUAL ? balance.startDate() : null;
-                    current.put(account.getId(), new Anchor(trueOn(balance, today), balance.amount(), trustedFrom));
+                    // movimenti, come nella pagina Conti (anchorOf).
+                    current.put(account.getId(), anchorOf(account, balance, today));
                 }
             }
         }

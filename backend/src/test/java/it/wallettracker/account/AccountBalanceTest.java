@@ -137,6 +137,33 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aBankBalanceFollowsTheMovementsThatArriveAfterItWasRead() {
+        // Il caso di Fineco (docs/saldi.md, parte M): il saldo letto la mattina, la cedola scaricata nel pomeriggio.
+        BankConnection connection = connectionRepository.save(new BankConnection("FinecoBank", "IT", "s-4",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account fineco = accountRepository.save(new Account(connection, "k-4", "u-4", null, "Dossier", "EUR"));
+        movement(fineco, "2026-11-05", "3.95"); // già nel saldo: importato prima della lettura
+        // Letto qualche secondo fa (lo stesso istante dell'importazione renderebbe il confronto casuale).
+        accountRepository.recordBalance(fineco.getId(), new BigDecimal("2595.30"), LocalDate.of(2026, 11, 16),
+                BalanceSource.BANK, Instant.now().minusSeconds(5));
+        movement(fineco, "2026-11-16", "1666.86"); // la cedola di oggi, arrivata dopo
+        movement(fineco, "2026-11-16", "-208.36"); // e la sua ritenuta
+        movement(fineco, "2026-11-02", "50"); // un movimento vecchio arrivato dopo: era già nel saldo della banca
+
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(4053.8);
+            json.assertThat().extractingPath("$[0].balance.date").isEqualTo("2026-11-16");
+            json.assertThat().extractingPath("$[0].balance.source").isEqualTo("BANK");
+        });
+
+        // La banca ridà il saldo, con la cedola dentro: si riparte da lì, niente doppioni.
+        accountRepository.recordBalance(fineco.getId(), new BigDecimal("4053.80"), LocalDate.of(2026, 11, 16),
+                BalanceSource.BANK, Instant.now().plusSeconds(5));
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].balance.amount").isEqualTo(4053.8);
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));

@@ -89,12 +89,10 @@ class BalanceHistoryReconstructTest {
 
     @Test
     void aBankBalanceIsTrueOnItsOwnDayAndAWrittenOneToday() {
-        CurrentBalance bank = new CurrentBalance(eur("10"), day(14), BalanceSource.BANK, null);
-        CurrentBalance written = new CurrentBalance(eur("10"), day(14), BalanceSource.MANUAL, day(1));
-        CurrentBalance future = new CurrentBalance(eur("10"), day(20), BalanceSource.BANK, null);
-        assertThat(BalanceHistoryService.trueOn(bank, TODAY)).isEqualTo(day(14));
-        assertThat(BalanceHistoryService.trueOn(written, TODAY)).isEqualTo(TODAY);
-        assertThat(BalanceHistoryService.trueOn(future, TODAY)).isEqualTo(TODAY);
+        assertThat(BalanceHistoryService.trueOn(BalanceSource.BANK, day(14), TODAY)).isEqualTo(day(14));
+        assertThat(BalanceHistoryService.trueOn(BalanceSource.MANUAL, day(14), TODAY)).isEqualTo(TODAY);
+        assertThat(BalanceHistoryService.trueOn(BalanceSource.BANK, day(20), TODAY)).isEqualTo(TODAY);
+        assertThat(BalanceHistoryService.trueOn(BalanceSource.BANK, null, TODAY)).isEqualTo(TODAY);
     }
 
     @Test

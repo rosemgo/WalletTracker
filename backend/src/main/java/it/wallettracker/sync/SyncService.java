@@ -11,6 +11,7 @@ import java.util.Optional;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.account.AccountRole;
+import it.wallettracker.account.BalanceCheckService;
 import it.wallettracker.account.BalanceSource;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Balance;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
@@ -66,10 +67,13 @@ public class SyncService {
     private final EnableBankingClient client;
     private final LogoService logoService;
     private final SyncProperties properties;
+    private final BalanceCheckService balanceCheckService;
 
     public SyncService(ConnectionService connectionService, AccountRepository accountRepository,
             TransactionImportService importService, ClassificationService classificationService,
-            EnableBankingClient client, LogoService logoService, SyncProperties properties) {
+            EnableBankingClient client, LogoService logoService, SyncProperties properties,
+            BalanceCheckService balanceCheckService) {
+        this.balanceCheckService = balanceCheckService;
         this.connectionService = connectionService;
         this.accountRepository = accountRepository;
         this.importService = importService;
@@ -258,6 +262,10 @@ public class SyncService {
             Optional<BankBalance.Chosen> chosen = BankBalance.choose(client.getBalances(account.getProviderUid(), psu),
                     account.getCurrency(), today);
             if (chosen.isPresent()) {
+                // Il controllo dei saldi (docs/saldi.md, parte N): il saldo nuovo contro quello di prima più i movimenti
+                // appena importati. Prima di salvarlo, perché il confronto è con quello di prima.
+                balanceCheckService.compare(account, BalanceSource.BANK, chosen.get().amount(), chosen.get().date(),
+                        now);
                 accountRepository.recordBalance(account.getId(), chosen.get().amount(), chosen.get().date(),
                         BalanceSource.BANK, now);
                 log.info("{}: saldo {} ({}) al {}", account.getName(), chosen.get().amount(), chosen.get().type(),

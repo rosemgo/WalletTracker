@@ -24,9 +24,12 @@ public class AccountService {
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
     private final AccountLogoRepository logoRepository;
+    private final BalanceCheckService balanceCheckService;
 
     public AccountService(AccountRepository accountRepository, BankTransactionRepository transactionRepository,
-            ClassificationService classificationService, AccountLogoRepository logoRepository) {
+            ClassificationService classificationService, AccountLogoRepository logoRepository,
+            BalanceCheckService balanceCheckService) {
+        this.balanceCheckService = balanceCheckService;
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
@@ -115,6 +118,9 @@ public class AccountService {
         }
         LocalDate last = transactionRepository.lastBookingDate(account.getId());
         LocalDate start = last != null ? last : LocalDate.ofInstant(now, ZoneId.systemDefault());
+        // Il controllo dei saldi (docs/saldi.md, parte N): il saldo scritto ora contro quello scritto prima più i
+        // movimenti caricati in mezzo.
+        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, start, now);
         account.changeBalance(balance, start, BalanceSource.MANUAL, now);
         return dtoOf(account);
     }
@@ -124,13 +130,14 @@ public class AccountService {
      * saldi, per la fotografia del giorno. Dentro una transazione.
      */
     CurrentBalance currentBalance(Account account) {
-        if (account.getBalanceSource() == BalanceSource.MANUAL && account.getBalance() != null) {
-            return CurrentBalance.of(account,
-                    transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
-                            account.getBalanceUpdatedAt()),
-                    transactionRepository.lastBookingDate(account.getId()));
+        if (account.getBalanceSource() == null || account.getBalance() == null) {
+            return null;
         }
-        return CurrentBalance.of(account, BigDecimal.ZERO, null);
+        // Della banca o scritto a mano, lo stesso: il saldo più i movimenti arrivati dopo (docs/saldi.md, parti C e M).
+        return CurrentBalance.of(account,
+                transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
+                        account.getBalanceUpdatedAt()),
+                transactionRepository.lastBookingDate(account.getId()));
     }
 
     /** Il conto per la dashboard, con il saldo di oggi. Dentro una transazione. */
