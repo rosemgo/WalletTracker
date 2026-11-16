@@ -24,9 +24,12 @@ public class AccountService {
     private final BankTransactionRepository transactionRepository;
     private final ClassificationService classificationService;
     private final AccountLogoRepository logoRepository;
+    private final BalanceCheckService balanceCheckService;
 
     public AccountService(AccountRepository accountRepository, BankTransactionRepository transactionRepository,
-            ClassificationService classificationService, AccountLogoRepository logoRepository) {
+            ClassificationService classificationService, AccountLogoRepository logoRepository,
+            BalanceCheckService balanceCheckService) {
+        this.balanceCheckService = balanceCheckService;
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
@@ -115,6 +118,9 @@ public class AccountService {
         }
         LocalDate last = transactionRepository.lastBookingDate(account.getId());
         LocalDate start = last != null ? last : LocalDate.ofInstant(now, ZoneId.systemDefault());
+        // Il controllo dei saldi (docs/saldi.md, parte N): il saldo scritto ora contro quello scritto prima più i
+        // movimenti caricati in mezzo.
+        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, start, now);
         account.changeBalance(balance, start, BalanceSource.MANUAL, now);
         return dtoOf(account);
     }

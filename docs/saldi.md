@@ -537,3 +537,37 @@ di adesso meno i movimenti con una data successiva. Per Fineco il 16 novembre: 2
 movimento vecchio arrivato tardi, la nuova lettura che riparte da sé) e
 `BalanceHistoryServiceTest.aMovementArrivedAfterTheBankBalanceBelongsToItsDayNotToTheDaysBefore`.
 
+## Parte N: il controllo dei saldi
+
+Richiesta dell'utente, dopo il caso della parte M: avere la certezza che nell'app non manchi nessun movimento. Nessuna
+app che legge i conti tramite le banche può prometterlo da sola (uno storico rifiutato dopo 89 giorni senza login, un
+consenso scaduto, un movimento consegnato in ritardo). Si può però **verificarlo** ogni volta: è la riconciliazione che
+si fa a mano con gli estratti conto, fatta dall'app a ogni saldo nuovo.
+
+**La regola.** Il saldo nuovo deve essere quello di prima più i movimenti arrivati in mezzo, con la regola di `sumAfter`
+(parti C e M): dopo il primo saldo (una data successiva, o lo stesso giorno importati dopo la sua lettura) e dentro il
+secondo (una data precedente, o lo stesso giorno importati prima della sua lettura). Al centesimo.
+
+- **Torna:** tutti i movimenti di quel periodo ci sono. Non si salva niente.
+- **Non torna:** manca un movimento o ce n'è uno in più. Si salva la coppia di saldi (`V42`, tabella `balance_check`).
+
+**Quando.** In `SyncService.refreshBalance`, a ogni saldo nuovo della banca, dopo aver importato i movimenti e prima di
+salvarlo; in `AccountService.changeBalance`, a ogni saldo scritto dall'utente. Solo tra due saldi dello stesso tipo (due
+della banca, o due scritti): il primo saldo di un conto non ha niente con cui confrontarsi.
+
+**L'avviso** (`BALANCE_MISMATCH`, come gli altri in `AlertService`, non salvato): si ricalcola a ogni lettura degli avvisi
+da ogni coppia salvata. Se poi il movimento mancante arriva, dalla sincronizzazione o da un file caricato in Importa,
+la coppia torna e l'avviso sparisce da solo. Dice il conto, il periodo, la differenza e il verso ("in più": manca
+un'entrata o c'è un'uscita doppia; "in meno": il contrario), con il collegamento ai movimenti di quel conto in quel
+periodo. Si chiude con la crocetta; un'altra differenza è un avviso nuovo. I conti esclusi non danno avvisi.
+
+**Che cosa non vede.** Un movimento che la banca aveva già nel saldo ma che arriva nell'app dopo la lettura, con la
+stessa data (parte M): per qualche ora è contato due volte nel saldo di adesso, e alla lettura successiva il controllo
+lo segnala come differenza anche se intanto il saldo è tornato giusto. È raro, perché il saldo si legge subito dopo i
+movimenti; l'avviso in quel caso si chiude con la crocetta.
+
+**Le prove.** `BalanceCheckTest`: due saldi della banca che tornano e uno che non torna, con l'avviso e il movimento
+mancante che lo fa sparire; la cedola dello stesso giorno arrivata dopo la lettura (conta) e il movimento arrivato prima
+(no); due saldi scritti a mano; il primo saldo, senza niente da confrontare. `alerts-panel.spec.ts`: il testo
+dell'avviso e il collegamento ai movimenti.
+
