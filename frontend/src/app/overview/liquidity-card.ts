@@ -44,7 +44,8 @@ interface Group {
  * I saldi sono quelli di adesso: la scheda non cambia guardando un mese passato. Un conto senza saldo non entra nel
  * totale, e la scheda lo dice. Senza nessun saldo la scheda non compare.
  *
- * Sotto il totale, il grafico della liquidità nella valuta principale, giorno per giorno (docs/saldi.md, parte L):
+ * Sotto il totale, il grafico della liquidità giorno per giorno (docs/saldi.md, parte L), nella valuta principale; con più
+ * valute, dei pulsanti scelgono quale tracciare (una alla volta, ognuna con la sua scala, senza conversioni):
  * pieno dove ci sono i saldi salvati dall'app, tratteggiato dove è stimato dai movimenti. Scorrendolo, il totale
  * mostra quel giorno. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto
  * Conti): ci porta "Vedi i conti" in alto.
@@ -60,10 +61,10 @@ interface Group {
           <a routerLink="/conti">Vedi i conti ›</a>
         </div>
         <div class="liquidity-totals">
-          @for (g of groups(); track g.currency; let first = $first) {
+          @for (g of groups(); track g.currency) {
             <!-- Scorrendo il grafico, il totale della valuta del grafico mostra quel giorno. -->
             <strong class="liquidity-total" data-testid="liquidity-total">{{
-              (first ? (scrubbed()?.amount ?? g.total) : g.total)
+              (g.currency === chartCurrency() ? (scrubbed()?.amount ?? g.total) : g.total)
                 | money: g.currency : 'symbol' : '1.0-0'
             }}</strong>
           }
@@ -74,6 +75,25 @@ interface Group {
               ? 'Sul tuo conto, adesso'
               : 'Su ' + withBalance() + ' conti, adesso')
         }}</span>
+        @if (groups().length > 1) {
+          <!-- Con più valute, quale tracciare: una alla volta, ognuna con la sua scala, senza conversioni. -->
+          <div
+            class="segmented compact liquidity-currencies"
+            role="group"
+            aria-label="Valuta del grafico"
+            data-testid="chart-currency"
+          >
+            @for (g of groups(); track g.currency) {
+              <button
+                type="button"
+                [attr.aria-pressed]="g.currency === chartCurrency()"
+                (click)="chosenCurrency.set(g.currency)"
+              >
+                {{ g.currency }}
+              </button>
+            }
+          </div>
+        }
         @if (chart(); as c) {
           <app-trend-chart
             [values]="c.values"
@@ -97,6 +117,10 @@ interface Group {
               sono stimati dai movimenti, e valgono solo se nell'app ci sono tutti.
             </p>
           }
+        } @else if (groups().length > 1 && history()?.currency === chartCurrency()) {
+          <p class="secondary history-note">
+            Per {{ chartCurrency() }} non c'è ancora uno storico da disegnare: comincia da oggi.
+          </p>
         }
         @for (g of groups(); track g.currency) {
           @if (groups().length > 1) {
@@ -143,13 +167,23 @@ export class LiquidityCard implements OnInit {
     // Dipende solo dalla valuta (un computed: una stringa uguale non lo riaccende), non dalla lista dei conti, che si
     // aggiorna più volte (all'apertura del Riepilogo, a ogni refresh): lo storico non si richiede per niente.
     effect(() => {
-      const currency = this.mainCurrency();
+      const currency = this.chartCurrency();
       untracked(() => this.loadHistory(currency));
     });
   }
 
-  /** La valuta del grafico: la prima della scheda, quella con più conti (null senza saldi). */
-  private readonly mainCurrency = computed(() => this.groups()[0]?.currency ?? null);
+  /** La valuta scelta con i pulsanti sopra il grafico (null = nessuna scelta: la principale). */
+  protected readonly chosenCurrency = signal<string | null>(null);
+
+  /**
+   * La valuta del grafico: quella scelta, se c'è ancora un conto con un saldo in quella valuta, altrimenti la prima
+   * della scheda, quella con più conti (null senza saldi).
+   */
+  protected readonly chartCurrency = computed(() => {
+    const currencies = this.groups().map((g) => g.currency);
+    const chosen = this.chosenCurrency();
+    return chosen !== null && currencies.includes(chosen) ? chosen : (currencies[0] ?? null);
+  });
 
   /** I conti che contano: niente carte di credito né conti esclusi. */
   private readonly counted = computed(() =>
@@ -194,7 +228,8 @@ export class LiquidityCard implements OnInit {
    */
   protected readonly chart = computed(() => {
     const h = this.history();
-    if (h === null || h.points.length < 2) {
+    // Cambiando valuta, finché lo storico nuovo non arriva quello di prima non si mostra sotto il pulsante sbagliato.
+    if (h === null || h.currency !== this.chartCurrency() || h.points.length < 2) {
       return null;
     }
     const points = h.points;

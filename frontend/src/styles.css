@@ -3669,6 +3669,11 @@ ul.steps li + li {
   background: repeating-linear-gradient(to right, var(--trend) 0 4px, transparent 4px 7px);
 }
 
+/* Con più valute, quale tracciare: sopra il grafico. */
+.segmented.liquidity-currencies {
+  margin: 14px 0 0;
+}
+
 .liquidity-card .chart-keys {
   margin-top: 2px;
 }

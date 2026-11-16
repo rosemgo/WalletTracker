@@ -228,4 +228,96 @@ describe('LiquidityCard', () => {
     const page = await render();
     expect(page.querySelector('app-trend-chart')).toBeNull();
   });
+
+  it('with more currencies lets choose which one to draw, one at a time', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 1000),
+      account(2, 'Broker Beta', 'INVESTMENT', 500),
+      account(5, 'Conto USD', 'SPENDING', 700, 'USD'),
+      account(6, 'Conto CHF', 'SPENDING', 300, 'CHF'),
+    ];
+    const histories: Record<string, BalanceHistory> = {
+      EUR: {
+        currency: 'EUR',
+        accounts: 2,
+        points: [
+          { date: '2026-11-15', amount: 1400, estimated: true },
+          { date: '2026-11-16', amount: 1500, estimated: false },
+        ],
+      },
+      USD: {
+        currency: 'USD',
+        accounts: 1,
+        points: [
+          { date: '2026-11-15', amount: 650, estimated: true },
+          { date: '2026-11-16', amount: 700, estimated: false },
+        ],
+      },
+      CHF: {
+        currency: 'CHF',
+        accounts: 1,
+        points: [{ date: '2026-11-16', amount: 300, estimated: false }],
+      },
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: WalletApi,
+          useValue: {
+            accounts: () => of([...accounts]),
+            balanceHistory: (currency: string) => {
+              asked.push(currency);
+              return of(histories[currency]);
+            },
+          },
+        },
+        { provide: LOCALE_ID, useValue: 'it-IT' },
+      ],
+    });
+    fixture = TestBed.createComponent(LiquidityCard);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    const buttons = () =>
+      Array.from(page.querySelectorAll<HTMLButtonElement>('[data-testid="chart-currency"] button'));
+
+    // Tutte le valute dei conti, la principale (più conti) scelta.
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['EUR', 'CHF', 'USD']);
+    expect(buttons()[0].getAttribute('aria-pressed')).toBe('true');
+    expect(asked).toEqual(['EUR']);
+
+    buttons()[2].click(); // USD
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(asked).toEqual(['EUR', 'USD']);
+    expect(buttons()[2].getAttribute('aria-pressed')).toBe('true');
+    expect(page.querySelector('app-trend-chart')).not.toBeNull();
+    // Scorrendo, cambia il totale in dollari; quello in euro resta.
+    const wrap = page.querySelector('app-trend-chart .month-chart-wrap') as HTMLElement;
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    fixture.detectChanges();
+    const totals = Array.from(page.querySelectorAll('[data-testid="liquidity-total"]')).map((t) =>
+      t.textContent?.trim(),
+    );
+    expect(totals).toEqual([
+      expect.stringMatching(/^1\.500\s€$/),
+      expect.stringMatching(/^300\sCHF$/),
+      expect.stringMatching(/^650\sUSD$/),
+    ]);
+
+    // Una valuta senza storico da disegnare lo dice, e i pulsanti restano per tornare indietro.
+    buttons()[1].click(); // CHF
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.querySelector('app-trend-chart')).toBeNull();
+    expect(page.textContent).toContain('Per CHF non c');
+    expect(buttons()).toHaveLength(3);
+  });
+
+  it('with one currency there is no choice', async () => {
+    accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
+    const page = await render();
+    expect(page.querySelector('[data-testid="chart-currency"]')).toBeNull();
+  });
 });

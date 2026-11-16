@@ -481,7 +481,14 @@ ha un valore vero. La stima resta per i giorni prima di questa funzione, per que
 per i giorni dopo l'ultimo saldo letto dalla banca. Il calcolo è una funzione senza database (`reconstruct`), provata da
 `BalanceHistoryReconstructTest`; `BalanceHistoryServiceTest` prova fotografie, conti contati ed endpoint.
 
-**Nella scheda Liquidità del Riepilogo.** Sotto il totale, il grafico della valuta principale (la prima della scheda),
+**Le valute.** Una alla volta, senza conversioni (parte K): un grafico con 11.000 € e 700 $ sulla stessa scala avrebbe
+la linea dei dollari piatta sul fondo, e un cambio servirebbe un servizio esterno e cambierebbe la cifra ogni giorno. Le
+fotografie si salvano per tutti i conti, in ogni valuta. Con più valute, sopra il grafico dei pulsanti (uno per ogni
+valuta dei conti con un saldo, nell'ordine della scheda) scelgono quale tracciare, ognuna con la sua scala; di partenza
+la principale. Scorrendo, cambia il totale della valuta del grafico, gli altri restano quelli di adesso. Una valuta che
+non ha ancora due giorni da disegnare lo dice, e i pulsanti restano.
+
+**Nella scheda Liquidità del Riepilogo.** Sotto il totale, il grafico della valuta scelta (di partenza la prima della scheda),
 con il componente degli investimenti (`TrendChart`), a cui si sono aggiunti due parametri: `estimated` (per ogni giorno,
 se è stimato: un tratto tra due giorni veri è pieno, ogni altro tratteggiato, anche un buco in mezzo ai giorni salvati)
 e `zeroBased` (qui false: la scala parte poco sotto il valore più basso, altrimenti con

@@ -55,7 +55,8 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
 - **Il grafico della liquidità**: nel Riepilogo, la scheda "Liquidità" mostra come sono cambiati i soldi sui conti,
   giorno per giorno, fino a un anno. Da ora l'app salva ogni giorno il saldo di ogni conto (linea piena); per i giorni
   prima lo stima togliendo i movimenti dal saldo vero successivo (linea tratteggiata, "stima"). Scorrendo il grafico, il
-  totale mostra quel giorno. A Conti si va con "Vedi i conti", in alto nella scheda.
+  totale mostra quel giorno. Con conti in più valute, dei pulsanti sopra il grafico scelgono quale tracciare (una alla
+  volta, senza conversioni). A Conti si va con "Vedi i conti", in alto nella scheda.
 
 ## 1.2.7
 
