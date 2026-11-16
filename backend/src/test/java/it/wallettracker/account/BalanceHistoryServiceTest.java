@@ -108,6 +108,14 @@ class BalanceHistoryServiceTest {
         assertThat(mvc.get().uri("/api/accounts/balance-history?currency=EUR")).hasStatusOk().bodyJson()
                 .satisfies(json -> json.assertThat().extractingPath("$.currency").isEqualTo("EUR"));
         assertThat(mvc.get().uri("/api/accounts/balance-history?currency=EURO")).hasStatus(400);
+        // Un conto solo: il conto in euro è lo stesso del totale; la carta e il conto in dollari, in euro, niente.
+        assertThat(historyService.history("EUR", main.getId(), TODAY).points()).last()
+                .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("970.00"));
+        assertThat(historyService.history("EUR", card.getId(), TODAY).points()).isEmpty();
+        assertThat(historyService.history("EUR", dollars.getId(), TODAY).points()).isEmpty();
+        assertThat(mvc.get().uri("/api/accounts/balance-history?currency=USD&accountId={id}", dollars.getId()))
+                .hasStatusOk().bodyJson()
+                .satisfies(json -> json.assertThat().extractingPath("$.accounts").isEqualTo(1));
         assertThat(historyService.history("GBP", TODAY).points()).isEmpty();
     }
 

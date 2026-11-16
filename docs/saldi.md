@@ -505,3 +505,8 @@ usa l'app, e la legenda basta. Con meno di due giorni il grafico non
 c'è. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto Conti): a Conti porta
 "Vedi i conti" in alto.
 
+**Un conto alla volta.** Toccando un conto nell'elenco della scheda, il grafico mostra solo quel conto
+(`GET /api/accounts/balance-history?currency=EUR&accountId=7`); sopra il grafico il suo nome, il saldo del giorno scelto
+scorrendo, e "Tutti i conti" per tornare al totale (anche toccando di nuovo il conto, o una valuta). Il totale in cima
+resta quello di adesso. Serve a confrontare la linea di un conto con il suo estratto: se il totale non torna, si trova
+subito il conto i cui movimenti nell'app non tornano con quelli della banca (un doppione, un movimento mancante).

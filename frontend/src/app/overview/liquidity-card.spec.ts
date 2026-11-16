@@ -45,11 +45,13 @@ function account(
 describe('LiquidityCard', () => {
   let accounts: Account[];
   let history: BalanceHistory;
+  let accountHistory: BalanceHistory; // lo storico di un conto solo
   let asked: string[];
   let fixture: ComponentFixture<LiquidityCard>;
 
   beforeEach(() => {
     history = { currency: 'EUR', accounts: 0, points: [] }; // di solito niente storico: niente grafico
+    accountHistory = { currency: 'EUR', accounts: 0, points: [] };
     asked = [];
   });
 
@@ -61,9 +63,9 @@ describe('LiquidityCard', () => {
           provide: WalletApi,
           useValue: {
             accounts: () => of([...accounts]), // ogni volta una lista nuova, come dal backend
-            balanceHistory: (currency: string) => {
-              asked.push(currency);
-              return of(history);
+            balanceHistory: (currency: string, accountId: number | null = null) => {
+              asked.push(accountId === null ? currency : `${currency}|${accountId}`);
+              return of(accountId === null ? history : accountHistory);
             },
           },
         },
@@ -323,5 +325,65 @@ describe('LiquidityCard', () => {
     accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
     const page = await render();
     expect(page.querySelector('[data-testid="chart-currency"]')).toBeNull();
+  });
+
+  it('touching an account draws only that account, and touching it again all of them', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 1000),
+      account(2, 'Broker Beta', 'INVESTMENT', 400),
+    ];
+    history = {
+      currency: 'EUR',
+      accounts: 2,
+      points: [
+        { date: '2026-11-15', amount: 1300, estimated: true },
+        { date: '2026-11-16', amount: 1400, estimated: false },
+      ],
+    };
+    accountHistory = {
+      currency: 'EUR',
+      accounts: 1,
+      points: [
+        { date: '2026-11-15', amount: 350, estimated: true },
+        { date: '2026-11-16', amount: 400, estimated: false },
+      ],
+    };
+    const page = await render();
+    const row = (label: string) =>
+      Array.from(page.querySelectorAll<HTMLButtonElement>('button.liquidity-row')).find((b) =>
+        b.textContent?.includes(label),
+      )!;
+
+    row('Broker Beta').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(asked).toEqual(['EUR', 'EUR|2']);
+    expect(row('Broker Beta').getAttribute('aria-pressed')).toBe('true');
+    expect(page.querySelector('[data-testid="chart-account"]')?.textContent).toContain(
+      'Broker Beta',
+    );
+
+    // Scorrendo, il saldo del conto in quel giorno sta sopra il grafico; il totale resta quello di adesso.
+    const wrap = page.querySelector('app-trend-chart .month-chart-wrap') as HTMLElement;
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    fixture.detectChanges();
+    expect(page.querySelector('[data-testid="chart-account"]')?.textContent).toMatch(
+      /350\s€ · 15 novembre 2026 · stima/,
+    );
+    expect(page.querySelector('[data-testid="liquidity-total"]')?.textContent).toMatch(/1\.400\s€/);
+
+    // Di nuovo lo stesso conto: tutti. Con "Tutti i conti" lo stesso.
+    row('Broker Beta').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.querySelector('[data-testid="chart-account"]')).toBeNull();
+    row('Banca Alfa').click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    (page.querySelector('[data-testid="chart-account"] button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.querySelector('[data-testid="chart-account"]')).toBeNull();
+    expect(asked).toEqual(['EUR', 'EUR|2', 'EUR', 'EUR|1', 'EUR']);
   });
 });

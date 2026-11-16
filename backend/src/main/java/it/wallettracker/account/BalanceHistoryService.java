@@ -92,9 +92,22 @@ public class BalanceHistoryService {
     /** La liquidità in {@code currency}, giorno per giorno, dall'inizio della storia (al massimo un anno) a oggi. */
     @Transactional(readOnly = true)
     public BalanceHistory history(String currency, LocalDate today) {
+        return history(currency, null, today);
+    }
+
+    /**
+     * Come {@link #history(String, LocalDate)}, ma di un conto solo ({@code accountId}; null = tutti): per confrontare
+     * la linea di un conto con il suo estratto. Un conto che non conta nella liquidità, di un'altra valuta o senza saldo
+     * dà una storia vuota.
+     */
+    @Transactional(readOnly = true)
+    public BalanceHistory history(String currency, Long accountId, LocalDate today) {
         String chosen = currency.toUpperCase(Locale.ROOT);
         Map<Long, Anchor> current = new LinkedHashMap<>();
         for (Account account : accountRepository.findAll()) {
+            if (accountId != null && !accountId.equals(account.getId())) {
+                continue;
+            }
             if (counts(account) && chosen.equals(account.getCurrency())) {
                 CurrentBalance balance = accountService.currentBalance(account);
                 if (balance != null) {

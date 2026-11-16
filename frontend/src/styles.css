@@ -3669,6 +3669,55 @@ ul.steps li + li {
   background: repeating-linear-gradient(to right, var(--trend) 0 4px, transparent 4px 7px);
 }
 
+/* I conti della liquidità sono toccabili: il grafico mostra solo quel conto. Il conto scelto ha lo sfondo leggero. */
+ul.rows li > button.liquidity-row {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: -8px -10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+ul.rows li > button.liquidity-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+ul.rows li > button.liquidity-row[aria-pressed='true'] {
+  background: var(--acc-soft, color-mix(in srgb, var(--acc) 14%, transparent));
+}
+
+@media (hover: hover) {
+  ul.rows li > button.liquidity-row:hover {
+    background: color-mix(in srgb, var(--acc) 8%, transparent);
+  }
+}
+
+/* Sopra il grafico di un conto solo: il nome, il saldo del giorno scelto, e il ritorno a tutti i conti. */
+.liquidity-account {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.liquidity-account > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
 /* Con più valute, quale tracciare: sopra il grafico. */
 .segmented.liquidity-currencies {
   margin: 14px 0 0;
