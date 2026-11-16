@@ -140,11 +140,16 @@ export class LiquidityCard implements OnInit {
 
   constructor() {
     // La valuta del grafico è la prima della scheda (quella con più conti): lo storico si chiede quando la si conosce.
+    // Dipende solo dalla valuta (un computed: una stringa uguale non lo riaccende), non dalla lista dei conti, che si
+    // aggiorna più volte (all'apertura del Riepilogo, a ogni refresh): lo storico non si richiede per niente.
     effect(() => {
-      const currency = this.groups()[0]?.currency ?? null;
+      const currency = this.mainCurrency();
       untracked(() => this.loadHistory(currency));
     });
   }
+
+  /** La valuta del grafico: la prima della scheda, quella con più conti (null senza saldi). */
+  private readonly mainCurrency = computed(() => this.groups()[0]?.currency ?? null);
 
   /** I conti che contano: niente carte di credito né conti esclusi. */
   private readonly counted = computed(() =>

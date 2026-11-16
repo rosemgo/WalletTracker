@@ -5,6 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
+import { AccountsStore } from '../accounts/accounts-store';
 import { Account, AccountRole, BalanceHistory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { LiquidityCard } from './liquidity-card';
@@ -59,7 +60,7 @@ describe('LiquidityCard', () => {
         {
           provide: WalletApi,
           useValue: {
-            accounts: () => of(accounts),
+            accounts: () => of([...accounts]), // ogni volta una lista nuova, come dal backend
             balanceHistory: (currency: string) => {
               asked.push(currency);
               return of(history);
@@ -152,7 +153,10 @@ describe('LiquidityCard', () => {
     };
     const page = await render();
 
-    // Lo storico si chiede per la valuta principale, una volta.
+    // Lo storico si chiede per la valuta principale, una volta: anche se i conti si aggiornano di nuovo.
+    expect(asked).toEqual(['EUR']);
+    TestBed.inject(AccountsStore).refresh();
+    await fixture.whenStable();
     expect(asked).toEqual(['EUR']);
     expect(page.querySelector('app-trend-chart path.estimate')).not.toBeNull();
     expect(page.querySelector('app-trend-chart path.month')).not.toBeNull();

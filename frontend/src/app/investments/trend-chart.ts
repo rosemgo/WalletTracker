@@ -192,7 +192,10 @@ export class TrendChart {
     // Dal primo passo sopra lo zero; con la scala che non parte da zero, dal primo multiplo sopra il fondo.
     const first = this.zeroBased() ? step : (Math.floor(min / step) + 1) * step;
     for (let value = first; value < max; value += step) {
-      const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
+      const symbol = this.currency() === 'EUR' ? '€' : this.currency(); // come il resto dell'app: "700 USD"
+      const label = this.privacy.hide(
+        `${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} ${symbol}`,
+      );
       lines.push({ value, y: this.y(value), label });
     }
     return lines;
