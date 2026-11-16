@@ -106,20 +106,16 @@ interface Group {
             (scrubbed)="scrub.set($event)"
           />
           <div class="chart-keys">
-            <span><span class="key"></span>Saldi salvati</span>
+            @if (c.someSaved) {
+              <span><span class="key"></span>Saldi salvati</span>
+            }
             @if (c.someEstimated) {
               <span><span class="key estimate"></span>Stima dai movimenti</span>
             }
           </div>
-          @if (c.onlyToday) {
-            <p class="secondary history-note">
-              Da oggi l'app salva i saldi ogni giorno: la linea piena crescerà. Gli altri giorni
-              sono stimati dai movimenti, e valgono solo se nell'app ci sono tutti.
-            </p>
-          }
         } @else if (groups().length > 1 && history()?.currency === chartCurrency()) {
           <p class="secondary history-note">
-            Per {{ chartCurrency() }} non c'è ancora uno storico da disegnare: comincia da oggi.
+            Storico non ancora disponibile per {{ chartCurrency() }}.
           </p>
         }
         @for (g of groups(); track g.currency) {
@@ -248,7 +244,8 @@ export class LiquidityCard implements OnInit {
       ),
       estimated,
       someEstimated: trueDays < points.length,
-      onlyToday: trueDays <= 1,
+      // Un tratto pieno c'è solo tra due giorni salvati di fila: senza, la voce della legenda non avrebbe niente.
+      someSaved: estimated.some((e, i) => !e && i + 1 < estimated.length && !estimated[i + 1]),
       description:
         `Liquidità in ${h.currency} giorno per giorno, dal ${formatDate(points[0].date, 'd MMMM y', this.locale)} ` +
         `a oggi. Le parti tratteggiate sono stimate dai movimenti.`,

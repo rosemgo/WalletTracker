@@ -161,7 +161,8 @@ describe('LiquidityCard', () => {
     expect(page.querySelector('app-trend-chart path.estimate')).not.toBeNull();
     expect(page.querySelector('app-trend-chart path.month')).not.toBeNull();
     expect(page.querySelector('.chart-keys')?.textContent).toContain('Stima dai movimenti');
-    expect(page.querySelector('.history-note')).toBeNull(); // ci sono già due giorni salvati
+    // Due giorni salvati di fila: c'è un tratto pieno, e la legenda ha tutte e due le voci.
+    expect(page.querySelector('.chart-keys')?.textContent).toContain('Saldi salvati');
 
     // Scorrendo indietro di due giorni, il totale in euro mostra il 14 novembre, stimato.
     const wrap = page.querySelector('app-trend-chart .month-chart-wrap') as HTMLElement;
@@ -204,7 +205,7 @@ describe('LiquidityCard', () => {
     expect(dashed).toHaveLength(2); // 11-14 e 15-16
   });
 
-  it('says that the line becomes solid day by day when only today is saved', async () => {
+  it('with only today saved the legend shows only the estimate, and no explanation', async () => {
     accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
     history = {
       currency: 'EUR',
@@ -215,7 +216,10 @@ describe('LiquidityCard', () => {
       ],
     };
     const page = await render();
-    expect(page.querySelector('.history-note')?.textContent).toContain('Da oggi l');
+    const keys = page.querySelector('.chart-keys')?.textContent ?? '';
+    expect(keys).toContain('Stima dai movimenti');
+    expect(keys).not.toContain('Saldi salvati');
+    expect(page.querySelector('.history-note')).toBeNull();
   });
 
   it('without a history of at least two days there is no chart', async () => {
@@ -311,7 +315,7 @@ describe('LiquidityCard', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(page.querySelector('app-trend-chart')).toBeNull();
-    expect(page.textContent).toContain('Per CHF non c');
+    expect(page.textContent).toContain('Storico non ancora disponibile per CHF.');
     expect(buttons()).toHaveLength(3);
   });
 

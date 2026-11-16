@@ -486,15 +486,16 @@ la linea dei dollari piatta sul fondo, e un cambio servirebbe un servizio estern
 fotografie si salvano per tutti i conti, in ogni valuta. Con più valute, sopra il grafico dei pulsanti (uno per ogni
 valuta dei conti con un saldo, nell'ordine della scheda) scelgono quale tracciare, ognuna con la sua scala; di partenza
 la principale. Scorrendo, cambia il totale della valuta del grafico, gli altri restano quelli di adesso. Una valuta che
-non ha ancora due giorni da disegnare lo dice, e i pulsanti restano.
+non ha ancora due giorni da disegnare mostra "Storico non ancora disponibile per CHF", e i pulsanti restano.
 
 **Nella scheda Liquidità del Riepilogo.** Sotto il totale, il grafico della valuta scelta (di partenza la prima della scheda),
 con il componente degli investimenti (`TrendChart`), a cui si sono aggiunti due parametri: `estimated` (per ogni giorno,
 se è stimato: un tratto tra due giorni veri è pieno, ogni altro tratteggiato, anche un buco in mezzo ai giorni salvati)
 e `zeroBased` (qui false: la scala parte poco sotto il valore più basso, altrimenti con
 10.000 € sul conto le variazioni sarebbero una riga piatta). Scorrendolo, il totale mostra quel giorno, e sotto "Il 20
-luglio 2026 · stima dai movimenti". Una legenda distingue "Saldi salvati" e "Stima dai movimenti". Finché l'unico giorno
-salvato è oggi, una riga spiega che la linea piena crescerà giorno per giorno. Con meno di due giorni il grafico non
+luglio 2026 · stima dai movimenti". La legenda ha "Stima dai movimenti" se c'è un tratto stimato, e "Saldi salvati" solo se c'è
+un tratto pieno (due giorni salvati di fila). Nessuna spiegazione sotto il grafico: i testi della scheda sono per chi
+usa l'app, e la legenda basta. Con meno di due giorni il grafico non
 c'è. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto Conti): a Conti porta
 "Vedi i conti" in alto.
 
