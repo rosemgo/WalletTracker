@@ -1,11 +1,11 @@
 import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 
-import { Account, AccountRole } from '../api/models';
+import { Account, AccountRole, BalanceHistory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { LiquidityCard } from './liquidity-card';
 
@@ -43,16 +43,33 @@ function account(
 /** Riepilogo → Liquidità: i soldi sui conti adesso, in tutto e conto per conto. */
 describe('LiquidityCard', () => {
   let accounts: Account[];
+  let history: BalanceHistory;
+  let asked: string[];
+  let fixture: ComponentFixture<LiquidityCard>;
+
+  beforeEach(() => {
+    history = { currency: 'EUR', accounts: 0, points: [] }; // di solito niente storico: niente grafico
+    asked = [];
+  });
 
   async function render(): Promise<HTMLElement> {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: WalletApi, useValue: { accounts: () => of(accounts) } },
+        {
+          provide: WalletApi,
+          useValue: {
+            accounts: () => of(accounts),
+            balanceHistory: (currency: string) => {
+              asked.push(currency);
+              return of(history);
+            },
+          },
+        },
         { provide: LOCALE_ID, useValue: 'it-IT' },
       ],
     });
-    const fixture = TestBed.createComponent(LiquidityCard);
+    fixture = TestBed.createComponent(LiquidityCard);
     await fixture.whenStable();
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -116,5 +133,67 @@ describe('LiquidityCard', () => {
     accounts = [account(2, 'Conto manuale', 'MAIN', null)];
     page = await render();
     expect(page.querySelector('.liquidity-card')).toBeNull();
+  });
+
+  it('draws the liquidity day by day: estimated and dashed before the saved balances', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 1000),
+      account(5, 'Conto USD', 'SPENDING', 70, 'USD'),
+    ];
+    history = {
+      currency: 'EUR',
+      accounts: 1,
+      points: [
+        { date: '2026-11-13', amount: -300, estimated: true },
+        { date: '2026-11-14', amount: -500, estimated: true },
+        { date: '2026-11-15', amount: 1000, estimated: false },
+        { date: '2026-11-16', amount: 1000, estimated: false },
+      ],
+    };
+    const page = await render();
+
+    // Lo storico si chiede per la valuta principale, una volta.
+    expect(asked).toEqual(['EUR']);
+    expect(page.querySelector('app-trend-chart path.estimate')).not.toBeNull();
+    expect(page.querySelector('app-trend-chart path.month')).not.toBeNull();
+    expect(page.querySelector('.chart-keys')?.textContent).toContain('Stima dai movimenti');
+    expect(page.querySelector('.history-note')).toBeNull(); // ci sono già due giorni salvati
+
+    // Scorrendo indietro di due giorni, il totale in euro mostra il 14 novembre, stimato.
+    const wrap = page.querySelector('app-trend-chart .month-chart-wrap') as HTMLElement;
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    fixture.detectChanges();
+    expect(page.querySelector('[data-testid="liquidity-total"]')?.textContent).toMatch(/^-500\s€$/);
+    expect(page.textContent).toContain('Il 14 novembre 2026 · stima dai movimenti');
+    // Il totale in dollari non è nel grafico: resta quello di adesso.
+    expect(page.querySelectorAll('[data-testid="liquidity-total"]')[1].textContent).toMatch(
+      /70\sUSD/,
+    );
+  });
+
+  it('says that the line becomes solid day by day when only today is saved', async () => {
+    accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
+    history = {
+      currency: 'EUR',
+      accounts: 1,
+      points: [
+        { date: '2026-11-15', amount: 900, estimated: true },
+        { date: '2026-11-16', amount: 1000, estimated: false },
+      ],
+    };
+    const page = await render();
+    expect(page.querySelector('.history-note')?.textContent).toContain('Da oggi l');
+  });
+
+  it('without a history of at least two days there is no chart', async () => {
+    accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
+    history = {
+      currency: 'EUR',
+      accounts: 1,
+      points: [{ date: '2026-11-16', amount: 1000, estimated: false }],
+    };
+    const page = await render();
+    expect(page.querySelector('app-trend-chart')).toBeNull();
   });
 });

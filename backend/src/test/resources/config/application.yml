@@ -8,6 +8,9 @@
 wallettracker:
   sync:
     enabled: false
+  # Anche le fotografie dei saldi: i test le salvano da sé, il giorno che scelgono.
+  balance-history:
+    enabled: false
   # Nei test nessuna domanda a GitHub: UpdateCheckServiceTest usa un finto GitHub.
   update:
     enabled: false

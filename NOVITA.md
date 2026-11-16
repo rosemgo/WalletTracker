@@ -52,6 +52,10 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   tipo" e "Da dove", un interruttore sceglie se mostrare le rendite di tutto il periodo (come prima) o solo quelle del
   mese della barra in evidenza. Toccando un'altra barra gli elenchi la seguono, e i collegamenti a Movimenti aprono
   quel mese.
+- **Il grafico della liquidità**: nel Riepilogo, la scheda "Liquidità" mostra come sono cambiati i soldi sui conti,
+  giorno per giorno, fino a un anno. Da ora l'app salva ogni giorno il saldo di ogni conto (linea piena); per i giorni
+  prima lo stima togliendo i movimenti dal saldo vero successivo (linea tratteggiata, "stima"). Scorrendo il grafico, il
+  totale mostra quel giorno. A Conti si va con "Vedi i conti", in alto nella scheda.
 
 ## 1.2.7
 

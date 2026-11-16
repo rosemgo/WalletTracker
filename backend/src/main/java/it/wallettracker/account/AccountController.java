@@ -2,6 +2,7 @@ package it.wallettracker.account;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import jakarta.validation.Valid;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,15 +40,28 @@ import org.springframework.web.bind.annotation.RestController;
 public class AccountController {
 
     private final AccountService accountService;
+    private final BalanceHistoryService historyService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, BalanceHistoryService historyService) {
         this.accountService = accountService;
+        this.historyService = historyService;
     }
 
     /** {@code GET /api/accounts}: tutti i conti. */
     @GetMapping
     public List<AccountDto> list() {
         return accountService.allAccounts();
+    }
+
+    /**
+     * {@code GET /api/accounts/balance-history?currency=EUR}: la liquidità giorno per giorno in quella valuta
+     * (docs/saldi.md, parte L).
+     */
+    @GetMapping("/balance-history")
+    public BalanceHistory balanceHistory(
+            @RequestParam @Pattern(regexp = "[A-Za-z]{3}", message = "La valuta è un codice di tre lettere, come EUR.")
+            String currency) {
+        return historyService.history(currency, LocalDate.now());
     }
 
     /**

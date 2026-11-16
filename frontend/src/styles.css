@@ -3639,24 +3639,43 @@ ul.steps li + li {
   padding: 0 16px;
 }
 
-/* La liquidità del Riepilogo: come la scheda degli investimenti, tutta toccabile; il totale grande, poi i conti. */
-a.card.liquidity-card {
+/* La liquidità del Riepilogo: il totale grande, il grafico, poi i conti. Non è più tutta toccabile (il grafico si
+   scorre col dito): a Conti porta il collegamento in alto. */
+.liquidity-card {
   display: block;
-  color: var(--ink);
-  text-decoration: none;
-  transition: transform 0.2s var(--ease);
 }
 
-@media (hover: hover) {
-  a.card.liquidity-card:hover {
-    transform: translateY(-2px);
-  }
-}
-
-.liquidity-card .card-head span {
+.liquidity-card .card-head a {
   color: var(--acc);
   font-size: 0.9rem;
   font-weight: 600;
+  text-decoration: none;
+}
+
+/* Il grafico della liquidità (docs/saldi.md, parte L): la stima tratteggiata, del colore della linea. */
+.month-chart .estimate {
+  fill: none;
+  stroke: var(--trend);
+  stroke-width: 2;
+  stroke-dasharray: 3 4;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+/* Il trattino della legenda per la stima: tre lineette ben separate (un bordo "dashed" così corto sembrava pieno). */
+.chart-keys .key.estimate {
+  height: 2.5px;
+  border-top: 0;
+  background: repeating-linear-gradient(to right, var(--trend) 0 4px, transparent 4px 7px);
+}
+
+.liquidity-card .chart-keys {
+  margin-top: 2px;
+}
+
+.liquidity-card .history-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
 }
 
 /* Un totale per ogni valuta, uno accanto all'altro (vanno a capo se non ci stanno). */

@@ -64,6 +64,10 @@ const STEPS = [
           <path class="area" [attr.d]="areaPath()" />
         </svg>
         <svg class="month-chart layer line-layer" [attr.viewBox]="'0 0 ' + width + ' ' + height">
+          @if (estimatePath()) {
+            <!-- La parte stimata (parametro estimatedUntil): tratteggiata, prima di quella vera. -->
+            <path class="estimate" [attr.d]="estimatePath()" />
+          }
           <path class="month" pathLength="1" [attr.d]="linePath()" />
           @if (tip(); as t) {
             <line class="guide" [attr.x1]="t.x" [attr.x2]="t.x" [attr.y1]="top" [attr.y2]="base" />
@@ -91,6 +95,16 @@ export class TrendChart {
   readonly names = input.required<string[]>();
   readonly description = input.required<string>();
   readonly currency = input('EUR');
+  /**
+   * Quanti valori, dall'inizio, sono stimati e non veri (lo storico della liquidità, docs/saldi.md parte L): quel
+   * tratto si disegna tratteggiato. 0 = tutti veri.
+   */
+  readonly estimatedUntil = input(0);
+  /**
+   * true (il solito): la scala parte da zero, come per l'investito. false: parte poco sotto il valore più basso, per
+   * vedere come cambia una cifra che non va mai vicino allo zero (la liquidità).
+   */
+  readonly zeroBased = input(true);
 
   /** Il mese su cui si sta scorrendo (0 = il primo), o null. */
   readonly scrubbed = output<number | null>();
@@ -107,6 +121,12 @@ export class TrendChart {
   /** La scala: da zero (o dal valore più basso, se è negativo) al più alto, con un po' di spazio sopra. */
   private readonly scale = computed(() => {
     const values = this.values();
+    if (!this.zeroBased() && values.length > 0) {
+      const low = Math.min(...values);
+      const high = Math.max(...values);
+      const pad = (high - low) * 0.15 || Math.abs(high) * 0.05 || 1;
+      return { max: high + pad, min: low - pad };
+    }
     const max = Math.max(1, ...values) * 1.08;
     const min = Math.min(0, ...values);
     return { max, min };
@@ -121,13 +141,27 @@ export class TrendChart {
     return BASE - ((value - min) / (max - min)) * (BASE - TOP);
   }
 
-  protected readonly linePath = computed(() =>
-    smoothPath(this.values().map((v, i) => ({ x: this.x(i), y: this.y(v) }))),
+  private readonly points = computed(() =>
+    this.values().map((v, i) => ({ x: this.x(i), y: this.y(v) })),
   );
 
+  /** La linea vera: da dove finisce la stima (o dall'inizio) all'ultimo valore. */
+  protected readonly linePath = computed(() =>
+    smoothPath(this.points().slice(Math.min(this.estimatedUntil(), this.values().length - 1))),
+  );
+
+  /** Il tratto stimato, fino al primo valore vero compreso (così le due linee si toccano); vuoto senza stima. */
+  protected readonly estimatePath = computed(() => {
+    const until = this.estimatedUntil();
+    return until > 0 ? smoothPath(this.points().slice(0, until + 1)) : '';
+  });
+
+  /** L'area sotto tutta la linea, stima compresa. */
   protected readonly areaPath = computed(() => {
     const n = this.values().length;
-    return n === 0 ? '' : `${this.linePath()}L${this.x(n - 1).toFixed(1)} ${BASE}L0 ${BASE}Z`;
+    return n === 0
+      ? ''
+      : `${smoothPath(this.points())}L${this.x(n - 1).toFixed(1)} ${BASE}L0 ${BASE}Z`;
   });
 
   protected readonly last = computed(() => {
@@ -137,10 +171,12 @@ export class TrendChart {
 
   /** Le linee di riferimento a valori tondi, con la scritta (nascosta in modalità discreta). */
   protected readonly grid = computed(() => {
-    const { max } = this.scale();
-    const step = STEPS.find((s) => max / s <= 2.5) ?? STEPS[STEPS.length - 1];
+    const { max, min } = this.scale();
+    const step = STEPS.find((s) => (max - min) / s <= 2.5) ?? STEPS[STEPS.length - 1];
     const lines = [];
-    for (let value = step; value < max; value += step) {
+    // Dal primo passo sopra lo zero; con la scala che non parte da zero, dal primo multiplo sopra il fondo.
+    const first = this.zeroBased() ? step : (Math.floor(min / step) + 1) * step;
+    for (let value = first; value < max; value += step) {
       const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
       lines.push({ value, y: this.y(value), label });
     }

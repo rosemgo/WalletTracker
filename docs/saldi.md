@@ -435,3 +435,44 @@ arrivati.
 totale per valuta, euro e dollari, con i conti sotto il loro codice; i conti dal più ricco; il conto senza saldo
 detto a parte; nessuna scheda senza saldi.
 
+## Parte L: il grafico della liquidità
+
+Richiesta dell'utente: un grafico che mostri come cambia nel tempo la liquidità sui conti. Fino a qui l'app conosceva
+solo il saldo di **adesso** di ogni conto (parti B e C): per una storia servivano i saldi dei giorni passati.
+
+**Due strade, tutte e due.** Valutate con l'utente (che ha scelto la terza):
+
+| | Come | Pro | Contro |
+|---|---|---|---|
+| A, ricostruzione | il saldo vero di oggi, meno i movimenti, giorno per giorno all'indietro | grafico pieno da subito | se manca un movimento, tutti i giorni prima sono sbagliati: contro la parte A ("mai dai soli movimenti") |
+| B, fotografie | ogni giorno l'app salva il saldo di ogni conto | valori veri | il grafico parte vuoto |
+| **C, tutte e due** | le fotografie sono i valori veri; i giorni senza si stimano dalla fotografia successiva | utile subito, e dice che cosa è stimato | più lavoro |
+
+La C non tradisce la parte A: una stima parte sempre da un saldo **vero** (una fotografia, o il saldo di oggi), e il
+grafico la disegna diversa, tratteggiata, con la parola "stima" quando la si guarda.
+
+**Le fotografie (`V41`, tabella `balance_snapshot`).** Un conto, un giorno, un importo. `BalanceSnapshotScheduler` ogni
+ora (mentre l'app è accesa) salva il saldo di oggi di ogni conto che conta nella liquidità, lo stesso della pagina Conti
+(`AccountService.currentBalance`): nello stesso giorno l'ultima fotografia sostituisce la precedente. Ogni ora e non
+una volta al giorno perché il computer può essere spento: basta che l'app sia accesa un momento perché il giorno abbia
+il suo valore. Eliminando un conto manuale se ne vanno anche le sue fotografie. Nei test il timer è spento
+(`wallettracker.balance-history.enabled`), come la sincronizzazione.
+
+**La storia (`BalanceHistoryService`, `GET /api/accounts/balance-history?currency=EUR`).** Contano gli stessi conti
+della scheda Liquidità (parte K): niente carte di credito né conti esclusi, solo quelli con un saldo, una valuta alla
+volta. Da quando: il primo movimento (o la prima fotografia) di uno dei conti, al massimo un anno fa. Per ogni conto si
+cammina all'indietro da oggi: il valore di un giorno è la sua fotografia, se c'è, altrimenti il valore del giorno dopo
+meno i movimenti contabilizzati del giorno dopo. Il saldo di oggi vale come fotografia di oggi. Prima del primo
+movimento di un conto il suo saldo resta fermo: non sappiamo niente di diverso. Un giorno è **stimato** se almeno un
+conto, quel giorno, non ha la fotografia. Il calcolo è una funzione senza database (`reconstruct`), provata da
+`BalanceHistoryReconstructTest`; `BalanceHistoryServiceTest` prova fotografie, conti contati ed endpoint.
+
+**Nella scheda Liquidità del Riepilogo.** Sotto il totale, il grafico della valuta principale (la prima della scheda),
+con il componente degli investimenti (`TrendChart`), a cui si sono aggiunti due parametri: `estimatedUntil` (il tratto
+iniziale stimato, tratteggiato) e `zeroBased` (qui false: la scala parte poco sotto il valore più basso, altrimenti con
+10.000 € sul conto le variazioni sarebbero una riga piatta). Scorrendolo, il totale mostra quel giorno, e sotto "Il 20
+luglio 2026 · stima dai movimenti". Una legenda distingue "Saldi salvati" e "Stima dai movimenti". Finché l'unico giorno
+salvato è oggi, una riga spiega che la linea piena crescerà giorno per giorno. Con meno di due giorni il grafico non
+c'è. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto Conti): a Conti porta
+"Vedi i conti" in alto.
+

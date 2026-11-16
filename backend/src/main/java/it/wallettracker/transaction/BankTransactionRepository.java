@@ -287,4 +287,34 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             WHERE t.account.id = :accountId AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
             """)
     LocalDate lastBookingDate(@Param("accountId") Long accountId);
+
+    /**
+     * I movimenti contabilizzati dei conti {@code ids}, sommati per conto e per giorno, dal giorno dopo {@code from}
+     * a {@code to} compreso: lo storico dei saldi li toglie, un giorno alla volta, dal valore vero successivo
+     * (docs/saldi.md, parte L).
+     */
+    @Query("""
+            SELECT t.account.id AS accountId, t.bookingDate AS day, SUM(t.amount) AS total FROM BankTransaction t
+            WHERE t.account.id IN :ids AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND t.bookingDate > :from AND t.bookingDate <= :to
+            GROUP BY t.account.id, t.bookingDate
+            """)
+    List<AccountDayTotal> sumByAccountAndDay(@Param("ids") Collection<Long> ids, @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    /** Una riga di {@link #sumByAccountAndDay}. */
+    interface AccountDayTotal {
+        Long getAccountId();
+
+        LocalDate getDay();
+
+        BigDecimal getTotal();
+    }
+
+    /** Il giorno del primo movimento contabilizzato tra i conti {@code ids}, o null se non ne hanno. */
+    @Query("""
+            SELECT MIN(t.bookingDate) FROM BankTransaction t
+            WHERE t.account.id IN :ids AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+            """)
+    LocalDate firstBookingDate(@Param("ids") Collection<Long> ids);
 }

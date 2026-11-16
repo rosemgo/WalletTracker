@@ -743,6 +743,20 @@ export interface InvestmentGroup {
   search?: string | null; // ...e le parole fisse del testo, per trovare proprio quei movimenti
 }
 
+/** GET /api/accounts/balance-history: la liquidità giorno per giorno in una valuta (docs/saldi.md, parte L). */
+export interface BalanceHistory {
+  currency: string;
+  accounts: number; // quanti conti sono sommati
+  points: BalancePoint[]; // dal giorno più vecchio a oggi; vuoto se nessun conto ha un saldo
+}
+
+/** Un giorno dello storico della liquidità. */
+export interface BalancePoint {
+  date: string; // "2026-11-16"
+  amount: number;
+  estimated: boolean; // almeno un conto senza la fotografia di quel giorno: stimato dai movimenti
+}
+
 /** Le rendite nette di un mese, per tipo e per titolo: gli elenchi del periodo, per un mese solo. */
 export interface InvestmentIncomeMonth {
   month: string; // "2026-07"
