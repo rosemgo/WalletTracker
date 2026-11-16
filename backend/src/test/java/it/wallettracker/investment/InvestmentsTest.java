@@ -8,6 +8,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import it.wallettracker.investment.InvestmentDtos.Group;
+import it.wallettracker.investment.InvestmentDtos.IncomeMonth;
 import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.investment.Investments.Movement;
 import it.wallettracker.transaction.TransactionType;
@@ -238,6 +239,30 @@ class InvestmentsTest {
         List<Month> months = Investments.months(movements, YearMonth.of(2026, 10), YearMonth.of(2026, 11));
         assertThat(months.get(0).withholding()).isEqualByComparingTo("-65");
         assertThat(months.get(1).withholding()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void theIncomeOfEachMonthHasItsOwnLists() {
+        String bond = "ROMANIA-7OT45 6,5%";
+        List<Movement> movements = Investments.withholdingsOnTheirIncome(List.of(
+                m("2026-10-30", "520", TransactionType.INVESTMENT_INCOME, false, "Cedole", bond),
+                m("2026-11-01", "-65", TransactionType.WITHHOLDING_TAX, false, null, bond),
+                m("2026-08-05", "12.40", TransactionType.INVESTMENT_INCOME, false, "Dividendi", "Enel"),
+                m("2026-11-20", "3", TransactionType.INVESTMENT_INCOME, false, "Interessi", null)));
+
+        // Dal 1° agosto al 15 novembre: settembre senza rendite non c'è; novembre si ferma a oggi.
+        List<IncomeMonth> months = Investments.incomeByMonth(movements, YearMonth.of(2026, 8),
+                LocalDate.of(2026, 11, 15));
+        assertThat(months).extracting(IncomeMonth::month)
+                .containsExactly(YearMonth.of(2026, 8), YearMonth.of(2026, 10));
+        IncomeMonth october = months.get(1);
+        // La ritenuta del 1° novembre è della cedola del 30 ottobre: il mese è netto.
+        assertThat(october.byType()).singleElement().satisfies(g -> {
+            assertThat(g.name()).isEqualTo("Cedole");
+            assertThat(g.amount()).isEqualByComparingTo("455");
+        });
+        assertThat(october.bySource()).extracting(Group::name).containsExactly(bond);
+        assertThat(months.get(0).bySource()).extracting(Group::name).containsExactly("Enel");
     }
 
     @Test

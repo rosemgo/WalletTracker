@@ -64,7 +64,14 @@ const STEPS = [
           <path class="area" [attr.d]="areaPath()" />
         </svg>
         <svg class="month-chart layer line-layer" [attr.viewBox]="'0 0 ' + width + ' ' + height">
-          <path class="month" pathLength="1" [attr.d]="linePath()" />
+          <!-- I tratti stimati (parametro estimated) tratteggiati, quelli veri pieni. -->
+          @for (seg of segments(); track $index) {
+            @if (seg.estimated) {
+              <path class="estimate" [attr.d]="seg.path" />
+            } @else {
+              <path class="month" pathLength="1" [attr.d]="seg.path" />
+            }
+          }
           @if (tip(); as t) {
             <line class="guide" [attr.x1]="t.x" [attr.x2]="t.x" [attr.y1]="top" [attr.y2]="base" />
             <circle class="today" [attr.cx]="t.x" [attr.cy]="t.y" r="5" />
@@ -91,6 +98,16 @@ export class TrendChart {
   readonly names = input.required<string[]>();
   readonly description = input.required<string>();
   readonly currency = input('EUR');
+  /**
+   * Per ogni valore, se è stimato e non vero (lo storico della liquidità, docs/saldi.md parte L): un tratto tra due
+   * valori veri si disegna pieno, ogni altro tratteggiato. Vuoto (il solito) = tutti veri.
+   */
+  readonly estimated = input<readonly boolean[]>([]);
+  /**
+   * true (il solito): la scala parte da zero, come per l'investito. false: parte poco sotto il valore più basso, per
+   * vedere come cambia una cifra che non va mai vicino allo zero (la liquidità).
+   */
+  readonly zeroBased = input(true);
 
   /** Il mese su cui si sta scorrendo (0 = il primo), o null. */
   readonly scrubbed = output<number | null>();
@@ -107,6 +124,12 @@ export class TrendChart {
   /** La scala: da zero (o dal valore più basso, se è negativo) al più alto, con un po' di spazio sopra. */
   private readonly scale = computed(() => {
     const values = this.values();
+    if (!this.zeroBased() && values.length > 0) {
+      const low = Math.min(...values);
+      const high = Math.max(...values);
+      const pad = (high - low) * 0.15 || Math.abs(high) * 0.05 || 1;
+      return { max: high + pad, min: low - pad };
+    }
     const max = Math.max(1, ...values) * 1.08;
     const min = Math.min(0, ...values);
     return { max, min };
@@ -121,13 +144,39 @@ export class TrendChart {
     return BASE - ((value - min) / (max - min)) * (BASE - TOP);
   }
 
-  protected readonly linePath = computed(() =>
-    smoothPath(this.values().map((v, i) => ({ x: this.x(i), y: this.y(v) }))),
+  private readonly points = computed(() =>
+    this.values().map((v, i) => ({ x: this.x(i), y: this.y(v) })),
   );
 
+  /**
+   * La linea, in pezzi: ogni pezzo è una serie di tratti dello stesso tipo, vero (tra due valori veri) o stimato. Due
+   * pezzi vicini hanno in comune il punto dove si toccano, così la linea è continua. Senza stime, un pezzo solo.
+   */
+  protected readonly segments = computed(() => {
+    const points = this.points();
+    const estimated = this.estimated();
+    if (points.length < 2) {
+      return points.length === 1 ? [{ estimated: false, path: smoothPath(points) }] : [];
+    }
+    const kind = (t: number) => Boolean(estimated[t] || estimated[t + 1]); // il tratto dal punto t a t+1
+    const segments: { estimated: boolean; path: string }[] = [];
+    let from = 0; // il primo tratto del pezzo in corso
+    for (let t = 1; t <= points.length - 1; t++) {
+      // Finiti i tratti, o il tratto t è di un altro tipo: il pezzo va dal punto "from" al punto t.
+      if (t === points.length - 1 || kind(t) !== kind(from)) {
+        segments.push({ estimated: kind(from), path: smoothPath(points.slice(from, t + 1)) });
+        from = t;
+      }
+    }
+    return segments;
+  });
+
+  /** L'area sotto tutta la linea, stima compresa. */
   protected readonly areaPath = computed(() => {
     const n = this.values().length;
-    return n === 0 ? '' : `${this.linePath()}L${this.x(n - 1).toFixed(1)} ${BASE}L0 ${BASE}Z`;
+    return n === 0
+      ? ''
+      : `${smoothPath(this.points())}L${this.x(n - 1).toFixed(1)} ${BASE}L0 ${BASE}Z`;
   });
 
   protected readonly last = computed(() => {
@@ -137,11 +186,16 @@ export class TrendChart {
 
   /** Le linee di riferimento a valori tondi, con la scritta (nascosta in modalità discreta). */
   protected readonly grid = computed(() => {
-    const { max } = this.scale();
-    const step = STEPS.find((s) => max / s <= 2.5) ?? STEPS[STEPS.length - 1];
+    const { max, min } = this.scale();
+    const step = STEPS.find((s) => (max - min) / s <= 2.5) ?? STEPS[STEPS.length - 1];
     const lines = [];
-    for (let value = step; value < max; value += step) {
-      const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
+    // Dal primo passo sopra lo zero; con la scala che non parte da zero, dal primo multiplo sopra il fondo.
+    const first = this.zeroBased() ? step : (Math.floor(min / step) + 1) * step;
+    for (let value = first; value < max; value += step) {
+      const symbol = this.currency() === 'EUR' ? '€' : this.currency(); // come il resto dell'app: "700 USD"
+      const label = this.privacy.hide(
+        `${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} ${symbol}`,
+      );
       lines.push({ value, y: this.y(value), label });
     }
     return lines;

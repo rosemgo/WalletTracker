@@ -207,15 +207,41 @@
               (picked)="incomePick.set($event)"
             />
             <p class="secondary note-value">
-              Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese. Alcune
-              banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a
-              parte (tipo "Ritenute sulle rendite"), che qui si toglie dalla rendita dello stesso
-              titolo; altre (come Trade Republic) accreditano già il netto.
+              Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese, e scegli
+              qui sotto se gli elenchi mostrano tutto il periodo o solo quel mese. Alcune banche
+              (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a parte (tipo
+              "Ritenute sulle rendite"), che qui si toglie dalla rendita dello stesso titolo; altre
+              (come Trade Republic) accreditano già il netto.
             </p>
+            @let lists = incomeLists()!;
             @if (d.incomeByType.length > 0) {
+              <!-- Gli elenchi di tutto il periodo, o del mese della barra (la seconda scelta segue la barra toccata). -->
+              <div
+                class="segmented compact"
+                role="group"
+                aria-label="Rendite negli elenchi"
+                data-testid="income-scope"
+              >
+                <button
+                  type="button"
+                  [attr.aria-pressed]="incomeScope() === 'period'"
+                  (click)="incomeScope.set('period')"
+                >
+                  {{ periodLabel(d.period) | upperFirst }}
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-pressed]="incomeScope() === 'month'"
+                  (click)="incomeScope.set('month')"
+                >
+                  {{ incomeMonthLabel() }}
+                </button>
+              </div>
+            }
+            @if (lists.byType.length > 0) {
               <h3 #typeTitle>Per tipo</h3>
               <ul class="rows">
-                @for (g of rows('type', d.incomeByType); track g.name) {
+                @for (g of rows('type', lists.byType); track g.name) {
                   <li>
                     @if (g.name === unmatched) {
                       <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
@@ -227,7 +253,7 @@
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
                     } @else {
-                      <a routerLink="/movimenti" [queryParams]="typeQuery(d, g)">
+                      <a routerLink="/movimenti" [queryParams]="typeQuery(g)">
                         <span>
                           {{ g.name }}
                           <span class="secondary">{{
@@ -240,7 +266,7 @@
                   </li>
                 }
               </ul>
-              @if (shortened(d.incomeByType)) {
+              @if (shortened(lists.byType)) {
                 <button
                   type="button"
                   class="link show-all"
@@ -250,13 +276,13 @@
                   {{
                     openLists().has('type')
                       ? 'Mostra meno'
-                      : 'Mostra tutti (' + d.incomeByType.length + ')'
+                      : 'Mostra tutti (' + lists.byType.length + ')'
                   }}
                 </button>
               }
               <h3 #sourceTitle>Da dove</h3>
               <ul class="rows">
-                @for (g of rows('source', d.incomeBySource); track g.name) {
+                @for (g of rows('source', lists.bySource); track g.name) {
                   <li>
                     @if (g.name === unmatched) {
                       <!-- Senza link: Movimenti non sa mostrare solo queste (docs/investimenti.md, parte U). -->
@@ -268,7 +294,7 @@
                       </span>
                       <strong>{{ g.amount | money: d.currency }}</strong>
                     } @else {
-                      <a routerLink="/movimenti" [queryParams]="sourceQuery(d, g)">
+                      <a routerLink="/movimenti" [queryParams]="sourceQuery(g)">
                         <span>
                           {{ g.name | readable }}
                           <span class="secondary">{{
@@ -281,7 +307,7 @@
                   </li>
                 }
               </ul>
-              @if (shortened(d.incomeBySource)) {
+              @if (shortened(lists.bySource)) {
                 <button
                   type="button"
                   class="link show-all"
@@ -291,12 +317,12 @@
                   {{
                     openLists().has('source')
                       ? 'Mostra meno'
-                      : 'Mostra tutti (' + d.incomeBySource.length + ')'
+                      : 'Mostra tutti (' + lists.bySource.length + ')'
                   }}
                 </button>
               }
             } @else {
-              <p class="secondary">Nessuna rendita in questo periodo.</p>
+              <p class="secondary">{{ lists.empty }}</p>
             }
             <p class="secondary note-value">
               Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito.
