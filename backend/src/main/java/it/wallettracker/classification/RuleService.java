@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import it.wallettracker.category.CategoryService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.RuleUsage;
@@ -18,7 +19,6 @@ import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * La gestione delle regole dalla dashboard: elenco, creazione, modifica, cancellazione e prova.
@@ -116,8 +116,8 @@ public class RuleService {
     public void delete(Long id) {
         ClassificationRule rule = find(id);
         if (rule.isBuiltin()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Le regole di partenza non si cancellano: puoi disattivarle.");
+            // messaggio: Le regole di partenza non si cancellano: puoi disattivarle.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "rule.builtin-not-deletable");
         }
         ruleRepository.delete(rule);
         // flush(): la cancellazione va scritta nel database PRIMA che classifyAll rilegga le regole attive.
@@ -196,13 +196,14 @@ public class RuleService {
     /** Con "tutte le parole" il testo deve avere almeno una parola: "***" non ne ha, e non troverebbe niente. */
     private static void checkPattern(RuleRequest request) {
         if (request.matchMode() == ClassificationRule.MatchMode.ALL_WORDS && ClassificationRule.words(request.pattern()).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Con \"contiene tutte le parole\" scrivi almeno una parola (lettere o cifre).");
+            // messaggio: Con "contiene tutte le parole" scrivi almeno una parola (lettere o cifre).
+            throw new ApiException(HttpStatus.BAD_REQUEST, "rule.no-words");
         }
     }
 
     private ClassificationRule find(Long id) {
-        return ruleRepository.findById(id).orElseThrow(() -> new NotFoundException("Regola", id));
+        // messaggio: Regola {0} non trovato
+        return ruleRepository.findById(id).orElseThrow(() -> new NotFoundException("not-found.rule", id));
     }
 
     /** Riclassifica tutto e restituisce la regola con il nuovo numero di utilizzi. */

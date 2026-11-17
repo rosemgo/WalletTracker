@@ -145,7 +145,7 @@ export class TransactionsPage implements OnInit {
     }
     const categoryId = Number(params.get('categoryId'));
     if (Number.isInteger(categoryId) && categoryId > 0) {
-      this.category.set({ id: categoryId, name: 'Una categoria' });
+      this.category.set({ id: categoryId, name: $localize`Una categoria` });
       // Il nome, per la pillola: dall'elenco delle categorie.
       this.api.categories().subscribe({
         next: (categories) => {
@@ -182,7 +182,7 @@ export class TransactionsPage implements OnInit {
     const to = this.to();
     // Le date "2026-10-01" si confrontano anche come testo: l'ordine alfabetico è quello delle date.
     if (from !== null && to !== null && from > to) {
-      this.error.set('La data di inizio è dopo quella di fine.');
+      this.error.set($localize`La data di inizio è dopo quella di fine.`);
       return;
     }
     this.loading.set(true);
@@ -216,8 +216,8 @@ export class TransactionsPage implements OnInit {
           }
           this.error.set(
             response.status === 400
-              ? (response.error?.detail ?? 'Ricerca non valida.')
-              : 'Impossibile caricare i movimenti: il backend è avviato?',
+              ? (response.error?.detail ?? $localize`Ricerca non valida.`)
+              : $localize`Impossibile caricare i movimenti: il backend è avviato?`,
           );
           this.loading.set(false);
         },
@@ -309,13 +309,13 @@ export class TransactionsPage implements OnInit {
     if (t.category) {
       what = t.category;
     } else if (t.type === 'EXPENSE' || t.type === 'INCOME') {
-      what = 'Senza categoria';
+      what = $localize`Senza categoria`;
     } else {
-      what = t.type ? this.typeLabels[t.type] : 'Da verificare';
+      what = t.type ? this.typeLabels[t.type] : $localize`Da verificare`;
     }
     const parts = [what, this.accountNames().get(t.accountId) ?? ''];
     if (t.status === 'PENDING') {
-      parts.push('in attesa');
+      parts.push($localize`in attesa`);
     }
     return parts.filter((p) => p !== '').join(' · ');
   }

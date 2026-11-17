@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -32,29 +31,30 @@ export { MAX_SEARCH_WORDS, merchantSearch } from './merchant-search';
 import { TransactionsChanged } from './transactions-changed';
 import { shortAccountName } from '../accounts/accounts-store';
 import { Avatar } from './avatar';
+import { LocalDatePipe } from '../text/dates';
 import { UpperFirstPipe } from '../text/upper-first.pipe';
 
 /** Che effetto ha ogni tipo sui totali: la riga sotto il nome, nel foglio "Conta come". */
 export const TYPE_HINTS: Record<TransactionType, string> = {
-  EXPENSE: 'Conta nelle spese e nella sua categoria',
-  INCOME: 'Conta nelle entrate',
-  INTERNAL_TRANSFER: 'Soldi tra due tuoi conti: né spesa né entrata',
-  CARD_SETTLEMENT: "L'addebito del saldo della carta: le spese sono già contate una per una",
-  INVESTMENT_DEPOSIT: 'Verso un tuo conto di investimento: tenuto a parte',
-  INVESTMENT_WITHDRAWAL: 'Da un tuo conto di investimento: tenuto a parte',
-  SECURITIES_BUY: 'Investimenti: tenuto a parte',
-  SECURITIES_SELL: 'Investimenti: tenuto a parte',
-  INVESTMENT_INCOME: 'Rendite degli investimenti: tenute a parte',
-  WITHHOLDING_TAX: 'Trattenuta su una cedola o un dividendo: si toglie dalla rendita',
-  INVESTMENT_TAX: 'Bollo, capital gain, Tobin tax: tenute a parte',
-  IGNORED: "Resta nell'elenco, fuori da tutti i totali",
-  TO_REVIEW: 'Fuori dai totali finché non lo classifichi',
+  EXPENSE: $localize`Conta nelle spese e nella sua categoria`,
+  INCOME: $localize`Conta nelle entrate`,
+  INTERNAL_TRANSFER: $localize`Soldi tra due tuoi conti: né spesa né entrata`,
+  CARD_SETTLEMENT: $localize`L'addebito del saldo della carta: le spese sono già contate una per una`,
+  INVESTMENT_DEPOSIT: $localize`Verso un tuo conto di investimento: tenuto a parte`,
+  INVESTMENT_WITHDRAWAL: $localize`Da un tuo conto di investimento: tenuto a parte`,
+  SECURITIES_BUY: $localize`Investimenti: tenuto a parte`,
+  SECURITIES_SELL: $localize`Investimenti: tenuto a parte`,
+  INVESTMENT_INCOME: $localize`Rendite degli investimenti: tenute a parte`,
+  WITHHOLDING_TAX: $localize`Trattenuta su una cedola o un dividendo: si toglie dalla rendita`,
+  INVESTMENT_TAX: $localize`Bollo, capital gain, Tobin tax: tenute a parte`,
+  IGNORED: $localize`Resta nell'elenco, fuori da tutti i totali`,
+  TO_REVIEW: $localize`Fuori dai totali finché non lo classifichi`,
 };
 
 const ORIGINS: Record<TransactionOrigin, string> = {
-  BANK: 'dalla banca, con la sincronizzazione',
-  CSV: 'da un file CSV',
-  TRADE_REPUBLIC_FILE: 'dal file di Trade Republic',
+  BANK: $localize`dalla banca, con la sincronizzazione`,
+  CSV: $localize`da un file CSV`,
+  TRADE_REPUBLIC_FILE: $localize`dal file di Trade Republic`,
 };
 
 /** La proposta dopo un cambio di categoria: gli altri movimenti dell'esercente che avevano la vecchia. */
@@ -78,7 +78,7 @@ interface Done {
  */
 @Component({
   selector: 'app-transaction-detail',
-  imports: [Avatar, DatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
+  imports: [Avatar, LocalDatePipe, MoneyPipe, RouterLink, UpperFirstPipe],
   templateUrl: './transaction-detail.html',
 })
 export class TransactionDetail implements OnInit {
@@ -93,6 +93,14 @@ export class TransactionDetail implements OnInit {
   protected readonly origins = ORIGINS;
   protected readonly nameOf = nameOf;
   protected readonly maxNoteLength = 300;
+  /** I testi che il template usa dentro un'espressione, dove non si possono marcare per la traduzione. */
+  protected readonly noCategory = $localize`Nessuna categoria`;
+  protected readonly uncategorized = $localize`Senza categoria`;
+  protected readonly toReview = $localize`:Un movimento senza tipo:Da verificare`;
+  protected readonly countsAs = $localize`Conta come`;
+  protected readonly chooseACategory = $localize`Scegli una categoria`;
+  /** Dentro "Categoria cambiata in «quella delle regole»." */
+  protected readonly ofTheRules = $localize`quella delle regole`;
 
   protected readonly detail = signal<Detail | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -132,12 +140,12 @@ export class TransactionDetail implements OnInit {
   /** "Per un acquisto di titoli non serve una categoria: il tipo dice già che cos'è." */
   protected readonly notNeededText = computed(() => {
     const type = this.transaction()?.type;
-    const what = (type && WITHOUT_CATEGORY[type]) ?? 'questo tipo di movimento';
-    return `Per ${what} non serve una categoria: il tipo dice già che cos'è.`;
+    const what = (type && WITHOUT_CATEGORY[type]) ?? $localize`questo tipo di movimento`;
+    return $localize`Per ${what}:what: non serve una categoria: il tipo dice già che cos'è.`;
   });
 
   /** La frase di un movimento senza categoria che ne vuole una: nella pagina, "crea una regola" è un link. */
-  protected readonly noCategoryText = 'Nessuna categoria: sceglila tu, o crea una regola.';
+  protected readonly noCategoryText = $localize`Nessuna categoria: sceglila tu, o crea una regola.`;
 
   /** Perché ha questa categoria, in una frase. */
   protected readonly categoryWhy = computed(() => {
@@ -147,14 +155,18 @@ export class TransactionDetail implements OnInit {
     }
     switch (d.categoryOrigin) {
       case 'MANUAL':
-        return 'Scelta da te: le regole non la cambiano.';
+        return $localize`Scelta da te: le regole non la cambiano.`;
       case 'RULE':
-        return d.ruleName ? `Messa dalla regola «${d.ruleName}».` : 'Messa da una regola.';
+        return d.ruleName
+          ? $localize`Messa dalla regola «${d.ruleName}:ruleName:».`
+          : $localize`Messa da una regola.`;
       default:
         if (d.transaction.type === null || d.transaction.type === 'TO_REVIEW') {
-          return 'Nessuna categoria: prima scegli il tipo, in «Conta come».';
+          return $localize`Nessuna categoria: prima scegli il tipo, in «Conta come».`;
         }
-        return needsCategory(d.transaction.type) ? this.noCategoryText : 'Nessuna categoria.';
+        return needsCategory(d.transaction.type)
+          ? this.noCategoryText
+          : $localize`Nessuna categoria.`;
     }
   });
 
@@ -177,7 +189,7 @@ export class TransactionDetail implements OnInit {
     const used = this.used();
     if (used && used.categories.length > 0 && search === '') {
       sections.push({
-        title: `Già usate per «${used.word}…»`,
+        title: $localize`Già usate per «${used.word}:word:…»`,
         items: used.categories.map((u) => ({ id: u.categoryId, name: u.category })),
       });
     }
@@ -241,8 +253,8 @@ export class TransactionDetail implements OnInit {
       error: (response) =>
         this.error.set(
           response.status === 404
-            ? 'Questo movimento non esiste più.'
-            : 'Impossibile caricare il movimento: il backend è avviato?',
+            ? $localize`Questo movimento non esiste più.`
+            : $localize`Impossibile caricare il movimento: il backend è avviato?`,
         ),
     });
   }
@@ -278,11 +290,11 @@ export class TransactionDetail implements OnInit {
       return;
     }
     const undo: CategoryChange[] = [{ id: t.id, categoryId: t.manualCategoryId }];
-    const before = { id: t.categoryId, name: t.category ?? 'senza categoria' };
+    const before = { id: t.categoryId, name: t.category ?? $localize`senza categoria` };
     this.api.correctCategory(t.id, categoryId).subscribe({
       next: () => {
         this.refresh();
-        this.done.set({ text: `Categoria cambiata in «${name}».`, undo });
+        this.done.set({ text: $localize`Categoria cambiata in «${name}:name:».`, undo });
         if (this.detail()?.merchant) {
           this.api.similarTransactions(t.id, before.id).subscribe({
             next: (movements) => {
@@ -294,7 +306,7 @@ export class TransactionDetail implements OnInit {
         }
       },
       error: (response) =>
-        this.error.set(response.error?.detail ?? 'La categoria non è stata salvata.'),
+        this.error.set(response.error?.detail ?? $localize`La categoria non è stata salvata.`),
     });
   }
 
@@ -311,13 +323,13 @@ export class TransactionDetail implements OnInit {
         this.proposal.set(null);
         const n = changes.length + 1;
         this.done.set({
-          text: `Spostati ${n} movimenti in «${p.to}».`,
+          text: $localize`Spostati ${n}:n: movimenti in «${p.to}:to:».`,
           undo: [...before, ...previous],
         });
         this.refresh();
       },
       error: (response) =>
-        this.error.set(response.error?.detail ?? 'I movimenti non sono stati spostati.'),
+        this.error.set(response.error?.detail ?? $localize`I movimenti non sono stati spostati.`),
     });
   }
 
@@ -326,7 +338,7 @@ export class TransactionDetail implements OnInit {
     this.proposal.set(null);
     const d = this.done();
     if (d !== null) {
-      this.done.set({ ...d, text: 'Spostato solo questo movimento.' });
+      this.done.set({ ...d, text: $localize`Spostato solo questo movimento.` });
     }
   }
 
@@ -342,7 +354,7 @@ export class TransactionDetail implements OnInit {
         this.proposal.set(null);
         this.refresh();
       },
-      error: () => this.error.set('Non è stato possibile annullare.'),
+      error: () => this.error.set($localize`Non è stato possibile annullare.`),
     });
   }
 
@@ -355,7 +367,7 @@ export class TransactionDetail implements OnInit {
     }
     this.api.correctType(t.id, type).subscribe({
       next: () => this.refresh(),
-      error: () => this.error.set('La correzione non è stata salvata.'),
+      error: () => this.error.set($localize`La correzione non è stata salvata.`),
     });
   }
 
@@ -364,7 +376,7 @@ export class TransactionDetail implements OnInit {
     if (s) {
       this.api.acceptCategorySuggestion(s.merchantKey, s.categoryId).subscribe({
         next: () => this.refresh(),
-        error: () => this.error.set('Il suggerimento non è stato accettato.'),
+        error: () => this.error.set($localize`Il suggerimento non è stato accettato.`),
       });
     }
   }
@@ -388,7 +400,8 @@ export class TransactionDetail implements OnInit {
         this.editingNote.set(false);
         this.refresh();
       },
-      error: (response) => this.error.set(response.error?.detail ?? 'La nota non è stata salvata.'),
+      error: (response) =>
+        this.error.set(response.error?.detail ?? $localize`La nota non è stata salvata.`),
     });
   }
 
@@ -428,6 +441,8 @@ export class TransactionDetail implements OnInit {
 
   /** Il nome di un tipo; per un'entrata, "Spesa" vuol dire rimborso di una spesa. */
   protected typeLabel(t: Transaction, type: TransactionType): string {
-    return type === 'EXPENSE' && t.amount > 0 ? 'Rimborso di una spesa' : this.typeLabels[type];
+    return type === 'EXPENSE' && t.amount > 0
+      ? $localize`Rimborso di una spesa`
+      : this.typeLabels[type];
   }
 }

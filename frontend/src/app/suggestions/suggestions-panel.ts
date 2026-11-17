@@ -2,6 +2,7 @@ import { Component, DestroyRef, OnInit, computed, inject, output, signal } from 
 
 import { AiSuggestionsStatus, CategorySuggestion } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { plural } from '../text/plural';
 import { ReadablePipe } from '../text/readable';
 
 /** Ogni quanto chiedere lo stato mentre l'IA risponde. */
@@ -70,9 +71,12 @@ export class SuggestionsPanel implements OnInit {
       next: ({ updated }) => {
         this.done(
           suggestion,
-          `${suggestion.merchantName}: "${suggestion.category}" assegnata a ` +
-            (updated === 1 ? '1 movimento.' : `${updated} movimenti.`) +
-            ' Per i movimenti futuri puoi creare una regola dal movimento, qui sotto.',
+          $localize`${suggestion.merchantName}:merchantName:: "${suggestion.category}:category:" assegnata a ` +
+            plural(updated, {
+              one: $localize`1 movimento.`,
+              other: $localize`${updated}:updated: movimenti.`,
+            }) +
+            $localize` Per i movimenti futuri puoi creare una regola dal movimento, qui sotto.`,
         );
         this.accepted.emit();
       },
@@ -86,7 +90,7 @@ export class SuggestionsPanel implements OnInit {
       next: () =>
         this.done(
           suggestion,
-          `${suggestion.merchantName}: "${suggestion.category}" non verrà più suggerita.`,
+          $localize`${suggestion.merchantName}:merchantName:: "${suggestion.category}:category:" non verrà più suggerita.`,
         ),
       error: (response) => this.fail(response, suggestion),
     });
@@ -128,7 +132,7 @@ export class SuggestionsPanel implements OnInit {
   ): void {
     this.finish(suggestion);
     this.message.set(null);
-    this.error.set(response.error?.detail ?? 'Operazione non riuscita.');
+    this.error.set(response.error?.detail ?? $localize`Operazione non riuscita.`);
   }
 
   /** Ricarica i suggerimenti: la pagina Movimenti lo chiama dopo che hai scelto a mano una categoria. */
@@ -160,9 +164,12 @@ export class SuggestionsPanel implements OnInit {
     } else if (wasRunning && job && !job.error) {
       const unsure = job.done - job.found;
       this.message.set(
-        `L'IA ha guardato ${job.done === 1 ? '1 esercente' : job.done + ' esercenti'}: ` +
-          (job.found === 1 ? '1 suggerimento' : `${job.found} suggerimenti`) +
-          (unsure > 0 ? `, per ${unsure === 1 ? '1' : unsure} non sa.` : '.'),
+        $localize`L'IA ha guardato ${plural(job.done, { one: $localize`1 esercente`, other: $localize`${job.done}:done: esercenti` })}:count:: ` +
+          plural(job.found, {
+            one: $localize`1 suggerimento`,
+            other: $localize`${job.found}:found: suggerimenti`,
+          }) +
+          (unsure > 0 ? $localize`, per ${unsure}:unsure: non sa.` : '.'),
       );
       this.api.categorySuggestions().subscribe({ next: (list) => this.suggestions.set(list) });
     }

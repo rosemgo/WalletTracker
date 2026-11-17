@@ -7,11 +7,12 @@ import it.wallettracker.bank.enablebanking.EnableBankingClient;
 import it.wallettracker.bank.enablebanking.EnableBankingCredentials;
 import it.wallettracker.bank.enablebanking.EnableBankingJwtFactory;
 import it.wallettracker.bank.enablebanking.EnableBankingProperties;
+import it.wallettracker.bank.enablebanking.InvalidPrivateKeyException;
+import it.wallettracker.message.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * La configurazione guidata di Enable Banking: stato attuale e salvataggio di credenziali nuove.
@@ -67,21 +68,27 @@ public class SetupService {
         PrivateKey key;
         try {
             key = EnableBankingJwtFactory.parsePrivateKey(privateKeyPem, "caricata");
-        } catch (IllegalStateException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (InvalidPrivateKeyException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, switch (e.problem()) {
+                // messaggio: La chiave caricata non è in formato PKCS#8 ('-----BEGIN PRIVATE KEY-----'). Se inizia con
+                //            'BEGIN RSA PRIVATE KEY' convertila con: openssl pkcs8 -topk8 -nocrypt -in vecchia.pem
+                //            -out enable-banking.pem
+                case NOT_PKCS8 -> "setup.key-not-pkcs8";
+                // messaggio: La chiave caricata non contiene una chiave privata RSA valida
+                case NOT_RSA -> "setup.key-not-rsa";
+            });
         }
 
         // 2. Enable Banking la accetta? Proviamo una richiesta firmata con queste credenziali.
         try {
             client.checkCredentials(EnableBankingJwtFactory.createToken(id, key));
         } catch (RestClientResponseException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Enable Banking ha rifiutato queste credenziali (HTTP " + e.getStatusCode().value() + "): "
-                            + "controlla che l'Application ID sia quello dell'applicazione a cui appartiene il file .pem, "
-                            + "e che l'applicazione sia attiva.");
+            // messaggio: Enable Banking ha rifiutato queste credenziali (HTTP {0}): controlla che l'Application ID
+            //            sia quello dell'applicazione a cui appartiene il file .pem, e che l'applicazione sia attiva.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "setup.credentials-rejected", e.getStatusCode().value());
         } catch (RestClientException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                    "Enable Banking non è raggiungibile, riprova più tardi: " + e.getMessage());
+            // messaggio: Enable Banking non è raggiungibile, riprova più tardi: {0}
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "setup.unreachable", String.valueOf(e.getMessage()));
         }
 
         // 3. Tutto bene: salviamo.

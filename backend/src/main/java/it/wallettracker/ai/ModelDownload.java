@@ -3,6 +3,7 @@ package it.wallettracker.ai;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import it.wallettracker.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -44,17 +45,22 @@ public class ModelDownload {
 
     private static final Logger log = LoggerFactory.getLogger(ModelDownload.class);
 
+    /** Gli stati che scriviamo noi (gli altri sono i messaggi di Ollama, in inglese, mostrati così come sono). */
+    private static final Message STARTING = Message.of("ai.download.starting"); // messaggio: avvio
+    private static final Message FAILED = Message.of("ai.download.failed");     // messaggio: errore
+
     /**
      * A che punto è lo scaricamento.
      *
      * @param model     il modello
      * @param running   se sta ancora scaricando
-     * @param status    l'ultimo messaggio di Ollama (es. "pulling manifest", "success")
+     * @param status    l'ultimo messaggio di Ollama, così com'è (es. "pulling manifest", "success"), oppure uno nostro
+     *                  ("avvio", "errore")
      * @param completed i byte scaricati della parte in corso (null se Ollama non lo dice)
      * @param total     i byte totali della parte in corso
      * @param error     il motivo, se è fallito
      */
-    public record State(String model, boolean running, String status, Long completed, Long total, String error) {
+    public record State(String model, boolean running, Message status, Long completed, Long total, Message error) {
     }
 
     private final OllamaApi ollamaApi;
@@ -75,7 +81,7 @@ public class ModelDownload {
         if (current != null && current.running()) {
             return; // ce n'è già uno: non ne facciamo partire un secondo
         }
-        state.set(new State(model, true, "avvio", null, null, null));
+        state.set(new State(model, true, STARTING, null, null, null));
         //programmazione reattiva (durante lo scaricamento del modello ollama vengono inviati uno stream di dati (Flux) per l'avanzamento: Spring AI gestisce questo stream) -> OllamaApi.pullModel() di Spring AI restituisce un Flux<ProgressResponse>, non un metodo bloccante. Ollama manda l’avanzamento come stream, e Spring AI lo legge con WebClient (Netty).
         ollamaApi.pullModel(new PullModelRequest(model))
                 .publishOn(Schedulers.boundedElastic()) // Esegue le lambda del subscribe in background (l'aggiornamento dello stato) su un thread di background per non impegnare il thread di rete (Netty) che riceve i dati.
@@ -83,7 +89,8 @@ public class ModelDownload {
                 progress -> state.set(progressOf(model, progress)),
                 error -> {
                     log.warn("Scaricamento di {} non riuscito: {}", model, error.getMessage());
-                    state.set(new State(model, false, "errore", null, null, error.getMessage()));
+                    // Il motivo è quello che dice Ollama, così com'è.
+                    state.set(new State(model, false, FAILED, null, null, Message.verbatim(error.getMessage())));
                 },
                 () -> state.set(finished(model))); //il segnale di completamento è un evento "puro": avvisa che l'azione è finita, ma non sta passando un nuovo dato. Non essendoci parametri in ingresso, si usano le parentesi tonde vuote ().
     }
@@ -93,22 +100,25 @@ public class ModelDownload {
         try {
             List<String> installed = ollamaApi.listModels().models().stream().map(OllamaApi.Model::name).toList();
             if (AiService.isInstalled(installed, model)) {
-                return new State(model, false, "success", null, null, null);
+                return new State(model, false, Message.verbatim("success"), null, null, null);
             }
         } catch (RuntimeException e) {
             // Un motivo diverso, e un messaggio diverso: prima finivano tutti in "Ollama ha finito senza scaricare".
             log.warn("Dopo lo scaricamento di {} non riesco a chiedere a Ollama i modelli: {}", model, e.getMessage());
-            return new State(model, false, "errore", null, null,
-                    "Lo scaricamento è finito, ma non sono riuscito a controllare se il modello c'è: " + e.getMessage());
+            // messaggio: Lo scaricamento è finito, ma non sono riuscito a controllare se il modello c'è: {0}
+            return new State(model, false, FAILED, null, null,
+                    Message.of("ai.download.check-failed", String.valueOf(e.getMessage())));
         }
         log.warn("Ollama ha finito senza scaricare {}", model);
         //State è un record, quindi oggetto immutabile: ogni volta n creo uno nuovo che sostituisce il vecchio (non modifico il vecchio)
-        return new State(model, false, "errore", null, null, "Ollama ha finito senza scaricare il modello. Di solito "
-                + "il nome è sbagliato, oppure Ollama non riesce a raggiungere internet (registry.ollama.ai)");
+        // messaggio: Ollama ha finito senza scaricare il modello. Di solito il nome è sbagliato, oppure Ollama non
+        //            riesce a raggiungere internet (registry.ollama.ai)
+        return new State(model, false, FAILED, null, null, Message.of("ai.download.nothing-downloaded"));
     }
 
     private static State progressOf(String model, ProgressResponse progress) {
         //State è un record, quindi oggetto immutabile: ogni volta n creo uno nuovo che sostituisce il vecchio (non modifico il vecchio)
-        return new State(model, true, progress.status(), progress.completed(), progress.total(), null);
+        return new State(model, true, Message.verbatim(progress.status()), progress.completed(), progress.total(),
+                null);
     }
 }

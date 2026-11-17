@@ -16,6 +16,6 @@ import { Component, input, output } from '@angular/core';
   </button>`,
 })
 export class CloseButton {
-  readonly label = input("Chiudi l'avviso");
+  readonly label = input($localize`Chiudi l'avviso`);
   readonly closed = output<void>();
 }

@@ -42,13 +42,46 @@ public final class InvestmentDtos {
      * Una voce di un elenco: "Cedole", o un titolo; l'importo e quanti movimenti. {@code accountId} e {@code search} ci
      * sono quando la voce è un conto (una rendita senza il nome di un titolo, docs/investimenti.md parti L e P): il conto
      * e le parole fisse del testo, per aprirne proprio quei movimenti.
+     *
+     * @param name il nome (una categoria, un titolo), oppure null per le voci che un nome non ce l'hanno: allora è
+     *             {@code kind} a dire quale voce è, e le parole le sceglie la dashboard
+     * @param kind che voce è: {@link GroupKind#NAMED} per quelle con un nome
      */
-    public record Group(String name, BigDecimal amount, int movements, Long accountId, String search) {
+    public record Group(String name, BigDecimal amount, int movements, Long accountId, String search,
+            GroupKind kind) {
 
-        /** Un gruppo che non è un conto. */
+        /** Un gruppo con un nome, che non è un conto. */
         public Group(String name, BigDecimal amount, int movements) {
-            this(name, amount, movements, null, null);
+            this(name, amount, movements, null, null, GroupKind.NAMED);
         }
+
+        /** Un gruppo con un nome, che può essere un conto. */
+        public Group(String name, BigDecimal amount, int movements, Long accountId, String search) {
+            this(name, amount, movements, accountId, search, GroupKind.NAMED);
+        }
+
+        /** Una voce senza nome: "Altre rendite", "Senza categoria"... */
+        public Group(GroupKind kind, BigDecimal amount, int movements) {
+            this(null, amount, movements, null, null, kind);
+        }
+    }
+
+    /**
+     * Le voci degli elenchi. Quelle senza un nome loro erano frasi in italiano scritte qui nel backend ("Altre
+     * rendite"), che la dashboard riconosceva confrontando il testo: adesso viaggia il tipo, e la frase la scrive la
+     * dashboard, nella lingua di chi guarda.
+     */
+    public enum GroupKind {
+        /** Una voce con il suo nome: una categoria ("Cedole") o un titolo ("BTP Italia"). */
+        NAMED,
+        /** Le rendite senza categoria: "Altre rendite". */
+        OTHER_INCOME,
+        /** Le rendite di cui non si conosce il titolo: "Senza nome del titolo". */
+        UNNAMED_SECURITY,
+        /** Le ritenute la cui rendita non è nel periodo: "Ritenute senza la loro rendita nel periodo". */
+        UNMATCHED_WITHHOLDING,
+        /** Le tasse senza categoria: "Senza categoria". */
+        UNCATEGORIZED
     }
 
     /**

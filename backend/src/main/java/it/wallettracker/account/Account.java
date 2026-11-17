@@ -6,7 +6,10 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import it.wallettracker.connection.BankConnection;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -74,9 +77,13 @@ public class Account {
     @Column(name = "last_sync_at")
     private Instant lastSyncAt;
 
-    /** Il motivo dell'ultimo errore di importazione; null se l'ultima è andata bene. */
+    /**
+     * Il motivo dell'ultimo errore di importazione; null se l'ultima è andata bene. Nella colonna non c'è la frase ma
+     * il suo codice con i parametri ({@link MessageConverter}): la frase si scrive quando qualcuno la legge.
+     */
     @Column(name = "last_sync_error")
-    private String lastSyncError;
+    @Convert(converter = MessageConverter.class)
+    private Message lastSyncError;
 
     /** Da dove arrivano i movimenti: Enable Banking o file CSV (V14). */
     @Enumerated(EnumType.STRING)
@@ -228,7 +235,7 @@ public class Account {
         return lastSyncAt;
     }
 
-    public String getLastSyncError() {
+    public Message getLastSyncError() {
         return lastSyncError;
     }
 

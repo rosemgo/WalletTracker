@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,6 +7,8 @@ import { Account, AccountOutcome, AccountRole } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { isTradeRepublic } from '../import/trade-republic';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe } from '../text/dates';
+import { plural } from '../text/plural';
 import { AccountsStore, logoUrl } from './accounts-store';
 import { BalanceForm } from './balance-form';
 import { ConnectionsSection } from './connections-section';
@@ -28,7 +29,14 @@ import { ConnectionsSection } from './connections-section';
  */
 @Component({
   selector: 'app-accounts-page',
-  imports: [BalanceForm, ConnectionsSection, DatePipe, MoneyPipe, ReactiveFormsModule, RouterLink],
+  imports: [
+    BalanceForm,
+    ConnectionsSection,
+    LocalDatePipe,
+    MoneyPipe,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   templateUrl: './accounts-page.html',
 })
 export class AccountsPage implements OnInit {
@@ -42,6 +50,10 @@ export class AccountsPage implements OnInit {
   protected readonly roles = ROLES;
   protected readonly isTradeRepublic = isTradeRepublic;
   protected readonly roleLabels = ROLE_LABELS;
+  /** I testi che il template usa dentro un'espressione, dove non si possono marcare per la traduzione. */
+  protected readonly noIban = $localize`Senza IBAN`;
+  protected readonly creditLabel = $localize`:L'intestazione della colonna, per una carta di credito:Plafond`;
+  protected readonly balanceLabel = $localize`:L'intestazione della colonna:Saldo`;
 
   // Lo stato della pagina, con i signals: quando un valore cambia (set/update), Angular aggiorna
   // da solo le parti del template che lo leggono. Nel template si leggono "chiamandoli": accounts().
@@ -91,20 +103,23 @@ export class AccountsPage implements OnInit {
         const names = new Map(this.accounts().map((a) => [a.id, this.nameOf(a)]));
         this.syncOutcomes.set(
           round.accounts.map((o) =>
-            outcomeLine(o, names.get(o.accountId) ?? `Conto ${o.accountId}`),
+            outcomeLine(o, names.get(o.accountId) ?? $localize`Conto ${o.accountId}:accountId:`),
           ),
         );
         const read = round.accounts.filter((o) => o.error === null);
         this.nothingArrived.set(read.length > 0 && read.every((o) => o.inserted + o.pending === 0));
-        const failed = round.failed > 0 ? `, ${round.failed} con errori (vedi sotto)` : '';
-        const updated =
-          round.updated === 1 ? 'Aggiornato 1 conto' : `Aggiornati ${round.updated} conti`;
+        const failed =
+          round.failed > 0 ? $localize`, ${round.failed}:failed: con errori (vedi sotto)` : '';
+        const updated = plural(round.updated, {
+          one: $localize`Aggiornato 1 conto`,
+          other: $localize`Aggiornati ${round.updated}:updated: conti`,
+        });
         this.message.set(`${updated}${failed}.`);
         this.loadAccounts();
       },
       error: () => {
         this.syncing.set(false);
-        this.error.set("L'aggiornamento non è riuscito: il backend è avviato?");
+        this.error.set($localize`L'aggiornamento non è riuscito: il backend è avviato?`);
       },
     });
   }
@@ -122,7 +137,7 @@ export class AccountsPage implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Impossibile caricare i conti: il backend è avviato?');
+        this.error.set($localize`Impossibile caricare i conti: il backend è avviato?`);
         this.loading.set(false);
       },
     });
@@ -138,10 +153,10 @@ export class AccountsPage implements OnInit {
         // quello nuovo: creiamo un NUOVO array (map), non modifichiamo quello vecchio.
         this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
         this.message.set(
-          `${this.nameOf(updated)}: ruolo "${ROLE_LABELS[role]}" salvato, movimenti riclassificati.`,
+          $localize`${this.nameOf(updated)}:name:: ruolo "${ROLE_LABELS[role]}:value:" salvato, movimenti riclassificati.`,
         );
       },
-      error: () => this.error.set('Il ruolo non è stato salvato.'),
+      error: () => this.error.set($localize`Il ruolo non è stato salvato.`),
     });
   }
 
@@ -165,13 +180,13 @@ export class AccountsPage implements OnInit {
       .subscribe({
         next: (account) => {
           this.message.set(
-            `Conto "${this.nameOf(account)}" creato: ora puoi importare un file CSV.`,
+            $localize`Conto "${this.nameOf(account)}:name:" creato: ora puoi importare un file CSV.`,
           );
           this.form.reset();
           this.loadAccounts();
         },
         error: (response) =>
-          this.error.set(response.error?.detail ?? 'Il conto non è stato creato.'),
+          this.error.set(response.error?.detail ?? $localize`Il conto non è stato creato.`),
       });
   }
 
@@ -180,13 +195,15 @@ export class AccountsPage implements OnInit {
     this.api.deleteAccount(account.id).subscribe({
       next: () => {
         this.confirmingDelete.set(null);
-        this.message.set(`Conto "${this.nameOf(account)}" eliminato, con i suoi movimenti.`);
+        this.message.set(
+          $localize`Conto "${this.nameOf(account)}:name:" eliminato, con i suoi movimenti.`,
+        );
         this.error.set(null);
         this.loadAccounts();
       },
       error: (response) => {
         this.confirmingDelete.set(null);
-        this.error.set(response.error?.detail ?? 'Il conto non è stato eliminato.');
+        this.error.set(response.error?.detail ?? $localize`Il conto non è stato eliminato.`);
       },
     });
   }
@@ -217,12 +234,13 @@ export class AccountsPage implements OnInit {
         this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
         this.message.set(
           name === ''
-            ? `Nome tolto: ora il conto si vede come "${updated.label}".`
-            : `Conto rinominato in "${name}".`,
+            ? $localize`Nome tolto: ora il conto si vede come "${updated.label}:label:".`
+            : $localize`Conto rinominato in "${name}:name:".`,
         );
         this.error.set(null);
       },
-      error: (response) => this.error.set(response.error?.detail ?? 'Il nome non è stato salvato.'),
+      error: (response) =>
+        this.error.set(response.error?.detail ?? $localize`Il nome non è stato salvato.`),
     });
   }
 
@@ -231,7 +249,7 @@ export class AccountsPage implements OnInit {
     this.editingBalance.set(null);
     this.accounts.update((list) => list.map((a) => (a.id === updated.id ? updated : a)));
     this.message.set(
-      `Saldo di "${updated.label}" salvato: da qui si aggiorna con i movimenti che arriveranno.`,
+      $localize`Saldo di "${updated.label}:label:" salvato: da qui si aggiorna con i movimenti che arriveranno.`,
     );
     this.error.set(null);
   }
@@ -245,27 +263,31 @@ export class AccountsPage implements OnInit {
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
-      this.error.set("Il logo è troppo grande: al massimo 256 KB. Scegli un'immagine più piccola.");
+      this.error.set(
+        $localize`Il logo è troppo grande: al massimo 256 KB. Scegli un'immagine più piccola.`,
+      );
       return;
     }
     this.api.uploadAccountLogo(account.id, file).subscribe({
       next: () => {
-        this.message.set(`Logo di "${account.label}" salvato.`);
+        this.message.set($localize`Logo di "${account.label}:label:" salvato.`);
         this.error.set(null);
         this.loadAccounts();
       },
-      error: (response) => this.error.set(response.error?.detail ?? 'Il logo non è stato salvato.'),
+      error: (response) =>
+        this.error.set(response.error?.detail ?? $localize`Il logo non è stato salvato.`),
     });
   }
 
   removeLogo(account: Account): void {
     this.api.deleteAccountLogo(account.id).subscribe({
       next: () => {
-        this.message.set(`Logo di "${account.label}" tolto.`);
+        this.message.set($localize`Logo di "${account.label}:label:" tolto.`);
         this.error.set(null);
         this.loadAccounts();
       },
-      error: (response) => this.error.set(response.error?.detail ?? 'Il logo non è stato tolto.'),
+      error: (response) =>
+        this.error.set(response.error?.detail ?? $localize`Il logo non è stato tolto.`),
     });
   }
 }
@@ -279,16 +301,19 @@ const MAX_LOGO_BYTES = 256 * 1024;
  */
 export function outcomeLine(outcome: AccountOutcome, name: string): string {
   if (outcome.error !== null) {
-    return `${name}: non aggiornato (${outcome.error.replace(/\.$/, '')})`;
+    return $localize`${name}:name:: non aggiornato (${outcome.error.replace(/\.$/, '')}:replace:)`;
   }
   const parts = [];
   if (outcome.inserted > 0) {
     parts.push(
-      outcome.inserted === 1 ? '1 movimento nuovo' : `${outcome.inserted} movimenti nuovi`,
+      plural(outcome.inserted, {
+        one: $localize`1 movimento nuovo`,
+        other: $localize`${outcome.inserted}:inserted: movimenti nuovi`,
+      }),
     );
   }
   if (outcome.pending > 0) {
-    parts.push(`${outcome.pending} in attesa`);
+    parts.push($localize`${outcome.pending}:pending: in attesa`);
   }
-  return `${name}: ${parts.length > 0 ? parts.join(', ') : 'nessun movimento nuovo'}`;
+  return `${name}: ${parts.length > 0 ? parts.join(', ') : $localize`nessun movimento nuovo`}`;
 }

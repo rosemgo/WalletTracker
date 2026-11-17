@@ -90,6 +90,9 @@ services:
       # I nomi con cui si apre l'app nel browser (vedi LocalOnlyRequestFilter). Con Tailscale si aggiunge il nome del
       # PC nella rete privata: lo fa ./installa.sh --tailscale (docs/47).
       WALLETTRACKER_ALLOWED_HOSTS: ${WALLETTRACKER_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      # La lingua scelta all'installazione (docs/lingue-3-installazione.md): in un'installazione nuova è quella in cui
+      # si apre l'app, finché non la si sceglie dall'app. Vuota = decide il browser.
+      WALLETTRACKER_LANGUAGE: ${WALLETTRACKER_LANGUAGE:-}
       # C'è una versione nuova? Una volta al giorno il backend lo chiede a GitHub (docs/50, parte J); false lo spegne.
       WALLETTRACKER_UPDATE_CHECK: ${WALLETTRACKER_UPDATE_CHECK:-true}
       # La chiave di cifratura e la chiave di Enable Banking: nelle cartelle montate qui sotto (volumes).
@@ -192,6 +195,8 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD:?manca POSTGRES_PASSWORD nel .env - avvia installa.ps1 o installa.sh (docs/45)}
       WALLETTRACKER_BACKUP_PASSWORD: ${WALLETTRACKER_BACKUP_PASSWORD:-}
+      # La lingua delle righe che il container scrive nel terminale e nei log: quella dello script di installazione.
+      WALLETTRACKER_LANGUAGE: ${WALLETTRACKER_LANGUAGE:-it}
       # Da che ora fare il backup del giorno, e quanti backup automatici tenere (quelli fatti a mano restano tutti).
       BACKUP_TIME: ${BACKUP_TIME:-03:15}
       BACKUP_KEEP: ${BACKUP_KEEP:-14}

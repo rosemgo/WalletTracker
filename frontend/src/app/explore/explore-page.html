@@ -1,6 +1,6 @@
-<h1>Analisi</h1>
+<h1 i18n>Analisi</h1>
 
-<div class="segmented" role="group" aria-label="Che cosa guardare">
+<div class="segmented" role="group" aria-label="Che cosa guardare" i18n-aria-label>
   @for (m of metrics; track m.value) {
     <button
       type="button"
@@ -19,9 +19,9 @@
 @if (series(); as s) {
   <div class="explore" [class.loading]="loading()">
     @if (s.currencies.length > 1) {
-      <label class="currency-choice">
-        Valuta
-        <select (change)="onCurrency($event)">
+      <label class="currency-choice"
+        ><ng-container i18n> Valuta </ng-container
+        ><select (change)="onCurrency($event)">
           @for (c of s.currencies; track c) {
             <option [value]="c" [selected]="c === s.currency">{{ c }}</option>
           }
@@ -43,11 +43,13 @@
               type="button"
               class="chip-button"
               (click)="clearCategory()"
-              [attr.aria-label]="'Togli il filtro ' + c.name"
+              aria-label="Togli il filtro {{ c.name }}"
+              i18n-aria-label
             >
               {{ c.name }} <span aria-hidden="true">✕</span>
             </button>
             <a
+              i18n
               [routerLink]="['/analisi/categoria', c.id]"
               [queryParams]="categoryMonth() ? { mese: categoryMonth() } : {}"
             >
@@ -68,10 +70,10 @@
           [description]="chartDescription()"
           (picked)="pickBar($event)"
         />
-        <span class="secondary">Tocca una barra per vedere quel periodo.</span>
+        <span i18n class="secondary">Tocca una barra per vedere quel periodo.</span>
       </section>
 
-      <div class="segmented" role="group" aria-label="Periodo">
+      <div class="segmented" role="group" aria-label="Periodo" i18n-aria-label>
         @for (p of periods; track p.value) {
           <button
             type="button"
@@ -83,8 +85,8 @@
         }
       </div>
 
-      <div class="pills by" role="group" aria-label="Raggruppa per">
-        <span class="secondary">Per</span>
+      <div class="pills by" role="group" aria-label="Raggruppa per" i18n-aria-label>
+        <span i18n class="secondary">Per</span>
         @for (g of groupings; track g.value) {
           @if (!(g.value === 'CATEGORY' && category())) {
             <button
@@ -118,7 +120,7 @@
                   </div>
                 </li>
               } @empty {
-                <li class="secondary">Niente in questo periodo.</li>
+                <li i18n class="secondary">Niente in questo periodo.</li>
               }
             </ul>
           </section>
@@ -134,7 +136,8 @@
                     class="group-row uncategorized"
                     routerLink="/movimenti"
                     [queryParams]="query"
-                    [attr.aria-label]="r.name + ': apri i movimenti, per dare loro una categoria'"
+                    aria-label="{{ r.name }}: apri i movimenti, per dare loro una categoria"
+                    i18n-aria-label
                   >
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
                   </a>
@@ -143,7 +146,8 @@
                     type="button"
                     class="group-row"
                     (click)="pickCategory(r)"
-                    [attr.aria-label]="r.name + ': mostra solo questa categoria'"
+                    aria-label="{{ r.name }}: mostra solo questa categoria"
+                    i18n-aria-label
                   >
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
                   </button>
@@ -153,7 +157,8 @@
                     class="group-row"
                     routerLink="/movimenti"
                     [queryParams]="query"
-                    [attr.aria-label]="(r.name | readable) + ': apri i movimenti'"
+                    aria-label="{{ r.name | readable }}: apri i movimenti"
+                    i18n-aria-label
                   >
                     <ng-container *ngTemplateOutlet="row; context: { $implicit: r }" />
                   </a>
@@ -164,14 +169,14 @@
                 }
               </li>
             } @empty {
-              <li class="secondary">Niente in questo periodo.</li>
+              <li i18n class="secondary">Niente in questo periodo.</li>
             }
           </ul>
         </section>
       }
 
       @if (category() && days().length > 0) {
-        <h2 class="days-title">I movimenti</h2>
+        <h2 i18n class="days-title">I movimenti</h2>
         @for (day of days(); track day.date) {
           <section class="day">
             <div class="day-head">
@@ -201,7 +206,7 @@
     </div>
   </div>
 } @else if (loading()) {
-  <p>Caricamento...</p>
+  <p i18n>Caricamento...</p>
 }
 
 <ng-template #row let-r>

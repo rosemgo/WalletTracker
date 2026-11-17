@@ -8,6 +8,8 @@ import it.wallettracker.account.AccountRepository;
 import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.category.CategoryKind;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.message.ApiException;
+import it.wallettracker.message.Message;
 import it.wallettracker.security.SecretCipher;
 import it.wallettracker.transaction.BankTransactionRepository;
 import org.slf4j.Logger;
@@ -16,7 +18,6 @@ import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Le impostazioni dell'IA e lo stato di Ollama e dei servizi cloud (passo 7c: Google Gemini, docs/30).
@@ -52,10 +53,10 @@ public class AiService {
      * lettere, per riconoscerla. Una chiave non torna mai indietro, nemmeno a chi l'ha inserita.
      *
      * @param keySet  se la chiave è salvata
-     * @param keyHint le ultime 4 lettere ("…a1b2"), o null
+     * @param keyHint le ultime 4 lettere ("…a1b2"), il messaggio "illeggibile", o null
      * @param consent se l'utente ha accettato l'invio dei dati a questo servizio
      */
-    public record CloudStatus(String model, boolean keySet, String keyHint, boolean consent) {
+    public record CloudStatus(String model, boolean keySet, Message keyHint, boolean consent) {
     }
 
     /**
@@ -64,7 +65,7 @@ public class AiService {
      * @param model          il modello che ha risposto davvero (con un alias, quello scelto dal fornitore), o null
      * @param thinkingTokens i token di "ragionamento" usati (solo Gemini), o null
      */
-    public record ConnectionTest(boolean ok, String answer, double seconds, String error, String model,
+    public record ConnectionTest(boolean ok, Message answer, double seconds, Message error, String model,
             Integer thinkingTokens) {
     }
 
@@ -106,13 +107,15 @@ public class AiService {
 
     private CloudStatus cloudStatus(AiSettings settings, AiProvider cloud) {
         String encrypted = settings.encryptedApiKey(cloud);
-        String hint = null;
+        Message hint = null;
         if (encrypted != null) {
             try {
                 String key = cipher.decrypt(encrypted, AiChatClients.keyPurpose(cloud));
-                hint = "…" + key.substring(Math.max(0, key.length() - 4));
+                hint = Message.verbatim("…" + key.substring(Math.max(0, key.length() - 4)));
             } catch (IllegalStateException e) {
-                hint = "illeggibile: inseriscila di nuovo"; // la chiave di cifratura è cambiata (SecretCipher)
+                // La chiave di cifratura è cambiata (SecretCipher).
+                // messaggio: illeggibile: inseriscila di nuovo
+                hint = Message.of("ai.key-unreadable");
             }
         }
         return new CloudStatus(settings.model(cloud), encrypted != null, hint, settings.hasConsent(cloud));
@@ -130,12 +133,12 @@ public class AiService {
                 geminiModel != null ? geminiModel.trim() : settings.model(AiProvider.GEMINI));
         if (provider.cloud()) {
             if (settings.encryptedApiKey(provider) == null) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Inserisci prima la chiave di " + provider.label + ".");
+                // messaggio: Inserisci prima la chiave di {0}.
+                throw new ApiException(HttpStatus.CONFLICT, "ai.key-missing-first", provider.label);
             }
             if (!settings.hasConsent(provider) && !consent) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Per usare " + provider.label
-                        + " serve il tuo consenso all'invio dei testi degli esercenti.");
+                // messaggio: Per usare {0} serve il tuo consenso all'invio dei testi degli esercenti.
+                throw new ApiException(HttpStatus.CONFLICT, "ai.consent-needed", provider.label);
             }
             settings.consent(provider, Instant.now());
         }
@@ -161,7 +164,8 @@ public class AiService {
 
     private static void requireCloud(AiProvider provider) {
         if (!provider.cloud()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo i servizi cloud hanno una chiave.");
+            // messaggio: Solo i servizi cloud hanno una chiave.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "ai.only-cloud-has-key");
         }
     }
 
@@ -173,26 +177,27 @@ public class AiService {
     public void check(AiTarget target) {
         AiSettings settings = settings();
         switch (target.provider()) {
-            case NONE -> throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "I suggerimenti con l'IA sono spenti: accendili in Impostazioni.");
+            // messaggio: I suggerimenti con l'IA sono spenti: accendili in Impostazioni.
+            case NONE -> throw new ApiException(HttpStatus.CONFLICT, "ai.off");
             case OLLAMA -> {
                 List<String> installed = installedModels();
                 if (installed == null) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Ollama non risponde: è avviato?");
+                    // messaggio: Ollama non risponde: è avviato?
+                    throw new ApiException(HttpStatus.CONFLICT, "ai.ollama-down");
                 }
                 if (!isInstalled(installed, target.model())) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT,
-                            "Il modello " + target.model() + " non è scaricato: scaricalo in Impostazioni.");
+                    // messaggio: Il modello {0} non è scaricato: scaricalo in Impostazioni.
+                    throw new ApiException(HttpStatus.CONFLICT, "ai.model-not-downloaded", target.model());
                 }
             }
             case GEMINI -> {
                 if (settings.encryptedApiKey(target.provider()) == null) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT,
-                            "Manca la chiave di " + target.provider().label + ": inseriscila in Impostazioni.");
+                    // messaggio: Manca la chiave di {0}: inseriscila in Impostazioni.
+                    throw new ApiException(HttpStatus.CONFLICT, "ai.key-missing", target.provider().label);
                 }
                 if (!settings.hasConsent(target.provider())) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Per usare " + target.provider().label
-                            + " serve il tuo consenso: lo dai in Impostazioni, scegliendo il servizio.");
+                    // messaggio: Per usare {0} serve il tuo consenso: lo dai in Impostazioni, scegliendo il servizio.
+                    throw new ApiException(HttpStatus.CONFLICT, "ai.consent-needed-settings", target.provider().label);
                 }
             }
         }
@@ -211,9 +216,11 @@ public class AiService {
         long start = System.nanoTime();
         try {
             CategoryModel.Reply reply = categoryModel.ask(question, target);
-            String name = reply.categoryId()
+            // La risposta: il nome della categoria, così com'è, oppure il messaggio "non so".
+            // messaggio: non so
+            Message name = reply.categoryId()
                     .flatMap(id -> question.categories().stream().filter(o -> o.id().equals(id)).findFirst())
-                    .map(CategoryQuestion.Option::name).orElse("non so");
+                    .map(option -> Message.verbatim(option.name())).orElse(Message.of("ai.answer-unknown"));
             double seconds = seconds(start);
             log.info("Prova della connessione a {}: {} in {} s (modello {}, token di ragionamento {})", provider.label,
                     name, String.format("%.1f", seconds), reply.model(), reply.thinkingTokens());
@@ -249,9 +256,9 @@ public class AiService {
         List<ModelEvaluation.Case> cases = EvaluationCases.build(transactionRepository.findAllWithManualCategory(),
                 categoryRepository.findAll(), owners, samples);
         if (cases.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Non c'è niente da misurare: la misura confronta il modello con le categorie che hai scelto a mano"
-                            + " per spese ed entrate, e non ne hai ancora scelta nessuna.");
+            // messaggio: Non c'è niente da misurare: la misura confronta il modello con le categorie che hai scelto a
+            //            mano per spese ed entrate, e non ne hai ancora scelta nessuna.
+            throw new ApiException(HttpStatus.CONFLICT, "ai.nothing-to-evaluate");
         }
         modelEvaluation.start(target, cases);
         return status();

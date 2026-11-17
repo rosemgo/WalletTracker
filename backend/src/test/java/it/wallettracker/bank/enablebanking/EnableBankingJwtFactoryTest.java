@@ -1,5 +1,6 @@
 package it.wallettracker.bank.enablebanking;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -70,6 +71,6 @@ class EnableBankingJwtFactoryTest {
 
         assertThatThrownBy(factory::createToken)
                 .isInstanceOf(EnableBankingNotConfiguredException.class)
-                .hasMessageContaining("Impostazioni");
+                .satisfies(says("Impostazioni"));
     }
 }

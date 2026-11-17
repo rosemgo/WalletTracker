@@ -1,5 +1,4 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -16,15 +15,17 @@ import {
 import { BalanceForm } from '../accounts/balance-form';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe, formatLocalDate } from '../text/dates';
+import { plural } from '../text/plural';
 import { FileDrop } from '../ui/file-drop';
 import { isTradeRepublic } from './trade-republic';
 
 /** I separatori che il backend accetta, con un nome leggibile. */
 export const DELIMITERS: { value: string; label: string }[] = [
-  { value: ';', label: 'Punto e virgola ( ; )' },
-  { value: ',', label: 'Virgola ( , )' },
-  { value: '\t', label: 'Tabulazione' },
-  { value: '|', label: 'Barra verticale ( | )' },
+  { value: ';', label: $localize`Punto e virgola ( ; )` },
+  { value: ',', label: $localize`Virgola ( , )` },
+  { value: '\t', label: $localize`Tabulazione` },
+  { value: '|', label: $localize`Barra verticale ( | )` },
 ];
 
 /** I formati di data del backend (RowReader.DATE_FORMATS), con un esempio. */
@@ -33,12 +34,17 @@ export const DATE_FORMATS: { value: string; label: string }[] = [
   { value: 'dd-MM-yyyy', label: '31-12-2026' },
   { value: 'dd.MM.yyyy', label: '31.12.2026' },
   { value: 'yyyy-MM-dd', label: '2026-12-31' },
-  { value: 'MM/dd/yyyy', label: "12/31/2026 (prima il mese, all'americana)" },
+  { value: 'MM/dd/yyyy', label: $localize`12/31/2026 (prima il mese, all'americana)` },
   { value: 'dd/MM/yy', label: '31/12/26' },
 ];
 
 /** Oltre questa dimensione il backend rifiuta il file (spring.servlet.multipart.max-file-size). */
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+/** "1 riga" oppure "75 righe": la forma per uno così com'è, quella per gli altri con il numero davanti. */
+function countOf(count: number, one: string, many: string): string {
+  return plural(count, { one, other: `${count} ${many}` });
+}
 
 /**
  * L'importazione dei movimenti da un file, CSV o Excel (docs/importa-file.md), in qualunque conto:
@@ -60,7 +66,7 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024;
  */
 @Component({
   selector: 'app-import-page',
-  imports: [BalanceForm, DatePipe, FileDrop, MoneyPipe, ReactiveFormsModule, RouterLink],
+  imports: [BalanceForm, LocalDatePipe, FileDrop, MoneyPipe, ReactiveFormsModule, RouterLink],
   templateUrl: './import-page.html',
 })
 export class ImportPage implements OnInit {
@@ -114,7 +120,7 @@ export class ImportPage implements OnInit {
   protected readonly columns = computed(() =>
     (this.preview()?.headers ?? []).map((header, index) => ({
       index,
-      label: `${index + 1} · ${header.trim() === '' ? '(senza nome)' : header}`,
+      label: `${index + 1} · ${header.trim() === '' ? $localize`(senza nome)` : header}`,
     })),
   );
 
@@ -175,7 +181,7 @@ export class ImportPage implements OnInit {
           this.api.previewImport(this.file()!, this.account.value!, mapping).pipe(
             catchError((response) => {
               this.preview.set(null);
-              this.error.set(response.error?.detail ?? 'Il file non si può leggere.');
+              this.error.set(response.error?.detail ?? $localize`Il file non si può leggere.`);
               return EMPTY;
             }),
           ),
@@ -217,7 +223,7 @@ export class ImportPage implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Impossibile caricare i conti: il backend è avviato?');
+        this.error.set($localize`Impossibile caricare i conti: il backend è avviato?`);
         this.loading.set(false);
       },
     });
@@ -231,7 +237,9 @@ export class ImportPage implements OnInit {
     if (file && file.size > MAX_FILE_BYTES) {
       // Lo diciamo subito, senza mandarlo: il backend lo rifiuterebbe comunque (413).
       this.file.set(null);
-      this.error.set('Il file è troppo grande: al massimo 5 MB. Esporta un periodo più breve.');
+      this.error.set(
+        $localize`Il file è troppo grande: al massimo 5 MB. Esporta un periodo più breve.`,
+      );
       return;
     }
     this.file.set(file);
@@ -259,7 +267,7 @@ export class ImportPage implements OnInit {
         this.importing.set(false);
         // Con righe sbagliate il backend manda anche l'elenco (campo "errors" del ProblemDetail).
         const errors: string[] = response.error?.errors ?? [];
-        const detail = response.error?.detail ?? "L'importazione non è riuscita.";
+        const detail = response.error?.detail ?? $localize`L'importazione non è riuscita.`;
         this.error.set([detail, ...errors].join(' '));
       },
     });
@@ -303,30 +311,32 @@ export class ImportPage implements OnInit {
       return this.tradeRepublicDoneMessage(done);
     }
     let text = this.linked()
-      ? done.imported === 1
-        ? '1 movimento aggiunto'
-        : `${done.imported} movimenti aggiunti`
-      : done.imported === 1
-        ? '1 movimento importato'
-        : `${done.imported} movimenti importati`;
+      ? plural(done.imported, {
+          one: $localize`1 movimento aggiunto`,
+          other: $localize`${done.imported}:imported: movimenti aggiunti`,
+        })
+      : plural(done.imported, {
+          one: $localize`1 movimento importato`,
+          other: $localize`${done.imported}:imported: movimenti importati`,
+        });
     if (done.covered > 0) {
-      text +=
-        done.covered === 1
-          ? '; 1 riga era nel periodo che porta la banca ed è stata saltata'
-          : `; ${done.covered} righe erano nel periodo che porta la banca e sono state saltate`;
+      text += plural(done.covered, {
+        one: $localize`; 1 riga era nel periodo che porta la banca ed è stata saltata`,
+        other: $localize`; ${done.covered}:covered: righe erano nel periodo che porta la banca e sono state saltate`,
+      });
     }
     if (done.duplicates > 0) {
-      text +=
-        done.duplicates === 1
-          ? ' (1 riga era già presente ed è stata saltata)'
-          : ` (${done.duplicates} righe erano già presenti e sono state saltate)`;
+      text += plural(done.duplicates, {
+        one: $localize` (1 riga era già presente ed è stata saltata)`,
+        other: $localize` (${done.duplicates}:duplicates: righe erano già presenti e sono state saltate)`,
+      });
     }
     if (done.completed > 0) {
       // Righe importate prima che si leggesse la seconda colonna della descrizione (docs/tinaba.md, parte H).
-      text +=
-        done.completed === 1
-          ? '; a 1 movimento già presente è stata completata la descrizione'
-          : `; a ${done.completed} movimenti già presenti è stata completata la descrizione`;
+      text += plural(done.completed, {
+        one: $localize`; a 1 movimento già presente è stata completata la descrizione`,
+        other: $localize`; a ${done.completed}:completed: movimenti già presenti è stata completata la descrizione`,
+      });
     }
     return `${text}.`;
   }
@@ -336,19 +346,20 @@ export class ImportPage implements OnInit {
    * movimento caricato; 81 righe erano già presenti."
    */
   private tradeRepublicDoneMessage(done: ImportResult): string {
-    const n = (count: number, one: string, many: string) =>
-      count === 1 ? one : `${count} ${many}`;
+    const n = countOf;
     const parts = [
       done.completed === 0
-        ? 'nessun movimento da completare'
-        : n(done.completed, '1 movimento completato', 'movimenti completati') +
-          ' con causale e controparte',
+        ? $localize`nessun movimento da completare`
+        : n(done.completed, $localize`1 movimento completato`, $localize`movimenti completati`) +
+          $localize` con causale e controparte`,
       done.imported === 0
-        ? 'nessun movimento caricato'
-        : n(done.imported, '1 movimento caricato', 'movimenti caricati'),
+        ? $localize`nessun movimento caricato`
+        : n(done.imported, $localize`1 movimento caricato`, $localize`movimenti caricati`),
     ];
     if (done.duplicates > 0) {
-      parts.push(n(done.duplicates, '1 riga era già presente', 'righe erano già presenti'));
+      parts.push(
+        n(done.duplicates, $localize`1 riga era già presente`, $localize`righe erano già presenti`),
+      );
     }
     const text = parts.join('; ');
     return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
@@ -358,12 +369,12 @@ export class ImportPage implements OnInit {
     return this.selected()?.label ?? '';
   }
 
-  private readonly datePipe = new DatePipe('it-IT');
+  private readonly locale = inject(LOCALE_ID);
 
   /** " (il 22 luglio 2026)": il primo giorno della banca, quando l'anteprima lo sa. */
   protected bankFromText(): string {
     const from = this.preview()?.bankFrom;
-    return from ? ` (il ${this.datePipe.transform(from, 'd MMMM y')})` : '';
+    return from ? $localize` (il ${formatLocalDate(from, 'long', this.locale)}:date:)` : '';
   }
 
   /**
@@ -371,46 +382,45 @@ export class ImportPage implements OnInit {
    * si aggiungono; 32 sono nel periodo che porta la banca." Conto manuale: "75 righe nuove, 3 già importate…".
    */
   protected summary(p: ImportPreview): string {
-    const n = (count: number, one: string, many: string) =>
-      count === 1 ? one : `${count} ${many}`;
+    const n = countOf;
     // Le operazioni sui titoli del file di Trade Republic: nel file, ma senza denaro sul conto.
     const skipped =
       p.skippedRows > 0
         ? `; ${n(
             p.skippedRows,
-            '1 operazione su titoli senza movimento di denaro non viene registrata',
-            'operazioni su titoli senza movimento di denaro non vengono registrate',
+            $localize`1 operazione su titoli senza movimento di denaro non viene registrata`,
+            $localize`operazioni su titoli senza movimento di denaro non vengono registrate`,
           )}`
         : '';
     if (!p.linkedAccount) {
-      let text = n(p.newRows, '1 riga nuova', 'righe nuove');
+      let text = n(p.newRows, $localize`1 riga nuova`, $localize`righe nuove`);
       if (p.duplicateRows > 0) {
-        text += `, ${n(p.duplicateRows, '1 già importata, che si salta', 'già importate, che si saltano')}`;
+        text += `, ${n(p.duplicateRows, $localize`1 già importata, che si salta`, $localize`già importate, che si saltano`)}`;
       }
       return `${text}${skipped}.`;
     }
-    const from = this.datePipe.transform(p.bankFrom, 'd MMMM y');
+    const from = p.bankFrom ? formatLocalDate(p.bankFrom, 'long', this.locale) : null;
     if (p.tradeRepublic) {
       return this.tradeRepublicSummary(p, from ?? '');
     }
     const added =
       p.newRows === 0
-        ? 'nessun movimento da aggiungere'
-        : `${n(p.newRows, '1 movimento più vecchio', 'movimenti più vecchi')} del ${from} ` +
-          (p.newRows === 1 ? 'si aggiunge' : 'si aggiungono');
-    let text = `Il file ha ${n(p.totalRows, '1 riga', 'righe')}: ${added}`;
+        ? $localize`nessun movimento da aggiungere`
+        : $localize`${n(p.newRows, $localize`1 movimento più vecchio`, $localize`movimenti più vecchi`)}:count: del ${from}:from: ` +
+          plural(p.newRows, { one: $localize`si aggiunge`, other: $localize`si aggiungono` });
+    let text = $localize`Il file ha ${n(p.totalRows, $localize`1 riga`, $localize`righe`)}:count:: ${added}:added:`;
     if (p.coveredRows > 0) {
-      text += `; ${n(p.coveredRows, '1 è nel periodo che porta la banca', 'sono nel periodo che porta la banca')}`;
+      text += `; ${n(p.coveredRows, $localize`1 è nel periodo che porta la banca`, $localize`sono nel periodo che porta la banca`)}`;
     }
     if (p.duplicateRows > 0) {
-      text += `; ${n(p.duplicateRows, '1 era già stata aggiunta', 'erano già state aggiunte')}`;
+      text += `; ${n(p.duplicateRows, $localize`1 era già stata aggiunta`, $localize`erano già state aggiunte`)}`;
     }
     text += `${skipped}.`;
     if (p.newRows === 0) {
       text +=
         p.duplicateRows > 0
-          ? ' I mesi più vecchi di questo file li hai già aggiunti; gli altri li porta la banca.'
-          : ` La banca ha già tutti i mesi di questo file: dal ${from} in poi li porta lei.`;
+          ? $localize` I mesi più vecchi di questo file li hai già aggiunti; gli altri li porta la banca.`
+          : $localize` La banca ha già tutti i mesi di questo file: dal ${from}:from: in poi li porta lei.`;
     }
     return text;
   }
@@ -422,36 +432,37 @@ export class ImportPage implements OnInit {
    * denaro non vengono registrate."
    */
   private tradeRepublicSummary(p: ImportPreview, from: string): string {
-    const n = (count: number, one: string, many: string) =>
-      count === 1 ? one : `${count} ${many}`;
+    const n = countOf;
     const parts: string[] = [];
     if (p.completeRows > 0) {
       parts.push(
         n(
           p.completeRows,
-          '1 movimento ricevuto dalla banca verrà completato',
-          'movimenti ricevuti dalla banca verranno completati',
-        ) + ' con causale e controparte',
+          $localize`1 movimento ricevuto dalla banca verrà completato`,
+          $localize`movimenti ricevuti dalla banca verranno completati`,
+        ) + $localize` con causale e controparte`,
       );
     }
     parts.push(
       p.newRows === 0
-        ? `nessun movimento precedente al ${from} da caricare`
+        ? $localize`nessun movimento precedente al ${from}:from: da caricare`
         : n(
             p.newRows,
-            `1 movimento precedente al ${from} verrà caricato`,
-            `movimenti precedenti al ${from} verranno caricati`,
+            $localize`1 movimento precedente al ${from}:from: verrà caricato`,
+            $localize`movimenti precedenti al ${from}:from: verranno caricati`,
           ),
     );
     if (p.duplicateRows > 0) {
-      parts.push(n(p.duplicateRows, '1 riga è già presente', 'righe sono già presenti'));
+      parts.push(
+        n(p.duplicateRows, $localize`1 riga è già presente`, $localize`righe sono già presenti`),
+      );
     }
     if (p.coveredRows > 0) {
       parts.push(
         n(
           p.coveredRows,
-          '1 riga non trova un movimento della banca (vedi «Da verificare»)',
-          'righe non trovano un movimento della banca (vedi «Da verificare»)',
+          $localize`1 riga non trova un movimento della banca (vedi «Da verificare»)`,
+          $localize`righe non trovano un movimento della banca (vedi «Da verificare»)`,
         ),
       );
     }
@@ -459,14 +470,14 @@ export class ImportPage implements OnInit {
       parts.push(
         n(
           p.skippedRows,
-          '1 operazione su titoli senza movimento di denaro non viene registrata',
-          'operazioni su titoli senza movimento di denaro non vengono registrate',
+          $localize`1 operazione su titoli senza movimento di denaro non viene registrata`,
+          $localize`operazioni su titoli senza movimento di denaro non vengono registrate`,
         ),
       );
     }
-    let text = `Il file contiene ${n(p.totalRows, '1 riga', 'righe')}: ${parts.join('; ')}.`;
+    let text = $localize`Il file contiene ${n(p.totalRows, $localize`1 riga`, $localize`righe`)}:count:: ${parts.join('; ')}:join:.`;
     if (p.newRows === 0 && p.completeRows === 0) {
-      text += " Il contenuto del file è già tutto presente nell'app.";
+      text += $localize` Il contenuto del file è già tutto presente nell'app.`;
     }
     return text;
   }
@@ -474,19 +485,28 @@ export class ImportPage implements OnInit {
   /** "Aggiungi 43 movimenti" (conto collegato) o "Importa 75 righe" (conto manuale). */
   protected importLabel(p: ImportPreview): string {
     if (p.linkedAccount && p.completeRows > 0) {
-      const complete = p.completeRows === 1 ? '1 movimento' : `${p.completeRows} movimenti`;
+      const complete = plural(p.completeRows, {
+        one: $localize`1 movimento`,
+        other: $localize`${p.completeRows}:completeRows: movimenti`,
+      });
       return p.newRows === 0
-        ? `Completa ${complete}`
-        : `Aggiungi ${p.newRows} e completa ${complete}`;
+        ? $localize`Completa ${complete}:complete:`
+        : $localize`Aggiungi ${p.newRows}:newRows: e completa ${complete}:complete:`;
     }
     if (p.linkedAccount) {
       if (p.newRows === 0) {
-        return 'Niente da aggiungere';
+        return $localize`Niente da aggiungere`;
       }
-      return p.newRows === 1 ? 'Aggiungi 1 movimento' : `Aggiungi ${p.newRows} movimenti`;
+      return plural(p.newRows, {
+        one: $localize`Aggiungi 1 movimento`,
+        other: $localize`Aggiungi ${p.newRows}:newRows: movimenti`,
+      });
     }
     const rows = p.totalRows - p.skippedRows; // le operazioni sui titoli di Trade Republic non si importano
-    return rows === 1 ? 'Importa 1 riga' : `Importa ${rows} righe`;
+    return plural(rows, {
+      one: $localize`Importa 1 riga`,
+      other: $localize`Importa ${rows}:rows: righe`,
+    });
   }
 
   private requestPreview(mapping: ImportMapping | null): void {

@@ -11,17 +11,17 @@ import { WalletApi } from '../api/wallet-api';
 
 /** I paesi proposti nel menu: quelli dove si trovano più spesso i conti degli utenti italiani. */
 const COUNTRIES = [
-  { code: 'IT', name: 'Italia' },
-  { code: 'DE', name: 'Germania' },
-  { code: 'ES', name: 'Spagna' },
-  { code: 'FR', name: 'Francia' },
-  { code: 'NL', name: 'Paesi Bassi' },
-  { code: 'BE', name: 'Belgio' },
-  { code: 'AT', name: 'Austria' },
-  { code: 'IE', name: 'Irlanda' },
-  { code: 'LT', name: 'Lituania' },
-  { code: 'LU', name: 'Lussemburgo' },
-  { code: 'PT', name: 'Portogallo' },
+  { code: 'IT', name: $localize`Italia` },
+  { code: 'DE', name: $localize`Germania` },
+  { code: 'ES', name: $localize`Spagna` },
+  { code: 'FR', name: $localize`Francia` },
+  { code: 'NL', name: $localize`Paesi Bassi` },
+  { code: 'BE', name: $localize`Belgio` },
+  { code: 'AT', name: $localize`Austria` },
+  { code: 'IE', name: $localize`Irlanda` },
+  { code: 'LT', name: $localize`Lituania` },
+  { code: 'LU', name: $localize`Lussemburgo` },
+  { code: 'PT', name: $localize`Portogallo` },
 ];
 
 /**
@@ -117,7 +117,9 @@ export class LinkPage implements OnInit {
       error: (response) => {
         this.starting.set(null);
         // Il backend spiega il motivo nel campo "detail" (Problem Details, vedi docs/09).
-        this.error.set(response.error?.detail ?? 'Non è stato possibile avviare il collegamento.');
+        this.error.set(
+          response.error?.detail ?? $localize`Non è stato possibile avviare il collegamento.`,
+        );
       },
     });
   }
@@ -134,7 +136,8 @@ export class LinkPage implements OnInit {
         this.banks.set([]);
         this.loading.set(false);
         this.error.set(
-          response.error?.detail ?? 'Impossibile caricare le banche: il backend è avviato?',
+          response.error?.detail ??
+            $localize`Impossibile caricare le banche: il backend è avviato?`,
         );
       },
     });

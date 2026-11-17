@@ -1,5 +1,10 @@
 # Sicurezza
 
+> **English.** WalletTracker handles banking data. **Do not open a public issue** for a vulnerability: use GitHub's
+> *Security → Report a vulnerability* (private report) on this repository, saying what you found and in which version,
+> how to reproduce it, and the impact you expect. Once fixed, the vulnerability will be described publicly, with your
+> name if you wish.
+
 WalletTracker gestisce dati bancari: la sicurezza ha la precedenza su qualsiasi altra funzione.
 
 ## Segnalare una vulnerabilità

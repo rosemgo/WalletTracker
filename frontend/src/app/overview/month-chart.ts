@@ -50,7 +50,8 @@ interface Point {
       [class.trend-over]="trend() === 'over'"
       tabindex="0"
       role="slider"
-      [attr.aria-label]="description() + '. Con le frecce si scorrono i giorni.'"
+      aria-label="{{ description() }}. Con le frecce si scorrono i giorni."
+      i18n-aria-label
       [attr.aria-valuemin]="1"
       [attr.aria-valuemax]="daysInMonth()"
       [attr.aria-valuenow]="day() ?? spentByDay().length"
@@ -198,8 +199,8 @@ export class MonthChart {
     const step = STEPS.find((s) => max / s <= 2.5) ?? STEPS[STEPS.length - 1];
     const lines = [];
     for (let value = step; value < max; value += step) {
-      // A mano: in italiano toLocaleString non separa le migliaia sotto 10.000 ("1000 €").
-      const label = this.privacy.hide(`${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`);
+      // "1.000 €": le migliaia separate e il simbolo della valuta del mese, come li scrive la lingua dell'app.
+      const label = this.euros(value);
       lines.push({ value, y: this.y(value), label });
     }
     return lines;
@@ -231,7 +232,8 @@ export class MonthChart {
     const spent = this.spentByDay()[day - 1];
     const usual = this.usualByDay()[day - 1];
     const date = `${day} ${this.monthShort()}`;
-    const usualText = usual !== undefined ? `di solito ${this.euros(usual)}` : null;
+    const usualText =
+      usual !== undefined ? $localize`di solito ${this.euros(usual)}:amount:` : null;
     const spentText = spent !== undefined ? this.euros(spent) : null;
     const x = this.x(day);
     return {

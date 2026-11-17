@@ -5,6 +5,10 @@
 # Lo ZIP contiene solo quello che serve a chi installa: LEGGIMI.txt, gli script (anche quelli da doppio clic), docker-compose.yml (con le immagini di QUESTA
 # versione), .env.example, le novità e il file VERSION. Niente codice: le immagini sono già pronte su GitHub Container
 # Registry. Accanto allo ZIP, SHA256SUMS con la sua impronta, che "Aggiorna" controlla prima di usarlo.
+#
+# Uno ZIP solo per le due lingue (docs/lingue-3-installazione.md): lo script chiede la lingua al primo avvio. Per chi
+# non legge l'italiano c'è la cartella "English", con il LEGGIMI in inglese (README.txt) e gli stessi file da doppio
+# clic con i nomi inglesi (Start, Update, Backup); le novità in inglese sono in CHANGELOG.md, accanto a NOVITA.md.
 set -euo pipefail
 
 versione=${1:?manca la versione, es. 1.0.0}
@@ -16,20 +20,29 @@ mkdir -p "$uscita"
 uscita=$(cd "$uscita" && pwd)
 cd "$(dirname "$0")/../.."
 
-# Le novità di questa versione: la sezione "## 1.0.0" di NOVITA.md, fino alla sezione dopo.
-awk -v v="$versione" '$0 == "## " v {dentro = 1; next} /^## / {dentro = 0} dentro' NOVITA.md >"$uscita/novita-$versione.md"
-grep -q '[^[:space:]]' "$uscita/novita-$versione.md" ||
-  { echo "In NOVITA.md manca la sezione \"## $versione\"" >&2; exit 1; }
+# Le novità di questa versione, nelle due lingue: la sezione "## 1.0.0" di NOVITA.md e di CHANGELOG.md, fino alla
+# sezione dopo. Insieme diventano la descrizione della release (rilascio.yml).
+novita_di() { # $1 = il file, $2 = dove scrivere la sezione
+  awk -v v="$versione" '$0 == "## " v {dentro = 1; next} /^## / {dentro = 0} dentro' "$1" >"$2"
+  grep -q '[^[:space:]]' "$2" || { echo "In $1 manca la sezione \"## $versione\"" >&2; exit 1; }
+}
+novita_di NOVITA.md "$uscita/novita-$versione.md"
+novita_di CHANGELOG.md "$uscita/changelog-$versione.md"
 
 cartella="$uscita/WalletTracker-$versione"
 rm -rf "$cartella" "$cartella.zip"
 mkdir -p "$cartella"
-cp installa.sh installa.ps1 .env.example NOVITA.md LEGGIMI.txt "$cartella/"
+cp installa.sh installa.ps1 .env.example NOVITA.md CHANGELOG.md LEGGIMI.txt "$cartella/"
 # I file da doppio clic (docs/50, parte N): .cmd per Windows, .command per il Mac. cp -p tiene il permesso di
 # esecuzione dei .command, e zip lo scrive nello ZIP: senza, il Mac non li aprirebbe con un doppio clic.
 cp -p ./*.cmd ./*.command "$cartella/"
 [ "$(find "$cartella" -maxdepth 1 \( -name '*.cmd' -o -name '*.command' \) | wc -l)" = 6 ] ||
   { echo "Mancano dei file da doppio clic (.cmd e .command)" >&2; exit 1; }
+# La cartella "English": il LEGGIMI in inglese e i tre file da doppio clic con i nomi inglesi, per Windows e per il Mac.
+mkdir "$cartella/English"
+cp -p English/README.txt English/*.cmd English/*.command "$cartella/English/"
+[ "$(find "$cartella/English" \( -name '*.cmd' -o -name '*.command' \) | wc -l)" = 6 ] ||
+  { echo "Nella cartella English mancano dei file da doppio clic (.cmd e .command)" >&2; exit 1; }
 echo "$versione" >"$cartella/VERSION"
 # Il nome delle immagini, di serie, diventa quello di questa versione: così anche un "docker compose up -d" scritto a
 # mano, senza lo script, prende le immagini giuste.

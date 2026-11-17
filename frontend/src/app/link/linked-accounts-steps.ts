@@ -13,21 +13,21 @@ export const ENABLE_BANKING_PANEL = 'https://enablebanking.com/cp/applications';
   selector: 'app-linked-accounts-steps',
   template: `
     <ol class="linked-steps">
-      <li>
+      <li i18n>
         Apri il <a [href]="panel" target="_blank" rel="noopener">pannello di Enable Banking</a> e
         accedi.
       </li>
-      <li>Nella tua applicazione premi <strong>Link accounts</strong>.</li>
-      <li>
+      <li i18n>Nella tua applicazione premi <strong>Link accounts</strong>.</li>
+      <li i18n>
         Scegli il paese e la banca, accedi alla banca e seleziona i conti da aggiungere (anche
         quelli che c'erano già, se la banca li propone insieme).
       </li>
-      <li>
+      <li i18n>
         Torna qui, premi <strong>Collega</strong> sulla banca e seleziona
         <strong>gli stessi conti</strong>.
       </li>
     </ol>
-    <p class="secondary">
+    <p i18n class="secondary">
       Serve una volta sola per ogni conto. Il motivo: la tua applicazione Enable Banking è in
       <strong>modalità ristretta</strong> (gratuita, per uso personale) e passa all'app solo i conti
       della sua lista; gli altri li toglie, anche se la banca li ha autorizzati.

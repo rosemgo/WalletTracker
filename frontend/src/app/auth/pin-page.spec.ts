@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { AuthStatus } from '../api/models';
 import { AuthState, AuthStore } from './auth-store';
+import { LanguageStore } from '../language/language-store';
 import { PinPage } from './pin-page';
 
 /**
@@ -12,12 +13,19 @@ import { PinPage } from './pin-page';
  */
 describe('PinPage', () => {
   let http: HttpTestingController;
+  const languageStore = { current: 'it', chooseHere: vi.fn(), choose: vi.fn() };
 
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [PinPage],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // La scelta della lingua nella prima schermata ha i suoi test (language-section.spec.ts): qui un sostituto,
+        // che non fa richieste.
+        { provide: LanguageStore, useValue: languageStore },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });

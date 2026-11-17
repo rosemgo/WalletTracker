@@ -15,26 +15,42 @@ export interface NavItem {
 export const MORE_PAGES: NavItem[] = [
   {
     path: '/abbonamenti',
-    label: 'Abbonamenti',
-    hint: 'le spese che tornano ogni mese o ogni anno',
+    label: $localize`Abbonamenti`,
+    hint: $localize`le spese che tornano ogni mese o ogni anno`,
   },
   {
     path: '/investimenti',
-    label: 'Investimenti',
-    hint: 'quanto hai versato, cedole, dividendi e interessi',
+    label: $localize`Investimenti`,
+    hint: $localize`quanto hai versato, cedole, dividendi e interessi`,
   },
-  { path: '/conti', label: 'Conti', hint: 'i conti collegati e quelli aggiunti a mano' },
+  {
+    path: '/conti',
+    label: $localize`Conti`,
+    hint: $localize`i conti collegati e quelli aggiunti a mano`,
+  },
   {
     path: '/collega',
-    label: 'Collega una banca',
-    hint: 'un conto nuovo, o il rinnovo del consenso',
+    label: $localize`Collega una banca`,
+    hint: $localize`un conto nuovo, o il rinnovo del consenso`,
   },
   {
     path: '/importa',
-    label: 'Importa',
-    hint: 'i movimenti da un file CSV, e il file di Trade Republic',
+    label: $localize`Importa`,
+    hint: $localize`i movimenti da un file CSV, e il file di Trade Republic`,
   },
-  { path: '/regole', label: 'Regole', hint: 'come i movimenti ricevono tipo e categoria' },
-  { path: '/categorie', label: 'Categorie', hint: 'le tue categorie di spesa e di entrata' },
-  { path: '/impostazioni', label: 'Impostazioni', hint: 'banca, intelligenza artificiale, tema' },
+  {
+    path: '/regole',
+    label: $localize`Regole`,
+    hint: $localize`come i movimenti ricevono tipo e categoria`,
+  },
+  {
+    path: '/categorie',
+    label: $localize`Categorie`,
+    hint: $localize`le tue categorie di spesa e di entrata`,
+  },
+  {
+    path: '/impostazioni',
+    label: $localize`Impostazioni`,
+    hint: $localize`banca, intelligenza artificiale, tema`,
+  },
 ];

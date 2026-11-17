@@ -14,6 +14,7 @@ import java.util.TreeMap;
 
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.subscription.RecurringDetector.Payment;
 import it.wallettracker.subscription.SubscriptionDtos.ConfirmRequest;
 import it.wallettracker.subscription.SubscriptionDtos.Confirmed;
@@ -29,7 +30,6 @@ import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Gli abbonamenti ricorrenti: suggerimenti, conferme, rifiuti.
@@ -169,15 +169,16 @@ public class SubscriptionService {
     @Transactional
     public void delete(Long id) {
         subscriptionRepository.delete(subscriptionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Abbonamento", id)));
+                // messaggio: Abbonamento {0} non trovato
+                .orElseThrow(() -> new NotFoundException("not-found.subscription", id)));
     }
 
     private void checkUndecided(String merchantKey, String currency, BigDecimal amount) {
         boolean decided = subscriptionRepository.findByMerchantKeyAndCurrency(merchantKey, currency).stream()
                 .anyMatch(d -> d.covers(merchantKey, currency, amount));
         if (decided) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Hai già deciso per questo esercente e questo importo: lo trovi nella pagina Abbonamenti.");
+            // messaggio: Hai già deciso per questo esercente e questo importo: lo trovi nella pagina Abbonamenti.
+            throw new ApiException(HttpStatus.CONFLICT, "subscription.already-decided");
         }
     }
 

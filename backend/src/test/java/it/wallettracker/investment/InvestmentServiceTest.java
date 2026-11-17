@@ -19,6 +19,7 @@ import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
 import it.wallettracker.investment.InvestmentDtos.Cash;
 import it.wallettracker.investment.InvestmentDtos.Group;
+import it.wallettracker.investment.InvestmentDtos.GroupKind;
 import it.wallettracker.investment.InvestmentDtos.Month;
 import it.wallettracker.investment.InvestmentDtos.Overview;
 import it.wallettracker.investment.InvestmentDtos.Period;
@@ -150,7 +151,7 @@ class InvestmentServiceTest {
         // Il bollo non è una ritenuta: sta tra le altre tasse, e le rendite restano lorde = nette.
         assertThat(o.withholdingInPeriod()).isEqualByComparingTo("0");
         assertThat(o.otherTaxesInPeriod()).isEqualByComparingTo("-2");
-        assertThat(o.otherTaxesByType()).extracting(Group::name).containsExactly("Senza categoria");
+        assertThat(o.otherTaxesByType()).extracting(Group::kind).containsExactly(GroupKind.UNCATEGORIZED);
         // "Da dove": il nome del titolo, senza l'etichetta iniziale.
         assertThat(o.incomeBySource()).extracting(Group::name).containsExactly("BTP ITALIA", "ACME");
         assertThat(o.incomeByType()).extracting(Group::name).containsExactly("Cedole", "Dividendi");
@@ -243,7 +244,7 @@ class InvestmentServiceTest {
         assertThat(o.months().getLast().income()).isEqualByComparingTo("125");
         assertThat(o.months().getLast().withholding()).isEqualByComparingTo("-15.63");
         // Il BTP è indicato solo dall'ISIN: è il suo nome in "Da dove", non "Ced.su"; e la cifra è netta.
-        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("IT0005436693")).singleElement()
+        assertThat(o.incomeBySource()).filteredOn(g -> "IT0005436693".equals(g.name())).singleElement()
                 .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("109.37"));
     }
 
@@ -258,10 +259,9 @@ class InvestmentServiceTest {
 
         Overview o = investmentService.overview(Period.YEAR, null, TODAY);
 
-        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("ROMANIA-7OT45 6,5%")).singleElement()
+        assertThat(o.incomeBySource()).filteredOn(g -> "ROMANIA-7OT45 6,5%".equals(g.name())).singleElement()
                 .satisfies(g -> assertThat(g.amount()).isEqualByComparingTo("455"));
-        assertThat(o.incomeByType()).extracting(Group::name)
-                .doesNotContain("Ritenute senza la loro rendita nel periodo");
+        assertThat(o.incomeByType()).extracting(Group::kind).doesNotContain(GroupKind.UNMATCHED_WITHHOLDING);
         // la ritenuta sta a settembre, con la sua cedola
         assertThat(o.months()).filteredOn(m -> m.month().equals(YearMonth.of(2026, 9))).singleElement()
                 .satisfies(m -> assertThat(m.withholding()).isEqualByComparingTo("-65"));
@@ -279,8 +279,8 @@ class InvestmentServiceTest {
 
         Overview o = investmentService.overview(Period.YEAR, null, TODAY);
 
-        assertThat(o.incomeBySource()).extracting(Group::name).contains("ROMANIA-7OT45 6,5%", broker.label())
-                .doesNotContain("Senza nome del titolo");
+        assertThat(o.incomeBySource()).extracting(Group::name).contains("ROMANIA-7OT45 6,5%", broker.label());
+        assertThat(o.incomeBySource()).extracting(Group::kind).doesNotContain(GroupKind.UNNAMED_SECURITY);
         // Gli interessi, con un codice diverso ogni mese, stanno tutti sotto il conto.
         assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals(broker.label()))
                 .singleElement().satisfies(g -> {
@@ -289,7 +289,7 @@ class InvestmentServiceTest {
                     assertThat(g.accountId()).isEqualTo(broker.getId());
                     assertThat(g.search()).isEqualTo("interest payment for payout collection");
                 });
-        assertThat(o.incomeBySource()).filteredOn(g -> g.name().equals("ROMANIA-7OT45 6,5%")).singleElement()
+        assertThat(o.incomeBySource()).filteredOn(g -> "ROMANIA-7OT45 6,5%".equals(g.name())).singleElement()
                 .satisfies(g -> assertThat(g.accountId()).isNull());
     }
 

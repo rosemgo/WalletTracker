@@ -1,11 +1,20 @@
 # Le novità di WalletTracker
 
 Una sezione per ogni versione, dalla più nuova. Quando si pubblica una versione (docs/50), il suo testo diventa la
-descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
+descrizione della release su GitHub. La stessa cosa in inglese è in [CHANGELOG.md](CHANGELOG.md): le due hanno le
+stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
 ## 1.3.0
 
+- **WalletTracker anche in inglese**: in Impostazioni → Lingua l'app passa dall'italiano all'inglese e ritorno, quando
+  vuoi. Vale per tutta l'installazione, il computer e il telefono. Date, numeri e importi seguono la lingua; le
+  categorie di partenza che non hai rinominato prendono il nome inglese ("Groceries"). Resta com'è quello che arriva
+  da fuori o da te: i testi dei movimenti mandati dalle banche, le regole di partenza, le categorie che hai
+  rinominato, le tue note.
+- **L'installazione chiede la lingua**: al primo avvio lo script chiede "Lingua / Language", e da lì in poi parla solo
+  quella; l'app si apre nella stessa lingua. Nello ZIP c'è la cartella **English**, con le istruzioni in inglese e
+  "Start / Update / Backup WalletTracker" da doppio clic. Anche la guida è in inglese: GUIDE.md.
 - **Importa anche i file Excel**: il file che esporta la banca (per esempio "Esporta in excel" di Fineco) si carica così
   com'è, senza convertirlo. L'app trova da sola la tabella anche quando sopra ci sono delle righe di note.
 - **Completa lo storico dei conti collegati**: quando colleghi un conto, la banca dà i movimenti solo degli ultimi mesi.
@@ -67,6 +76,8 @@ descrizione della release su GitHub. I numeri seguono la regola MAGGIORE.MINORE.
   con il saldo di prima più i movimenti arrivati in mezzo. Se non torna, un avviso nel Riepilogo dice quale conto, in
   quale periodo e di quanto, con i movimenti da controllare: di solito manca un movimento, che si recupera caricando il
   file della banca in Importa. Quando arriva, l'avviso sparisce da solo.
+
+Usi già WalletTracker? Non cambia niente: l'app e gli script restano in italiano finché non scegli tu.
 
 ## 1.2.7
 

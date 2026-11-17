@@ -6,6 +6,7 @@ import java.util.List;
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
+import it.wallettracker.message.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -111,7 +112,8 @@ public class ConnectionRemovalService {
      */
     public Removal remove(Long id, Instant now) {
         BankConnection connection = connectionRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Collegamento non trovato."));
+                // messaggio: Collegamento non trovato.
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "not-found.connection"));
         if (connection.isRemoved()) {
             return new Removal(connection.getAspspName(), accountRepository.findByConnectionOrderByName(connection)
                     .size(), true);

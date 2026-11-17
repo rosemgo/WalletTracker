@@ -11,6 +11,7 @@ import it.wallettracker.IntegrationTestConfiguration;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.BankConnectionRepository;
+import it.wallettracker.message.Message;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
@@ -52,6 +54,9 @@ class AccountControllerTest {
     @Autowired
     BankConnectionRepository connectionRepository;
 
+    @Autowired
+    JdbcTemplate jdbc;
+
     private int counter;
 
     @AfterEach
@@ -64,7 +69,7 @@ class AccountControllerTest {
     @Test
     void listsTheAccountsWithBankRoleAndSyncStatus() {
         Account account = account("ING");
-        accountRepository.recordSync(account.getId(), Instant.now(), "HTTP 429 troppe letture");
+        accountRepository.recordSync(account.getId(), Instant.now(), Message.verbatim("HTTP 429 troppe letture"));
 
         assertThat(mvc.get().uri("/api/accounts"))
                 .hasStatusOk()
@@ -77,6 +82,30 @@ class AccountControllerTest {
                     json.assertThat().doesNotHavePath("$[0].providerUid");
                     json.assertThat().doesNotHavePath("$[0].externalKey");
                 });
+    }
+
+    /**
+     * Nel database l'errore dell'ultimo aggiornamento è un codice con i suoi parametri; la frase nasce nella risposta,
+     * nella lingua di chi la chiede: lo stesso errore salvato si legge in italiano e in inglese.
+     */
+    @Test
+    void theSyncErrorIsSavedAsACodeAndAnsweredAsASentence() {
+        Account account = account("ING");
+        accountRepository.recordSync(account.getId(), Instant.now(), Message.of("sync.bank-error", 422));
+
+        String saved = jdbc.queryForObject("SELECT last_sync_error FROM account WHERE id = ?", String.class,
+                account.getId());
+        assertThat(saved).isEqualTo("{\"code\":\"sync.bank-error\",\"args\":[422]}");
+        String sentence = "La banca ha risposto con un errore (codice 422): riproveremo al prossimo aggiornamento.";
+        assertThat(mvc.get().uri("/api/accounts"))
+                .bodyJson().extractingPath("$[0].lastSyncError").isEqualTo(sentence);
+        assertThat(mvc.get().uri("/api/accounts").header("Accept-Language", "en"))
+                .bodyJson().extractingPath("$[0].lastSyncError")
+                .isEqualTo("The bank answered with an error (code 422): we will try again at the next update.");
+
+        // Un aggiornamento riuscito toglie l'errore.
+        accountRepository.recordSync(account.getId(), Instant.now(), null);
+        assertThat(mvc.get().uri("/api/accounts")).bodyJson().extractingPath("$[0].lastSyncError").isNull();
     }
 
     @Test

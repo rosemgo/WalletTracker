@@ -9,12 +9,12 @@
 export type Period = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'LAST_3_MONTHS' | 'THIS_YEAR' | 'CUSTOM';
 
 export const PERIOD_LABELS: Record<Period, string> = {
-  ALL: 'Tutto',
-  THIS_MONTH: 'Questo mese',
-  LAST_MONTH: 'Mese scorso',
-  LAST_3_MONTHS: 'Ultimi 3 mesi',
-  THIS_YEAR: "Quest'anno",
-  CUSTOM: 'Scegli le date',
+  ALL: $localize`Tutto`,
+  THIS_MONTH: $localize`Questo mese`,
+  LAST_MONTH: $localize`Mese scorso`,
+  LAST_3_MONTHS: $localize`Ultimi 3 mesi`,
+  THIS_YEAR: $localize`Quest'anno`,
+  CUSTOM: $localize`Scegli le date`,
 };
 
 export const PERIODS = Object.keys(PERIOD_LABELS) as Period[];

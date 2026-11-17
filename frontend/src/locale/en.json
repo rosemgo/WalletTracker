@@ -1,0 +1,4361 @@
+{
+  "locale": "en",
+  "translations": {
+    "27635288559968565": {
+      "it": "Conti",
+      "en": "Accounts"
+    },
+    "729995683981435661": {
+      "it": "{VAR_SELECT, select, true {Aggiornamento in corso...} other {Aggiorna ora}}",
+      "en": "{VAR_SELECT, select, true {Updating...} other {Update now}}"
+    },
+    "6000908803867255155": {
+      "it": "Collega una banca",
+      "en": "Link a bank"
+    },
+    "8560793471080001227": {
+      "it": "Importa un file",
+      "en": "Import a file"
+    },
+    "2432603810151928321": {
+      "it": " La banca non ha mandato niente di nuovo. Se mancano le spese di oggi: molte banche passano i pagamenti con carta alle app solo quando sono contabilizzati, di solito dopo 1–2 giorni lavorativi. Compariranno da soli a uno dei prossimi aggiornamenti. ",
+      "en": "The bank sent nothing new. If today's expenses are missing: many banks pass card payments on to apps only once they are booked, usually after 1–2 working days. They will show up by themselves at one of the next updates."
+    },
+    "4033324238130400666": {
+      "it": " Il ruolo dice al programma come trattare i movimenti di un conto: ad esempio, i trasferimenti verso un conto \"Investimenti\" sono versamenti, quelli verso una \"Carta di credito\" sono saldi della carta. Cambiando un ruolo, tutti i movimenti vengono riclassificati.\n",
+      "en": "The role tells the app how to treat the transactions of an account: for example, transfers to an \"Investments\" account are deposits, those to a \"Credit card\" are card settlements. When a role changes, all the transactions are classified again."
+    },
+    "5238406100080568114": {
+      "it": "{$START_TAG_STRONG}Escluso{$CLOSE_TAG_STRONG}: l'app smette di aggiornare quel conto e non lo conta nei totali, ma i suoi movimenti restano. Serve per mettere da parte un solo conto di una banca: gli altri continuano ad aggiornarsi. Per togliere tutta la banca, c'è \"Rimuovi collegamento\" più sotto.\n",
+      "en": "{$START_TAG_STRONG}Excluded{$CLOSE_TAG_STRONG}: the app stops updating that account and leaves it out of the totals, but its transactions stay. Use it to set aside a single account of a bank: the others keep updating. To remove the whole bank, there is \"Remove connection\" further down."
+    },
+    "4713286283084796227": {
+      "it": "Caricamento...",
+      "en": "Loading..."
+    },
+    "3984920602945038803": {
+      "it": "Banca",
+      "en": "Bank"
+    },
+    "3358890361725108180": {
+      "it": "Conto",
+      "en": "Account"
+    },
+    "1003352312847772353": {
+      "it": "Ruolo",
+      "en": "Role"
+    },
+    "817095040501125337": {
+      "it": "Saldo",
+      "en": "Balance"
+    },
+    "5349840492578950719": {
+      "it": "Consenso valido fino al",
+      "en": "Consent valid until"
+    },
+    "6163659074596720342": {
+      "it": "Ultimo aggiornamento",
+      "en": "Last update"
+    },
+    "5494315477493327581": {
+      "it": "es. Conto spese",
+      "en": "e.g. Spending account"
+    },
+    "8621305821206051931": {
+      "it": "Nome del conto {$INTERPOLATION}",
+      "en": "Name of the account {$INTERPOLATION}"
+    },
+    "1705596434281218132": {
+      "it": " Salva ",
+      "en": "Save"
+    },
+    "5659516738684077952": {
+      "it": " Annulla ",
+      "en": "Cancel"
+    },
+    "7379954441822677398": {
+      "it": " · per la banca: {$INTERPOLATION} ",
+      "en": "· for the bank: {$INTERPOLATION}"
+    },
+    "5800952018084591693": {
+      "it": "Vedi i movimenti",
+      "en": "See the transactions"
+    },
+    "1293325942090361344": {
+      "it": " Rinomina ",
+      "en": "Rename"
+    },
+    "4539966205409458709": {
+      "it": "Ruolo di {$INTERPOLATION}",
+      "en": "Role of {$INTERPOLATION}"
+    },
+    "287286287040588158": {
+      "it": "Plafond disponibile",
+      "en": "Available credit"
+    },
+    "1559234541999124265": {
+      "it": "al {$INTERPOLATION} · dalla banca",
+      "en": "on {$INTERPOLATION} · from the bank"
+    },
+    "5579101221815512951": {
+      "it": "Plafond non ancora letto: premi «Aggiorna ora»",
+      "en": "Available credit not read yet: press «Update now»"
+    },
+    "2227343796246215255": {
+      "it": " al {$INTERPOLATION} · {$START_BLOCK_IF} dalla banca {$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE_IF} scritto da te {$CLOSE_BLOCK_ELSE_IF}{$START_BLOCK_ELSE} dal tuo saldo del {$INTERPOLATION_1}, più i movimenti dopo {$CLOSE_BLOCK_ELSE}",
+      "en": "on {$INTERPOLATION} · {$START_BLOCK_IF} from the bank {$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE_IF} written by you {$CLOSE_BLOCK_ELSE_IF}{$START_BLOCK_ELSE} from your balance of {$INTERPOLATION_1}, plus the transactions after it {$CLOSE_BLOCK_ELSE}"
+    },
+    "8271812834391165609": {
+      "it": "Non ancora scritto",
+      "en": "Not written yet"
+    },
+    "6675108546057688309": {
+      "it": "La banca non lo dà",
+      "en": "The bank does not give it"
+    },
+    "5833553713162615952": {
+      "it": "Al prossimo aggiornamento",
+      "en": "At the next update"
+    },
+    "6468715656586794494": {
+      "it": "{VAR_SELECT, select, true {Correggi il saldo} other {Scrivi il saldo}}",
+      "en": "{VAR_SELECT, select, true {Correct the balance} other {Write the balance}}"
+    },
+    "6383648496352875399": {
+      "it": "Consenso",
+      "en": "Consent"
+    },
+    "9038132961142180981": {
+      "it": "Conto manuale",
+      "en": "Manual account"
+    },
+    "329041335702175208": {
+      "it": "Il conto e tutti i suoi movimenti verranno eliminati.",
+      "en": "The account and all its transactions will be deleted."
+    },
+    "626489409484728982": {
+      "it": " Elimina ",
+      "en": "Delete"
+    },
+    "396493527910002944": {
+      "it": "{VAR_SELECT, select, true {Cambia il logo} other {Carica il logo}}",
+      "en": "{VAR_SELECT, select, true {Change the logo} other {Upload the logo}}"
+    },
+    "8031326330378317419": {
+      "it": " Togli il logo ",
+      "en": "Remove the logo"
+    },
+    "2396478945512917392": {
+      "it": "Consenso fino al",
+      "en": "Consent until"
+    },
+    "2948163670786189221": {
+      "it": "collegamento rimosso: storico conservato",
+      "en": "connection removed: history kept"
+    },
+    "3663013721135848244": {
+      "it": "Aggiornato",
+      "en": "Updated"
+    },
+    "29590303997501679": {
+      "it": " mai ",
+      "en": "never"
+    },
+    "4643381711369300134": {
+      "it": "Completa con il file",
+      "en": "Complete with the file"
+    },
+    "8439953204094121947": {
+      "it": "Nessun conto: collega una banca o aggiungi un conto manuale.",
+      "en": "No accounts: link a bank or add a manual account."
+    },
+    "8822663970098285088": {
+      "it": "Nuovo conto manuale",
+      "en": "New manual account"
+    },
+    "755662943095335117": {
+      "it": " Per una banca o un broker che Enable Banking non copre (ad esempio Trade Republic): crei qui il conto e ci carichi i movimenti esportati in un file CSV o Excel, dalla pagina Importa. Un conto manuale non si aggiorna da solo: quando vuoi, importi il file nuovo (i movimenti già presenti vengono saltati). ",
+      "en": "For a bank or a broker that Enable Banking does not cover (for example Trade Republic): you create the account here and load into it the transactions exported to a CSV or Excel file, from the Import page. A manual account does not update by itself: whenever you want, you import the new file (the transactions already there are skipped)."
+    },
+    "7966565901521546052": {
+      "it": " Banca ",
+      "en": "Bank"
+    },
+    "8609393210075296147": {
+      "it": "es. Trade Republic",
+      "en": "e.g. Trade Republic"
+    },
+    "5973355750410330972": {
+      "it": "Scrivi il nome della banca.",
+      "en": "Write the name of the bank."
+    },
+    "8667000052985814883": {
+      "it": " Nome del conto ",
+      "en": "Account name"
+    },
+    "7499794565013499115": {
+      "it": "es. Conto titoli",
+      "en": "e.g. Securities account"
+    },
+    "1944634255832076990": {
+      "it": "Scrivi un nome per il conto.",
+      "en": "Write a name for the account."
+    },
+    "7484578487537879303": {
+      "it": " IBAN (facoltativo) ",
+      "en": "IBAN (optional)"
+    },
+    "8012975159914972621": {
+      "it": "es. DE12 3456 ...",
+      "en": "e.g. DE12 3456 ..."
+    },
+    "8299759800939394697": {
+      "it": "Non sembra un IBAN: due lettere e poi lettere e cifre.",
+      "en": "This does not look like an IBAN: two letters, then letters and digits."
+    },
+    "6054841707920723396": {
+      "it": " Valuta ",
+      "en": "Currency"
+    },
+    "2023620952089544256": {
+      "it": "Tre lettere, come EUR o USD.",
+      "en": "Three letters, like EUR or USD."
+    },
+    "7911304726377794107": {
+      "it": " Ruolo ",
+      "en": "Role"
+    },
+    "7294313104179515777": {
+      "it": "Aggiungi il conto",
+      "en": "Add the account"
+    },
+    "6162850587251913900": {
+      "it": "Senza IBAN",
+      "en": "No IBAN"
+    },
+    "8449916552838716261": {
+      "it": "Plafond",
+      "en": "Credit limit"
+    },
+    "6506796938554102270": {
+      "it": "Conto {$accountId}",
+      "en": "Account {$accountId}"
+    },
+    "5036352872035150275": {
+      "it": ", {$failed} con errori (vedi sotto)",
+      "en": ", {$failed} with errors (see below)"
+    },
+    "3223471859600021469": {
+      "it": "Aggiornato 1 conto",
+      "en": "1 account updated"
+    },
+    "5703636375447978156": {
+      "it": "Aggiornati {$updated} conti",
+      "en": "{$updated} accounts updated"
+    },
+    "3440289434210651441": {
+      "it": "L'aggiornamento non è riuscito: il backend è avviato?",
+      "en": "The update failed: is the backend running?"
+    },
+    "1237400645572297431": {
+      "it": "Impossibile caricare i conti: il backend è avviato?",
+      "en": "Cannot load the accounts: is the backend running?"
+    },
+    "1967401737775707329": {
+      "it": "{$name}: ruolo \"{$value}\" salvato, movimenti riclassificati.",
+      "en": "{$name}: role \"{$value}\" saved, transactions classified again."
+    },
+    "7417962282151689436": {
+      "it": "Il ruolo non è stato salvato.",
+      "en": "The role was not saved."
+    },
+    "1029401973135599121": {
+      "it": "Conto \"{$name}\" creato: ora puoi importare un file CSV.",
+      "en": "Account \"{$name}\" created: now you can import a CSV file."
+    },
+    "2585131318568336913": {
+      "it": "Il conto non è stato creato.",
+      "en": "The account was not created."
+    },
+    "4031400273620782371": {
+      "it": "Conto \"{$name}\" eliminato, con i suoi movimenti.",
+      "en": "Account \"{$name}\" deleted, with its transactions."
+    },
+    "749743687000848906": {
+      "it": "Il conto non è stato eliminato.",
+      "en": "The account was not deleted."
+    },
+    "8071096878784022357": {
+      "it": "Nome tolto: ora il conto si vede come \"{$label}\".",
+      "en": "Name removed: the account now shows as \"{$label}\"."
+    },
+    "2177690970044891354": {
+      "it": "Conto rinominato in \"{$name}\".",
+      "en": "Account renamed to \"{$name}\"."
+    },
+    "1862718817216327458": {
+      "it": "Il nome non è stato salvato.",
+      "en": "The name was not saved."
+    },
+    "7484631027179400976": {
+      "it": "Saldo di \"{$label}\" salvato: da qui si aggiorna con i movimenti che arriveranno.",
+      "en": "Balance of \"{$label}\" saved: from here on it updates with the transactions that arrive."
+    },
+    "6022585170108475789": {
+      "it": "Il logo è troppo grande: al massimo 256 KB. Scegli un'immagine più piccola.",
+      "en": "The logo is too large: 256 KB at most. Choose a smaller image."
+    },
+    "6775377280505005851": {
+      "it": "Logo di \"{$label}\" salvato.",
+      "en": "Logo of \"{$label}\" saved."
+    },
+    "8334164066959799934": {
+      "it": "Il logo non è stato salvato.",
+      "en": "The logo was not saved."
+    },
+    "4105462293796119595": {
+      "it": "Logo di \"{$label}\" tolto.",
+      "en": "Logo of \"{$label}\" removed."
+    },
+    "777885789532169371": {
+      "it": "Il logo non è stato tolto.",
+      "en": "The logo was not removed."
+    },
+    "9030863045422876155": {
+      "it": "{$name}: non aggiornato ({$replace})",
+      "en": "{$name}: not updated ({$replace})"
+    },
+    "5155563542143983149": {
+      "it": "1 movimento nuovo",
+      "en": "1 new transaction"
+    },
+    "2161058514400711832": {
+      "it": "{$inserted} movimenti nuovi",
+      "en": "{$inserted} new transactions"
+    },
+    "7813569758505874079": {
+      "it": "{$pending} in attesa",
+      "en": "{$pending} pending"
+    },
+    "2726410965944387043": {
+      "it": "nessun movimento nuovo",
+      "en": "no new transactions"
+    },
+    "8391540413883824471": {
+      "it": " Apri l'app della banca e cerca l'ultimo movimento che c'è qui: {$START_TAG_STRONG}{$INTERPOLATION} · {$INTERPOLATION_1} · {$INTERPOLATION_2}{$CLOSE_TAG_STRONG}. Scrivi il saldo che la banca mostra {$START_TAG_STRONG}dopo{$CLOSE_TAG_STRONG} quel movimento. ",
+      "en": "Open the bank's app and look for the last transaction shown here: {$START_TAG_STRONG}{$INTERPOLATION} · {$INTERPOLATION_1} · {$INTERPOLATION_2}{$CLOSE_TAG_STRONG}. Write the balance the bank shows {$START_TAG_STRONG}after{$CLOSE_TAG_STRONG} that transaction."
+    },
+    "4721357490739640365": {
+      "it": "Il conto non ha ancora movimenti: scrivi il saldo di oggi.",
+      "en": "The account has no transactions yet: write today's balance."
+    },
+    "3745445261672113620": {
+      "it": " Saldo ({$INTERPOLATION}) ",
+      "en": "Balance ({$INTERPOLATION})"
+    },
+    "286910801590864345": {
+      "it": "es. 1.234,56",
+      "en": "e.g. 1,234.56"
+    },
+    "3715296120573266319": {
+      "it": " Salva il saldo ",
+      "en": "Save the balance"
+    },
+    "1817007949945200502": {
+      "it": "Annulla",
+      "en": "Cancel"
+    },
+    "4866787914421774944": {
+      "it": "Scrivi un importo, come 1.234,56 (con il meno davanti se è negativo).",
+      "en": "Write an amount, like 1,234.56 (with a minus in front if it is negative)."
+    },
+    "2647350784356256272": {
+      "it": "Impossibile salvare il saldo: il backend è avviato?",
+      "en": "Cannot save the balance: is the backend running?"
+    },
+    "2398004145107087570": {
+      "it": "Collegamenti alle banche {$START_TAG_SPAN}›{$CLOSE_TAG_SPAN}",
+      "en": "Bank connections {$START_TAG_SPAN}›{$CLOSE_TAG_SPAN}"
+    },
+    "7408272254667371705": {
+      "it": " {$INTERPOLATION} · vedi quali conti hanno, o rimuovine uno ",
+      "en": "{$INTERPOLATION} · see which accounts they have, or remove one"
+    },
+    "5307934200691463241": {
+      "it": "Nessun collegamento: le banche si collegano da \"Collega una banca\".",
+      "en": "No connections: banks are linked from \"Link a bank\"."
+    },
+    "5295348623074027227": {
+      "it": " Nessun conto: Enable Banking non ne ha passato nessuno (la banca non era nella lista della tua applicazione). Puoi rimuoverlo. ",
+      "en": "No accounts: Enable Banking passed none (the bank was not in the list of your application). You can remove it."
+    },
+    "5448171381863300787": {
+      "it": " Rimuovi collegamento ",
+      "en": "Remove connection"
+    },
+    "9068189062191374858": {
+      "it": " L'app smetterà di leggere {$ICU} di {$INTERPOLATION} ({$START_TAG_STRONG}{$INTERPOLATION_1}{$CLOSE_TAG_STRONG}) e chiuderà il consenso su Enable Banking. {$START_TAG_STRONG}{$ICU_1}{$CLOSE_TAG_STRONG} come storia. Se un giorno ricolleghi la banca, tornano gli stessi, senza doppioni. ",
+      "en": "The app will stop reading {$ICU} of {$INTERPOLATION} ({$START_TAG_STRONG}{$INTERPOLATION_1}{$CLOSE_TAG_STRONG}) and will close the consent on Enable Banking. {$START_TAG_STRONG}{$ICU_1}{$CLOSE_TAG_STRONG} as history. If one day you link the bank again, the same ones come back, without duplicates."
+    },
+    "1633208900984894687": {
+      "it": "{VAR_PLURAL, plural, =1 {il conto} other {tutti i conti}}",
+      "en": "{VAR_PLURAL, plural, =1 {the account} other {all the accounts}}"
+    },
+    "3665110506463472740": {
+      "it": "{VAR_PLURAL, plural, =1 {Il conto e i movimenti restano} other {I conti e i movimenti restano}}",
+      "en": "{VAR_PLURAL, plural, =1 {The account and its transactions stay} other {The accounts and their transactions stay}}"
+    },
+    "7725790633097504998": {
+      "it": " Il collegamento non ha conti: si cancella, e il consenso su Enable Banking si chiude. ",
+      "en": "The connection has no accounts: it is deleted, and the consent on Enable Banking is closed."
+    },
+    "1395042425730778399": {
+      "it": " Vuoi smettere di leggere un solo conto? Non serve rimuovere il collegamento: dagli il ruolo {$START_TAG_STRONG}Escluso{$CLOSE_TAG_STRONG} nella tabella qui sopra. ",
+      "en": "Do you want to stop reading a single account? There is no need to remove the connection: give it the role {$START_TAG_STRONG}Excluded{$CLOSE_TAG_STRONG} in the table above."
+    },
+    "3442546872511116729": {
+      "it": "{VAR_SELECT, select, true {Rimozione...} other {Rimuovi}}",
+      "en": "{VAR_SELECT, select, true {Removing...} other {Remove}}"
+    },
+    "5089243552667025728": {
+      "it": "1 collegamento",
+      "en": "1 connection"
+    },
+    "558321310629511351": {
+      "it": "{$n} collegamenti",
+      "en": "{$n} connections"
+    },
+    "1329563231007623633": {
+      "it": "il conto resta",
+      "en": "the account stays"
+    },
+    "9117052637136786923": {
+      "it": "i conti restano",
+      "en": "the accounts stay"
+    },
+    "8325382235509976994": {
+      "it": "rimosso il {$date}: {$kept} come storia",
+      "en": "removed on {$date}: {$kept} as history"
+    },
+    "5853466530609977822": {
+      "it": "consenso scaduto il {$date}",
+      "en": "consent expired on {$date}"
+    },
+    "604982840472211025": {
+      "it": "valido fino al {$date}",
+      "en": "valid until {$date}"
+    },
+    "597471092021469880": {
+      "it": "Il conto resta con i suoi movimenti.",
+      "en": "The account stays with its transactions."
+    },
+    "9212725207098721932": {
+      "it": "I conti restano con i loro movimenti.",
+      "en": "The accounts stay with their transactions."
+    },
+    "1599424461939511566": {
+      "it": "{$bank}: collegamento cancellato.",
+      "en": "{$bank}: connection deleted."
+    },
+    "8354265240504861433": {
+      "it": "{$bank}: collegamento rimosso. {$kept}",
+      "en": "{$bank}: connection removed. {$kept}"
+    },
+    "7168189338798909408": {
+      "it": "Non è stato possibile chiudere il consenso su Enable Banking: chiudilo dal suo pannello.",
+      "en": "The consent on Enable Banking could not be closed: close it from its control panel."
+    },
+    "5688488575433019663": {
+      "it": "La rimozione non è riuscita: il backend è avviato?",
+      "en": "The removal failed: is the backend running?"
+    },
+    "1513942952168834122": {
+      "it": "Impossibile caricare i collegamenti: il backend è avviato?",
+      "en": "Cannot load the connections: is the backend running?"
+    },
+    "2763794561656221490": {
+      "it": "Suggerimenti con l'intelligenza artificiale",
+      "en": "Suggestions with artificial intelligence"
+    },
+    "3156831376182568895": {
+      "it": " Un modello di intelligenza artificiale può suggerire la categoria dei movimenti degli esercenti che non hai mai categorizzato. Suggerisce soltanto: decidi sempre tu. È spento di serie. ",
+      "en": "An artificial intelligence model can suggest the category for the transactions of merchants you have never categorised. It only suggests: you always decide. It is off by default."
+    },
+    "2428816959248649271": {
+      "it": " Suggerimenti ",
+      "en": "Suggestions"
+    },
+    "2895682203633113534": {
+      "it": "Suggerimenti con l'IA",
+      "en": "AI suggestions"
+    },
+    "8276210083089864647": {
+      "it": "Spenti",
+      "en": "Off"
+    },
+    "8963476830280289539": {
+      "it": "Sul mio computer (Ollama)",
+      "en": "On my computer (Ollama)"
+    },
+    "5733838593077720239": {
+      "it": "Nel cloud: Google Gemini",
+      "en": "In the cloud: Google Gemini"
+    },
+    "286818579895046153": {
+      "it": " Modello ",
+      "en": "Model"
+    },
+    "5006611970579558583": {
+      "it": "es. gemma3:4b",
+      "en": "e.g. gemma3:4b"
+    },
+    "9023464076690955495": {
+      "it": " Con Ollama il modello lavora sul tuo computer: i movimenti non escono di casa. Mentre lavora usa qualche GB di memoria; quando è inattivo, quasi niente. ",
+      "en": "With Ollama the model works on your computer: the transactions never leave home. While it works it uses a few GB of memory; when idle, almost none."
+    },
+    "3549368269687063291": {
+      "it": "Modelli consigliati",
+      "en": "Recommended models"
+    },
+    "3579839219586498468": {
+      "it": "Modello consigliato",
+      "en": "Recommended model"
+    },
+    "5862139662124645263": {
+      "it": "Da scaricare",
+      "en": "To download"
+    },
+    "5607261270445672639": {
+      "it": "Memoria mentre lavora",
+      "en": "Memory while working"
+    },
+    "2025116024070030309": {
+      "it": "Risposte giuste (prova)",
+      "en": "Right answers (test)"
+    },
+    "7729678630370151982": {
+      "it": " Usa questo ",
+      "en": "Use this one"
+    },
+    "4142516693245734223": {
+      "it": " Le percentuali vengono da 49 esercenti di prova: con i tuoi movimenti possono essere diverse. Per saperlo, usa \"Misura la precisione\" qui sotto. Con meno di 8 GB di memoria è meglio lasciare i suggerimenti spenti: i modelli più piccoli sbagliano quasi sempre. ",
+      "en": "The percentages come from 49 test merchants: with your transactions they may differ. To find out, use \"Measure the accuracy\" below. With less than 8 GB of memory it is better to leave the suggestions off: the smaller models are almost always wrong."
+    },
+    "8942984265029849841": {
+      "it": "Salva",
+      "en": "Save"
+    },
+    "1526321013488080576": {
+      "it": "Stato",
+      "en": "Status"
+    },
+    "4640737960815890810": {
+      "it": "✓ Ollama risponde",
+      "en": "✓ Ollama is answering"
+    },
+    "9196744413260150466": {
+      "it": "✗ Ollama non risponde",
+      "en": "✗ Ollama is not answering"
+    },
+    "2497711046447189637": {
+      "it": " Se il container di Ollama esiste già, avvialo da Docker Desktop o con {$START_TAG_CODE}docker start ollama{$CLOSE_TAG_CODE}. Solo la prima volta, crealo con {$START_TAG_CODE}docker run -d --name ollama --restart unless-stopped -p 127.0.0.1:11434:11434 -v ollama:/root/.ollama ollama/ollama{$CLOSE_TAG_CODE}: con {$START_TAG_CODE}--restart unless-stopped{$CLOSE_TAG_CODE} ripartirà da solo insieme a Docker. ",
+      "en": "If the Ollama container already exists, start it from Docker Desktop or with {$START_TAG_CODE}docker start ollama{$CLOSE_TAG_CODE}. Only the first time, create it with {$START_TAG_CODE}docker run -d --name ollama --restart unless-stopped -p 127.0.0.1:11434:11434 -v ollama:/root/.ollama ollama/ollama{$CLOSE_TAG_CODE}: with {$START_TAG_CODE}--restart unless-stopped{$CLOSE_TAG_CODE} it will start again by itself together with Docker."
+    },
+    "2687886291560505176": {
+      "it": "✓ Il modello {$INTERPOLATION} è scaricato",
+      "en": "✓ The model {$INTERPOLATION} is downloaded"
+    },
+    "5294080554473981115": {
+      "it": " Scaricamento di {$INTERPOLATION}: {$INTERPOLATION_1} {$START_BLOCK_IF} {$INTERPOLATION_2}% ({$INTERPOLATION_3} di {$INTERPOLATION_4}) {$CLOSE_BLOCK_IF}",
+      "en": "Downloading {$INTERPOLATION}: {$INTERPOLATION_1} {$START_BLOCK_IF} {$INTERPOLATION_2}% ({$INTERPOLATION_3} of {$INTERPOLATION_4}) {$CLOSE_BLOCK_IF}"
+    },
+    "1935413630263680255": {
+      "it": "Avanzamento",
+      "en": "Progress"
+    },
+    "1070089183890347867": {
+      "it": "✗ Il modello {$INTERPOLATION} non è scaricato",
+      "en": "✗ The model {$INTERPOLATION} is not downloaded"
+    },
+    "3774587707682882432": {
+      "it": "Scarica il modello",
+      "en": "Download the model"
+    },
+    "243735060361715856": {
+      "it": " Un modello piccolo pesa un paio di GB: ci vuole qualche minuto.",
+      "en": "A small model weighs a couple of GB: it takes a few minutes."
+    },
+    "4896846416441689910": {
+      "it": " Lo scaricamento non è riuscito: {$INTERPOLATION}. Controlla il nome del modello e la connessione a internet. ",
+      "en": "The download failed: {$INTERPOLATION}. Check the name of the model and the internet connection."
+    },
+    "5472218918315231618": {
+      "it": "Misura la precisione",
+      "en": "Measure the accuracy"
+    },
+    "1730418692183524438": {
+      "it": " Il programma prende alcuni esercenti che hai già categorizzato a mano, chiede al modello la categoria senza dirgli la tua scelta e conta quante volte indovina. Come esempi gli mostra le tue scelte su altri esercenti, come farà con i suggerimenti. Ogni domanda richiede qualche secondo. ",
+      "en": "The app takes some merchants you have already categorised by hand, asks the model for the category without telling it your choice, and counts how many times it gets it right. As examples it shows the model your choices for other merchants, as it will do with the suggestions. Each question takes a few seconds."
+    },
+    "8586006209085182699": {
+      "it": " Modello da misurare ",
+      "en": "Model to measure"
+    },
+    "5649698036492178313": {
+      "it": " Quanti esercenti ",
+      "en": "How many merchants"
+    },
+    "5143201647034280934": {
+      "it": " Misura ",
+      "en": "Measure"
+    },
+    "7033504265306311673": {
+      "it": "Risultato della misura",
+      "en": "Result of the measure"
+    },
+    "7229203858107356450": {
+      "it": " Misura di {$INTERPOLATION} in corso: {$INTERPOLATION_1} di {$INTERPOLATION_2}. ",
+      "en": "Measuring {$INTERPOLATION}: {$INTERPOLATION_1} of {$INTERPOLATION_2}."
+    },
+    "1685772739005302519": {
+      "it": " Misura di {$INTERPOLATION}: {$INTERPOLATION_1} esercenti. ",
+      "en": "Measure of {$INTERPOLATION}: {$INTERPOLATION_1} merchants."
+    },
+    "2912715984602530731": {
+      "it": "{$START_TAG_STRONG}{$INTERPOLATION}% giuste{$CLOSE_TAG_STRONG} ({$INTERPOLATION_1} giuste, {$INTERPOLATION_2} sbagliate, {$INTERPOLATION_3} \"non so\"), in media {$INTERPOLATION_4} secondi a domanda. ",
+      "en": "{$START_TAG_STRONG}{$INTERPOLATION}% right{$CLOSE_TAG_STRONG} ({$INTERPOLATION_1} right, {$INTERPOLATION_2} wrong, {$INTERPOLATION_3} \"I don't know\"), {$INTERPOLATION_4} seconds per question on average."
+    },
+    "982641209187198521": {
+      "it": "Avanzamento della misura",
+      "en": "Progress of the measure"
+    },
+    "496491604177022183": {
+      "it": "Errori del modello",
+      "en": "Mistakes of the model"
+    },
+    "276598563631325194": {
+      "it": "Esercente",
+      "en": "Merchant"
+    },
+    "6809668467064752752": {
+      "it": "La tua scelta",
+      "en": "Your choice"
+    },
+    "4839694519846276165": {
+      "it": "Il modello",
+      "en": "The model"
+    },
+    "1937138423233937232": {
+      "it": " Guarda gli errori: alcuni sono sbagli veri, altri scelte discutibili (Netflix è \"Intrattenimento\" o \"Multimedia\"?). Il modello suggerisce soltanto: decidi sempre tu. ",
+      "en": "Look at the mistakes: some are real errors, others are debatable choices (is Netflix \"Entertainment\" or \"Media\"?). The model only suggests: you always decide."
+    },
+    "2441110283232159679": {
+      "it": "consigliato, per computer con almeno 8 GB di memoria",
+      "en": "recommended, for computers with at least 8 GB of memory"
+    },
+    "5220014100879618087": {
+      "it": "3,3 GB",
+      "en": "3.3 GB"
+    },
+    "7931754802301890325": {
+      "it": "circa 3 GB",
+      "en": "about 3 GB"
+    },
+    "1630353473731253539": {
+      "it": "76%, 82% con le tue scelte come esempi",
+      "en": "76%, 82% with your choices as examples"
+    },
+    "4621590297540191942": {
+      "it": "circa tre volte più veloce, ma sbaglia di più: per computer lenti",
+      "en": "about three times faster, but makes more mistakes: for slow computers"
+    },
+    "3801245545166507492": {
+      "it": "2,0 GB",
+      "en": "2.0 GB"
+    },
+    "3397730827015668077": {
+      "it": "{$m} (sul tuo computer)",
+      "en": "{$m} (on your computer)"
+    },
+    "4651869407451098467": {
+      "it": "Impostazioni non salvate: controlla il nome del modello (es. gemma3:4b).",
+      "en": "Settings not saved: check the name of the model (e.g. gemma3:4b)."
+    },
+    "1877250479429312972": {
+      "it": "Lo scaricamento non è partito.",
+      "en": "The download did not start."
+    },
+    "5737803339125037676": {
+      "it": "La misura non è partita.",
+      "en": "The measure did not start."
+    },
+    "8562779358731366768": {
+      "it": "Impossibile leggere le impostazioni dell'IA: il backend è avviato?",
+      "en": "Cannot read the AI settings: is the backend running?"
+    },
+    "8307052898137379078": {
+      "it": "Suggerimenti con l'IA spenti.",
+      "en": "AI suggestions off."
+    },
+    "5507839986565134695": {
+      "it": "Suggerimenti con l'IA accesi, con il modello {$ollamaModel}.",
+      "en": "AI suggestions on, with the model {$ollamaModel}."
+    },
+    "2849658126943763904": {
+      "it": "Suggerimenti con l'IA accesi: {$label}, modello {$model}.",
+      "en": "AI suggestions on: {$label}, model {$model}."
+    },
+    "5256808639523594495": {
+      "it": " {$INTERPOLATION} Il modello lavora sui suoi server: per ogni domanda, i dati qui sotto escono dal tuo computer. ",
+      "en": "{$INTERPOLATION} The model works on its servers: for each question, the data below leaves your computer."
+    },
+    "635839042258769012": {
+      "it": "Come avere la chiave di {$INTERPOLATION}",
+      "en": "How to get the {$INTERPOLATION} key"
+    },
+    "6889533360804025277": {
+      "it": "La chiave",
+      "en": "The key"
+    },
+    "4584345645983455478": {
+      "it": "✓ Chiave salvata ({$INTERPOLATION})",
+      "en": "✓ Key saved ({$INTERPOLATION})"
+    },
+    "7995278291616253658": {
+      "it": " Cambia ",
+      "en": "Change"
+    },
+    "3330671026756169581": {
+      "it": " Togli ",
+      "en": "Remove"
+    },
+    "6685950871669273454": {
+      "it": " Chiave di {$INTERPOLATION} ",
+      "en": "{$INTERPOLATION} key"
+    },
+    "6577607337902854116": {
+      "it": " Salva la chiave ",
+      "en": "Save the key"
+    },
+    "6863559408597200239": {
+      "it": " La chiave viene salvata cifrata e non viene più mostrata: per riconoscerla vedrai solo le ultime 4 lettere. È come una password: non darla a nessuno. ",
+      "en": "The key is saved encrypted and is never shown again: to recognise it you will only see the last 4 letters. It is like a password: do not give it to anyone."
+    },
+    "327193200139587002": {
+      "it": " Cliccando un nome lo metti nel campo; poi premi \"Salva\". Puoi scrivere anche il nome di un altro modello di Google. ",
+      "en": "Clicking a name puts it in the field; then press \"Save\". You can also write the name of another Google model."
+    },
+    "5461062904994798707": {
+      "it": "Che cosa viene inviato",
+      "en": "What is sent"
+    },
+    "7708194691213017383": {
+      "it": " il testo dell'esercente, senza le parole con cifre (es. \"PAGAMENTO CARTA DEL NETFLIX.COM\"); ",
+      "en": "the merchant text, without the words containing digits (e.g. \"PAGAMENTO CARTA DEL NETFLIX.COM\");"
+    },
+    "233487664208042468": {
+      "it": "se è una spesa o un'entrata, e i nomi delle tue categorie;",
+      "en": "whether it is an expense or an income, and the names of your categories;"
+    },
+    "2107087010373244856": {
+      "it": "come esempi, alcune tue scelte su altri esercenti.",
+      "en": "as examples, some of your choices for other merchants."
+    },
+    "4829111341131692866": {
+      "it": "{$START_TAG_STRONG}Non{$CLOSE_TAG_STRONG} vengono inviati importi, date, IBAN, numeri di carta, il tuo nome. {$INTERPOLATION} ",
+      "en": "Amounts, dates, IBANs, card numbers and your name are {$START_TAG_STRONG}not{$CLOSE_TAG_STRONG} sent. {$INTERPOLATION}"
+    },
+    "6606207506599211230": {
+      "it": "✓ Hai accettato l'invio di questi dati a {$INTERPOLATION}.",
+      "en": "✓ You have accepted that this data is sent to {$INTERPOLATION}."
+    },
+    "5410380571016277892": {
+      "it": " Accetto che i dati qui sopra siano inviati a {$INTERPOLATION} per suggerire le categorie. ",
+      "en": "I accept that the data above is sent to {$INTERPOLATION} to suggest the categories."
+    },
+    "3758333586105696230": {
+      "it": " Prova la connessione ",
+      "en": "Test the connection"
+    },
+    "3405061693648960869": {
+      "it": " Per provare: salva la chiave, dai il consenso e premi \"Salva\".",
+      "en": "To test it: save the key, give your consent and press \"Save\"."
+    },
+    "6893686932906634174": {
+      "it": "Prova in corso...",
+      "en": "Testing..."
+    },
+    "5332754164053507766": {
+      "it": " ✓ {$INTERPOLATION} risponde: ESSELUNGA → {$INTERPOLATION_1} ({$INTERPOLATION_2}) ",
+      "en": "✓ {$INTERPOLATION} is answering: ESSELUNGA → {$INTERPOLATION_1} ({$INTERPOLATION_2})"
+    },
+    "5381452651789983107": {
+      "it": " Ha risposto il modello {$START_TAG_CODE}{$INTERPOLATION}{$CLOSE_TAG_CODE}. ",
+      "en": "The model {$START_TAG_CODE}{$INTERPOLATION}{$CLOSE_TAG_CODE} answered."
+    },
+    "1905128104247341278": {
+      "it": " Prima di rispondere ha \"ragionato\" con {$INTERPOLATION} token. ",
+      "en": "Before answering it \"reasoned\" with {$INTERPOLATION} tokens."
+    },
+    "39521601021149840": {
+      "it": "Google Gemini",
+      "en": "Google Gemini"
+    },
+    "2307180324353846461": {
+      "it": "Gemini è il servizio di intelligenza artificiale di Google.",
+      "en": "Gemini is Google's artificial intelligence service."
+    },
+    "1847289460006296438": {
+      "it": "Apri aistudio.google.com ed entra con il tuo account Google.",
+      "en": "Open aistudio.google.com and sign in with your Google account."
+    },
+    "5510042478164518357": {
+      "it": "Premi \"Get API key\", poi \"Create API key\", e copia la chiave.",
+      "en": "Press \"Get API key\", then \"Create API key\", and copy the key."
+    },
+    "6890223212178391844": {
+      "it": "Incollala qui sotto e premi \"Salva la chiave\".",
+      "en": "Paste it below and press \"Save the key\"."
+    },
+    "974166858117690953": {
+      "it": "Attenzione: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti. ",
+      "en": "Warning: with the free plan Google may use the data sent to improve its products."
+    },
+    "3430263443812724573": {
+      "it": "Leggi le condizioni sul sito prima di accettare.",
+      "en": "Read the terms on the site before accepting."
+    },
+    "8801785905384691401": {
+      "it": "veloce: di solito risponde in pochi secondi (è quello predefinito)",
+      "en": "fast: it usually answers in a few seconds (it is the default one)"
+    },
+    "5236547954504698330": {
+      "it": "ragiona prima di rispondere, quindi può essere più preciso, ma con il piano gratuito può impiegare minuti",
+      "en": "it reasons before answering, so it can be more accurate, but with the free plan it can take minutes"
+    },
+    "8019632420308149860": {
+      "it": "La chiave non è stata salvata.",
+      "en": "The key was not saved."
+    },
+    "185659713099576623": {
+      "it": "La chiave non è stata tolta.",
+      "en": "The key was not removed."
+    },
+    "544841566165250460": {
+      "it": "La prova non è partita.",
+      "en": "The test did not start."
+    },
+    "8605906617976783584": {
+      "it": "Questa non sembra una chiave: controlla di averla copiata intera.",
+      "en": "This does not look like a key: check that you copied all of it."
+    },
+    "8183847410162539298": {
+      "it": "Avvisi",
+      "en": "Alerts"
+    },
+    "3561355014004610841": {
+      "it": "{$START_TAG_STRONG}Il collegamento con {$INTERPOLATION} è scaduto.{$CLOSE_TAG_STRONG} Dal {$INTERPOLATION_1} i movimenti non vengono più aggiornati. Ricollegala: conti, movimenti e correzioni restano. {$START_LINK}Ricollega {$INTERPOLATION}{$CLOSE_LINK}",
+      "en": "{$START_TAG_STRONG}The connection with {$INTERPOLATION} has expired.{$CLOSE_TAG_STRONG} Since {$INTERPOLATION_1} the transactions are no longer updated. Link it again: accounts, transactions and corrections stay. {$START_LINK}Link {$INTERPOLATION} again{$CLOSE_LINK}"
+    },
+    "6176981904019533922": {
+      "it": "{$START_TAG_STRONG}Il collegamento con {$INTERPOLATION} scade {$INTERPOLATION_1}{$CLOSE_TAG_STRONG} ({$INTERPOLATION_2}). Le regole europee (PSD2) chiedono di rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza, non perdi niente. {$START_LINK}Ricollega {$INTERPOLATION}{$CLOSE_LINK}",
+      "en": "{$START_TAG_STRONG}The connection with {$INTERPOLATION} expires {$INTERPOLATION_1}{$CLOSE_TAG_STRONG} ({$INTERPOLATION_2}). European rules (PSD2) require the consent to be renewed with a new login to the bank: do it before it expires, you lose nothing. {$START_LINK}Link {$INTERPOLATION} again{$CLOSE_LINK}"
+    },
+    "6807313390667610044": {
+      "it": "Aggiornamento non riuscito: {$INTERPOLATION}.",
+      "en": "Update failed: {$INTERPOLATION}."
+    },
+    "8407602953033692564": {
+      "it": "Vai ai conti",
+      "en": "Go to the accounts"
+    },
+    "6879498246629900897": {
+      "it": "I movimenti di {$INTERPOLATION} non tornano con il saldo {$ICU}.",
+      "en": "The transactions of {$INTERPOLATION} do not match {$ICU}."
+    },
+    "125192974572397228": {
+      "it": "{VAR_SELECT, select, BANK {della banca} other {che hai scritto}}",
+      "en": "{VAR_SELECT, select, BANK {the balance of the bank} other {the balance you wrote}}"
+    },
+    "4421317926775817445": {
+      "it": "Dal {$INTERPOLATION} al {$INTERPOLATION_1} il saldo è cambiato di {$INTERPOLATION_2} {$ICU} rispetto ai movimenti: {$ICU_1} Se manca, si può caricare il file della banca in Importa.",
+      "en": "From {$INTERPOLATION} to {$INTERPOLATION_1} the balance changed by {$INTERPOLATION_2} {$ICU} than the transactions: {$ICU_1} If it is missing, you can load the bank's file in Import."
+    },
+    "3492956599867661227": {
+      "it": "{VAR_SELECT, select, true {in più} other {in meno}}",
+      "en": "{VAR_SELECT, select, true {more} other {less}}"
+    },
+    "1701155514522880724": {
+      "it": "{VAR_SELECT, select, true {probabilmente manca un'entrata o c'è un'uscita doppia.} other {probabilmente manca un'uscita o c'è un'entrata doppia.}}",
+      "en": "{VAR_SELECT, select, true {probably an income is missing or an expense is there twice.} other {probably an expense is missing or an income is there twice.}}"
+    },
+    "8764006015527409608": {
+      "it": "Budget superati questo mese:",
+      "en": "Budgets exceeded this month:"
+    },
+    "4531760428134184098": {
+      "it": "Vai ai budget",
+      "en": "Go to the budgets"
+    },
+    "8591874194765059704": {
+      "it": "Chiudi questo avviso",
+      "en": "Close this alert"
+    },
+    "8427008383136829740": {
+      "it": "oggi",
+      "en": "today"
+    },
+    "8653239709219216408": {
+      "it": "domani",
+      "en": "tomorrow"
+    },
+    "259989830717563781": {
+      "it": "tra {$daysLeft} giorni",
+      "en": "in {$daysLeft} days"
+    },
+    "7151932112800140801": {
+      "it": "Il server non risponde: riprova.",
+      "en": "The server is not answering: try again."
+    },
+    "7695234073109581424": {
+      "it": "Categorie di spesa",
+      "en": "Expense categories"
+    },
+    "6697645486648066589": {
+      "it": "Categorie di entrata",
+      "en": "Income categories"
+    },
+    "3930323532027497755": {
+      "it": "Categorie di investimento",
+      "en": "Investment categories"
+    },
+    "6584102779544885044": {
+      "it": "Altre categorie",
+      "en": "Other categories"
+    },
+    "1300777984996878342": {
+      "it": "un acquisto di titoli",
+      "en": "a securities purchase"
+    },
+    "4666584173824711465": {
+      "it": "una vendita di titoli",
+      "en": "a securities sale"
+    },
+    "4153774400287872171": {
+      "it": "un versamento negli investimenti",
+      "en": "a deposit into investments"
+    },
+    "6088450087720542764": {
+      "it": "un prelievo dagli investimenti",
+      "en": "a withdrawal from investments"
+    },
+    "6488093541040995181": {
+      "it": "un trasferimento tra i tuoi conti",
+      "en": "a transfer between your accounts"
+    },
+    "6442589447219127467": {
+      "it": "il saldo della carta di credito",
+      "en": "the credit card settlement"
+    },
+    "7001499373272398070": {
+      "it": "un movimento ignorato",
+      "en": "an ignored transaction"
+    },
+    "3312566284985858169": {
+      "it": "una ritenuta",
+      "en": "a withholding tax"
+    },
+    "6434698935894827022": {
+      "it": "Da assegnare",
+      "en": "To be assigned"
+    },
+    "1751655552785530631": {
+      "it": "Conto principale",
+      "en": "Main account"
+    },
+    "4013764764555890786": {
+      "it": "Conto spese",
+      "en": "Spending account"
+    },
+    "5848137366820771975": {
+      "it": "Carta di credito",
+      "en": "Credit card"
+    },
+    "5698891092385620781": {
+      "it": "Investimenti",
+      "en": "Investments"
+    },
+    "3384455359301844038": {
+      "it": "Escluso",
+      "en": "Excluded"
+    },
+    "7739642421094098908": {
+      "it": "Spesa",
+      "en": "Expense"
+    },
+    "8458917802757224890": {
+      "it": "Entrata",
+      "en": "Income"
+    },
+    "8835829271704048265": {
+      "it": "Trasferimento interno",
+      "en": "Internal transfer"
+    },
+    "2011303325236125342": {
+      "it": "Saldo carta di credito",
+      "en": "Credit card settlement"
+    },
+    "5679458807396270657": {
+      "it": "Versamento investimenti",
+      "en": "Investment deposit"
+    },
+    "2079329036559523822": {
+      "it": "Prelievo investimenti",
+      "en": "Investment withdrawal"
+    },
+    "5404991150925635121": {
+      "it": "Acquisto titoli",
+      "en": "Securities purchase"
+    },
+    "8831296440099819588": {
+      "it": "Vendita titoli",
+      "en": "Securities sale"
+    },
+    "322886981303816692": {
+      "it": "Cedole, dividendi e interessi",
+      "en": "Coupons, dividends and interest"
+    },
+    "1540038224568734674": {
+      "it": "Ritenute sulle rendite",
+      "en": "Withholding tax on income"
+    },
+    "2136751768106909479": {
+      "it": "Altre tasse investimenti",
+      "en": "Other investment taxes"
+    },
+    "9041376377992054748": {
+      "it": "Ignorato",
+      "en": "Ignored"
+    },
+    "5173351509232099798": {
+      "it": "Da verificare",
+      "en": "To review"
+    },
+    "1287905368086812768": {
+      "it": "contiene",
+      "en": "contains"
+    },
+    "2449871196909853817": {
+      "it": "contiene tutte le parole",
+      "en": "contains all the words"
+    },
+    "6640105287040104034": {
+      "it": "inizia con",
+      "en": "starts with"
+    },
+    "446355511233856179": {
+      "it": "entrate e uscite",
+      "en": "income and expenses"
+    },
+    "176046996325456160": {
+      "it": "solo uscite",
+      "en": "expenses only"
+    },
+    "2235715588540227661": {
+      "it": "solo entrate",
+      "en": "income only"
+    },
+    "4601158816990473641": {
+      "it": "Altre rendite",
+      "en": "Other income"
+    },
+    "5624509370989230494": {
+      "it": "Senza nome del titolo",
+      "en": "Security without a name"
+    },
+    "6859041993966992929": {
+      "it": "Ritenute senza la loro rendita nel periodo",
+      "en": "Withholding tax without its income in the period"
+    },
+    "7699868535167569959": {
+      "it": "Senza categoria",
+      "en": "No category"
+    },
+    "5017786397627511113": {
+      "it": "Sezioni",
+      "en": "Sections"
+    },
+    "3716776800892396728": {
+      "it": "WalletTracker",
+      "en": "WalletTracker"
+    },
+    "6516045032642582207": {
+      "it": "Modalità discreta",
+      "en": "Discreet mode"
+    },
+    "5885983071514428492": {
+      "it": "Esci",
+      "en": "Log out"
+    },
+    "3303171116076745964": {
+      "it": "Modalità discreta: nasconde gli importi",
+      "en": "Discreet mode: hides the amounts"
+    },
+    "5298483733946777013": {
+      "it": " Senza rete: stai vedendo gli ultimi dati scaricati, e per ora non si possono fare modifiche. ",
+      "en": "Offline: you are seeing the last data downloaded, and for now no changes can be made."
+    },
+    "7233533429397434107": {
+      "it": "Chiudi l'avviso senza rete",
+      "en": "Close the offline notice"
+    },
+    "5658758964283347615": {
+      "it": " È pronta una nuova versione di WalletTracker. ",
+      "en": "A new version of WalletTracker is ready."
+    },
+    "5643014807286711792": {
+      "it": "Aggiorna",
+      "en": "Update"
+    },
+    "8344645273522791629": {
+      "it": "Chiudi l'avviso della versione pronta",
+      "en": "Close the notice about the ready version"
+    },
+    "976991695647051347": {
+      "it": " È disponibile WalletTracker {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}. {$START_LINK}Che cosa cambia e come aggiornare{$CLOSE_LINK}. ",
+      "en": "WalletTracker {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} is available. {$START_LINK}What changes and how to update{$CLOSE_LINK}."
+    },
+    "3568763485184346921": {
+      "it": "Chiudi l'avviso della versione nuova",
+      "en": "Close the notice about the new version"
+    },
+    "7738242432287702793": {
+      "it": "Apri le Impostazioni",
+      "en": "Open Settings"
+    },
+    "868993878156498067": {
+      "it": "Chiudi l'avviso dei backup",
+      "en": "Close the backup notice"
+    },
+    "3665175962446917019": {
+      "it": " Per iniziare, configura il collegamento con Enable Banking: {$START_LINK}apri le Impostazioni{$CLOSE_LINK}. ",
+      "en": "To get started, set up the connection with Enable Banking: {$START_LINK}open Settings{$CLOSE_LINK}."
+    },
+    "5327128487116878100": {
+      "it": "Chiudi l'avviso della configurazione",
+      "en": "Close the setup notice"
+    },
+    "3008360892718204481": {
+      "it": "Riepilogo · WalletTracker",
+      "en": "Overview · WalletTracker"
+    },
+    "8388490192613111964": {
+      "it": "Analisi · WalletTracker",
+      "en": "Analysis · WalletTracker"
+    },
+    "5917560098765731788": {
+      "it": "Categoria · WalletTracker",
+      "en": "Category · WalletTracker"
+    },
+    "2458478186701435121": {
+      "it": "Investimenti · WalletTracker",
+      "en": "Investments · WalletTracker"
+    },
+    "3196462655929673178": {
+      "it": "Budget · WalletTracker",
+      "en": "Budget · WalletTracker"
+    },
+    "2709477990925954455": {
+      "it": "Abbonamenti · WalletTracker",
+      "en": "Subscriptions · WalletTracker"
+    },
+    "6417688862067061775": {
+      "it": "Movimenti · WalletTracker",
+      "en": "Transactions · WalletTracker"
+    },
+    "712076310454048179": {
+      "it": "Movimento · WalletTracker",
+      "en": "Transaction · WalletTracker"
+    },
+    "864705619127892741": {
+      "it": "Conti · WalletTracker",
+      "en": "Accounts · WalletTracker"
+    },
+    "7458835434406377378": {
+      "it": "Importa movimenti · WalletTracker",
+      "en": "Import transactions · WalletTracker"
+    },
+    "5529317015831316251": {
+      "it": "Regole · WalletTracker",
+      "en": "Rules · WalletTracker"
+    },
+    "6378946874372725759": {
+      "it": "Categorie · WalletTracker",
+      "en": "Categories · WalletTracker"
+    },
+    "1480285740209420623": {
+      "it": "Collega una banca · WalletTracker",
+      "en": "Link a bank · WalletTracker"
+    },
+    "3667697344333276823": {
+      "it": "Impostazioni · WalletTracker",
+      "en": "Settings · WalletTracker"
+    },
+    "2325546583395405655": {
+      "it": "Altro · WalletTracker",
+      "en": "More · WalletTracker"
+    },
+    "3040906378101300791": {
+      "it": "Collegamento · WalletTracker",
+      "en": "Connection · WalletTracker"
+    },
+    "1849026713622916290": {
+      "it": "Riepilogo",
+      "en": "Overview"
+    },
+    "1863581126975272932": {
+      "it": "Movimenti",
+      "en": "Transactions"
+    },
+    "2305570385542557002": {
+      "it": "Analisi",
+      "en": "Analysis"
+    },
+    "6885844978916799621": {
+      "it": "Budget",
+      "en": "Budget"
+    },
+    "5684758787825659628": {
+      "it": "Altro",
+      "en": "More"
+    },
+    "2360877876391049143": {
+      "it": "Backup: il servizio dei backup non risponde.",
+      "en": "Backup: the backup service is not answering."
+    },
+    "40480600201541580": {
+      "it": "Backup: il backup automatico è spento (manca la password dei backup).",
+      "en": "Backup: the automatic backup is off (the backup password is missing)."
+    },
+    "3968964346135291443": {
+      "it": "Backup: l'ultimo backup non è riuscito.",
+      "en": "Backup: the last backup failed."
+    },
+    "1449715936220209546": {
+      "it": "Backup: nessun backup negli ultimi due giorni.",
+      "en": "Backup: no backup in the last two days."
+    },
+    "3685416289890140838": {
+      "it": "Mostra gli importi",
+      "en": "Show the amounts"
+    },
+    "229056593006664987": {
+      "it": "Nascondi gli importi",
+      "en": "Hide the amounts"
+    },
+    "3075026350666322158": {
+      "it": "Le tue spese e i tuoi conti, a colpo d'occhio.",
+      "en": "Your expenses and your accounts, at a glance."
+    },
+    "5230112506462533810": {
+      "it": "✓ L'app è protetta da un PIN: lo chiede su ogni dispositivo.",
+      "en": "✓ The app is protected by a PIN: it is asked on every device."
+    },
+    "4069099604442159854": {
+      "it": " PIN di adesso ",
+      "en": "Current PIN"
+    },
+    "4360313204272419036": {
+      "it": "Togli il PIN",
+      "en": "Remove the PIN"
+    },
+    "4837233737931172255": {
+      "it": " Senza PIN si entra solo dal server; dai dispositivi remoti non si entrerà più, finché non ne crei uno nuovo. ",
+      "en": "Without a PIN you can get in only from the server; from remote devices you will no longer get in, until you create a new one."
+    },
+    "4436629051277478462": {
+      "it": " Il PIN si toglie solo dal server, il computer su cui è installata l'app. ",
+      "en": "The PIN can only be removed from the server, the computer where the app is installed."
+    },
+    "7214516315460560104": {
+      "it": "L'app è aperta senza PIN, solo dal server. Dai dispositivi remoti non si entra.",
+      "en": "The app is open without a PIN, only from the server. You cannot get in from remote devices."
+    },
+    "8158644687554627183": {
+      "it": " PIN ",
+      "en": "PIN"
+    },
+    "5603926743440007912": {
+      "it": " Ripeti il PIN ",
+      "en": "Repeat the PIN"
+    },
+    "132255651382012103": {
+      "it": "Proteggi con un PIN",
+      "en": "Protect with a PIN"
+    },
+    "4695476921010187891": {
+      "it": " Da 6 a 10 cifre. Da quel momento lo chiederemo su ogni dispositivo, anche sul server. ",
+      "en": "From 6 to 10 digits. From then on we will ask for it on every device, the server included."
+    },
+    "4019290720866658013": {
+      "it": "Il PIN è fatto di cifre: da 6 a 10.",
+      "en": "The PIN is made of digits: from 6 to 10."
+    },
+    "1262199172689313074": {
+      "it": "I due PIN non sono uguali: riscrivili.",
+      "en": "The two PINs are not the same: write them again."
+    },
+    "8719600843645161856": {
+      "it": "Salva il codice di recupero",
+      "en": "Save the recovery code"
+    },
+    "314616869625101297": {
+      "it": "Come vuoi proteggere WalletTracker?",
+      "en": "How do you want to protect WalletTracker?"
+    },
+    "4303641871470455254": {
+      "it": "Con un PIN",
+      "en": "With a PIN"
+    },
+    "4194719885770870621": {
+      "it": " Lo chiederemo per aprire l'app, su ogni dispositivo. Serve se userai l'app da un dispositivo remoto (il telefono, un portatile, un altro computer). Da 6 a 10 cifre: non usare il PIN del bancomat né una data di nascita. ",
+      "en": "We will ask for it to open the app, on every device. You need it if you will use the app from a remote device (the phone, a laptop, another computer). From 6 to 10 digits: do not use your bank card PIN or a date of birth."
+    },
+    "1165497588778118747": {
+      "it": "Crea il PIN",
+      "en": "Create the PIN"
+    },
+    "3991942812492543445": {
+      "it": "Senza PIN, solo dal server",
+      "en": "Without a PIN, only from the server"
+    },
+    "2058090443596802410": {
+      "it": " Chi usa questo computer, il server su cui è installata l'app, entra subito. Dai dispositivi remoti, invece, non si potrà entrare finché non crei un PIN (lo puoi fare quando vuoi, da Impostazioni). ",
+      "en": "Whoever uses this computer, the server where the app is installed, gets in straight away. From remote devices, instead, you will not be able to get in until you create a PIN (you can do it whenever you want, from Settings)."
+    },
+    "779146649583446066": {
+      "it": " Continua senza PIN ",
+      "en": "Continue without a PIN"
+    },
+    "4777107178141434412": {
+      "it": "Ho dimenticato il PIN",
+      "en": "I forgot the PIN"
+    },
+    "4183928785867865247": {
+      "it": " Scrivi il codice di recupero che hai salvato quando hai creato il PIN, e scegli un PIN nuovo. ",
+      "en": "Write the recovery code you saved when you created the PIN, and choose a new PIN."
+    },
+    "1053196097764378640": {
+      "it": " Codice di recupero ",
+      "en": "Recovery code"
+    },
+    "9066799130729919210": {
+      "it": "XXXX-XXXX-XXXX-XXXX",
+      "en": "XXXX-XXXX-XXXX-XXXX"
+    },
+    "6610790806958108319": {
+      "it": " PIN nuovo ",
+      "en": "New PIN"
+    },
+    "70207366466599504": {
+      "it": " Ripeti il PIN nuovo ",
+      "en": "Repeat the new PIN"
+    },
+    "7656048790521574184": {
+      "it": "{VAR_SELECT, select, true {Aspetta {INTERPOLATION}} other {Scegli il PIN nuovo}}",
+      "en": "{VAR_SELECT, select, true {Wait {INTERPOLATION}} other {Choose the new PIN}}"
+    },
+    "6830680994695431658": {
+      "it": " Torna al PIN ",
+      "en": "Back to the PIN"
+    },
+    "9104123019471224761": {
+      "it": " Hai perso anche il codice? Dal server, il computer su cui è installata l'app, lo script di installazione azzera il PIN (la guida dice come). ",
+      "en": "Did you lose the code too? From the server, the computer where the app is installed, the installation script resets the PIN (the guide says how)."
+    },
+    "521873169398789408": {
+      "it": "Inserisci il PIN",
+      "en": "Enter the PIN"
+    },
+    "6904762166192135995": {
+      "it": "{VAR_SELECT, select, true {Aspetta {INTERPOLATION}} other {Entra}}",
+      "en": "{VAR_SELECT, select, true {Wait {INTERPOLATION}} other {Enter}}"
+    },
+    "8445431511401209603": {
+      "it": " Ho dimenticato il PIN ",
+      "en": "I forgot the PIN"
+    },
+    "4132735550923134355": {
+      "it": "Da qui serve un PIN",
+      "en": "A PIN is needed from here"
+    },
+    "1517229785664013688": {
+      "it": " WalletTracker è aperto senza PIN, ma solo dal server, il computer su cui è installato. Per usarlo da questo dispositivo, crea un PIN dal server: {$START_TAG_STRONG}Impostazioni → Accesso{$CLOSE_TAG_STRONG}. ",
+      "en": "WalletTracker is open without a PIN, but only from the server, the computer where it is installed. To use it from this device, create a PIN from the server: {$START_TAG_STRONG}Settings → Access{$CLOSE_TAG_STRONG}."
+    },
+    "6048104735082208019": {
+      "it": "Crea il PIN dal server",
+      "en": "Create the PIN from the server"
+    },
+    "394808210370154387": {
+      "it": " WalletTracker non è ancora protetto. Per sicurezza la scelta si fa solo dal server, il computer su cui è installata l'app: aprila lì, su {$START_TAG_STRONG}http://localhost:8000{$CLOSE_TAG_STRONG}. ",
+      "en": "WalletTracker is not protected yet. For safety the choice can only be made from the server, the computer where the app is installed: open it there, at {$START_TAG_STRONG}http://localhost:8000{$CLOSE_TAG_STRONG}."
+    },
+    "7956391659033283829": {
+      "it": "Il server non risponde",
+      "en": "The server is not answering"
+    },
+    "1911237433039203594": {
+      "it": " Per entrare serve il collegamento con il server, il computer su cui gira WalletTracker. Controlla che sia acceso e che tu sia in rete (da un dispositivo remoto, con Tailscale acceso), poi riprova. ",
+      "en": "To get in you need the connection with the server, the computer where WalletTracker runs. Check that it is on and that you are online (from a remote device, with Tailscale on), then try again."
+    },
+    "9132704298661019725": {
+      "it": "Riprova",
+      "en": "Try again"
+    },
+    "3505543824838529936": {
+      "it": "Un attimo…",
+      "en": "One moment…"
+    },
+    "8269962072690482522": {
+      "it": "Il server non risponde: controlla che sia acceso e riprova.",
+      "en": "The server is not answering: check that it is on and try again."
+    },
+    "6585987171324972054": {
+      "it": "Il tuo codice di recupero",
+      "en": "Your recovery code"
+    },
+    "2546988139069948349": {
+      "it": "Codice di recupero",
+      "en": "Recovery code"
+    },
+    "4648090067919461152": {
+      "it": "{VAR_SELECT, select, true {Copiato ✓} other {Copia il codice}}",
+      "en": "{VAR_SELECT, select, true {Copied ✓} other {Copy the code}}"
+    },
+    "3789746791716479506": {
+      "it": " Se dimentichi il PIN, con questo codice ne scegli uno nuovo, anche da un dispositivo remoto. Salvalo adesso dove salvi le cose importanti (un gestore di password, un foglio in un cassetto): {$START_TAG_STRONG}non lo vedrai più{$CLOSE_TAG_STRONG}. Vale una volta sola: dopo l'uso, l'app te ne dà uno nuovo. ",
+      "en": "If you forget the PIN, with this code you choose a new one, even from a remote device. Save it now where you keep important things (a password manager, a sheet of paper in a drawer): {$START_TAG_STRONG}you will not see it again{$CLOSE_TAG_STRONG}. It works only once: after you use it, the app gives you a new one."
+    },
+    "6908308262824009530": {
+      "it": " L'ho salvato, continua ",
+      "en": "I have saved it, continue"
+    },
+    "3828720649774659138": {
+      "it": "{VAR_SELECT, select, true {Budget del mese} other {Budget di un mese passato}}",
+      "en": "{VAR_SELECT, select, true {Budget of the month} other {Budget of a past month}}"
+    },
+    "1685902468951680274": {
+      "it": "Mese precedente",
+      "en": "Previous month"
+    },
+    "1616265268555424233": {
+      "it": "Mese successivo",
+      "en": "Next month"
+    },
+    "4699245310144793732": {
+      "it": "Speso nelle categorie con un budget",
+      "en": "Spent in the categories with a budget"
+    },
+    "845062209918862487": {
+      "it": " su {$INTERPOLATION} · {$INTERPOLATION_1} ",
+      "en": "of {$INTERPOLATION} · {$INTERPOLATION_1}"
+    },
+    "5583441459483375971": {
+      "it": "Spesa di {$INTERPOLATION}",
+      "en": "Spending on {$INTERPOLATION}"
+    },
+    "5893861370001005122": {
+      "it": "il ritmo di oggi",
+      "en": "today's pace"
+    },
+    "8345053905128904217": {
+      "it": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} di {$INTERPOLATION_1} ",
+      "en": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} of {$INTERPOLATION_1}"
+    },
+    "8634068989346327232": {
+      "it": "Restano {$INTERPOLATION}",
+      "en": "{$INTERPOLATION} left"
+    },
+    "464874140443976709": {
+      "it": "Superato di {$INTERPOLATION}",
+      "en": "Exceeded by {$INTERPOLATION}"
+    },
+    "4439715233794834274": {
+      "it": "Modifica",
+      "en": "Edit"
+    },
+    "2402846969362487836": {
+      "it": "Elimina",
+      "en": "Delete"
+    },
+    "652252707014562483": {
+      "it": " Nessun budget in questo mese. Creane uno qui sotto: ad esempio \"Spesa alimentare\", 400 € al mese. ",
+      "en": "No budget in this month. Create one below: for example \"Groceries\", €400 a month."
+    },
+    "3941062358430201613": {
+      "it": "{VAR_SELECT, select, true {Modifica il budget} other {Nuovo budget}}",
+      "en": "{VAR_SELECT, select, true {Edit the budget} other {New budget}}"
+    },
+    "2683495045710342816": {
+      "it": " Un budget è quanto vuoi spendere al massimo in una categoria ogni mese. Contano solo le spese vere: un rimborso (\"Rimborso di una spesa\") le riduce, i trasferimenti tra i tuoi conti non contano mai. ",
+      "en": "A budget is the most you want to spend in a category each month. Only real expenses count: a refund (\"Refund of an expense\") reduces them, transfers between your accounts never count."
+    },
+    "9148085865787403414": {
+      "it": " Categoria ",
+      "en": "Category"
+    },
+    "1743336206694157601": {
+      "it": "— scegli —",
+      "en": "— choose —"
+    },
+    "7086737132587735592": {
+      "it": "Scegli la categoria.",
+      "en": "Choose the category."
+    },
+    "6377678535372785290": {
+      "it": " Al mese, al massimo ",
+      "en": "Per month, at most"
+    },
+    "2056428384518139213": {
+      "it": "es. 400",
+      "en": "e.g. 400"
+    },
+    "2593327629464200985": {
+      "it": "Un importo maggiore di zero, al massimo con due decimali.",
+      "en": "An amount greater than zero, with two decimals at most."
+    },
+    "1616252519705684760": {
+      "it": "{VAR_SELECT, select, true {Salva le modifiche} other {Crea il budget}}",
+      "en": "{VAR_SELECT, select, true {Save the changes} other {Create the budget}}"
+    },
+    "4493452637644305501": {
+      "it": "Nei limiti",
+      "en": "Within limits"
+    },
+    "269585821489855595": {
+      "it": "Quasi esaurito",
+      "en": "Almost used up"
+    },
+    "8583054849330069658": {
+      "it": "Superato",
+      "en": "Exceeded"
+    },
+    "2222185221263199281": {
+      "it": "Rispettati {$kept} su {$count}.",
+      "en": "{$kept} of {$count} kept."
+    },
+    "3054935949462676412": {
+      "it": "Nei tre mesi prima, in media {$amount}.",
+      "en": "In the three months before, {$amount} on average."
+    },
+    "5001335702858244954": {
+      "it": "Budget \"{$category}\" salvato.",
+      "en": "Budget \"{$category}\" saved."
+    },
+    "4520998134390091429": {
+      "it": "Il budget non è stato salvato.",
+      "en": "The budget was not saved."
+    },
+    "5075450246779188136": {
+      "it": "Budget \"{$category}\" eliminato.",
+      "en": "Budget \"{$category}\" deleted."
+    },
+    "6958453474702686722": {
+      "it": "Il budget non è stato eliminato.",
+      "en": "The budget was not deleted."
+    },
+    "6718682047822203281": {
+      "it": "Impossibile caricare i budget: il backend è avviato?",
+      "en": "Cannot load the budgets: is the backend running?"
+    },
+    "3706213118861939815": {
+      "it": "In linea con il ritmo di oggi.",
+      "en": "In line with today's pace."
+    },
+    "4308204947173954943": {
+      "it": "{$amount} sopra il ritmo di oggi: rallenta per restare nel budget.",
+      "en": "{$amount} above today's pace: slow down to stay within the budget."
+    },
+    "7329481644489716179": {
+      "it": "{$amount} sotto il ritmo di oggi.",
+      "en": "{$amount} below today's pace."
+    },
+    "4568025969880696244": {
+      "it": "Categorie",
+      "en": "Categories"
+    },
+    "4942534156181363375": {
+      "it": " La categoria dice {$START_TAG_STRONG}per che cosa{$CLOSE_TAG_STRONG} sono i soldi (Spesa alimentare, Stipendio e pensione...); il tipo del movimento dice {$START_TAG_STRONG}che cos'è{$CLOSE_TAG_STRONG} (spesa, entrata, trasferimento). Ogni categoria sta in un gruppo: nei menu compaiono per prime le categorie del gruppo che si addice al movimento, ma puoi sempre sceglierne un'altra. Puoi rinominare, aggiungere ed eliminare le categorie: rinominandone una, movimenti, regole e budget si aggiornano da soli.\n",
+      "en": "The category says {$START_TAG_STRONG}what{$CLOSE_TAG_STRONG} the money is for (Groceries, Salary and pension...); the type of the transaction says {$START_TAG_STRONG}what it is{$CLOSE_TAG_STRONG} (expense, income, transfer). Every category belongs to a group: in the menus the categories of the group that suits the transaction come first, but you can always choose another one. You can rename, add and delete categories: when you rename one, transactions, rules and budgets update by themselves."
+    },
+    "4651403097620709342": {
+      "it": "Nuova categoria",
+      "en": "New category"
+    },
+    "845041155954588585": {
+      "it": " Nome ",
+      "en": "Name"
+    },
+    "2829939238315604647": {
+      "it": "es. Animali domestici",
+      "en": "e.g. Pets"
+    },
+    "6716366390205312713": {
+      "it": "Scrivi un nome (al massimo 100 caratteri).",
+      "en": "Write a name (100 characters at most)."
+    },
+    "7597222093578012418": {
+      "it": " Gruppo ",
+      "en": "Group"
+    },
+    "1654470830488327501": {
+      "it": "Aggiungi",
+      "en": "Add"
+    },
+    "3800720921072756623": {
+      "it": "Nuovo nome di {$INTERPOLATION}",
+      "en": "New name of {$INTERPOLATION}"
+    },
+    "7170700333751417038": {
+      "it": "· di partenza",
+      "en": "· starter"
+    },
+    "4916249371001136190": {
+      "it": "{VAR_PLURAL, plural, =1 {1 movimento} other {{INTERPOLATION} movimenti}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 transaction} other {{INTERPOLATION} transactions}}"
+    },
+    "5519496616929337147": {
+      "it": " nessun movimento ",
+      "en": "no transactions"
+    },
+    "4805908283801326433": {
+      "it": "Gruppo",
+      "en": "Group"
+    },
+    "6926488016817070312": {
+      "it": "Gruppo di {$INTERPOLATION}",
+      "en": "Group of {$INTERPOLATION}"
+    },
+    "7796381291409443369": {
+      "it": "{VAR_PLURAL, plural, =1 {1 movimento resterà senza categoria.} other {{INTERPOLATION} movimenti resteranno senza categoria.}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 transaction will be left without a category.} other {{INTERPOLATION} transactions will be left without a category.}}"
+    },
+    "5892808900362904008": {
+      "it": " Nessun movimento la usa. ",
+      "en": "No transaction uses it."
+    },
+    "9006766932196152173": {
+      "it": "Categoria \"{$name}\" aggiunta.",
+      "en": "Category \"{$name}\" added."
+    },
+    "1391934138418738183": {
+      "it": "\"{$name}\" ora si chiama \"{$name2}\": movimenti, regole e budget sono aggiornati.",
+      "en": "\"{$name}\" is now called \"{$name2}\": transactions, rules and budgets are updated."
+    },
+    "3766309277417170043": {
+      "it": "\"{$name}\" spostata in \"{$value}\".",
+      "en": "\"{$name}\" moved to \"{$value}\"."
+    },
+    "4193113657512409623": {
+      "it": "Categoria \"{$name}\" eliminata.",
+      "en": "Category \"{$name}\" deleted."
+    },
+    "3645798755052017239": {
+      "it": "Operazione non riuscita.",
+      "en": "The operation failed."
+    },
+    "7479261693828208772": {
+      "it": "Impossibile caricare le categorie: il backend è avviato?",
+      "en": "Cannot load the categories: is the backend running?"
+    },
+    "8597927931190618883": {
+      "it": "Torna ad Analisi",
+      "en": "Back to Analysis"
+    },
+    "5923041569817566400": {
+      "it": "Categoria",
+      "en": "Category"
+    },
+    "310893571892031328": {
+      "it": "Budget {$INTERPOLATION}",
+      "en": "Budget {$INTERPOLATION}"
+    },
+    "7222457799561294151": {
+      "it": "La tacca è dove dovresti essere oggi, spendendo in modo regolare.",
+      "en": "The mark is where you should be today, spending at a steady pace."
+    },
+    "723862188931043791": {
+      "it": "Imposta un budget per questa categoria",
+      "en": "Set a budget for this category"
+    },
+    "4771733586158335421": {
+      "it": "Periodo del grafico",
+      "en": "Period of the chart"
+    },
+    "6795013453035932765": {
+      "it": " Quest'anno ",
+      "en": "This year"
+    },
+    "6857230666195175209": {
+      "it": " 12 mesi ",
+      "en": "12 months"
+    },
+    "7244666925544695022": {
+      "it": " Dove, {$ICU} ",
+      "en": "Where, {$ICU}"
+    },
+    "5212303023297406979": {
+      "it": "{VAR_SELECT, select, true {questo mese} other {a {INTERPOLATION}}}",
+      "en": "{VAR_SELECT, select, true {this month} other {in {INTERPOLATION}}}"
+    },
+    "2838211393161482132": {
+      "it": "{VAR_PLURAL, plural, =1 {1 volta} other {{INTERPOLATION} volte}}",
+      "en": "{VAR_PLURAL, plural, =1 {once} other {{INTERPOLATION} times}}"
+    },
+    "5383800237447218572": {
+      "it": "Nessun movimento in questo mese.",
+      "en": "No transactions in this month."
+    },
+    "1470016117136954496": {
+      "it": " Vedi i movimenti ",
+      "en": "See the transactions"
+    },
+    "187208729016610976": {
+      "it": "{VAR_SELECT, select, true {Cambia il budget} other {I budget}}",
+      "en": "{VAR_SELECT, select, true {Change the budget} other {The budgets}}"
+    },
+    "6324578799066940228": {
+      "it": "Senza descrizione",
+      "en": "No description"
+    },
+    "7588276756458190887": {
+      "it": "Budget usato al {$used} per cento",
+      "en": "Budget used at {$used} per cent"
+    },
+    "4443412477780915577": {
+      "it": "Budget usato al {$used} per cento; a questo punto del mese il ritmo regolare è al {$pace} per cento",
+      "en": "Budget used at {$used} per cent; at this point of the month the steady pace is at {$pace} per cent"
+    },
+    "4808792598838856287": {
+      "it": "a {$monthName}, finora",
+      "en": "in {$monthName}, so far"
+    },
+    "8774828566604096783": {
+      "it": "a {$monthName}",
+      "en": "in {$monthName}"
+    },
+    "1815660686270027667": {
+      "it": "{$when} · come al solito ({$usual}).",
+      "en": "{$when} · as usual ({$usual})."
+    },
+    "3551413447660141935": {
+      "it": "{$when} · {$delta} più del solito ({$usual}).",
+      "en": "{$when} · {$delta} more than usual ({$usual})."
+    },
+    "52793351992594483": {
+      "it": "{$when} · {$delta} meno del solito ({$usual}).",
+      "en": "{$when} · {$delta} less than usual ({$usual})."
+    },
+    "7181804317344687032": {
+      "it": "{$amount} rimasti",
+      "en": "{$amount} left"
+    },
+    "4091385245661583305": {
+      "it": "superato di {$amount}",
+      "en": "exceeded by {$amount}"
+    },
+    "8769889108834927061": {
+      "it": "{$remaining} · {$count}",
+      "en": "{$remaining} · {$count}"
+    },
+    "8387114904981774527": {
+      "it": "1 giorno",
+      "en": "1 day"
+    },
+    "4449680855579764033": {
+      "it": "{$daysLeft} giorni",
+      "en": "{$daysLeft} days"
+    },
+    "5447048603289960816": {
+      "it": "{$date}: {$amount}",
+      "en": "{$date}: {$amount}"
+    },
+    "8925303957403571530": {
+      "it": "{$date}, {$amount}",
+      "en": "{$date}, {$amount}"
+    },
+    "1445383878507320976": {
+      "it": "Ultimi 12 mesi",
+      "en": "Last 12 months"
+    },
+    "1010965015943068437": {
+      "it": "Quest'anno",
+      "en": "This year"
+    },
+    "3211986125713500630": {
+      "it": ", di solito {$amount} al mese",
+      "en": ", usually {$amount} a month"
+    },
+    "2920608999573617867": {
+      "it": "negli ultimi 12 mesi",
+      "en": "in the last 12 months"
+    },
+    "620423823560342736": {
+      "it": "da gennaio",
+      "en": "since January"
+    },
+    "3325432367172201603": {
+      "it": "di solito {$amount}",
+      "en": "usually {$amount}"
+    },
+    "68187315978154487": {
+      "it": "Questa categoria non esiste più.",
+      "en": "This category no longer exists."
+    },
+    "2783928158460753522": {
+      "it": "Impossibile caricare la categoria: il backend è avviato?",
+      "en": "Cannot load the category: is the backend running?"
+    },
+    "2308378646791259564": {
+      "it": "Impossibile caricare quel mese: il backend è avviato?",
+      "en": "Cannot load that month: is the backend running?"
+    },
+    "8647789840954595539": {
+      "it": "al giorno",
+      "en": "a day"
+    },
+    "2069152129347164680": {
+      "it": "a settimana",
+      "en": "a week"
+    },
+    "6561503422969662088": {
+      "it": "al mese",
+      "en": "a month"
+    },
+    "9178537394153663482": {
+      "it": "Che cosa guardare",
+      "en": "What to look at"
+    },
+    "8865431258414102942": {
+      "it": "Togli il filtro {$INTERPOLATION}",
+      "en": "Remove the filter {$INTERPOLATION}"
+    },
+    "978454048314238562": {
+      "it": " La pagina della categoria ",
+      "en": "The page of the category"
+    },
+    "1843700555636417059": {
+      "it": "Tocca una barra per vedere quel periodo.",
+      "en": "Tap a bar to see that period."
+    },
+    "4567211800209744037": {
+      "it": "Periodo",
+      "en": "Period"
+    },
+    "3078437728422083357": {
+      "it": "Raggruppa per",
+      "en": "Group by"
+    },
+    "1561445427557828843": {
+      "it": "Per",
+      "en": "By"
+    },
+    "7644406909806113313": {
+      "it": "Niente in questo periodo.",
+      "en": "Nothing in this period."
+    },
+    "7684442826225990718": {
+      "it": "{$INTERPOLATION}: apri i movimenti, per dare loro una categoria",
+      "en": "{$INTERPOLATION}: open the transactions, to give them a category"
+    },
+    "2050971203790472745": {
+      "it": "{$INTERPOLATION}: mostra solo questa categoria",
+      "en": "{$INTERPOLATION}: show only this category"
+    },
+    "5964177724805286893": {
+      "it": "{$INTERPOLATION}: apri i movimenti",
+      "en": "{$INTERPOLATION}: open the transactions"
+    },
+    "808756407940803": {
+      "it": "I movimenti",
+      "en": "The transactions"
+    },
+    "7904844329410640145": {
+      "it": "Spese",
+      "en": "Expenses"
+    },
+    "2461984017323916943": {
+      "it": "Entrate",
+      "en": "Income"
+    },
+    "3247189800310901004": {
+      "it": "Netto",
+      "en": "Net"
+    },
+    "4967746177329664158": {
+      "it": "12 mesi",
+      "en": "12 months"
+    },
+    "5238253014738197537": {
+      "it": "6 mesi",
+      "en": "6 months"
+    },
+    "3940505970687188205": {
+      "it": "Mese",
+      "en": "Month"
+    },
+    "2423219997151060481": {
+      "it": "Settimana",
+      "en": "Week"
+    },
+    "6620158398678469056": {
+      "it": "Entrate {$amount} · Uscite {$amount2}",
+      "en": "Income {$amount} · Expenses {$amount2}"
+    },
+    "6927968246445082961": {
+      "it": "Di solito {$amount} {$perUnit}",
+      "en": "Usually {$amount} {$perUnit}"
+    },
+    "2867237053176705952": {
+      "it": "media {$amount}",
+      "en": "average {$amount}"
+    },
+    "7869889995426331422": {
+      "it": "Uscite",
+      "en": "Expenses"
+    },
+    "1299134975696102662": {
+      "it": "Richiesta non valida.",
+      "en": "Invalid request."
+    },
+    "1956404111965766079": {
+      "it": "Impossibile caricare l'analisi: il backend è avviato?",
+      "en": "Cannot load the analysis: is the backend running?"
+    },
+    "4348642141188834022": {
+      "it": "Impossibile caricare i movimenti del periodo.",
+      "en": "Cannot load the transactions of the period."
+    },
+    "722719205792526090": {
+      "it": "1 movimento",
+      "en": "1 transaction"
+    },
+    "7774712830512508411": {
+      "it": "{$movements} movimenti",
+      "en": "{$movements} transactions"
+    },
+    "4205776899189453066": {
+      "it": "{$count} · come al solito",
+      "en": "{$count} · as usual"
+    },
+    "6648396057442773280": {
+      "it": "{$count} · {$value}{$amount} sul solito",
+      "en": "{$count} · {$value}{$amount} vs usual"
+    },
+    "6996978855944992594": {
+      "it": "Importa movimenti da un file",
+      "en": "Import transactions from a file"
+    },
+    "1144851199912055487": {
+      "it": " Esporta i movimenti dalla banca in un file {$START_TAG_STRONG}CSV{$CLOSE_TAG_STRONG} o {$START_TAG_STRONG}Excel{$CLOSE_TAG_STRONG} e caricalo qui. Il programma propone come leggere le colonne; tu controlli l'anteprima e, se serve, correggi. Che cosa viene aggiunto dipende dal conto che scegli: lo vedi qui sotto prima di caricare il file.\n",
+      "en": "Export the transactions from the bank to a {$START_TAG_STRONG}CSV{$CLOSE_TAG_STRONG} or {$START_TAG_STRONG}Excel{$CLOSE_TAG_STRONG} file and load it here. The app proposes how to read the columns; you check the preview and, if needed, correct it. What gets added depends on the account you choose: you see it below before loading the file."
+    },
+    "686625220018435477": {
+      "it": "Trade Republic: esportazione delle transazioni",
+      "en": "Trade Republic: transaction export"
+    },
+    "1307247726379329694": {
+      "it": " L'esportazione delle transazioni di Trade Republic viene riconosciuta automaticamente: non occorre impostare le colonne. ",
+      "en": "The transaction export of Trade Republic is recognised automatically: there is no need to set the columns."
+    },
+    "3472617648338280182": {
+      "it": "{$START_TAG_STRONG}In ogni caso{$CLOSE_TAG_STRONG} vengono caricati i movimenti non ancora presenti: in un conto manuale tutti, in un conto collegato quelli precedenti allo storico trasmesso dalla banca. ",
+      "en": "{$START_TAG_STRONG}In every case{$CLOSE_TAG_STRONG} the transactions not yet present are loaded: in a manual account all of them, in a linked account those earlier than the history sent by the bank."
+    },
+    "4744346941627336083": {
+      "it": "{$START_TAG_STRONG}Se il conto è collegato{$CLOSE_TAG_STRONG}, i movimenti già ricevuti dalla banca vengono completati con causale e controparte: tramite il collegamento Trade Republic trasmette soltanto data e importo. ",
+      "en": "{$START_TAG_STRONG}If the account is linked{$CLOSE_TAG_STRONG}, the transactions already received from the bank are completed with description and counterparty: through the connection Trade Republic sends only date and amount."
+    },
+    "6033696336524856750": {
+      "it": "Per ottenere il file:",
+      "en": "To get the file:"
+    },
+    "6086134609336752555": {
+      "it": " nell'app di Trade Republic (o su app.traderepublic.com) apri il profilo, poi i documenti; ",
+      "en": "in the Trade Republic app (or at app.traderepublic.com) open the profile, then the documents;"
+    },
+    "3900296996417730786": {
+      "it": "scegli «Esportazione transazioni», il periodo e il formato CSV;",
+      "en": "choose «Export transactions», the period and the CSV format;"
+    },
+    "4290412878437641230": {
+      "it": "carica il file così com'è, senza modificarlo.",
+      "en": "load the file as it is, without changing it."
+    },
+    "1151792280400947846": {
+      "it": " Non hai ancora nessun conto: collega una banca ({$START_LINK}Collega una banca{$CLOSE_LINK}) oppure crea un conto manuale nella pagina {$START_LINK_1}Conti{$CLOSE_LINK}, poi torna qui. ",
+      "en": "You have no accounts yet: link a bank ({$START_LINK}Link a bank{$CLOSE_LINK}) or create a manual account on the {$START_LINK_1}Accounts{$CLOSE_LINK} page, then come back here."
+    },
+    "7887077815377497907": {
+      "it": "Importazione completata",
+      "en": "Import completed"
+    },
+    "7956591272572136304": {
+      "it": " I movimenti sono stati classificati come quelli arrivati dalla banca. {$START_LINK}Vai ai movimenti{$CLOSE_LINK}, filtra per questo conto e controlla quelli \"Da verificare\": molti file non hanno causale, e senza testo il programma non indovina. ",
+      "en": "The transactions have been classified like those that come from the bank. {$START_LINK}Go to the transactions{$CLOSE_LINK}, filter by this account and check those \"To review\": many files have no description, and without text the app cannot guess."
+    },
+    "3918204433177777457": {
+      "it": "Il saldo del conto",
+      "en": "The balance of the account"
+    },
+    "3534552271803632026": {
+      "it": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} al {$INTERPOLATION_1}. ",
+      "en": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} on {$INTERPOLATION_1}."
+    },
+    "3735785049319248153": {
+      "it": " Salvato: da qui si aggiorna con i movimenti che importerai. ",
+      "en": "Saved: from here on it updates with the transactions you import."
+    },
+    "1639205761395300805": {
+      "it": " È quello che vedi nell'app della banca? ",
+      "en": "Is it what you see in the bank's app?"
+    },
+    "4699155242678736917": {
+      "it": " No, correggilo ",
+      "en": "No, correct it"
+    },
+    "2104506832727155192": {
+      "it": " Senza saldo il conto non mostra quanti soldi ci sono. ",
+      "en": "Without a balance the account does not show how much money there is."
+    },
+    "8241383257057287355": {
+      "it": " Scrivi il saldo ",
+      "en": "Write the balance"
+    },
+    "1999958317888942095": {
+      "it": "Importa un altro file",
+      "en": "Import another file"
+    },
+    "1817281669374926730": {
+      "it": "1. Conto e file",
+      "en": "1. Account and file"
+    },
+    "6769608457255878922": {
+      "it": " Conto ",
+      "en": "Account"
+    },
+    "5503617758668052383": {
+      "it": "Conti manuali (non collegati a una banca)",
+      "en": "Manual accounts (not linked to a bank)"
+    },
+    "80995553253933959": {
+      "it": "Conti collegati con Enable Banking",
+      "en": "Accounts linked with Enable Banking"
+    },
+    "4802057950417673264": {
+      "it": "{$START_TAG_STRONG}Conto Trade Republic collegato.{$CLOSE_TAG_STRONG} Tramite il collegamento Trade Republic trasmette soltanto data e importo dei movimenti. Caricando l'esportazione delle transazioni: ",
+      "en": "{$START_TAG_STRONG}Linked Trade Republic account.{$CLOSE_TAG_STRONG} Through the connection Trade Republic sends only the date and amount of the transactions. By loading the transaction export:"
+    },
+    "8542842200193685327": {
+      "it": " i movimenti già ricevuti dalla banca vengono {$START_TAG_STRONG}completati{$CLOSE_TAG_STRONG} con causale e controparte; ",
+      "en": "the transactions already received from the bank are {$START_TAG_STRONG}completed{$CLOSE_TAG_STRONG} with description and counterparty;"
+    },
+    "8675016478978033649": {
+      "it": " i movimenti precedenti al primo ricevuto dalla banca{$INTERPOLATION} vengono {$START_TAG_STRONG}caricati{$CLOSE_TAG_STRONG}. ",
+      "en": "the transactions earlier than the first one received from the bank{$INTERPOLATION} are {$START_TAG_STRONG}loaded{$CLOSE_TAG_STRONG}."
+    },
+    "5956794814271406550": {
+      "it": "Date e importi trasmessi dalla banca non vengono modificati.",
+      "en": "Dates and amounts sent by the bank are not changed."
+    },
+    "4294418459308476797": {
+      "it": "{$START_TAG_STRONG}Completa lo storico di un conto collegato.{$CLOSE_TAG_STRONG} I movimenti di questo conto arrivano dalla banca, ma solo da quando l'hai collegato: la banca dà uno storico limitato. Dal file aggiungo {$START_TAG_STRONG}solo i movimenti più vecchi{$CLOSE_TAG_STRONG} del primo arrivato dalla banca{$INTERPOLATION}; gli altri li porta la banca, e aggiungerli farebbe doppioni. ",
+      "en": "{$START_TAG_STRONG}Complete the history of a linked account.{$CLOSE_TAG_STRONG} The transactions of this account come from the bank, but only since you linked it: the bank gives a limited history. From the file I add {$START_TAG_STRONG}only the transactions older{$CLOSE_TAG_STRONG} than the first one that came from the bank{$INTERPOLATION}; the bank brings the others, and adding them would create duplicates."
+    },
+    "4978314594533085456": {
+      "it": "{$START_TAG_STRONG}Importa i movimenti di un conto manuale{$CLOSE_TAG_STRONG}, uno che Enable Banking non copre. Aggiungo tutte le righe del file; quelle già importate (lo stesso file, o un file che si sovrappone al precedente) si saltano. ",
+      "en": "{$START_TAG_STRONG}Import the transactions of a manual account{$CLOSE_TAG_STRONG}, one that Enable Banking does not cover. I add all the rows of the file; those already imported (the same file, or a file that overlaps the previous one) are skipped."
+    },
+    "5285136540640754021": {
+      "it": "Scegli il file (CSV o Excel)",
+      "en": "Choose the file (CSV or Excel)"
+    },
+    "7827356488265659983": {
+      "it": "2. Esportazione Trade Republic riconosciuta",
+      "en": "2. Trade Republic export recognised"
+    },
+    "3331472265947076953": {
+      "it": " Il file è l'{$START_TAG_STRONG}esportazione delle transazioni{$CLOSE_TAG_STRONG} di Trade Republic: le colonne vengono lette automaticamente, senza impostazioni. ",
+      "en": "The file is the {$START_TAG_STRONG}transaction export{$CLOSE_TAG_STRONG} of Trade Republic: the columns are read automatically, with no settings."
+    },
+    "4210744644573464173": {
+      "it": "{$START_TAG_STRONG}Completamento:{$CLOSE_TAG_STRONG} i movimenti già ricevuti dalla banca ricevono causale e controparte dal file. Data e importo restano quelli trasmessi dalla banca. ",
+      "en": "{$START_TAG_STRONG}Completion:{$CLOSE_TAG_STRONG} the transactions already received from the bank get description and counterparty from the file. Date and amount stay those sent by the bank."
+    },
+    "7486450689663102333": {
+      "it": "{$START_TAG_STRONG}Caricamento:{$CLOSE_TAG_STRONG} vengono aggiunti i movimenti precedenti al primo ricevuto dalla banca{$INTERPOLATION}. ",
+      "en": "{$START_TAG_STRONG}Loading:{$CLOSE_TAG_STRONG} the transactions earlier than the first one received from the bank{$INTERPOLATION} are added."
+    },
+    "5481168308633670914": {
+      "it": "{$START_TAG_STRONG}Caricamento:{$CLOSE_TAG_STRONG} vengono aggiunti tutti i movimenti del file; quelli già importati in precedenza sono riconosciuti e non vengono duplicati. ",
+      "en": "{$START_TAG_STRONG}Loading:{$CLOSE_TAG_STRONG} all the transactions of the file are added; those already imported before are recognised and are not duplicated."
+    },
+    "4380842276347880244": {
+      "it": "{$START_TAG_STRONG}Importi netti:{$CLOSE_TAG_STRONG} viene registrato l'importo effettivamente accreditato o addebitato: interessi e dividendi al netto delle ritenute, acquisti comprensivi di commissioni e imposte, imposta di bollo per il suo importo effettivo. ",
+      "en": "{$START_TAG_STRONG}Net amounts:{$CLOSE_TAG_STRONG} the amount actually credited or debited is recorded: interest and dividends net of withholding tax, purchases including fees and taxes, stamp duty for its actual amount."
+    },
+    "7707739475183411635": {
+      "it": "{$START_TAG_STRONG}Operazioni su titoli senza movimento di denaro{$CLOSE_TAG_STRONG} (trasferimenti di azioni, diritti di opzione): {$ICU} ",
+      "en": "{$START_TAG_STRONG}Operations on securities with no movement of money{$CLOSE_TAG_STRONG} (transfers of shares, subscription rights): {$ICU}"
+    },
+    "727116713618184340": {
+      "it": "{VAR_PLURAL, plural, =1 {1 riga, non registrata tra i movimenti.} other {{INTERPOLATION} righe, non registrate tra i movimenti.}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 row, not recorded among the transactions.} other {{INTERPOLATION} rows, not recorded among the transactions.}}"
+    },
+    "867974976342295646": {
+      "it": "2. Come leggere le colonne",
+      "en": "2. How to read the columns"
+    },
+    "9067165910333223711": {
+      "it": " Proposta in base ai nomi delle colonne e alle prime righe: controllala. Ogni modifica aggiorna l'anteprima qui sotto. ",
+      "en": "Proposed from the names of the columns and the first rows: check it. Every change updates the preview below."
+    },
+    "9202858557937642448": {
+      "it": " Separatore ",
+      "en": "Separator"
+    },
+    "326819936092149573": {
+      "it": " Data ",
+      "en": "Date"
+    },
+    "9064652761851579670": {
+      "it": " Formato della data ",
+      "en": "Date format"
+    },
+    "8029209622712671612": {
+      "it": " Importo ",
+      "en": "Amount"
+    },
+    "2413400446365297834": {
+      "it": "Una colonna, con il segno (-12,50)",
+      "en": "One column, with the sign (-12.50)"
+    },
+    "2678690839976875834": {
+      "it": "Due colonne: entrate e uscite",
+      "en": "Two columns: income and expenses"
+    },
+    "2016399179874694855": {
+      "it": " Una colonna senza segno: il verso si capisce dal testo ",
+      "en": "One column without a sign: the direction comes from the text"
+    },
+    "7072676597530853953": {
+      "it": " Colonna dell'importo ",
+      "en": "Amount column"
+    },
+    "914329152395054614": {
+      "it": " Cerca le parole delle entrate nella colonna ",
+      "en": "Look for the income words in the column"
+    },
+    "3040736361709541128": {
+      "it": " Parole delle entrate, separate da virgole ",
+      "en": "Income words, separated by commas"
+    },
+    "581943813950662092": {
+      "it": "es. ricevuto, accredito",
+      "en": "e.g. received, credit"
+    },
+    "484497086311379512": {
+      "it": "Le righe che ne contengono una sono entrate; tutte le altre, uscite.",
+      "en": "The rows that contain one are income; all the others, expenses."
+    },
+    "8637964241539028198": {
+      "it": " Colonna delle entrate ",
+      "en": "Income column"
+    },
+    "5127486831969942427": {
+      "it": " Colonna delle uscite ",
+      "en": "Expense column"
+    },
+    "7033751901274411393": {
+      "it": " Decimali ",
+      "en": "Decimals"
+    },
+    "3226401901214084944": {
+      "it": "Virgola (1.234,56)",
+      "en": "Comma (1.234,56)"
+    },
+    "1796932192198514281": {
+      "it": "Punto (1,234.56)",
+      "en": "Point (1,234.56)"
+    },
+    "1281046537865794683": {
+      "it": " Descrizione (facoltativa) ",
+      "en": "Description (optional)"
+    },
+    "2883557601272782308": {
+      "it": "— nessuna —",
+      "en": "— none —"
+    },
+    "5094414299209167284": {
+      "it": " Altro testo da aggiungere alla descrizione (facoltativo) ",
+      "en": "Other text to add to the description (optional)"
+    },
+    "7643904133446873429": {
+      "it": "— nessuno —",
+      "en": "— none —"
+    },
+    "9042955618777780238": {
+      "it": " Controparte (facoltativa) ",
+      "en": "Counterparty (optional)"
+    },
+    "193500419530904682": {
+      "it": " Valuta (facoltativa) ",
+      "en": "Currency (optional)"
+    },
+    "2730543495839634977": {
+      "it": "— quella del conto —",
+      "en": "— the account's —"
+    },
+    "7526636577245347269": {
+      "it": "3. Anteprima",
+      "en": "3. Preview"
+    },
+    "3490378247342344169": {
+      "it": "{VAR_PLURAL, plural, =1 {1 riga non si legge} other {{INTERPOLATION} righe non si leggono}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 row cannot be read} other {{INTERPOLATION} rows cannot be read}}"
+    },
+    "3844024365584863041": {
+      "it": " nel file di Trade Republic. È stato modificato? Scaricalo di nuovo dall'app: ",
+      "en": "in the Trade Republic file. Has it been changed? Download it again from the app:"
+    },
+    "7573707128115258344": {
+      "it": " con queste impostazioni. Correggi la mappatura (o il file) per poter importare: ",
+      "en": "with these settings. Fix the mapping (or the file) to be able to import:"
+    },
+    "2063852283698190863": {
+      "it": " I movimenti che cambiano (aggiunti o completati), per data: ",
+      "en": "The transactions that change (added or completed), by date:"
+    },
+    "2714780791429805064": {
+      "it": " Le prime righe, come verranno aggiunte: ",
+      "en": "The first rows, as they will be added:"
+    },
+    "2895021007323100367": {
+      "it": " Le prime righe del file, come si leggono: ",
+      "en": "The first rows of the file, as they are read:"
+    },
+    "146442697456175258": {
+      "it": "Data",
+      "en": "Date"
+    },
+    "9179334982462659411": {
+      "it": "Descrizione",
+      "en": "Description"
+    },
+    "4264698314023171402": {
+      "it": "Controparte",
+      "en": "Counterparty"
+    },
+    "2727415440048465451": {
+      "it": "Importo",
+      "en": "Amount"
+    },
+    "1537163302023537456": {
+      "it": "Righe del file senza un movimento della banca",
+      "en": "Rows of the file without a transaction from the bank"
+    },
+    "6189168589883906164": {
+      "it": " Rientrano nel periodo coperto dalla banca, ma la banca non ha trasmesso un movimento dello stesso importo entro 3 giorni. Non vengono aggiunte, per evitare duplicati: le più recenti arriveranno con il prossimo aggiornamento del conto; per le altre verifica l'estratto conto di Trade Republic. ",
+      "en": "They fall within the period covered by the bank, but the bank has not sent a transaction of the same amount within 3 days. They are not added, to avoid duplicates: the most recent ones will arrive with the next update of the account; for the others check the Trade Republic statement."
+    },
+    "2674037213727663012": {
+      "it": "Movimenti della banca assenti dal file",
+      "en": "Bank transactions missing from the file"
+    },
+    "2897775717044221071": {
+      "it": " Movimenti ricevuti dalla banca nel periodo del file che il file non contiene: restano invariati, senza causale. ",
+      "en": "Transactions received from the bank in the period of the file that the file does not contain: they stay unchanged, without a description."
+    },
+    "5139002782475530298": {
+      "it": "Il file, così com'è (prime righe):",
+      "en": "The file, as it is (first rows):"
+    },
+    "9064222220960986975": {
+      "it": " Importazione in corso... ",
+      "en": "Importing..."
+    },
+    "1883974575931385022": {
+      "it": "Punto e virgola ( ; )",
+      "en": "Semicolon ( ; )"
+    },
+    "2679581165988558363": {
+      "it": "Virgola ( , )",
+      "en": "Comma ( , )"
+    },
+    "4212503678722425756": {
+      "it": "Tabulazione",
+      "en": "Tab"
+    },
+    "3497618043421204370": {
+      "it": "Barra verticale ( | )",
+      "en": "Vertical bar ( | )"
+    },
+    "8134697429269146880": {
+      "it": "12/31/2026 (prima il mese, all'americana)",
+      "en": "12/31/2026 (month first, American style)"
+    },
+    "3535081648158329571": {
+      "it": "(senza nome)",
+      "en": "(no name)"
+    },
+    "1936454936604778340": {
+      "it": "Il file non si può leggere.",
+      "en": "The file cannot be read."
+    },
+    "6942238192668272145": {
+      "it": "Il file è troppo grande: al massimo 5 MB. Esporta un periodo più breve.",
+      "en": "The file is too large: 5 MB at most. Export a shorter period."
+    },
+    "3749961680200918305": {
+      "it": "L'importazione non è riuscita.",
+      "en": "The import failed."
+    },
+    "6201928504794541237": {
+      "it": "1 movimento aggiunto",
+      "en": "1 transaction added"
+    },
+    "9142587400014882738": {
+      "it": "{$imported} movimenti aggiunti",
+      "en": "{$imported} transactions added"
+    },
+    "4169132716919431288": {
+      "it": "1 movimento importato",
+      "en": "1 transaction imported"
+    },
+    "7972033829941362632": {
+      "it": "{$imported} movimenti importati",
+      "en": "{$imported} transactions imported"
+    },
+    "7445377893605630509": {
+      "it": "; 1 riga era nel periodo che porta la banca ed è stata saltata",
+      "en": "; 1 row was in the period the bank brings and was skipped"
+    },
+    "1581249674195230559": {
+      "it": "; {$covered} righe erano nel periodo che porta la banca e sono state saltate",
+      "en": "; {$covered} rows were in the period the bank brings and were skipped"
+    },
+    "7019766090466626276": {
+      "it": " (1 riga era già presente ed è stata saltata)",
+      "en": "(1 row was already present and was skipped)"
+    },
+    "1790409211781620018": {
+      "it": " ({$duplicates} righe erano già presenti e sono state saltate)",
+      "en": "({$duplicates} rows were already present and were skipped)"
+    },
+    "2560000788203113220": {
+      "it": "; a 1 movimento già presente è stata completata la descrizione",
+      "en": "; the description of 1 transaction already present was completed"
+    },
+    "4895082027655405681": {
+      "it": "; a {$completed} movimenti già presenti è stata completata la descrizione",
+      "en": "; the description of {$completed} transactions already present was completed"
+    },
+    "8415025504967243919": {
+      "it": "nessun movimento da completare",
+      "en": "no transactions to complete"
+    },
+    "8245386733078735203": {
+      "it": "1 movimento completato",
+      "en": "1 transaction completed"
+    },
+    "37254623221917523": {
+      "it": "movimenti completati",
+      "en": "transactions completed"
+    },
+    "6968872283198937310": {
+      "it": " con causale e controparte",
+      "en": "with description and counterparty"
+    },
+    "5074440046136398356": {
+      "it": "nessun movimento caricato",
+      "en": "no transactions loaded"
+    },
+    "3939681189735695579": {
+      "it": "1 movimento caricato",
+      "en": "1 transaction loaded"
+    },
+    "5434191638026161716": {
+      "it": "movimenti caricati",
+      "en": "transactions loaded"
+    },
+    "7954995526220981497": {
+      "it": "1 riga era già presente",
+      "en": "1 row was already present"
+    },
+    "197783913962959617": {
+      "it": "righe erano già presenti",
+      "en": "rows were already present"
+    },
+    "488225153923447087": {
+      "it": " (il {$date})",
+      "en": "(on {$date})"
+    },
+    "2919607449120439204": {
+      "it": "1 operazione su titoli senza movimento di denaro non viene registrata",
+      "en": "1 operation on securities with no movement of money is not recorded"
+    },
+    "1548494507312167612": {
+      "it": "operazioni su titoli senza movimento di denaro non vengono registrate",
+      "en": "operations on securities with no movement of money are not recorded"
+    },
+    "751007100379284325": {
+      "it": "1 riga nuova",
+      "en": "1 new row"
+    },
+    "8306836969292026125": {
+      "it": "righe nuove",
+      "en": "new rows"
+    },
+    "27543514560665917": {
+      "it": "1 già importata, che si salta",
+      "en": "1 already imported, which is skipped"
+    },
+    "42283232502786341": {
+      "it": "già importate, che si saltano",
+      "en": "already imported, which are skipped"
+    },
+    "3846111142300743968": {
+      "it": "nessun movimento da aggiungere",
+      "en": "no transactions to add"
+    },
+    "1700153749689506418": {
+      "it": "{$count} del {$from} ",
+      "en": "{$count} than {$from}"
+    },
+    "2491870360987862838": {
+      "it": "1 movimento più vecchio",
+      "en": "1 transaction older"
+    },
+    "5175865029713039550": {
+      "it": "movimenti più vecchi",
+      "en": "transactions older"
+    },
+    "7404781808240422216": {
+      "it": "si aggiunge",
+      "en": "is added"
+    },
+    "911301947526541704": {
+      "it": "si aggiungono",
+      "en": "are added"
+    },
+    "5222560562034106399": {
+      "it": "Il file ha {$count}: {$added}",
+      "en": "The file has {$count}: {$added}"
+    },
+    "1848334933097943683": {
+      "it": "1 riga",
+      "en": "1 row"
+    },
+    "3929430569936211444": {
+      "it": "righe",
+      "en": "rows"
+    },
+    "6363551537078552782": {
+      "it": "1 è nel periodo che porta la banca",
+      "en": "1 is in the period the bank brings"
+    },
+    "4923589123506726773": {
+      "it": "sono nel periodo che porta la banca",
+      "en": "are in the period the bank brings"
+    },
+    "7817820429792383391": {
+      "it": "1 era già stata aggiunta",
+      "en": "1 had already been added"
+    },
+    "8762328596737640539": {
+      "it": "erano già state aggiunte",
+      "en": "had already been added"
+    },
+    "7009145979934908929": {
+      "it": " I mesi più vecchi di questo file li hai già aggiunti; gli altri li porta la banca.",
+      "en": "You have already added the oldest months of this file; the bank brings the others."
+    },
+    "8455812713395102332": {
+      "it": " La banca ha già tutti i mesi di questo file: dal {$from} in poi li porta lei.",
+      "en": "The bank already has all the months of this file: from {$from} on it brings them itself."
+    },
+    "322937709720494332": {
+      "it": "1 movimento ricevuto dalla banca verrà completato",
+      "en": "1 transaction received from the bank will be completed"
+    },
+    "1154680609297121009": {
+      "it": "movimenti ricevuti dalla banca verranno completati",
+      "en": "transactions received from the bank will be completed"
+    },
+    "4127444552117388992": {
+      "it": "nessun movimento precedente al {$from} da caricare",
+      "en": "no transactions earlier than {$from} to load"
+    },
+    "3513903395289957861": {
+      "it": "1 movimento precedente al {$from} verrà caricato",
+      "en": "1 transaction earlier than {$from} will be loaded"
+    },
+    "7927513934572922220": {
+      "it": "movimenti precedenti al {$from} verranno caricati",
+      "en": "transactions earlier than {$from} will be loaded"
+    },
+    "2365453056918765551": {
+      "it": "1 riga è già presente",
+      "en": "1 row is already present"
+    },
+    "7303553195792006529": {
+      "it": "righe sono già presenti",
+      "en": "rows are already present"
+    },
+    "5343869310507336803": {
+      "it": "1 riga non trova un movimento della banca (vedi «Da verificare»)",
+      "en": "1 row does not find a transaction from the bank (see «To review»)"
+    },
+    "5557181220012408138": {
+      "it": "righe non trovano un movimento della banca (vedi «Da verificare»)",
+      "en": "rows do not find a transaction from the bank (see «To review»)"
+    },
+    "1656877799149520619": {
+      "it": "Il file contiene {$count}: {$join}.",
+      "en": "The file contains {$count}: {$join}."
+    },
+    "3468371557820367465": {
+      "it": " Il contenuto del file è già tutto presente nell'app.",
+      "en": "Everything in the file is already in the app."
+    },
+    "8913560102822165875": {
+      "it": "{$completeRows} movimenti",
+      "en": "{$completeRows} transactions"
+    },
+    "6348495728207702190": {
+      "it": "Completa {$complete}",
+      "en": "Complete {$complete}"
+    },
+    "2326044809159341651": {
+      "it": "Aggiungi {$newRows} e completa {$complete}",
+      "en": "Add {$newRows} and complete {$complete}"
+    },
+    "7899584013163664245": {
+      "it": "Niente da aggiungere",
+      "en": "Nothing to add"
+    },
+    "4915305998068421870": {
+      "it": "Aggiungi 1 movimento",
+      "en": "Add 1 transaction"
+    },
+    "4744119302960636835": {
+      "it": "Aggiungi {$newRows} movimenti",
+      "en": "Add {$newRows} transactions"
+    },
+    "6416408778788685264": {
+      "it": "Importa 1 riga",
+      "en": "Import 1 row"
+    },
+    "1554600263973498373": {
+      "it": "Importa {$rows} righe",
+      "en": "Import {$rows} rows"
+    },
+    "346701801745849002": {
+      "it": "{VAR_SELECT, select, true {Mostra meno} other {Mostra tutti ({INTERPOLATION})}}",
+      "en": "{VAR_SELECT, select, true {Show less} other {Show all ({INTERPOLATION})}}"
+    },
+    "5922816884230087995": {
+      "it": "Investito",
+      "en": "Invested"
+    },
+    "7431932732022843106": {
+      "it": "Vedi tutto ›",
+      "en": "See all ›"
+    },
+    "7210768905820677775": {
+      "it": "Investito in titoli quest'anno",
+      "en": "Invested in securities this year"
+    },
+    "2772625531525225074": {
+      "it": "Rendite quest'anno",
+      "en": "Income this year"
+    },
+    "851240127668089520": {
+      "it": "Ancora nessun investimento",
+      "en": "No investments yet"
+    },
+    "7262164705917202045": {
+      "it": " Qui compaiono i titoli che compri e vendi, i bonifici che fai verso i conti di investimento e le cedole, i dividendi e gli interessi che incassi. L'app li riconosce dal {$START_TAG_STRONG}tipo{$CLOSE_TAG_STRONG} dei movimenti: ",
+      "en": "Here you find the securities you buy and sell, the transfers you make to your investment accounts, and the coupons, dividends and interest you receive. The app recognises them by the {$START_TAG_STRONG}type{$CLOSE_TAG_STRONG} of the transactions:"
+    },
+    "6433802901616656591": {
+      "it": " un acquisto deve avere il tipo {$START_TAG_STRONG}Acquisto titoli{$CLOSE_TAG_STRONG} (una vendita, {$START_TAG_STRONG}Vendita titoli{$CLOSE_TAG_STRONG}): per Trade Republic, Tinaba e il deposito titoli della banca ci sono già le {$START_LINK}regole{$CLOSE_LINK}; per gli altri, una regola nuova o, per un movimento solo, {$START_TAG_STRONG}Conta come{$CLOSE_TAG_STRONG} nella sua scheda; ",
+      "en": "a purchase must have the type {$START_TAG_STRONG}Securities purchase{$CLOSE_TAG_STRONG} (a sale, {$START_TAG_STRONG}Securities sale{$CLOSE_TAG_STRONG}): for Trade Republic, Tinaba and the bank's securities account the {$START_LINK}rules{$CLOSE_LINK} are already there; for the others, a new rule or, for a single transaction, {$START_TAG_STRONG}Counts as{$CLOSE_TAG_STRONG} on its page;"
+    },
+    "3572603071998370080": {
+      "it": " un bonifico verso il broker diventa {$START_TAG_STRONG}Versamento investimenti{$CLOSE_TAG_STRONG} da solo se in {$START_LINK}Conti{$CLOSE_LINK} il conto del broker ha il ruolo {$START_TAG_STRONG}Investimenti{$CLOSE_TAG_STRONG} (anche un conto manuale, con il suo IBAN, se la banca non si può collegare). ",
+      "en": "a transfer to the broker becomes an {$START_TAG_STRONG}Investment deposit{$CLOSE_TAG_STRONG} by itself if in {$START_LINK}Accounts{$CLOSE_LINK} the broker's account has the role {$START_TAG_STRONG}Investments{$CLOSE_TAG_STRONG} (a manual account too, with its IBAN, if the bank cannot be linked)."
+    },
+    "7283256023962326497": {
+      "it": " Per {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} si vedono solo i bonifici, nessun acquisto: quello che hai comprato lì non è nell'investito. Importa i movimenti del conto in {$START_LINK}Importa{$CLOSE_LINK} per vederlo. ",
+      "en": "For {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} only the transfers are visible, no purchases: what you bought there is not in the invested amount. Import the transactions of the account in {$START_LINK}Import{$CLOSE_LINK} to see it."
+    },
+    "8978793743840562797": {
+      "it": "Chiudi l'avviso sui conti senza acquisti",
+      "en": "Close the notice about the accounts without purchases"
+    },
+    "125260524765020195": {
+      "it": "Acquistato · {$INTERPOLATION}",
+      "en": "Bought · {$INTERPOLATION}"
+    },
+    "4448979454081246001": {
+      "it": "Rientrato dalle vendite",
+      "en": "Returned from sales"
+    },
+    "3860498160246396859": {
+      "it": " Acquisti di titoli meno vendite, da tutti i conti, nel periodo scelto. Non è quanto valgono oggi: per quello servirebbero le quotazioni. Contano i movimenti che WalletTracker conosce: se lo storico della banca è più corto, i più vecchi non ci sono. Le vendite sono come le registra la banca: le tasse che paga a parte (il capital gain) sono in Altre tasse. ",
+      "en": "Purchases of securities minus sales, from all the accounts, in the chosen period. It is not what they are worth today: that would need market prices. Only the transactions WalletTracker knows count: if the bank's history is shorter, the oldest ones are not there. Sales are as the bank records them: the taxes it charges separately (capital gains) are in Other taxes."
+    },
+    "362911890322865597": {
+      "it": "Bonifici verso i conti di investimento · {$INTERPOLATION}",
+      "en": "Transfers to the investment accounts · {$INTERPOLATION}"
+    },
+    "4224294725802897060": {
+      "it": " Soldi spostati dai conti di tutti i giorni verso broker e wallet, meno quelli tornati indietro. Non dicono quanti ne hai investiti: quello è l'investito in titoli. ",
+      "en": "Money moved from the everyday accounts to brokers and wallets, minus what came back. It does not say how much you invested: that is the amount invested in securities."
+    },
+    "5226222963727692967": {
+      "it": "Liquidità sui conti di investimento",
+      "en": "Cash on the investment accounts"
+    },
+    "6013999891421029082": {
+      "it": " Al {$INTERPOLATION} · {$ICU} ",
+      "en": "On {$INTERPOLATION} · {$ICU}"
+    },
+    "505984459204836824": {
+      "it": "{VAR_SELECT, select, true {dalla banca} other {dal saldo che hai scritto}}",
+      "en": "{VAR_SELECT, select, true {from the bank} other {from the balance you wrote}}"
+    },
+    "6087560778986405911": {
+      "it": " Saldo non scritto: {$START_LINK}scrivilo in Conti{$CLOSE_LINK}",
+      "en": "Balance not written: {$START_LINK}write it in Accounts{$CLOSE_LINK}"
+    },
+    "248834811475419002": {
+      "it": " La banca non dà il saldo: {$START_LINK}scrivilo in Conti{$CLOSE_LINK}",
+      "en": "The bank does not give the balance: {$START_LINK}write it in Accounts{$CLOSE_LINK}"
+    },
+    "8131577579211655466": {
+      "it": " I soldi sui conti di investimento non (ancora) investiti in titoli: il saldo che dà la banca, o quello che hai scritto per un conto manuale. Non si calcola dai movimenti, che nell'app non sono mai tutti. ",
+      "en": "The money on the investment accounts not (yet) invested in securities: the balance given by the bank, or the one you wrote for a manual account. It is not computed from the transactions, which are never all in the app."
+    },
+    "3755115817600259177": {
+      "it": "Cedole, dividendi e interessi · {$INTERPOLATION}",
+      "en": "Coupons, dividends and interest · {$INTERPOLATION}"
+    },
+    "3386870645229242173": {
+      "it": "Netti: quello che è arrivato sul conto",
+      "en": "Net: what arrived on the account"
+    },
+    "5569869196002559560": {
+      "it": " Tutto è netto, le barre e gli elenchi: tocca una barra per la cifra del mese, e scegli qui sotto se gli elenchi mostrano tutto il periodo o solo quel mese. Alcune banche (come Fineco) pagano il lordo e trattengono la ritenuta con un movimento a parte (tipo \"Ritenute sulle rendite\"), che qui si toglie dalla rendita dello stesso titolo; altre (come Trade Republic) accreditano già il netto. ",
+      "en": "Everything is net, the bars and the lists: tap a bar for the figure of the month, and choose below whether the lists show the whole period or only that month. Some banks (like Fineco) pay the gross amount and withhold the tax with a separate transaction (type \"Withholding tax on income\"), which is taken off the income of the same security here; others (like Trade Republic) already credit the net amount."
+    },
+    "4169823336069588437": {
+      "it": "Rendite negli elenchi",
+      "en": "Income in the lists"
+    },
+    "2219326806415181082": {
+      "it": "Per tipo",
+      "en": "By type"
+    },
+    "3353426987174450179": {
+      "it": "Da dove",
+      "en": "From where"
+    },
+    "2892748668921717883": {
+      "it": " Le vendite non sono qui: restituiscono soprattutto i soldi che avevi investito. ",
+      "en": "Sales are not here: they mostly give back the money you had invested."
+    },
+    "8009369264186658903": {
+      "it": "Altre tasse sugli investimenti",
+      "en": "Other taxes on investments"
+    },
+    "7646863653054417343": {
+      "it": " Non riguardano le rendite e non si tolgono dal netto: il bollo si paga sul deposito, il capital gain sulle vendite in guadagno (Fineco lo addebita una volta al mese, per le vendite del mese prima). Una ritenuta su una cedola o un dividendo finita qui ha il tipo sbagliato: dalle il tipo \"Ritenute sulle rendite\". ",
+      "en": "They do not concern the income and are not taken off the net: stamp duty is paid on the securities account, capital gains tax on sales at a profit (Fineco charges it once a month, for the sales of the month before). A withholding tax on a coupon or a dividend that ended up here has the wrong type: give it the type \"Withholding tax on income\"."
+    },
+    "3792322408248683405": {
+      "it": "Acquisti e vendite · {$INTERPOLATION}",
+      "en": "Purchases and sales · {$INTERPOLATION}"
+    },
+    "1713819516742723754": {
+      "it": "2 anni",
+      "en": "2 years"
+    },
+    "4318605077756384399": {
+      "it": "Tutto",
+      "en": "All"
+    },
+    "5889572172563723393": {
+      "it": "{$value}: {$amount} netti",
+      "en": "{$value}: {$amount} net"
+    },
+    "7383435095616373618": {
+      "it": "Nessuna rendita in {$month}.",
+      "en": "No income in {$month}."
+    },
+    "8395586720313419039": {
+      "it": "Nessuna rendita in questo periodo.",
+      "en": "No income in this period."
+    },
+    "7737969341577807794": {
+      "it": "Investito a {$value}",
+      "en": "Invested in {$value}"
+    },
+    "4570519138030826352": {
+      "it": "Investito da {$value} a {$value2}",
+      "en": "Invested from {$value} to {$value2}"
+    },
+    "455868152672531177": {
+      "it": "Investito in titoli · {$periodLabel}",
+      "en": "Invested in securities · {$periodLabel}"
+    },
+    "796024536216448260": {
+      "it": "{$amount} questo mese",
+      "en": "{$amount} this month"
+    },
+    "8005900126773086056": {
+      "it": "{$amount} quest'anno · {$month}",
+      "en": "{$amount} this year · {$month}"
+    },
+    "2519623997375952560": {
+      "it": "Investito in titoli, acquisti meno vendite, mese per mese: {$amount} {$periodLabel}",
+      "en": "Invested in securities, purchases minus sales, month by month: {$amount} {$periodLabel}"
+    },
+    "6018876006251014331": {
+      "it": "Bonifici verso i conti di investimento, mese per mese: {$amount} nel periodo",
+      "en": "Transfers to the investment accounts, month by month: {$amount} in the period"
+    },
+    "3092673197723820623": {
+      "it": "Cedole, dividendi e interessi netti, mese per mese: {$amount} nel periodo",
+      "en": "Net coupons, dividends and interest, month by month: {$amount} in the period"
+    },
+    "1971202649297807928": {
+      "it": "ultimi 12 mesi",
+      "en": "last 12 months"
+    },
+    "3028754581438885718": {
+      "it": "da inizio anno",
+      "en": "year to date"
+    },
+    "6084475661456824869": {
+      "it": "ultimi 2 anni",
+      "en": "last 2 years"
+    },
+    "360104213721796024": {
+      "it": "da sempre",
+      "en": "all time"
+    },
+    "3731030114469663407": {
+      "it": "Impossibile caricare gli investimenti: il backend è avviato?",
+      "en": "Cannot load the investments: is the backend running?"
+    },
+    "6940792522945459166": {
+      "it": "media {$amount} al mese",
+      "en": "average {$amount} a month"
+    },
+    "1801833281417973162": {
+      "it": "{$INTERPOLATION}. Con le frecce si scorrono i mesi.",
+      "en": "{$INTERPOLATION}. Use the arrow keys to move through the months."
+    },
+    "370464195132830013": {
+      "it": " Vale per tutta l'installazione: il computer e il telefono. Le categorie di partenza che non hai rinominato prendono il nome nella lingua nuova; quelle che hai rinominato tu, i testi dei movimenti e le regole restano come sono. ",
+      "en": "It applies to the whole installation: the computer and the phone. The starter categories you have not renamed take their name in the new language; those you renamed, the texts of the transactions and the rules stay as they are."
+    },
+    "8942851010126064213": {
+      "it": "La lingua non è stata cambiata: riprova.",
+      "en": "The language was not changed: try again."
+    },
+    "1310784822753194399": {
+      "it": "Collegamento della banca",
+      "en": "Linking the bank"
+    },
+    "5051979739695902073": {
+      "it": "Collegamento in corso e importazione dei movimenti... può richiedere qualche secondo.",
+      "en": "Linking and importing the transactions... it may take a few seconds."
+    },
+    "7895791439916629229": {
+      "it": "{$INTERPOLATION}: nessun conto passato da Enable Banking",
+      "en": "{$INTERPOLATION}: no accounts passed by Enable Banking"
+    },
+    "7401246042249460557": {
+      "it": " La banca ha accettato il consenso, ma Enable Banking non ha passato nessun conto all'app: quelli che hai autorizzato non sono nella lista della tua applicazione Enable Banking. Non è stato collegato niente. Per collegarli: ",
+      "en": "The bank accepted the consent, but Enable Banking passed no accounts to the app: the ones you authorised are not in the list of your Enable Banking application. Nothing was linked. To link them:"
+    },
+    "1873714043811516931": {
+      "it": "Torna a Collega una banca",
+      "en": "Back to Link a bank"
+    },
+    "5291323068291404052": {
+      "it": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} collegata: {$ICU}, {$INTERPOLATION_2} movimenti nuovi importati. ",
+      "en": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} linked: {$ICU}, {$INTERPOLATION_2} new transactions imported."
+    },
+    "7720802162510909607": {
+      "it": "{VAR_PLURAL, plural, =1 {1 conto} other {{INTERPOLATION} conti}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 account} other {{INTERPOLATION} accounts}}"
+    },
+    "787757344310050619": {
+      "it": "Manca un conto che hai autorizzato?",
+      "en": "Is an account you authorised missing?"
+    },
+    "3749777532833335435": {
+      "it": "Non è nella lista della tua applicazione Enable Banking. Aggiungilo e ricollega:",
+      "en": "It is not in the list of your Enable Banking application. Add it and link again:"
+    },
+    "2454573106920681803": {
+      "it": "Alcuni conti non sono stati importati (riproveremo al prossimo aggiornamento):",
+      "en": "Some accounts were not imported (we will try again at the next update):"
+    },
+    "2108460776374156732": {
+      "it": " Ora scegli il {$START_LINK}ruolo dei nuovi conti{$CLOSE_LINK}, oppure guarda i {$START_LINK_1}movimenti{$CLOSE_LINK}. ",
+      "en": "Now choose the {$START_LINK}role of the new accounts{$CLOSE_LINK}, or look at the {$START_LINK_1}transactions{$CLOSE_LINK}."
+    },
+    "789279719724060423": {
+      "it": "Riprova a collegare una banca",
+      "en": "Try linking a bank again"
+    },
+    "1481368289372981374": {
+      "it": "La banca ha risposto: {$value}",
+      "en": "The bank answered: {$value}"
+    },
+    "285584351784998347": {
+      "it": "In questo indirizzo mancano i dati del collegamento.",
+      "en": "The connection data is missing from this address."
+    },
+    "5797923842587438319": {
+      "it": "Il collegamento non è riuscito.",
+      "en": "The link failed."
+    },
+    "831463394083267230": {
+      "it": "{$START_TAG_STRONG}La prima volta per un conto:{$CLOSE_TAG_STRONG} aggiungilo alla tua applicazione Enable Banking (passi qui sotto). Poi non serve più. ",
+      "en": "{$START_TAG_STRONG}The first time for an account:{$CLOSE_TAG_STRONG} add it to your Enable Banking application (steps below). After that it is no longer needed."
+    },
+    "3936443436380770526": {
+      "it": "Scegli la tua banca e premi {$START_TAG_STRONG}Collega{$CLOSE_TAG_STRONG}.",
+      "en": "Choose your bank and press {$START_TAG_STRONG}Link{$CLOSE_TAG_STRONG}."
+    },
+    "7704964317950486369": {
+      "it": "Verrai portato sul sito della banca: accedi e autorizza la lettura dei conti.",
+      "en": "You will be taken to the bank's site: log in and authorise reading the accounts."
+    },
+    "8061308574120840657": {
+      "it": "Alla fine tornerai qui, e i movimenti verranno importati in automatico.",
+      "en": "At the end you will come back here, and the transactions will be imported automatically."
+    },
+    "7966991900629674091": {
+      "it": "Un conto nuovo? Prima aggiungilo in Enable Banking",
+      "en": "A new account? Add it in Enable Banking first"
+    },
+    "5367369472408305687": {
+      "it": " Per rinnovare il collegamento con {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}, premi {$START_TAG_STRONG}Collega{$CLOSE_TAG_STRONG} qui sotto e accedi alla banca. I conti, i movimenti e le tue correzioni restano: WalletTracker riconosce i conti e li sposta sul nuovo collegamento. ",
+      "en": "To renew the connection with {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}, press {$START_TAG_STRONG}Link{$CLOSE_TAG_STRONG} below and log in to the bank. The accounts, the transactions and your corrections stay: WalletTracker recognises the accounts and moves them to the new connection."
+    },
+    "7956495833010039640": {
+      "it": " Paese ",
+      "en": "Country"
+    },
+    "89046989723178781": {
+      "it": " Cerca ",
+      "en": "Search"
+    },
+    "8061181128576445007": {
+      "it": "es. ING, Revolut",
+      "en": "e.g. ING, Revolut"
+    },
+    "3930309523223157295": {
+      "it": "Per collegare una banca serve Tailscale",
+      "en": "Linking a bank needs Tailscale"
+    },
+    "7234909604347229756": {
+      "it": " Dopo il consenso, la banca rimanda il tuo browser a un indirizzo {$START_TAG_STRONG}https{$CLOSE_TAG_STRONG} di WalletTracker (Enable Banking non ne accetta altri), e quello lo dà Tailscale: è anche quello che apre l'app dal telefono. ",
+      "en": "After the consent, the bank sends your browser back to an {$START_TAG_STRONG}https{$CLOSE_TAG_STRONG} address of WalletTracker (Enable Banking accepts no others), and Tailscale provides it: it is also the one that opens the app from the phone."
+    },
+    "3469382692708611990": {
+      "it": " Prepara Tailscale seguendo la {$START_LINK}guida{$CLOSE_LINK} (capitolo «Tailscale»), registra su Enable Banking l'indirizzo che comparirà in {$START_LINK_1}Impostazioni{$CLOSE_LINK}, e torna qui. ",
+      "en": "Set up Tailscale following the {$START_LINK}guide{$CLOSE_LINK} (chapter «Tailscale»), register on Enable Banking the address that will appear in {$START_LINK_1}Settings{$CLOSE_LINK}, and come back here."
+    },
+    "6782245850278120285": {
+      "it": "Sviluppo: la banca non tornerebbe qui",
+      "en": "Development: the bank would not come back here"
+    },
+    "4960902774029890950": {
+      "it": " Al ritorno la banca andrà su {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}, cioè all'app in Docker (è lei che risponde su Tailscale), non al backend di {$START_TAG_CODE}./mvnw{$CLOSE_TAG_CODE} che avvia il collegamento: il collegamento non si completerebbe. ",
+      "en": "On the way back the bank will go to {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}, that is the app in Docker (it is the one answering on Tailscale), not the {$START_TAG_CODE}./mvnw{$CLOSE_TAG_CODE} backend that starts the link: the link would not complete."
+    },
+    "4288070268716116824": {
+      "it": " Aggiungi {$START_TAG_CODE}https://localhost:8443/callback{$CLOSE_TAG_CODE} a {$START_TAG_CODE}ENABLE_BANKING_REDIRECT_URL{$CLOSE_TAG_CODE} nel {$START_TAG_CODE}.env{$CLOSE_TAG_CODE} (separato da una virgola), registralo anche su Enable Banking, e riavvia {$START_TAG_CODE}./mvnw{$CLOSE_TAG_CODE}. ",
+      "en": "Add {$START_TAG_CODE}https://localhost:8443/callback{$CLOSE_TAG_CODE} to {$START_TAG_CODE}ENABLE_BANKING_REDIRECT_URL{$CLOSE_TAG_CODE} in the {$START_TAG_CODE}.env{$CLOSE_TAG_CODE} (separated by a comma), register it on Enable Banking too, and restart {$START_TAG_CODE}./mvnw{$CLOSE_TAG_CODE}."
+    },
+    "8748389732638472184": {
+      "it": " Al ritorno dalla banca si aprirà {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}, l'indirizzo di Tailscale: lì l'app ti chiederà il PIN, poi finirà il collegamento da sola. ",
+      "en": "On the way back from the bank {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} will open, the Tailscale address: there the app will ask you for the PIN, then it will finish the link by itself."
+    },
+    "2391244561885935584": {
+      "it": " Prima crea un PIN in {$START_LINK}Impostazioni → Accesso{$CLOSE_LINK}: dall'indirizzo di Tailscale, senza PIN, l'app non si apre. ",
+      "en": "First create a PIN in {$START_LINK}Settings → Access{$CLOSE_LINK}: from the Tailscale address, without a PIN, the app does not open."
+    },
+    "2213616162977765333": {
+      "it": "Caricamento delle banche...",
+      "en": "Loading the banks..."
+    },
+    "7421760720691764184": {
+      "it": "Consenso fino a {$INTERPOLATION} giorni",
+      "en": "Consent for up to {$INTERPOLATION} days"
+    },
+    "2660398508970720212": {
+      "it": "{VAR_SELECT, select, true {Apertura della banca...} other {Collega}}",
+      "en": "{VAR_SELECT, select, true {Opening the bank...} other {Link}}"
+    },
+    "8695841664031663621": {
+      "it": "Nessuna banca trovata.",
+      "en": "No bank found."
+    },
+    "8415215184969697279": {
+      "it": "Italia",
+      "en": "Italy"
+    },
+    "492579018556713144": {
+      "it": "Germania",
+      "en": "Germany"
+    },
+    "1578158151255947056": {
+      "it": "Spagna",
+      "en": "Spain"
+    },
+    "2448890345981387332": {
+      "it": "Francia",
+      "en": "France"
+    },
+    "2366689023508703438": {
+      "it": "Paesi Bassi",
+      "en": "Netherlands"
+    },
+    "4923532159603961289": {
+      "it": "Belgio",
+      "en": "Belgium"
+    },
+    "21641575311466062": {
+      "it": "Austria",
+      "en": "Austria"
+    },
+    "6997785629787049278": {
+      "it": "Irlanda",
+      "en": "Ireland"
+    },
+    "376096388110439345": {
+      "it": "Lituania",
+      "en": "Lithuania"
+    },
+    "5921359081812123204": {
+      "it": "Lussemburgo",
+      "en": "Luxembourg"
+    },
+    "7897692357515337686": {
+      "it": "Portogallo",
+      "en": "Portugal"
+    },
+    "3123879447392769446": {
+      "it": "Non è stato possibile avviare il collegamento.",
+      "en": "The link could not be started."
+    },
+    "1060955379862150798": {
+      "it": "Impossibile caricare le banche: il backend è avviato?",
+      "en": "Cannot load the banks: is the backend running?"
+    },
+    "6103453820345866214": {
+      "it": " Apri il {$START_LINK}pannello di Enable Banking{$CLOSE_LINK} e accedi. ",
+      "en": "Open the {$START_LINK}Enable Banking control panel{$CLOSE_LINK} and log in."
+    },
+    "7988119897233291133": {
+      "it": "Nella tua applicazione premi {$START_TAG_STRONG}Link accounts{$CLOSE_TAG_STRONG}.",
+      "en": "In your application press {$START_TAG_STRONG}Link accounts{$CLOSE_TAG_STRONG}."
+    },
+    "840353714836978037": {
+      "it": " Scegli il paese e la banca, accedi alla banca e seleziona i conti da aggiungere (anche quelli che c'erano già, se la banca li propone insieme). ",
+      "en": "Choose the country and the bank, log in to the bank and select the accounts to add (also those already there, if the bank offers them together)."
+    },
+    "8312457383585960456": {
+      "it": " Torna qui, premi {$START_TAG_STRONG}Collega{$CLOSE_TAG_STRONG} sulla banca e seleziona {$START_TAG_STRONG}gli stessi conti{$CLOSE_TAG_STRONG}. ",
+      "en": "Come back here, press {$START_TAG_STRONG}Link{$CLOSE_TAG_STRONG} on the bank and select {$START_TAG_STRONG}the same accounts{$CLOSE_TAG_STRONG}."
+    },
+    "6595439614757847380": {
+      "it": " Serve una volta sola per ogni conto. Il motivo: la tua applicazione Enable Banking è in {$START_TAG_STRONG}modalità ristretta{$CLOSE_TAG_STRONG} (gratuita, per uso personale) e passa all'app solo i conti della sua lista; gli altri li toglie, anche se la banca li ha autorizzati. ",
+      "en": "It is needed only once for each account. The reason: your Enable Banking application is in {$START_TAG_STRONG}restricted mode{$CLOSE_TAG_STRONG} (free, for personal use) and passes to the app only the accounts in its list; it removes the others, even if the bank authorised them."
+    },
+    "3950058997524312698": {
+      "it": "Abbonamenti",
+      "en": "Subscriptions"
+    },
+    "4526736049252773978": {
+      "it": "le spese che tornano ogni mese o ogni anno",
+      "en": "the expenses that come back every month or every year"
+    },
+    "7195847910227906495": {
+      "it": "quanto hai versato, cedole, dividendi e interessi",
+      "en": "how much you deposited, coupons, dividends and interest"
+    },
+    "4467710845609537535": {
+      "it": "i conti collegati e quelli aggiunti a mano",
+      "en": "the linked accounts and those added by hand"
+    },
+    "8236585639144198040": {
+      "it": "un conto nuovo, o il rinnovo del consenso",
+      "en": "a new account, or the renewal of the consent"
+    },
+    "7669366884388968041": {
+      "it": "Importa",
+      "en": "Import"
+    },
+    "8860028434844794445": {
+      "it": "i movimenti da un file CSV, e il file di Trade Republic",
+      "en": "transactions from a CSV file, and the Trade Republic file"
+    },
+    "8679434883059358500": {
+      "it": "Regole",
+      "en": "Rules"
+    },
+    "7084220252346588622": {
+      "it": "come i movimenti ricevono tipo e categoria",
+      "en": "how transactions get their type and category"
+    },
+    "8480833809864274951": {
+      "it": "le tue categorie di spesa e di entrata",
+      "en": "your expense and income categories"
+    },
+    "8502305771103286072": {
+      "it": "Impostazioni",
+      "en": "Settings"
+    },
+    "5716741677341668979": {
+      "it": "banca, intelligenza artificiale, tema",
+      "en": "bank, artificial intelligence, theme"
+    },
+    "6257742107375262262": {
+      "it": "Liquidità",
+      "en": "Cash"
+    },
+    "5702006088440056535": {
+      "it": "Vedi i conti ›",
+      "en": "See the accounts ›"
+    },
+    "5020891470034505459": {
+      "it": "{VAR_PLURAL, plural, =1 {Sul tuo conto, adesso} other {Su {INTERPOLATION} conti, adesso}}",
+      "en": "{VAR_PLURAL, plural, =1 {On your account, now} other {On {INTERPOLATION} accounts, now}}"
+    },
+    "6397894164536703905": {
+      "it": "Valuta del grafico",
+      "en": "Currency of the chart"
+    },
+    "4967050096275237981": {
+      "it": " Tutti i conti ",
+      "en": "All accounts"
+    },
+    "876522556398186445": {
+      "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Saldi salvati",
+      "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Saved balances"
+    },
+    "8550815096719227346": {
+      "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Stima dai movimenti",
+      "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Estimated from the transactions"
+    },
+    "7132938759682315519": {
+      "it": " Storico non ancora disponibile per {$INTERPOLATION}. ",
+      "en": "History not available yet for {$INTERPOLATION}."
+    },
+    "4188840551952738445": {
+      "it": "al {$INTERPOLATION}",
+      "en": "on {$INTERPOLATION}"
+    },
+    "8856905278208146821": {
+      "it": " {$ICU} ",
+      "en": "{$ICU}"
+    },
+    "3378065843231399950": {
+      "it": "{VAR_PLURAL, plural, =1 {1 conto senza saldo non è nel totale} other {{INTERPOLATION} conti senza saldo non sono nel totale}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 account without a balance is not in the total} other {{INTERPOLATION} accounts without a balance are not in the total}}"
+    },
+    "3506952562998536004": {
+      "it": "Il {$day} · stima dai movimenti",
+      "en": "On {$day} · estimated from the transactions"
+    },
+    "6588707462483089966": {
+      "it": "Il {$day}",
+      "en": "On {$day}"
+    },
+    "7479578550281236217": {
+      "it": "{$day} · stima",
+      "en": "{$day} · estimate"
+    },
+    "325354694424296750": {
+      "it": "Liquidità in {$currency} giorno per giorno, dal {$day} a oggi. Le parti tratteggiate sono stimate dai movimenti.",
+      "en": "Cash in {$currency} day by day, from {$day} to today. The dashed parts are estimated from the transactions."
+    },
+    "9099833423739740185": {
+      "it": "{$account} in {$currency} giorno per giorno, dal {$day} a oggi. Le parti tratteggiate sono stimate dai movimenti.",
+      "en": "{$account} in {$currency} day by day, from {$day} to today. The dashed parts are estimated from the transactions."
+    },
+    "8153525948990570064": {
+      "it": "{$INTERPOLATION}. Con le frecce si scorrono i giorni.",
+      "en": "{$INTERPOLATION}. Use the arrow keys to move through the days."
+    },
+    "8977878290683386887": {
+      "it": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}Un mese tipico (media di {$ICU}) ",
+      "en": "{$START_TAG_SPAN}{$CLOSE_TAG_SPAN}A typical month (average of {$ICU})"
+    },
+    "8143554442572790670": {
+      "it": "{VAR_PLURAL, plural, =1 {1 mese} other {{INTERPOLATION} mesi}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 month} other {{INTERPOLATION} months}}"
+    },
+    "3040065388397627279": {
+      "it": " Entrate {$ICU}: {$INTERPOLATION} ",
+      "en": "Income {$ICU}: {$INTERPOLATION}"
+    },
+    "7111066402303001671": {
+      "it": "{VAR_SELECT, select, true {finora} other {del mese}}",
+      "en": "{VAR_SELECT, select, true {so far} other {for the month}}"
+    },
+    "7944917928718386472": {
+      "it": "Spese per categoria",
+      "en": "Expenses by category"
+    },
+    "526022431537356362": {
+      "it": "Tutte ›",
+      "en": "All ›"
+    },
+    "3559583854963584689": {
+      "it": "Senza categoria: apri le spese del mese, per dare loro una categoria",
+      "en": "No category: open the expenses of the month, to give them a category"
+    },
+    "1881263766521656235": {
+      "it": " Nessuna spesa {$ICU}. ",
+      "en": "No expenses {$ICU}."
+    },
+    "4919276160774510884": {
+      "it": "{VAR_SELECT, select, true {finora} other {in questo mese}}",
+      "en": "{VAR_SELECT, select, true {so far} other {in this month}}"
+    },
+    "3812229193648826011": {
+      "it": "In arrivo nei prossimi 7 giorni",
+      "en": "Coming up in the next 7 days"
+    },
+    "5889931838047162592": {
+      "it": "Abbonamenti ›",
+      "en": "Subscriptions ›"
+    },
+    "1765328346184065439": {
+      "it": "{VAR_PLURAL, plural, =1 {movimento da verificare} other {movimenti da verificare}}",
+      "en": "{VAR_PLURAL, plural, =1 {transaction to review} other {transactions to review}}"
+    },
+    "6179592031240056959": {
+      "it": "{VAR_PLURAL, plural, =1 {categoria suggerita} other {categorie suggerite}}",
+      "en": "{VAR_PLURAL, plural, =1 {suggested category} other {suggested categories}}"
+    },
+    "9129419994705694408": {
+      "it": "Tutto il mese",
+      "en": "Whole month"
+    },
+    "3846607783785654015": {
+      "it": "Speso fino al {$day} {$monthShort}",
+      "en": "Spent up to {$day} {$monthShort}"
+    },
+    "3907969062587724962": {
+      "it": "Speso finora",
+      "en": "Spent so far"
+    },
+    "2071043402785254135": {
+      "it": "Speso nel mese",
+      "en": "Spent in the month"
+    },
+    "6819146742117809929": {
+      "it": "Spesa accumulata nel mese: {$amount} al giorno {$length}",
+      "en": "Spending accumulated in the month: {$amount} on day {$length}"
+    },
+    "9055709066329022222": {
+      "it": "{$spent}, contro {$amount} di un mese tipico allo stesso giorno",
+      "en": "{$spent}, against {$amount} of a typical month on the same day"
+    },
+    "8537833957016905371": {
+      "it": "1 movimento da verificare",
+      "en": "1 transaction to review"
+    },
+    "3907464611872215339": {
+      "it": "{$n} movimenti da verificare",
+      "en": "{$n} transactions to review"
+    },
+    "6690494873392269380": {
+      "it": "1 categoria suggerita",
+      "en": "1 suggested category"
+    },
+    "2842906256539243610": {
+      "it": "{$n} categorie suggerite",
+      "en": "{$n} suggested categories"
+    },
+    "7154550165217872635": {
+      "it": "Impossibile caricare il riepilogo: il backend è avviato?",
+      "en": "Cannot load the overview: is the backend running?"
+    },
+    "1349078813767786652": {
+      "it": "Il confronto con il solito comincia dopo il primo mese completo di movimenti.",
+      "en": "The comparison with the usual starts after the first full month of transactions."
+    },
+    "2054672090960570303": {
+      "it": " a questo punto del mese",
+      "en": "at this point of the month"
+    },
+    "6496313955865973308": {
+      "it": "In linea con il solito{$when}.",
+      "en": "In line with the usual{$when}."
+    },
+    "1532665698861312224": {
+      "it": "{$amount} in meno del solito{$when}.",
+      "en": "{$amount} less than usual{$when}."
+    },
+    "2877152345806119313": {
+      "it": "{$amount} più del solito{$when}.",
+      "en": "{$amount} more than usual{$when}."
+    },
+    "6532998917370371948": {
+      "it": "Da inizio {$year}",
+      "en": "Since the start of {$year}"
+    },
+    "6741257036459937160": {
+      "it": "Tutto il {$year}",
+      "en": "All of {$year}"
+    },
+    "8362089882371908385": {
+      "it": "come al solito",
+      "en": "as usual"
+    },
+    "5562682550348262535": {
+      "it": "{$value}{$amount} sul solito",
+      "en": "{$value}{$amount} vs usual"
+    },
+    "339860315472001799": {
+      "it": " Una regola insegna all'app a riconoscere un movimento: {$START_EMPHASISED_TEXT}\"se il testo contiene (o inizia con) queste parole, allora è una spesa, un'entrata… di questa categoria\"{$CLOSE_EMPHASISED_TEXT}. Maiuscole, minuscole e spazi in più non contano. Le regole si provano in ordine di {$START_TAG_STRONG}priorità{$CLOSE_TAG_STRONG}, dal numero più basso: vale la prima che corrisponde. Quando salvi, modifichi o cancelli una regola, l'app la applica subito a tutti i movimenti, anche a quelli vecchi.\n",
+      "en": "A rule teaches the app to recognise a transaction: {$START_EMPHASISED_TEXT}\"if the text contains (or starts with) these words, then it is an expense, an income… of this category\"{$CLOSE_EMPHASISED_TEXT}. Upper case, lower case and extra spaces do not matter. The rules are tried in order of {$START_TAG_STRONG}priority{$CLOSE_TAG_STRONG}, from the lowest number: the first one that matches applies. When you save, edit or delete a rule, the app applies it straight away to all the transactions, the old ones too."
+    },
+    "8755274764065989258": {
+      "it": "Perché a volte una regola non vale?",
+      "en": "Why does a rule sometimes not apply?"
+    },
+    "135257906893424320": {
+      "it": "Prima delle regole l'app controlla due cose:",
+      "en": "Before the rules the app checks two things:"
+    },
+    "3642647826657462895": {
+      "it": "{$START_TAG_STRONG}se il movimento l'hai sistemato tu{$CLOSE_TAG_STRONG}, cambiandogli tipo o categoria: vale la tua scelta, e nessuna regola la cambia; ",
+      "en": "{$START_TAG_STRONG}whether you sorted out the transaction yourself{$CLOSE_TAG_STRONG}, by changing its type or category: your choice applies, and no rule changes it;"
+    },
+    "7414246094609255931": {
+      "it": "{$START_TAG_STRONG}se sono soldi che passano da un tuo conto a un altro{$CLOSE_TAG_STRONG} (dal conto corrente alla carta di credito, o al conto degli investimenti): li riconosce da sola, perché trova l'uscita su un conto e l'entrata uguale sull'altro. Non sono né una spesa né un'entrata, e le regole non li toccano. ",
+      "en": "{$START_TAG_STRONG}whether it is money going from one of your accounts to another{$CLOSE_TAG_STRONG} (from the current account to the credit card, or to the investment account): it recognises them by itself, because it finds the outflow on one account and the same inflow on the other. They are neither an expense nor an income, and the rules do not touch them."
+    },
+    "4438628346796359249": {
+      "it": " Attenzione: la regola «{$INTERPOLATION}» è salvata, ma per alcuni movimenti che corrispondono al suo testo non vince lei. ",
+      "en": "Warning: the rule «{$INTERPOLATION}» is saved, but for some transactions that match its text it is not the one that wins."
+    },
+    "7735205501907659569": {
+      "it": "{VAR_SELECT, select, true {Modifica la regola} other {Nuova regola}}",
+      "en": "{VAR_SELECT, select, true {Edit the rule} other {New rule}}"
+    },
+    "5605991009261248799": {
+      "it": "es. Supermercato",
+      "en": "e.g. Supermarket"
+    },
+    "2881864076063733576": {
+      "it": "Scrivi un nome (massimo 100 caratteri).",
+      "en": "Write a name (100 characters at most)."
+    },
+    "8794392638024482099": {
+      "it": " Se il testo ",
+      "en": "If the text"
+    },
+    "2950135081625303697": {
+      "it": " queste parole ",
+      "en": "these words"
+    },
+    "7772418564522007840": {
+      "it": "es. ESSELUNGA",
+      "en": "e.g. ESSELUNGA"
+    },
+    "2098840041675954416": {
+      "it": "Almeno 2 caratteri.",
+      "en": "At least 2 characters."
+    },
+    "3726301065847813211": {
+      "it": "in quest'ordine e una dopo l'altra",
+      "en": "in this order and one after the other"
+    },
+    "381686135314474265": {
+      "it": "parole intere, in qualsiasi ordine, anche con altre in mezzo",
+      "en": "whole words, in any order, even with others in between"
+    },
+    "8574602330022627653": {
+      "it": "all'inizio del testo",
+      "en": "at the start of the text"
+    },
+    "3038620465052024122": {
+      "it": " per ",
+      "en": "for"
+    },
+    "7688669663853800721": {
+      "it": " allora il tipo è ",
+      "en": "then the type is"
+    },
+    "2243897227035976901": {
+      "it": " Categoria (facoltativa) ",
+      "en": "Category (optional)"
+    },
+    "6344172595448032497": {
+      "it": " Priorità ",
+      "en": "Priority"
+    },
+    "275159852840442440": {
+      "it": "Un numero da 0 a 10000.",
+      "en": "A number from 0 to 10000."
+    },
+    "6221017844286245303": {
+      "it": " Attiva ",
+      "en": "Active"
+    },
+    "1153109560645312201": {
+      "it": "Prova",
+      "en": "Test"
+    },
+    "3616860064166246259": {
+      "it": " Il testo di questa regola corrisponde a {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}{$ICU}. {$START_BLOCK_IF} La regola ne classificherebbe {$START_TAG_STRONG}{$INTERPOLATION_1}{$CLOSE_TAG_STRONG}. {$CLOSE_BLOCK_IF}",
+      "en": "The text of this rule matches {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}{$ICU}. {$START_BLOCK_IF} The rule would classify {$START_TAG_STRONG}{$INTERPOLATION_1}{$CLOSE_TAG_STRONG} of them. {$CLOSE_BLOCK_IF}"
+    },
+    "2167515127084798521": {
+      "it": "{VAR_PLURAL, plural, =1 {movimento} other {movimenti}}",
+      "en": "{VAR_PLURAL, plural, =1 {transaction} other {transactions}}"
+    },
+    "8584735695750043527": {
+      "it": "I più recenti:",
+      "en": "The most recent:"
+    },
+    "2838179902322782602": {
+      "it": "Priorità",
+      "en": "Priority"
+    },
+    "2332180001770133395": {
+      "it": "Nome",
+      "en": "Name"
+    },
+    "7462296114891574178": {
+      "it": "Condizione",
+      "en": "Condition"
+    },
+    "8389013513531416843": {
+      "it": "Risultato",
+      "en": "Result"
+    },
+    "7002889194169911190": {
+      "it": "Usata",
+      "en": "Used"
+    },
+    "796680273282378456": {
+      "it": "Attiva",
+      "en": "Active"
+    },
+    "6308049077007007491": {
+      "it": "Regola di partenza",
+      "en": "Starter rule"
+    },
+    "4763782613860393763": {
+      "it": "Attiva {$INTERPOLATION}",
+      "en": "Turn on {$INTERPOLATION}"
+    },
+    "7058484076544629349": {
+      "it": "Le tue regole",
+      "en": "Your rules"
+    },
+    "4709693640063036485": {
+      "it": " Nessuna regola tua: creane una qui sopra, oppure da un movimento (\"Crea una regola\" nella sua scheda). ",
+      "en": "No rules of your own: create one above, or from a transaction (\"Create a rule\" on its page)."
+    },
+    "819141214328257291": {
+      "it": "Regole di partenza ({$INTERPOLATION})",
+      "en": "Starter rules ({$INTERPOLATION})"
+    },
+    "8776152591697877395": {
+      "it": " Vengono con l'app e riconoscono i movimenti tipici di banche e investimenti. Puoi disattivarle o cambiarne la priorità; non si eliminano. ",
+      "en": "They come with the app and recognise the typical transactions of banks and investments. You can turn them off or change their priority; they cannot be deleted."
+    },
+    "9159586432133749281": {
+      "it": "{$ICU}:",
+      "en": "{$ICU}:"
+    },
+    "8321100399736132292": {
+      "it": " vince la regola «{$INTERPOLATION}», che ha priorità {$INTERPOLATION_1}. Per far valere questa, dalle una priorità più bassa di {$INTERPOLATION_1}. ",
+      "en": "the rule «{$INTERPOLATION}» wins, which has priority {$INTERPOLATION_1}. To make this one apply, give it a priority lower than {$INTERPOLATION_1}."
+    },
+    "3919780262192731500": {
+      "it": " il tipo è stato scelto a mano, e una scelta a mano vince sempre sulle regole. ",
+      "en": "the type was chosen by hand, and a choice made by hand always wins over the rules."
+    },
+    "1093204344328712546": {
+      "it": " sono trasferimenti tra i tuoi conti (abbinati, o con l'IBAN di un tuo conto): vengono prima delle regole. Per un conto di investimento, dagli il ruolo Investimenti in Conti. ",
+      "en": "they are transfers between your accounts (matched, or with the IBAN of one of your accounts): they come before the rules. For an investment account, give it the role Investments in Accounts."
+    },
+    "5718035390406940829": {
+      "it": "Movimenti con \"{$pattern}\"",
+      "en": "Transactions with \"{$pattern}\""
+    },
+    "6028616169197190682": {
+      "it": "Modulo compilato dalla tua correzione: accorcia il testo da cercare se serve, controlla la prova e salva.",
+      "en": "Form filled in from your correction: shorten the text to search for if needed, check the test and save."
+    },
+    "7241657755307574517": {
+      "it": "Modulo compilato dal movimento: scegli la categoria, accorcia il testo da cercare se serve, controlla la prova e salva.",
+      "en": "Form filled in from the transaction: choose the category, shorten the text to search for if needed, check the test and save."
+    },
+    "1333173555476797304": {
+      "it": "Prova non riuscita.",
+      "en": "The test failed."
+    },
+    "143253058759149149": {
+      "it": "Regola \"{$name}\" salvata: ora classifica {$uses} movimenti.",
+      "en": "Rule \"{$name}\" saved: it now classifies {$uses} transactions."
+    },
+    "5743949874826921447": {
+      "it": "La regola non è stata salvata.",
+      "en": "The rule was not saved."
+    },
+    "2881069745021114586": {
+      "it": "La regola non è stata aggiornata.",
+      "en": "The rule was not updated."
+    },
+    "2303189952383123576": {
+      "it": "Regola \"{$name}\" cancellata.",
+      "en": "Rule \"{$name}\" deleted."
+    },
+    "764025705972342332": {
+      "it": "La regola non è stata cancellata.",
+      "en": "The rule was not deleted."
+    },
+    "3079635653573756335": {
+      "it": "Impossibile caricare le regole: il backend è avviato?",
+      "en": "Cannot load the rules: is the backend running?"
+    },
+    "6535001054362098632": {
+      "it": "Fatto a mano",
+      "en": "Made by hand"
+    },
+    "733904836484543304": {
+      "it": "Automatico",
+      "en": "Automatic"
+    },
+    "4092969058525922734": {
+      "it": "Prima di un ripristino",
+      "en": "Before a restore"
+    },
+    "3803442807610794974": {
+      "it": "Prima di un aggiornamento",
+      "en": "Before an update"
+    },
+    "6147808700623548697": {
+      "it": " I backup li fa l'app installata con Docker (lo script di installazione, docs/48): qui non ci sono. ",
+      "en": "Backups are made by the app installed with Docker (the installation script, docs/48): there are none here."
+    },
+    "1909863436139239699": {
+      "it": " Il servizio dei backup non risponde: dal server, controlla con {$START_TAG_CODE}docker compose ps{$CLOSE_TAG_CODE}. ",
+      "en": "The backup service is not answering: from the server, check with {$START_TAG_CODE}docker compose ps{$CLOSE_TAG_CODE}."
+    },
+    "8769178237672198400": {
+      "it": " ✓ Backup automatico acceso: uno al giorno, dalle {$INTERPOLATION}. ",
+      "en": "✓ Automatic backup on: one a day, from {$INTERPOLATION}."
+    },
+    "7922547934594925622": {
+      "it": " Backup automatico spento: manca la password dei backup. Dal server, lancia lo script di installazione con {$START_TAG_CODE}-Backup{$CLOSE_TAG_CODE} (Windows) o {$START_TAG_CODE}--backup{$CLOSE_TAG_CODE} (docs/48). ",
+      "en": "Automatic backup off: the backup password is missing. From the server, run the installation script with {$START_TAG_CODE}-Backup{$CLOSE_TAG_CODE} (Windows) or {$START_TAG_CODE}--backup{$CLOSE_TAG_CODE} (docs/48)."
+    },
+    "6050356982761085700": {
+      "it": " Ultimo backup: {$START_BLOCK_IF}{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}{$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE}{$START_TAG_STRONG}nessuno{$CLOSE_TAG_STRONG}{$CLOSE_BLOCK_ELSE}",
+      "en": "Last backup: {$START_BLOCK_IF}{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}{$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE}{$START_TAG_STRONG}none{$CLOSE_TAG_STRONG}{$CLOSE_BLOCK_ELSE}"
+    },
+    "8591792527699534879": {
+      "it": "{VAR_SELECT, select, true {Backup in corso…} other {Fai un backup adesso}}",
+      "en": "{VAR_SELECT, select, true {Backup in progress…} other {Make a backup now}}"
+    },
+    "7810101333022324148": {
+      "it": "Scarica",
+      "en": "Download"
+    },
+    "4069109640834262012": {
+      "it": " Si tengono gli ultimi {$INTERPOLATION} automatici, {$INTERPOLATION_1} fatti a mano e {$INTERPOLATION_2} di prima di ogni aggiornamento o ripristino: i più vecchi si cancellano da soli. Per tenerne uno per sempre, scaricalo. ",
+      "en": "The last {$INTERPOLATION} automatic ones, {$INTERPOLATION_1} made by hand and {$INTERPOLATION_2} from before each update or restore are kept: the oldest are deleted by themselves. To keep one forever, download it."
+    },
+    "492539103377776797": {
+      "it": " Si tengono gli ultimi {$INTERPOLATION} backup automatici. ",
+      "en": "The last {$INTERPOLATION} automatic backups are kept."
+    },
+    "3179026060051474302": {
+      "it": " I backup si scaricano solo dal server ({$START_TAG_CODE}http://localhost:8000{$CLOSE_TAG_CODE}): sono cifrati, ma sono tutti i tuoi dati. ",
+      "en": "Backups can only be downloaded from the server ({$START_TAG_CODE}http://localhost:8000{$CLOSE_TAG_CODE}): they are encrypted, but they are all your data."
+    },
+    "3589112389178771268": {
+      "it": " I backup sono in: {$START_BLOCK_IF}{$START_TAG_CODE}{$INTERPOLATION}{$CLOSE_TAG_CODE}{$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE} la cartella {$START_TAG_CODE_1}backup{$CLOSE_TAG_CODE} di WalletTracker, sul server {$CLOSE_BLOCK_ELSE}",
+      "en": "The backups are in: {$START_BLOCK_IF}{$START_TAG_CODE}{$INTERPOLATION}{$CLOSE_TAG_CODE}{$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE} the {$START_TAG_CODE_1}backup{$CLOSE_TAG_CODE} folder of WalletTracker, on the server {$CLOSE_BLOCK_ELSE}"
+    },
+    "2932432317883573862": {
+      "it": " Per cambiarla (un disco esterno, Google Drive) lancia dal server lo script di installazione con {$START_TAG_CODE}-CartellaBackup{$CLOSE_TAG_CODE} (Windows) o {$START_TAG_CODE}--cartella-backup{$CLOSE_TAG_CODE}. Il ripristino si fa dal server, con {$START_TAG_CODE}-Ripristina{$CLOSE_TAG_CODE}: docs/48. ",
+      "en": "To change it (an external disk, Google Drive) run the installation script from the server with {$START_TAG_CODE}-BackupFolder{$CLOSE_TAG_CODE} (Windows) or {$START_TAG_CODE}--backup-folder{$CLOSE_TAG_CODE}. A restore is done from the server, with {$START_TAG_CODE}-Restore{$CLOSE_TAG_CODE}: docs/48."
+    },
+    "473385895034229120": {
+      "it": "Caricamento…",
+      "en": "Loading…"
+    },
+    "2895170185459213317": {
+      "it": "Enable Banking",
+      "en": "Enable Banking"
+    },
+    "1001036363012481637": {
+      "it": " ✓ Configurato {$ICU} · Application ID {$START_TAG_CODE}{$INTERPOLATION}{$CLOSE_TAG_CODE}",
+      "en": "✓ Set up {$ICU} · Application ID {$START_TAG_CODE}{$INTERPOLATION}{$CLOSE_TAG_CODE}"
+    },
+    "5996251693528487796": {
+      "it": "{VAR_SELECT, select, true {da questa pagina} other {dal file .env}}",
+      "en": "{VAR_SELECT, select, true {from this page} other {from the .env file}}"
+    },
+    "8223754859740577545": {
+      "it": " Puoi sostituire le credenziali in qualsiasi momento ripetendo i passi qui sotto. ",
+      "en": "You can replace the credentials at any time by repeating the steps below."
+    },
+    "1017896978112849778": {
+      "it": "Non ancora configurato: segui i tre passi qui sotto.",
+      "en": "Not set up yet: follow the three steps below."
+    },
+    "190236739118613459": {
+      "it": "1. Crea la tua applicazione su Enable Banking",
+      "en": "1. Create your application on Enable Banking"
+    },
+    "5529675513018574020": {
+      "it": " Enable Banking è il servizio autorizzato (PSD2) che legge i conti dalle banche. L'uso per i {$START_TAG_STRONG}tuoi{$CLOSE_TAG_STRONG} conti è gratuito. I nomi delle voci sul sito potrebbero cambiare leggermente. ",
+      "en": "Enable Banking is the authorised service (PSD2) that reads the accounts from the banks. Using it for {$START_TAG_STRONG}your own{$CLOSE_TAG_STRONG} accounts is free. The names of the items on the site may change slightly."
+    },
+    "1626888290940561959": {
+      "it": " Vai su {$START_LINK}enablebanking.com{$CLOSE_LINK}, crea un account e apri il pannello di controllo ({$START_EMPHASISED_TEXT}Control Panel{$CLOSE_EMPHASISED_TEXT}). ",
+      "en": "Go to {$START_LINK}enablebanking.com{$CLOSE_LINK}, create an account and open the control panel ({$START_EMPHASISED_TEXT}Control Panel{$CLOSE_EMPHASISED_TEXT})."
+    },
+    "7320820345560259229": {
+      "it": " Registra una nuova applicazione ({$START_EMPHASISED_TEXT}Applications{$CLOSE_EMPHASISED_TEXT}), ambiente {$START_TAG_STRONG}Production{$CLOSE_TAG_STRONG}. ",
+      "en": "Register a new application ({$START_EMPHASISED_TEXT}Applications{$CLOSE_EMPHASISED_TEXT}), {$START_TAG_STRONG}Production{$CLOSE_TAG_STRONG} environment."
+    },
+    "4327614771534818156": {
+      "it": "{$START_TAG_STRONG}Prima prepara Tailscale.{$CLOSE_TAG_STRONG} Come indirizzo di ritorno ({$START_EMPHASISED_TEXT}Redirect URL{$CLOSE_EMPHASISED_TEXT}) Enable Banking accetta solo indirizzi {$START_TAG_STRONG}https{$CLOSE_TAG_STRONG}, e quello di WalletTracker lo dà Tailscale: è anche quello che apre l'app dal telefono. I passi sono nella {$START_LINK}guida{$CLOSE_LINK}, capitolo «Tailscale». Dopo, qui comparirà l'indirizzo da registrare. ",
+      "en": "{$START_TAG_STRONG}Set up Tailscale first.{$CLOSE_TAG_STRONG} As the return address ({$START_EMPHASISED_TEXT}Redirect URL{$CLOSE_EMPHASISED_TEXT}) Enable Banking accepts only {$START_TAG_STRONG}https{$CLOSE_TAG_STRONG} addresses, and Tailscale provides the one of WalletTracker: it is also the one that opens the app from the phone. The steps are in the {$START_LINK}guide{$CLOSE_LINK}, chapter «Tailscale». Afterwards, the address to register will appear here."
+    },
+    "7495811026515039896": {
+      "it": " Come indirizzi di ritorno ({$START_EMPHASISED_TEXT}Redirect URLs{$CLOSE_EMPHASISED_TEXT}) inseriscili tutti, esattamente così: ",
+      "en": "As return addresses ({$START_EMPHASISED_TEXT}Redirect URLs{$CLOSE_EMPHASISED_TEXT}) enter all of them, exactly like this:"
+    },
+    "7006626139356374558": {
+      "it": " Come indirizzo di ritorno ({$START_EMPHASISED_TEXT}Redirect URL{$CLOSE_EMPHASISED_TEXT}) inserisci esattamente: ",
+      "en": "As the return address ({$START_EMPHASISED_TEXT}Redirect URL{$CLOSE_EMPHASISED_TEXT}) enter exactly:"
+    },
+    "7435740871896232945": {
+      "it": "{VAR_SELECT, select, true {Copiato ✓} other {Copia}}",
+      "en": "{VAR_SELECT, select, true {Copied ✓} other {Copy}}"
+    },
+    "1814336212925308868": {
+      "it": " Alla fine il browser scarica un file {$START_TAG_CODE}.pem{$CLOSE_TAG_CODE}: è la tua {$START_TAG_STRONG}chiave privata{$CLOSE_TAG_STRONG}. Conservalo con cura e non condividerlo con nessuno. Il nome del file è l'Application ID. ",
+      "en": "At the end the browser downloads a {$START_TAG_CODE}.pem{$CLOSE_TAG_CODE} file: it is your {$START_TAG_STRONG}private key{$CLOSE_TAG_STRONG}. Keep it safe and do not share it with anyone. The name of the file is the Application ID."
+    },
+    "2229843863247560472": {
+      "it": "{$START_TAG_STRONG}Attiva l'applicazione collegando i tuoi conti{$CLOSE_TAG_STRONG}: nella sua pagina premi {$START_TAG_STRONG}Link accounts{$CLOSE_TAG_STRONG}, scegli la banca e seleziona {$START_TAG_STRONG}tutti i conti{$CLOSE_TAG_STRONG} che vuoi leggere con WalletTracker. L'applicazione resta in {$START_TAG_STRONG}modalità ristretta{$CLOSE_TAG_STRONG} (gratuita, per uso personale): l'app riceverà solo i conti di questa lista. Per un conto nuovo, in futuro, ripeti questo passaggio prima di collegarlo. ",
+      "en": "{$START_TAG_STRONG}Activate the application by linking your accounts{$CLOSE_TAG_STRONG}: on its page press {$START_TAG_STRONG}Link accounts{$CLOSE_TAG_STRONG}, choose the bank and select {$START_TAG_STRONG}all the accounts{$CLOSE_TAG_STRONG} you want to read with WalletTracker. The application stays in {$START_TAG_STRONG}restricted mode{$CLOSE_TAG_STRONG} (free, for personal use): the app will receive only the accounts in this list. For a new account, in the future, repeat this step before linking it."
+    },
+    "3735720205402512912": {
+      "it": "2. Inserisci le credenziali",
+      "en": "2. Enter the credentials"
+    },
+    "4882668536012234259": {
+      "it": "Scegli il file della chiave privata (.pem)",
+      "en": "Choose the private key file (.pem)"
+    },
+    "4514441078153792797": {
+      "it": " Application ID ",
+      "en": "Application ID"
+    },
+    "2977307436770586312": {
+      "it": "es. cf589be3-3755-465b-a8df-a90a16a31403",
+      "en": "e.g. cf589be3-3755-465b-a8df-a90a16a31403"
+    },
+    "9010979184339385850": {
+      "it": " Il nome del file non contiene l'Application ID: copialo dal sito di Enable Banking. ",
+      "en": "The name of the file does not contain the Application ID: copy it from the Enable Banking site."
+    },
+    "5802102197551649966": {
+      "it": "3. Verifica e salva",
+      "en": "3. Check and save"
+    },
+    "8941995261359261742": {
+      "it": " WalletTracker prova le credenziali con Enable Banking e le salva solo se vengono accettate. ",
+      "en": "WalletTracker tries the credentials with Enable Banking and saves them only if they are accepted."
+    },
+    "7256688287419793880": {
+      "it": "{VAR_SELECT, select, true {Verifica in corso...} other {Verifica e salva}}",
+      "en": "{VAR_SELECT, select, true {Checking...} other {Check and save}}"
+    },
+    "4477003502000550471": {
+      "it": " {$INTERPOLATION} Ora puoi {$START_LINK}collegare la tua prima banca{$CLOSE_LINK}. ",
+      "en": "{$INTERPOLATION} Now you can {$START_LINK}link your first bank{$CLOSE_LINK}."
+    },
+    "623142645694433224": {
+      "it": "Caricamento... (se resta così, controlla che il backend sia avviato)",
+      "en": "Loading... (if it stays like this, check that the backend is running)"
+    },
+    "5621597867547268354": {
+      "it": "Backup",
+      "en": "Backup"
+    },
+    "605557076087297526": {
+      "it": "Accesso",
+      "en": "Access"
+    },
+    "1724269317437510873": {
+      "it": "Lingua",
+      "en": "Language"
+    },
+    "8348257481290234405": {
+      "it": "Aspetto",
+      "en": "Appearance"
+    },
+    "5764302646531668274": {
+      "it": "Informazioni",
+      "en": "About"
+    },
+    "6648945771739485030": {
+      "it": " WalletTracker, {$START_TAG_STRONG}versione di sviluppo{$CLOSE_TAG_STRONG}: costruita dal codice, non da una versione pubblicata. ",
+      "en": "WalletTracker, {$START_TAG_STRONG}development version{$CLOSE_TAG_STRONG}: built from the code, not from a published version."
+    },
+    "4461945075302253816": {
+      "it": " WalletTracker, versione {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}. ",
+      "en": "WalletTracker, version {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}."
+    },
+    "2866586083764715315": {
+      "it": "Versione: il server non risponde.",
+      "en": "Version: the server is not answering."
+    },
+    "1374249420728049711": {
+      "it": " È disponibile la versione {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}. {$START_BLOCK_IF}{$START_LINK}La pagina della versione su GitHub{$CLOSE_LINK}. {$CLOSE_BLOCK_IF}",
+      "en": "Version {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} is available. {$START_BLOCK_IF}{$START_LINK}The page of the version on GitHub{$CLOSE_LINK}. {$CLOSE_BLOCK_IF}"
+    },
+    "7089849484761836263": {
+      "it": " Per aggiornare, sul {$START_TAG_STRONG}server{$CLOSE_TAG_STRONG} (il computer con Docker), nella cartella di WalletTracker: ",
+      "en": "To update, on the {$START_TAG_STRONG}server{$CLOSE_TAG_STRONG} (the computer with Docker), in the WalletTracker folder:"
+    },
+    "830968417171161765": {
+      "it": " Windows: {$START_TAG_CODE}powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna{$CLOSE_TAG_CODE}",
+      "en": "Windows: {$START_TAG_CODE}powershell -ExecutionPolicy Bypass -File installa.ps1 -Update{$CLOSE_TAG_CODE}"
+    },
+    "6901096111354770204": {
+      "it": "Mac e Linux: {$START_TAG_CODE}./installa.sh --aggiorna{$CLOSE_TAG_CODE}",
+      "en": "Mac and Linux: {$START_TAG_CODE}./installa.sh --update{$CLOSE_TAG_CODE}"
+    },
+    "4352942394312107062": {
+      "it": " Prima di cambiare qualcosa fa un backup; se la versione nuova non parte, torna da solo a quella di adesso, con i dati di prima. ",
+      "en": "Before changing anything it makes a backup; if the new version does not start, it goes back by itself to the current one, with the data from before."
+    },
+    "979033583678939937": {
+      "it": " È l'ultima versione pubblicata (controllato il {$INTERPOLATION}). ",
+      "en": "It is the latest published version (checked on {$INTERPOLATION})."
+    },
+    "3015076750745115147": {
+      "it": " Il controllo delle versioni nuove è spento ({$START_TAG_CODE}WALLETTRACKER_UPDATE_CHECK=false{$CLOSE_TAG_CODE} nel .env). ",
+      "en": "The check for new versions is off ({$START_TAG_CODE}WALLETTRACKER_UPDATE_CHECK=false{$CLOSE_TAG_CODE} in the .env)."
+    },
+    "8925902777005482230": {
+      "it": "Scrivi l'Application ID e scegli il file .pem.",
+      "en": "Write the Application ID and choose the .pem file."
+    },
+    "3124054816746031442": {
+      "it": "Credenziali verificate e salvate.",
+      "en": "Credentials checked and saved."
+    },
+    "720101869180027952": {
+      "it": "Le credenziali non sono state salvate.",
+      "en": "The credentials were not saved."
+    },
+    "4122939499517353576": {
+      "it": "Gli abbonamenti costano, al mese",
+      "en": "Subscriptions cost, per month"
+    },
+    "7402350393849793127": {
+      "it": "{$INTERPOLATION} all'anno",
+      "en": "{$INTERPOLATION} a year"
+    },
+    "4260628991926579430": {
+      "it": "Abbonamento",
+      "en": "Subscription"
+    },
+    "6294737568736466914": {
+      "it": "Al mese",
+      "en": "Per month"
+    },
+    "7347274374980673033": {
+      "it": "Ultimo pagamento",
+      "en": "Last payment"
+    },
+    "3610338631060902860": {
+      "it": "Prossimo",
+      "en": "Next"
+    },
+    "5611275524524553139": {
+      "it": " prezzo cambiato: prima {$INTERPOLATION} ",
+      "en": "price changed: {$INTERPOLATION} before"
+    },
+    "635906085962611935": {
+      "it": " ! nessun pagamento recente: forse l'hai disdetto? Non conta nel totale. ",
+      "en": "! no recent payment: did you cancel it? It does not count in the total."
+    },
+    "1801083588109525681": {
+      "it": "Pagato il",
+      "en": "Paid on"
+    },
+    "7922210569564954799": {
+      "it": "Nessun abbonamento confermato. Confermali dai suggerimenti qui sotto.",
+      "en": "No confirmed subscriptions. Confirm them from the suggestions below."
+    },
+    "4515601269207211038": {
+      "it": "Suggerimenti",
+      "en": "Suggestions"
+    },
+    "8138284469056365472": {
+      "it": " WalletTracker cerca tra le spese degli ultimi 13 mesi i pagamenti allo stesso esercente che si ripetono ogni mese (almeno 3 volte) o ogni anno, con importi simili. Sono solo suggerimenti: conferma quelli giusti, ignora gli altri. ",
+      "en": "WalletTracker looks through the expenses of the last 13 months for payments to the same merchant that repeat every month (at least 3 times) or every year, with similar amounts. They are only suggestions: confirm the right ones, ignore the others."
+    },
+    "170661151980127651": {
+      "it": "Nome di {$INTERPOLATION}",
+      "en": "Name of {$INTERPOLATION}"
+    },
+    "9108168348614784408": {
+      "it": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} {$INTERPOLATION_1} · {$INTERPOLATION_2} pagamenti · ultimo il {$INTERPOLATION_3} ",
+      "en": "{$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG} {$INTERPOLATION_1} · {$INTERPOLATION_2} payments · last on {$INTERPOLATION_3}"
+    },
+    "4813036266184589646": {
+      "it": " È un abbonamento ",
+      "en": "It is a subscription"
+    },
+    "2979215686253891948": {
+      "it": "No, non suggerirlo più",
+      "en": "No, do not suggest it again"
+    },
+    "8473494512756159697": {
+      "it": "Nessun suggerimento al momento.",
+      "en": "No suggestions at the moment."
+    },
+    "1279151736768533163": {
+      "it": " Pagamenti che hai detto di non suggerire più ({$INTERPOLATION}) ",
+      "en": "Payments you asked not to be suggested again ({$INTERPOLATION})"
+    },
+    "6844797985701148966": {
+      "it": " circa {$INTERPOLATION} ",
+      "en": "about {$INTERPOLATION}"
+    },
+    "1855160334539204200": {
+      "it": " tutti gli importi ({$INTERPOLATION}) ",
+      "en": "all amounts ({$INTERPOLATION})"
+    },
+    "3152821906586463925": {
+      "it": " Suggeriscilo di nuovo ",
+      "en": "Suggest it again"
+    },
+    "2862316379130067638": {
+      "it": "all'anno",
+      "en": "a year"
+    },
+    "5901559179919602980": {
+      "it": "\"{$chosenName}\" aggiunto agli abbonamenti.",
+      "en": "\"{$chosenName}\" added to the subscriptions."
+    },
+    "1171603916322001136": {
+      "it": "\"{$name}\" non verrà più suggerito.",
+      "en": "\"{$name}\" will not be suggested again."
+    },
+    "8748268197027412551": {
+      "it": "{$name} tolto dagli abbonamenti: fatto.",
+      "en": "{$name} removed from the subscriptions: done."
+    },
+    "641862310463897951": {
+      "it": "{$merchant} potrà essere suggerito di nuovo: fatto.",
+      "en": "{$merchant} can be suggested again: done."
+    },
+    "5695847069522385203": {
+      "it": "Impossibile caricare gli abbonamenti: il backend è avviato?",
+      "en": "Cannot load the subscriptions: is the backend running?"
+    },
+    "8821276429666860990": {
+      "it": "Suggerimenti di categoria",
+      "en": "Category suggestions"
+    },
+    "2475665234321426168": {
+      "it": " Dalle categorie che hai già scelto a mano e, se l'hai accesa, dall'intelligenza artificiale (segno \"IA\"). Finché non accetti, i movimenti restano senza categoria. ",
+      "en": "From the categories you have already chosen by hand and, if you turned it on, from artificial intelligence (\"AI\" mark). Until you accept, the transactions stay without a category."
+    },
+    "6253352783489395886": {
+      "it": "Suggerito dall'intelligenza artificiale",
+      "en": "Suggested by artificial intelligence"
+    },
+    "2338142270033064022": {
+      "it": "IA",
+      "en": "AI"
+    },
+    "1989386319926743468": {
+      "it": "{VAR_PLURAL, plural, =1 {1 movimento senza categoria} other {{INTERPOLATION} movimenti senza categoria}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 transaction without a category} other {{INTERPOLATION} transactions without a category}}"
+    },
+    "9101384352551272771": {
+      "it": " suggerita dall'IA ({$INTERPOLATION}): controlla prima di accettare ",
+      "en": "suggested by the AI ({$INTERPOLATION}): check before accepting"
+    },
+    "8704708480770993723": {
+      "it": " l'hai scelta per {$ICU} ",
+      "en": "you chose it for {$ICU}"
+    },
+    "1282033770046750846": {
+      "it": " Accetta ",
+      "en": "Accept"
+    },
+    "3542042671420335679": {
+      "it": "No",
+      "en": "No"
+    },
+    "6301462320688331443": {
+      "it": " L'IA ({$INTERPOLATION}) sta guardando gli esercenti: {$INTERPOLATION_1} di {$INTERPOLATION_2}... ",
+      "en": "The AI ({$INTERPOLATION}) is looking at the merchants: {$INTERPOLATION_1} of {$INTERPOLATION_2}..."
+    },
+    "2165086913985915366": {
+      "it": "Avanzamento dell'IA",
+      "en": "Progress of the AI"
+    },
+    "5429118359881991956": {
+      "it": " La prima risposta può richiedere di più: Ollama carica il modello in memoria (qualche secondo, o qualche minuto se il computer è appena stato acceso). Le altre sono più veloci. ",
+      "en": "The first answer can take longer: Ollama loads the model into memory (a few seconds, or a few minutes if the computer has just been switched on). The others are faster."
+    },
+    "7446798160107366948": {
+      "it": " {$ICU} ({$INTERPOLATION_1}). Ogni risposta richiede qualche secondo: ne chiede al massimo 20 alla volta. ",
+      "en": "{$ICU} ({$INTERPOLATION_1}). Each answer takes a few seconds: it asks 20 at a time at most."
+    },
+    "7622568269370553180": {
+      "it": "{VAR_PLURAL, plural, =1 {1 esercente senza categoria non è ancora stato chiesto all'IA} other {{INTERPOLATION} esercenti senza categoria non sono ancora stati chiesti all'IA}}",
+      "en": "{VAR_PLURAL, plural, =1 {1 merchant without a category has not been asked to the AI yet} other {{INTERPOLATION} merchants without a category have not been asked to the AI yet}}"
+    },
+    "2991477350229486215": {
+      "it": " Chiedi all'IA ",
+      "en": "Ask the AI"
+    },
+    "1877559843040129528": {
+      "it": "{$merchantName}: \"{$category}\" assegnata a ",
+      "en": "{$merchantName}: \"{$category}\" assigned to"
+    },
+    "5590201979837969574": {
+      "it": "1 movimento.",
+      "en": "1 transaction."
+    },
+    "8397755934431455117": {
+      "it": "{$updated} movimenti.",
+      "en": "{$updated} transactions."
+    },
+    "3583715776222537049": {
+      "it": " Per i movimenti futuri puoi creare una regola dal movimento, qui sotto.",
+      "en": "For future transactions you can create a rule from the transaction, below."
+    },
+    "4048858857303649425": {
+      "it": "{$merchantName}: \"{$category}\" non verrà più suggerita.",
+      "en": "{$merchantName}: \"{$category}\" will not be suggested again."
+    },
+    "5415320024463164658": {
+      "it": "L'IA ha guardato {$count}: ",
+      "en": "The AI looked at {$count}:"
+    },
+    "2636830359808594574": {
+      "it": "1 esercente",
+      "en": "1 merchant"
+    },
+    "3011720805788567671": {
+      "it": "{$done} esercenti",
+      "en": "{$done} merchants"
+    },
+    "2561895852300522979": {
+      "it": "1 suggerimento",
+      "en": "1 suggestion"
+    },
+    "7418152118752453885": {
+      "it": "{$found} suggerimenti",
+      "en": "{$found} suggestions"
+    },
+    "8734222346948751326": {
+      "it": ", per {$unsure} non sa.",
+      "en": ", for {$unsure} it does not know."
+    },
+    "8362900837792029014": {
+      "it": "chiaro o scuro come il telefono o il computer",
+      "en": "light or dark like the phone or the computer"
+    },
+    "8614352572977669561": {
+      "it": "Giorno",
+      "en": "Day"
+    },
+    "3247195982172410972": {
+      "it": "sempre chiaro: si legge meglio al sole",
+      "en": "always light: easier to read in the sun"
+    },
+    "3982695589716117839": {
+      "it": "Notte",
+      "en": "Night"
+    },
+    "1983800090791038720": {
+      "it": "sempre scuro",
+      "en": "always dark"
+    },
+    "2473708249335920209": {
+      "it": "Tema",
+      "en": "Theme"
+    },
+    "8824321607840072073": {
+      "it": "Oggi · {$text}",
+      "en": "Today · {$text}"
+    },
+    "1516123378099960992": {
+      "it": "Ieri · {$text}",
+      "en": "Yesterday · {$text}"
+    },
+    "6407699370409434111": {
+      "it": "(nessuna descrizione)",
+      "en": "(no description)"
+    },
+    "6794496279528089048": {
+      "it": "Questo mese",
+      "en": "This month"
+    },
+    "4399585639438817823": {
+      "it": "Mese scorso",
+      "en": "Last month"
+    },
+    "6060815452821336766": {
+      "it": "Ultimi 3 mesi",
+      "en": "Last 3 months"
+    },
+    "4677743120602373233": {
+      "it": "Scegli le date",
+      "en": "Choose the dates"
+    },
+    "390519082969539242": {
+      "it": "Torna ai movimenti",
+      "en": "Back to the transactions"
+    },
+    "3506902083525919597": {
+      "it": "Movimento",
+      "en": "Transaction"
+    },
+    "4139514125246396442": {
+      "it": "{VAR_SELECT, select, true {In attesa} other {Contabilizzato}}",
+      "en": "{VAR_SELECT, select, true {Pending} other {Booked}}"
+    },
+    "7855679579559957075": {
+      "it": "Non serve",
+      "en": "Not needed"
+    },
+    "578066907837130931": {
+      "it": " Aggiungila comunque ",
+      "en": "Add it anyway"
+    },
+    "1647836752334611944": {
+      "it": "Cambia",
+      "en": "Change"
+    },
+    "6607639187471096910": {
+      "it": " Nessuna categoria: sceglila tu, o {$START_LINK}crea una regola{$CLOSE_LINK}. ",
+      "en": "No category: choose it yourself, or {$START_LINK}create a rule{$CLOSE_LINK}."
+    },
+    "3751893968708935700": {
+      "it": "Conta come",
+      "en": "Counts as"
+    },
+    "3781941888201465493": {
+      "it": "(scelto da te)",
+      "en": "(chosen by you)"
+    },
+    "5129369007511123144": {
+      "it": " Suggerita: {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}{$START_BLOCK_IF}{$START_TAG_SPAN}IA{$CLOSE_TAG_SPAN}{$CLOSE_BLOCK_IF}",
+      "en": "Suggested: {$START_TAG_STRONG}{$INTERPOLATION}{$CLOSE_TAG_STRONG}{$START_BLOCK_IF}{$START_TAG_SPAN}AI{$CLOSE_TAG_SPAN}{$CLOSE_BLOCK_IF}"
+    },
+    "1586529017061799330": {
+      "it": "Accetta",
+      "en": "Accept"
+    },
+    "5292578007676486810": {
+      "it": "No, grazie",
+      "en": "No, thanks"
+    },
+    "3715338183091273409": {
+      "it": " Accettando, la ricevono tutti i movimenti di questo esercente senza categoria. ",
+      "en": "If you accept, all the transactions of this merchant without a category get it."
+    },
+    "8449635540863011735": {
+      "it": " {$ICU} di questo esercente in «{$INTERPOLATION_1}». Li sposti anche in «{$INTERPOLATION_2}»? ",
+      "en": "{$ICU} of this merchant in «{$INTERPOLATION_1}». Move them to «{$INTERPOLATION_2}» as well?"
+    },
+    "3448301886006121882": {
+      "it": "{VAR_PLURAL, plural, =1 {C'è un altro movimento} other {Ci sono altri {INTERPOLATION} movimenti}}",
+      "en": "{VAR_PLURAL, plural, =1 {There is another transaction} other {There are {INTERPOLATION} other transactions}}"
+    },
+    "2172635150162106737": {
+      "it": "{VAR_PLURAL, plural, =1 {Sposta anche quello} other {Sposta anche quelli}}",
+      "en": "{VAR_PLURAL, plural, =1 {Move that one too} other {Move those too}}"
+    },
+    "5451445703719139628": {
+      "it": "Solo questo",
+      "en": "Only this one"
+    },
+    "7272479552892376829": {
+      "it": "{$START_LINK}Crea una regola{$CLOSE_LINK} per i prossimi movimenti di questo esercente. ",
+      "en": "{$START_LINK}Create a rule{$CLOSE_LINK} for the next transactions of this merchant."
+    },
+    "8469807135343057905": {
+      "it": " Una regola per questo esercente non conviene: i suoi movimenti sono in {$INTERPOLATION} categorie diverse, e una regola li metterebbe tutti insieme. ",
+      "en": "A rule for this merchant is not a good idea: its transactions are in {$INTERPOLATION} different categories, and a rule would put them all together."
+    },
+    "74554771921639228": {
+      "it": "Lo stesso esercente",
+      "en": "The same merchant"
+    },
+    "3724871286963498060": {
+      "it": " {$ICU} nell'ultimo anno · {$INTERPOLATION_1} in tutto ",
+      "en": "{$ICU} in the last year · {$INTERPOLATION_1} in total"
+    },
+    "1283746335760683776": {
+      "it": " Tutti i movimenti di questo esercente ",
+      "en": "All the transactions of this merchant"
+    },
+    "1372441452794204502": {
+      "it": "Nota",
+      "en": "Note"
+    },
+    "3317926983630302822": {
+      "it": "Nota del movimento",
+      "en": "Note on the transaction"
+    },
+    "1942014818502448122": {
+      "it": "per esempio: regalo per Luca",
+      "en": "for example: present for Luca"
+    },
+    "1895427852815227712": {
+      "it": " Aggiungi una nota ",
+      "en": "Add a note"
+    },
+    "3589225149561633525": {
+      "it": "Solo per te, e la ritrovi con la ricerca.",
+      "en": "Only for you, and you can find it again with the search."
+    },
+    "4857007125237124143": {
+      "it": "Dettagli",
+      "en": "Details"
+    },
+    "3839563521914293922": {
+      "it": "Causale",
+      "en": "Description"
+    },
+    "5526197415787086175": {
+      "it": "Data contabile",
+      "en": "Booking date"
+    },
+    "4026039763827247948": {
+      "it": "Data valuta",
+      "en": "Value date"
+    },
+    "1691406457551848073": {
+      "it": "Arrivato",
+      "en": "Arrived"
+    },
+    "7871736743952584990": {
+      "it": "{$INTERPOLATION}, il {$INTERPOLATION_1}",
+      "en": "{$INTERPOLATION}, on {$INTERPOLATION_1}"
+    },
+    "5699694968903829442": {
+      "it": "{VAR_SELECT, select, true {Nascondi i dati originali} other {Mostra i dati originali}}",
+      "en": "{VAR_SELECT, select, true {Hide the original data} other {Show the original data}}"
+    },
+    "3878159577877100855": {
+      "it": "{VAR_SELECT, select, true {Conta come} other {Scegli una categoria}}",
+      "en": "{VAR_SELECT, select, true {Counts as} other {Choose a category}}"
+    },
+    "145878132662787436": {
+      "it": "Chiudi",
+      "en": "Close"
+    },
+    "3260847645511487547": {
+      "it": "Cerca una categoria",
+      "en": "Search for a category"
+    },
+    "7375093279576616696": {
+      "it": "Togli la mia scelta (decidono le regole)",
+      "en": "Remove my choice (the rules decide)"
+    },
+    "8698364470500903589": {
+      "it": " Automatico {$START_TAG_SPAN}Lo decide di nuovo l'app, con le regole{$CLOSE_TAG_SPAN}",
+      "en": "Automatic {$START_TAG_SPAN}The app decides again, with the rules{$CLOSE_TAG_SPAN}"
+    },
+    "7016249063495943071": {
+      "it": "Conta nelle spese e nella sua categoria",
+      "en": "Counts in the expenses and in its category"
+    },
+    "7759972641558496689": {
+      "it": "Conta nelle entrate",
+      "en": "Counts in the income"
+    },
+    "5076183384332731268": {
+      "it": "Soldi tra due tuoi conti: né spesa né entrata",
+      "en": "Money between two of your accounts: neither expense nor income"
+    },
+    "6659695215214479005": {
+      "it": "L'addebito del saldo della carta: le spese sono già contate una per una",
+      "en": "The charge for the card settlement: the expenses are already counted one by one"
+    },
+    "7526510569343643441": {
+      "it": "Verso un tuo conto di investimento: tenuto a parte",
+      "en": "To one of your investment accounts: kept apart"
+    },
+    "4166862546768339531": {
+      "it": "Da un tuo conto di investimento: tenuto a parte",
+      "en": "From one of your investment accounts: kept apart"
+    },
+    "3480703595597826400": {
+      "it": "Investimenti: tenuto a parte",
+      "en": "Investments: kept apart"
+    },
+    "1977280707520053408": {
+      "it": "Rendite degli investimenti: tenute a parte",
+      "en": "Investment income: kept apart"
+    },
+    "1254533621229484686": {
+      "it": "Trattenuta su una cedola o un dividendo: si toglie dalla rendita",
+      "en": "Withheld on a coupon or a dividend: taken off the income"
+    },
+    "7113066395100998332": {
+      "it": "Bollo, capital gain, Tobin tax: tenute a parte",
+      "en": "Stamp duty, capital gains, Tobin tax: kept apart"
+    },
+    "8125541922345842404": {
+      "it": "Resta nell'elenco, fuori da tutti i totali",
+      "en": "Stays in the list, outside all the totals"
+    },
+    "8580117334307378556": {
+      "it": "Fuori dai totali finché non lo classifichi",
+      "en": "Outside the totals until you classify it"
+    },
+    "8784889443115369236": {
+      "it": "dalla banca, con la sincronizzazione",
+      "en": "from the bank, with the synchronisation"
+    },
+    "3105691234135519335": {
+      "it": "da un file CSV",
+      "en": "from a CSV file"
+    },
+    "4345682388681013111": {
+      "it": "dal file di Trade Republic",
+      "en": "from the Trade Republic file"
+    },
+    "4890163931305073741": {
+      "it": "Nessuna categoria",
+      "en": "No category"
+    },
+    "2958035538474093539": {
+      "it": "Scegli una categoria",
+      "en": "Choose a category"
+    },
+    "3572766283888221178": {
+      "it": "quella delle regole",
+      "en": "the one from the rules"
+    },
+    "3081088365926756147": {
+      "it": "questo tipo di movimento",
+      "en": "this type of transaction"
+    },
+    "3891793866163581253": {
+      "it": "Per {$what} non serve una categoria: il tipo dice già che cos'è.",
+      "en": "A category is not needed for {$what}: the type already says what it is."
+    },
+    "7902357796016791957": {
+      "it": "Nessuna categoria: sceglila tu, o crea una regola.",
+      "en": "No category: choose it yourself, or create a rule."
+    },
+    "6170651687266641871": {
+      "it": "Scelta da te: le regole non la cambiano.",
+      "en": "Chosen by you: the rules do not change it."
+    },
+    "5487802162756470951": {
+      "it": "Messa dalla regola «{$ruleName}».",
+      "en": "Set by the rule «{$ruleName}»."
+    },
+    "8912612038030245584": {
+      "it": "Messa da una regola.",
+      "en": "Set by a rule."
+    },
+    "1717189864780805255": {
+      "it": "Nessuna categoria: prima scegli il tipo, in «Conta come».",
+      "en": "No category: first choose the type, in «Counts as»."
+    },
+    "2258541704046156855": {
+      "it": "Nessuna categoria.",
+      "en": "No category."
+    },
+    "6570586816563841161": {
+      "it": "Già usate per «{$word}…»",
+      "en": "Already used for «{$word}…»"
+    },
+    "1971523005712872745": {
+      "it": "Questo movimento non esiste più.",
+      "en": "This transaction no longer exists."
+    },
+    "2462909316109162733": {
+      "it": "Impossibile caricare il movimento: il backend è avviato?",
+      "en": "Cannot load the transaction: is the backend running?"
+    },
+    "1417922683844558791": {
+      "it": "senza categoria",
+      "en": "no category"
+    },
+    "898150919919747287": {
+      "it": "Categoria cambiata in «{$name}».",
+      "en": "Category changed to «{$name}»."
+    },
+    "6988838912266569711": {
+      "it": "La categoria non è stata salvata.",
+      "en": "The category was not saved."
+    },
+    "2822312515489919648": {
+      "it": "Spostati {$n} movimenti in «{$to}».",
+      "en": "{$n} transactions moved to «{$to}»."
+    },
+    "5156588405250478239": {
+      "it": "I movimenti non sono stati spostati.",
+      "en": "The transactions were not moved."
+    },
+    "5629512939534882641": {
+      "it": "Spostato solo questo movimento.",
+      "en": "Only this transaction was moved."
+    },
+    "6196243246875236711": {
+      "it": "Non è stato possibile annullare.",
+      "en": "It could not be undone."
+    },
+    "9081489497760938435": {
+      "it": "La correzione non è stata salvata.",
+      "en": "The correction was not saved."
+    },
+    "8584943278482818283": {
+      "it": "Il suggerimento non è stato accettato.",
+      "en": "The suggestion was not accepted."
+    },
+    "4020763236181552534": {
+      "it": "La nota non è stata salvata.",
+      "en": "The note was not saved."
+    },
+    "2444447303893984007": {
+      "it": "Rimborso di una spesa",
+      "en": "Refund of an expense"
+    },
+    "5578467346539053376": {
+      "it": "Cerca",
+      "en": "Search"
+    },
+    "1207186092541479456": {
+      "it": "Cerca: esercente, categoria, nota, importo",
+      "en": "Search: merchant, category, note, amount"
+    },
+    "2562239429552735405": {
+      "it": "Filtri",
+      "en": "Filters"
+    },
+    "6882594589294877075": {
+      "it": " Da verificare ",
+      "en": "To review"
+    },
+    "6596015092903059519": {
+      "it": " Senza categoria ",
+      "en": "No category"
+    },
+    "4359952133479129417": {
+      "it": "Tutti i conti",
+      "en": "All accounts"
+    },
+    "2759773909798147145": {
+      "it": "Tipo",
+      "en": "Type"
+    },
+    "3044517331849521484": {
+      "it": "Tutti i tipi",
+      "en": "All types"
+    },
+    "2816472339327772180": {
+      "it": " Dal ",
+      "en": "From"
+    },
+    "8636387317315108203": {
+      "it": " Al ",
+      "en": "To"
+    },
+    "3662868077971674053": {
+      "it": " Nessun movimento trovato per \"{$INTERPOLATION}\" con questi filtri. ",
+      "en": "No transactions found for \"{$INTERPOLATION}\" with these filters."
+    },
+    "6555246687601620923": {
+      "it": " Nessun movimento con questi filtri. ",
+      "en": "No transactions with these filters."
+    },
+    "3744050341834070838": {
+      "it": " Mostra altri ",
+      "en": "Show more"
+    },
+    "1442015642577073478": {
+      "it": "{$INTERPOLATION} di {$INTERPOLATION_1} movimenti",
+      "en": "{$INTERPOLATION} of {$INTERPOLATION_1} transactions"
+    },
+    "6985097871548611495": {
+      "it": "Una categoria",
+      "en": "A category"
+    },
+    "8674713228266436596": {
+      "it": "La data di inizio è dopo quella di fine.",
+      "en": "The start date is after the end date."
+    },
+    "2745640072787650698": {
+      "it": "Ricerca non valida.",
+      "en": "Invalid search."
+    },
+    "7165722292565593133": {
+      "it": "Impossibile caricare i movimenti: il backend è avviato?",
+      "en": "Cannot load the transactions: is the backend running?"
+    },
+    "1010095568456387177": {
+      "it": "in attesa",
+      "en": "pending"
+    },
+    "8322798194551692336": {
+      "it": "Chiudi l'avviso",
+      "en": "Close the notice"
+    },
+    "2171809295131776494": {
+      "it": "Tocca per scegliere un altro file",
+      "en": "Tap to choose another file"
+    },
+    "5768573552276435038": {
+      "it": "o trascinalo qui",
+      "en": "or drag it here"
+    }
+  }
+}

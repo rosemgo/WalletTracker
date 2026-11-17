@@ -22,6 +22,7 @@ import it.wallettracker.investment.InvestmentDtos.Cash;
 import it.wallettracker.investment.InvestmentDtos.Overview;
 import it.wallettracker.investment.InvestmentDtos.Period;
 import it.wallettracker.investment.Investments.Movement;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.subscription.MerchantKey;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
@@ -29,7 +30,6 @@ import it.wallettracker.transaction.TransactionDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Gli investimenti (docs/investimenti.md, parte I): quanto hai investito in titoli (acquisti e vendite), quanto hai
@@ -61,8 +61,8 @@ public class InvestmentService {
     @Transactional(readOnly = true)
     public Overview overview(Period period, String currency, LocalDate today) {
         if (currency != null && !CURRENCY.matcher(currency.toUpperCase(Locale.ROOT)).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La valuta è un codice di tre lettere, come EUR.");
+            // messaggio: La valuta è un codice di tre lettere, come EUR.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "currency.invalid");
         }
         List<BankTransaction> transactions = repository.findInvestmentMovements().stream()
                 .filter(t -> !t.getBookingDate().isAfter(today))

@@ -20,27 +20,27 @@ interface CloudInfo {
  */
 export const CLOUD_INFO: Record<AiCloudProvider, CloudInfo> = {
   GEMINI: {
-    label: 'Google Gemini',
-    about: 'Gemini è il servizio di intelligenza artificiale di Google.',
+    label: $localize`Google Gemini`,
+    about: $localize`Gemini è il servizio di intelligenza artificiale di Google.`,
     keyUrl: 'https://aistudio.google.com',
     keySteps: [
-      'Apri aistudio.google.com ed entra con il tuo account Google.',
-      'Premi "Get API key", poi "Create API key", e copia la chiave.',
-      'Incollala qui sotto e premi "Salva la chiave".',
+      $localize`Apri aistudio.google.com ed entra con il tuo account Google.`,
+      $localize`Premi "Get API key", poi "Create API key", e copia la chiave.`,
+      $localize`Incollala qui sotto e premi "Salva la chiave".`,
     ],
     dataNote:
-      'Attenzione: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti. ' +
-      'Leggi le condizioni sul sito prima di accettare.',
+      $localize`Attenzione: con il piano gratuito Google può usare i dati inviati per migliorare i suoi prodotti. ` +
+      $localize`Leggi le condizioni sul sito prima di accettare.`,
     // Misurati con "Prova la connessione" (docs/30, parte O6): con il piano gratuito il Flash più recente può
     // aspettare minuti in coda, il Lite risponde in pochi secondi.
     models: [
       {
         name: 'gemini-flash-lite-latest',
-        note: 'veloce: di solito risponde in pochi secondi (è quello predefinito)',
+        note: $localize`veloce: di solito risponde in pochi secondi (è quello predefinito)`,
       },
       {
         name: 'gemini-flash-latest',
-        note: 'ragiona prima di rispondere, quindi può essere più preciso, ma con il piano gratuito può impiegare minuti',
+        note: $localize`ragiona prima di rispondere, quindi può essere più preciso, ma con il piano gratuito può impiegare minuti`,
       },
     ],
   },
@@ -86,12 +86,12 @@ export class CloudAiSection {
   saveKey(): void {
     this.run(
       this.api.saveAiKey(this.provider(), this.key().trim()),
-      'La chiave non è stata salvata.',
+      $localize`La chiave non è stata salvata.`,
     );
   }
 
   deleteKey(): void {
-    this.run(this.api.deleteAiKey(this.provider()), 'La chiave non è stata tolta.');
+    this.run(this.api.deleteAiKey(this.provider()), $localize`La chiave non è stata tolta.`);
   }
 
   testConnection(): void {
@@ -105,7 +105,7 @@ export class CloudAiSection {
       },
       error: (response) => {
         this.busy.set(false);
-        this.error.set(response.error?.detail ?? 'La prova non è partita.');
+        this.error.set(response.error?.detail ?? $localize`La prova non è partita.`);
       },
     });
   }
@@ -126,7 +126,7 @@ export class CloudAiSection {
         this.busy.set(false);
         this.error.set(
           response.status === 400
-            ? 'Questa non sembra una chiave: controlla di averla copiata intera.'
+            ? $localize`Questa non sembra una chiave: controlla di averla copiata intera.`
             : failure,
         );
       },

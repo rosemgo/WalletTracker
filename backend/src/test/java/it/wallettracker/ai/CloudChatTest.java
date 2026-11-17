@@ -1,5 +1,6 @@
 package it.wallettracker.ai;
 
+import static it.wallettracker.message.TestMessages.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -130,7 +131,7 @@ class CloudChatTest {
                  "reason": "API_KEY_INVALID", "domain": "googleapis.com"}]}}""";
 
         assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest")))
-                .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.GEMINI))
+                .satisfies(e -> assertThat(text(AiErrors.describe(e, AiProvider.GEMINI)))
                         .startsWith("La chiave di Google Gemini non è valida"));
         assertThat(received).hasSize(1); // una chiave sbagliata non si riprova
     }
@@ -143,7 +144,7 @@ class CloudChatTest {
                  "status": "RESOURCE_EXHAUSTED"}}""";
 
         assertThatThrownBy(() -> categoryModel.suggest(QUESTION, new AiTarget(AiProvider.GEMINI, "gemini-flash-latest")))
-                .satisfies(e -> assertThat(AiErrors.describe(e, AiProvider.GEMINI)).contains("troppe richieste"));
+                .satisfies(e -> assertThat(text(AiErrors.describe(e, AiProvider.GEMINI))).contains("troppe richieste"));
         // La prima volta e due nuovi tentativi, nostri: quelli della libreria di Google sono spenti. Prima di
         // spegnerli le richieste erano 5 (solo Google), e il test durava 17 secondi.
         assertThat(received).hasSize(3);

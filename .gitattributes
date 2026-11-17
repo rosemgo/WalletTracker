@@ -7,3 +7,5 @@
 *.command text eol=lf
 # LEGGIMI.txt (nello ZIP di ogni versione) si apre con il Blocco note: fini riga di Windows, solo caratteri ASCII.
 LEGGIMI.txt text eol=crlf
+# Lo stesso per il LEGGIMI in inglese (English/README.txt).
+English/README.txt text eol=crlf

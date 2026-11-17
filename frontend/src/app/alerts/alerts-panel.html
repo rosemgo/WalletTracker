@@ -1,5 +1,5 @@
 @if (alerts().length > 0) {
-  <section class="alerts" aria-label="Avvisi">
+  <section class="alerts" aria-label="Avvisi" i18n-aria-label>
     @for (alert of alerts(); track alert) {
       <!-- Lo stato: icona + testo, come nei budget. CRITICAL = rosso ✕, WARNING = giallo !. -->
       <div class="alert" [class]="'alert ' + alert.severity.toLowerCase()">
@@ -12,53 +12,66 @@
         <div class="alert-body">
           @switch (alert.kind) {
             @case ('CONSENT_EXPIRED') {
-              <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
-              Dal {{ alert.date | date: 'dd/MM/yyyy' }} i movimenti non vengono più aggiornati.
-              Ricollegala: conti, movimenti e correzioni restano.
-              <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
-                >Ricollega {{ alert.bank }}</a
-              >
+              <ng-container i18n>
+                <strong>Il collegamento con {{ alert.bank }} è scaduto.</strong>
+                Dal {{ alert.date | localDate: 'numeric' }} i movimenti non vengono più aggiornati.
+                Ricollegala: conti, movimenti e correzioni restano.
+                <a
+                  routerLink="/collega"
+                  [queryParams]="{ bank: alert.bank, country: alert.country }"
+                  >Ricollega {{ alert.bank }}</a
+                >
+              </ng-container>
             }
             @case ('CONSENT_EXPIRING') {
-              <strong>Il collegamento con {{ alert.bank }} scade {{ when(alert.daysLeft) }}</strong>
-              ({{ alert.date | date: 'dd/MM/yyyy' }}). Le regole europee (PSD2) chiedono di
-              rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza, non
-              perdi niente.
-              <a routerLink="/collega" [queryParams]="{ bank: alert.bank, country: alert.country }"
-                >Ricollega {{ alert.bank }}</a
-              >
+              <ng-container i18n>
+                <strong
+                  >Il collegamento con {{ alert.bank }} scade {{ when(alert.daysLeft) }}</strong
+                >
+                ({{ alert.date | localDate: 'numeric' }}). Le regole europee (PSD2) chiedono di
+                rinnovare il consenso con un nuovo accesso alla banca: fallo prima della scadenza,
+                non perdi niente.
+                <a
+                  routerLink="/collega"
+                  [queryParams]="{ bank: alert.bank, country: alert.country }"
+                  >Ricollega {{ alert.bank }}</a
+                >
+              </ng-container>
             }
             @case ('SYNC_FAILED') {
-              <strong>Aggiornamento non riuscito: {{ alert.account }}.</strong>
+              <strong i18n>Aggiornamento non riuscito: {{ alert.account }}.</strong>
               {{ alert.message }}
-              <a routerLink="/conti">Vai ai conti</a>
+              <a i18n routerLink="/conti">Vai ai conti</a>
             }
             @case ('BALANCE_MISMATCH') {
               @if (alert.mismatch; as m) {
-                <strong
+                <strong i18n
                   >I movimenti di {{ alert.account }} non tornano con il saldo
-                  {{ m.source === 'BANK' ? 'della banca' : 'che hai scritto' }}.</strong
+                  {m.source, select, BANK {della banca} other {che hai scritto}}.</strong
                 >
-                Dal {{ m.from | date: 'd MMMM' }} al {{ m.to | date: 'd MMMM y' }} il saldo è
-                cambiato di
-                {{ (m.difference < 0 ? -m.difference : m.difference) | money: m.currency }}
-                {{ m.difference > 0 ? 'in più' : 'in meno' }} rispetto ai movimenti:
-                {{
-                  m.difference > 0
-                    ? "probabilmente manca un'entrata o c'è un'uscita doppia."
-                    : "probabilmente manca un'uscita o c'è un'entrata doppia."
-                }}
-                Se manca, si può caricare il file della banca in Importa.
-                <a routerLink="/movimenti" [queryParams]="mismatchQuery(alert)">Vedi i movimenti</a>
+                <ng-container i18n
+                  >Dal {{ m.from | localDate: 'dayMonthLong' }} al {{ m.to | localDate: 'long' }} il
+                  saldo è cambiato di
+                  {{ (m.difference < 0 ? -m.difference : m.difference) | money: m.currency }}
+                  {m.difference > 0, select, true {in più} other {in meno}} rispetto ai movimenti:
+                  {m.difference > 0, select,
+                    true {probabilmente manca un'entrata o c'è un'uscita doppia.}
+                    other {probabilmente manca un'uscita o c'è un'entrata doppia.}
+                  }
+                  Se manca, si può caricare il file della banca in Importa.</ng-container
+                >
+                <a routerLink="/movimenti" [queryParams]="mismatchQuery(alert)" i18n
+                  >Vedi i movimenti</a
+                >
               }
             }
             @case ('BUDGET_OVER') {
-              <strong>Budget superati questo mese:</strong> {{ alert.items.join(', ') }}.
-              <a routerLink="/budget">Vai ai budget</a>
+              <strong i18n>Budget superati questo mese:</strong> {{ alert.items.join(', ') }}.
+              <a i18n routerLink="/budget">Vai ai budget</a>
             }
           }
         </div>
-        <app-close-button label="Chiudi questo avviso" (closed)="close(alert)" />
+        <app-close-button label="Chiudi questo avviso" i18n-label (closed)="close(alert)" />
       </div>
     }
   </section>

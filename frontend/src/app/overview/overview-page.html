@@ -4,7 +4,13 @@
     <h1>{{ monthTitle() }}</h1>
   </div>
   <div class="month-arrows">
-    <button type="button" class="icon" (click)="previous()" aria-label="Mese precedente">
+    <button
+      type="button"
+      class="icon"
+      (click)="previous()"
+      aria-label="Mese precedente"
+      i18n-aria-label
+    >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
     </button>
     <button
@@ -13,6 +19,7 @@
       (click)="next()"
       [disabled]="isCurrent()"
       aria-label="Mese successivo"
+      i18n-aria-label
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
     </button>
@@ -29,9 +36,9 @@
 @if (overview(); as o) {
   <div class="overview" [class.loading]="loading()">
     @if (o.currencies.length > 1) {
-      <label class="currency-choice">
-        Valuta
-        <select (change)="onCurrency($event)">
+      <label class="currency-choice"
+        ><ng-container i18n> Valuta </ng-container
+        ><select (change)="onCurrency($event)">
           @for (c of o.currencies; track c) {
             <option [value]="c" [selected]="c === o.currency">{{ c }}</option>
           }
@@ -88,14 +95,15 @@
             >{{ monthTitle() }}</span
           >
           @if (o.usualMonths > 0) {
-            <span>
+            <span i18n>
               <span class="key usual"></span>Un mese tipico (media di
-              {{ o.usualMonths === 1 ? '1 mese' : o.usualMonths + ' mesi' }})
+              {o.usualMonths, plural, =1 {1 mese} other {{{ o.usualMonths }} mesi}})
             </span>
           }
         </div>
-        <p class="secondary income">
-          Entrate {{ isCurrent() ? 'finora' : 'del mese' }}:
+        <p i18n class="secondary income">
+          Entrate
+          {!!isCurrent(), select, true {finora} other {del mese}}:
           {{ o.income | money: o.currency : 'symbol' : '1.0-0' }}
         </p>
       </section>
@@ -107,8 +115,8 @@
     @if (topCategories().length > 0) {
       <section class="card spending-card">
         <div class="card-head">
-          <h2>Spese per categoria</h2>
-          <a routerLink="/analisi">Tutte ›</a>
+          <h2 i18n>Spese per categoria</h2>
+          <a i18n routerLink="/analisi">Tutte ›</a>
         </div>
         <ul class="bars">
           @for (c of topCategories(); track c.categoryId) {
@@ -128,7 +136,8 @@
                   class="bar-link"
                   routerLink="/movimenti"
                   [queryParams]="uncategorizedQuery()"
-                  [attr.aria-label]="'Senza categoria: apri le spese del mese, per dare loro una categoria'"
+                  aria-label="Senza categoria: apri le spese del mese, per dare loro una categoria"
+                  i18n-aria-label
                 >
                   <ng-container *ngTemplateOutlet="bar; context: { $implicit: c }" />
                 </a>
@@ -139,23 +148,26 @@
       </section>
     } @else {
       <section class="card spending-card">
-        <h2>Spese per categoria</h2>
-        <p class="secondary">Nessuna spesa {{ isCurrent() ? 'finora' : 'in questo mese' }}.</p>
+        <h2 i18n>Spese per categoria</h2>
+        <p i18n class="secondary">
+          Nessuna spesa
+          {!!isCurrent(), select, true {finora} other {in questo mese}}.
+        </p>
       </section>
     }
 
     @if (o.upcoming.length > 0) {
       <section class="card">
         <div class="card-head">
-          <h2>In arrivo nei prossimi 7 giorni</h2>
-          <a routerLink="/abbonamenti">Abbonamenti ›</a>
+          <h2 i18n>In arrivo nei prossimi 7 giorni</h2>
+          <a i18n routerLink="/abbonamenti">Abbonamenti ›</a>
         </div>
         <ul class="rows">
           @for (u of o.upcoming; track u.subscriptionId) {
             <li>
               <span>
                 {{ u.name }}
-                <span class="secondary">{{ u.date | date: 'EEEE d MMMM' | upperFirst }}</span>
+                <span class="secondary">{{ u.date | localDate: 'weekday' | upperFirst }}</span>
               </span>
               <strong>{{ u.amount | money: o.currency }}</strong>
             </li>
@@ -177,20 +189,26 @@
             [attr.aria-label]="toReviewLabel()"
           >
             <strong>{{ o.toReview }}</strong>
-            <span>{{ o.toReview === 1 ? 'movimento' : 'movimenti' }} da verificare</span>
+            <span i18n>{o.toReview, plural,
+              =1 {movimento da verificare}
+              other {movimenti da verificare}
+            }</span>
           </a>
         }
         @if (o.suggestions > 0) {
           <a routerLink="/movimenti" [attr.aria-label]="suggestionsLabel()">
             <strong>{{ o.suggestions }}</strong>
-            <span>{{ o.suggestions === 1 ? 'categoria suggerita' : 'categorie suggerite' }}</span>
+            <span i18n>{o.suggestions, plural,
+              =1 {categoria suggerita}
+              other {categorie suggerite}
+            }</span>
           </a>
         }
       </div>
     }
   </div>
 } @else if (loading()) {
-  <p>Caricamento...</p>
+  <p i18n>Caricamento...</p>
 }
 
 <!-- Una categoria di "Spese per categoria": il nome, l'importo, la barra e la differenza dal solito. -->

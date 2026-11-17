@@ -1,6 +1,6 @@
-<section class="card" aria-label="Suggerimenti con l'intelligenza artificiale">
-  <h2>Suggerimenti con l'intelligenza artificiale</h2>
-  <p class="hint">
+<section class="card" aria-label="Suggerimenti con l'intelligenza artificiale" i18n-aria-label>
+  <h2 i18n>Suggerimenti con l'intelligenza artificiale</h2>
+  <p i18n class="hint">
     Un modello di intelligenza artificiale può suggerire la categoria dei movimenti degli esercenti
     che non hai mai categorizzato. Suggerisce soltanto: decidi sempre tu. È spento di serie.
   </p>
@@ -13,43 +13,45 @@
   }
 
   <div class="form-grid">
-    <label>
-      Suggerimenti
-      <select
+    <label
+      ><ng-container i18n> Suggerimenti </ng-container
+      ><select
         [value]="provider()"
         (change)="provider.set($any($event.target).value)"
         aria-label="Suggerimenti con l'IA"
+        i18n-aria-label
       >
-        <option value="NONE">Spenti</option>
-        <option value="OLLAMA">Sul mio computer (Ollama)</option>
-        <option value="GEMINI">Nel cloud: Google Gemini</option>
+        <option i18n value="NONE">Spenti</option>
+        <option i18n value="OLLAMA">Sul mio computer (Ollama)</option>
+        <option i18n value="GEMINI">Nel cloud: Google Gemini</option>
       </select>
     </label>
     @if (provider() === 'OLLAMA') {
-      <label>
-        Modello
-        <input
+      <label
+        ><ng-container i18n> Modello </ng-container
+        ><input
           [value]="model()"
           (input)="model.set($any($event.target).value)"
           maxlength="100"
           placeholder="es. gemma3:4b"
+          i18n-placeholder
         />
       </label>
     }
   </div>
   @if (provider() === 'OLLAMA') {
-    <p class="hint">
+    <p i18n class="hint">
       Con Ollama il modello lavora sul tuo computer: i movimenti non escono di casa. Mentre lavora
       usa qualche GB di memoria; quando è inattivo, quasi niente.
     </p>
     <div class="table-scroll">
-      <table aria-label="Modelli consigliati">
+      <table aria-label="Modelli consigliati" i18n-aria-label>
         <thead>
           <tr>
-            <th>Modello consigliato</th>
-            <th>Da scaricare</th>
-            <th>Memoria mentre lavora</th>
-            <th>Risposte giuste (prova)</th>
+            <th i18n>Modello consigliato</th>
+            <th i18n>Da scaricare</th>
+            <th i18n>Memoria mentre lavora</th>
+            <th i18n>Risposte giuste (prova)</th>
             <th></th>
           </tr>
         </thead>
@@ -65,6 +67,7 @@
               <td>{{ m.precision }}</td>
               <td>
                 <button
+                  i18n
                   type="button"
                   class="link"
                   [disabled]="model().trim() === m.name"
@@ -78,7 +81,7 @@
         </tbody>
       </table>
     </div>
-    <p class="hint">
+    <p i18n class="hint">
       Le percentuali vengono da 49 esercenti di prova: con i tuoi movimenti possono essere diverse.
       Per saperlo, usa "Misura la precisione" qui sotto. Con meno di 8 GB di memoria è meglio
       lasciare i suggerimenti spenti: i modelli più piccoli sbagliano quasi sempre.
@@ -95,18 +98,18 @@
       />
     }
   }
-  <button type="button" [disabled]="saving()" (click)="save()">Salva</button>
+  <button i18n type="button" [disabled]="saving()" (click)="save()">Salva</button>
 
   @if (status(); as s) {
     @if (s.provider === 'OLLAMA' || provider() === 'OLLAMA') {
-      <h3>Stato</h3>
+      <h3 i18n>Stato</h3>
       <ul class="ai-status">
         <li>
           @if (s.ollamaReachable) {
-            <span class="status-good">✓ Ollama risponde</span>
+            <span i18n class="status-good">✓ Ollama risponde</span>
           } @else {
-            <span class="status-bad">✗ Ollama non risponde</span>
-            <div class="secondary">
+            <span i18n class="status-bad">✗ Ollama non risponde</span>
+            <div i18n class="secondary">
               Se il container di Ollama esiste già, avvialo da Docker Desktop o con
               <code>docker start ollama</code>. Solo la prima volta, crealo con
               <code
@@ -119,9 +122,9 @@
         @if (s.ollamaReachable) {
           <li>
             @if (s.modelInstalled) {
-              <span class="status-good">✓ Il modello {{ s.ollamaModel }} è scaricato</span>
+              <span i18n class="status-good">✓ Il modello {{ s.ollamaModel }} è scaricato</span>
             } @else if (s.download?.running) {
-              <span>
+              <span i18n>
                 Scaricamento di {{ s.download!.model }}: {{ s.download!.status }}
                 @if (percent() !== null) {
                   {{ percent() }}% ({{ size(s.download!.completed) }} di
@@ -129,20 +132,25 @@
                 }
               </span>
               @if (percent() !== null) {
-                <progress [value]="percent()" max="100" aria-label="Avanzamento"></progress>
+                <progress
+                  [value]="percent()"
+                  max="100"
+                  aria-label="Avanzamento"
+                  i18n-aria-label
+                ></progress>
               }
             } @else {
-              <span class="status-bad">✗ Il modello {{ s.ollamaModel }} non è scaricato</span>
+              <span i18n class="status-bad">✗ Il modello {{ s.ollamaModel }} non è scaricato</span>
               <div>
-                <button type="button" (click)="download()">Scarica il modello</button>
-                <span class="secondary">
+                <button i18n type="button" (click)="download()">Scarica il modello</button>
+                <span i18n class="secondary">
                   Un modello piccolo pesa un paio di GB: ci vuole qualche minuto.</span
                 >
               </div>
             }
             <!-- Un errore vecchio non conta se il modello adesso c'è (ad esempio scaricato in un altro modo). -->
             @if (s.download?.error && !s.modelInstalled) {
-              <p class="error">
+              <p i18n class="error">
                 Lo scaricamento non è riuscito: {{ s.download!.error }}. Controlla il nome del
                 modello e la connessione a internet.
               </p>
@@ -153,8 +161,8 @@
     }
 
     @if (evaluationTargets().length > 0) {
-      <h3>Misura la precisione</h3>
-      <p class="hint">
+      <h3 i18n>Misura la precisione</h3>
+      <p i18n class="hint">
         Il programma prende alcuni esercenti che hai già categorizzato a mano, chiede al modello la
         categoria senza dirgli la tua scelta e conta quante volte indovina. Come esempi gli mostra
         le tue scelte su altri esercenti, come farà con i suggerimenti. Ogni domanda richiede
@@ -164,9 +172,9 @@
         <p class="error">{{ evaluationError() }}</p>
       }
       <div class="form-grid">
-        <label>
-          Modello da misurare
-          <select
+        <label
+          ><ng-container i18n> Modello da misurare </ng-container
+          ><select
             [value]="evaluationTarget()"
             (change)="evaluationTarget.set($any($event.target).value)"
           >
@@ -177,9 +185,9 @@
             }
           </select>
         </label>
-        <label>
-          Quanti esercenti
-          <input
+        <label
+          ><ng-container i18n> Quanti esercenti </ng-container
+          ><input
             type="number"
             min="1"
             max="100"
@@ -189,6 +197,7 @@
         </label>
       </div>
       <button
+        i18n
         type="button"
         [disabled]="s.evaluation?.running || samples() < 1 || samples() > 100"
         (click)="evaluate()"
@@ -197,17 +206,21 @@
       </button>
 
       @if (s.evaluation; as e) {
-        <div class="evaluation" aria-label="Risultato della misura">
+        <div class="evaluation" aria-label="Risultato della misura" i18n-aria-label>
           <p>
             @if (e.running) {
-              Misura di {{ e.model }} in corso: {{ e.done }} di {{ e.total }}.
+              <ng-container i18n>
+                Misura di {{ e.model }} in corso: {{ e.done }} di {{ e.total }}.
+              </ng-container>
             } @else {
-              Misura di {{ e.model }}: {{ e.done }} esercenti.
+              <ng-container i18n> Misura di {{ e.model }}: {{ e.done }} esercenti. </ng-container>
             }
             @if (precision() !== null) {
-              <strong>{{ precision() }}% giuste</strong>
-              ({{ e.right }} giuste, {{ e.wrong }} sbagliate, {{ e.unsure }} "non so"), in media
-              {{ e.seconds.toFixed(1).replace('.', ',') }} secondi a domanda.
+              <ng-container i18n>
+                <strong>{{ precision() }}% giuste</strong>
+                ({{ e.right }} giuste, {{ e.wrong }} sbagliate, {{ e.unsure }} "non so"), in media
+                {{ e.seconds.toFixed(1).replace('.', ',') }} secondi a domanda.
+              </ng-container>
             }
           </p>
           @if (e.running) {
@@ -215,6 +228,7 @@
               [value]="e.done"
               [max]="e.total"
               aria-label="Avanzamento della misura"
+              i18n-aria-label
             ></progress>
           }
           @if (e.error) {
@@ -222,12 +236,12 @@
           }
           @if (e.mistakes.length > 0) {
             <div class="table-scroll">
-              <table aria-label="Errori del modello">
+              <table aria-label="Errori del modello" i18n-aria-label>
                 <thead>
                   <tr>
-                    <th>Esercente</th>
-                    <th>La tua scelta</th>
-                    <th>Il modello</th>
+                    <th i18n>Esercente</th>
+                    <th i18n>La tua scelta</th>
+                    <th i18n>Il modello</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,7 +255,7 @@
                 </tbody>
               </table>
             </div>
-            <p class="hint">
+            <p i18n class="hint">
               Guarda gli errori: alcuni sono sbagli veri, altri scelte discutibili (Netflix è
               "Intrattenimento" o "Multimedia"?). Il modello suggerisce soltanto: decidi sempre tu.
             </p>

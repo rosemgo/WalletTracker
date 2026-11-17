@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import it.wallettracker.csvimport.ImportDtos.ImportResult;
 import it.wallettracker.csvimport.ImportDtos.Preview;
+import it.wallettracker.message.Messages;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -34,9 +35,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class ImportController {
 
     private final CsvImportService importService;
+    private final Messages messages;
 
-    public ImportController(CsvImportService importService) {
+    public ImportController(CsvImportService importService, Messages messages) {
         this.importService = importService;
+        this.messages = messages;
     }
 
     @PostMapping("/preview")
@@ -58,8 +61,9 @@ public class ImportController {
      */
     @ExceptionHandler(ImportRejectedException.class)
     public ProblemDetail rejected(ImportRejectedException e) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
-        problem.setProperty("errors", e.getErrors());
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, messages.text(e.message()));
+        problem.setProperty("code", e.message().code());
+        problem.setProperty("errors", e.getErrors().stream().map(messages::text).toList());
         return problem;
     }
 }

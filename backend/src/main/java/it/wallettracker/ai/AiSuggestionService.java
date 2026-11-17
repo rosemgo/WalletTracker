@@ -7,12 +7,12 @@ import java.util.Set;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.category.CategoryRepository;
 import it.wallettracker.classification.ClassificationService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionType;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * "Chiedi all'IA" (Fase 3, passo 7b.3): quali esercenti chiedere ({@link AiQuestions}) e il giro di domande in
@@ -68,9 +68,9 @@ public class AiSuggestionService {
         aiService.check(target); // IA accesa? Ollama pronto, o servizio cloud con chiave e consenso?
         List<AiQuestions.Ask> asks = asks(AiQuestions.MAX_PER_RUN);
         if (asks.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Non ci sono esercenti da chiedere: quelli senza categoria sono già stati chiesti all'IA,"
-                            + " o hanno già un suggerimento dalla tua storia.");
+            // messaggio: Non ci sono esercenti da chiedere: quelli senza categoria sono già stati chiesti all'IA, o
+            //            hanno già un suggerimento dalla tua storia.
+            throw new ApiException(HttpStatus.CONFLICT, "ai.nothing-to-ask");
         }
         answerJob.start(target, asks);
         return status();

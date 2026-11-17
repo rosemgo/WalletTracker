@@ -22,13 +22,14 @@ import it.wallettracker.bank.enablebanking.EnableBankingProperties;
 import it.wallettracker.bank.enablebanking.PsuHeaders;
 import it.wallettracker.classification.ClassificationService;
 import it.wallettracker.logo.LogoService;
+import it.wallettracker.message.ApiException;
+import it.wallettracker.message.Message;
 import it.wallettracker.sync.SyncService;
 import it.wallettracker.sync.SyncService.AccountSync;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Il collegamento di una banca, in due tempi (lo stesso flusso del programma della Fase 0, ma dalla dashboard):
@@ -70,7 +71,7 @@ public class BankLinkService {
      * @param imported quanti movimenti nuovi sono stati importati
      * @param errors   gli errori di importazione, conto per conto (il collegamento è comunque salvato)
      */
-    public record LinkResult(String bank, int accounts, int imported, List<String> errors) {
+    public record LinkResult(String bank, int accounts, int imported, List<Message> errors) {
     }
 
     /**
@@ -103,8 +104,9 @@ public class BankLinkService {
      * Il collegamento non parte perché non c'è un indirizzo di ritorno che risponda da questa pagina: dal server
      * (http://localhost:8000) Enable Banking vuole un indirizzo https, e quello vero è di Tailscale (docs/47, parte Q).
      */
-    static final String NO_RETURN_ADDRESS = "Per collegare una banca serve un indirizzo https: prepara Tailscale "
-            + "(GUIDA.md, capitolo «Tailscale»), poi registra su Enable Banking l'indirizzo che compare in Impostazioni.";
+    // messaggio: Per collegare una banca serve un indirizzo https: prepara Tailscale (GUIDA.md, capitolo «Tailscale»),
+    //            poi registra su Enable Banking l'indirizzo che compare in Impostazioni.
+    static final String NO_RETURN_ADDRESS = "link.no-return-address";
 
     /** Le banche di un paese supportate da Enable Banking, in ordine alfabetico. */
     public List<Aspsp> banks(String country) {
@@ -121,13 +123,13 @@ public class BankLinkService {
      *               collegamento non parte: dopo il consenso, la banca rimanderebbe a una pagina di errore
      */
     public String start(String bankName, String country, String origin) {
-        String redirectUrl = properties.redirectUrlFor(origin).orElseThrow(() -> new ResponseStatusException(
+        String redirectUrl = properties.redirectUrlFor(origin).orElseThrow(() -> new ApiException(
                 HttpStatus.CONFLICT, NO_RETURN_ADDRESS));
         Aspsp bank = banks(country).stream()
                 .filter(b -> b.name().equals(bankName))
                 .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Banca " + bankName + " (" + country + ") non trovata"));
+                // messaggio: Banca {0} ({1}) non trovata
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "link.bank-not-found", bankName, country));
 
         Instant validUntil = consentValidUntil(bank, Instant.now());
         String state = UUID.randomUUID().toString();
@@ -148,8 +150,8 @@ public class BankLinkService {
         //il remove() verifica se la chiave è presente nell'hashmap e se è presente, restituisce l'oggetto e rimuove la coppia chiave, valore dalla mappa
         Pending started = state != null ? pending.remove(state) : null;
         if (started == null || isExpired(started)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Questo collegamento non è valido o è scaduto: ricomincia da \"Collega una banca\".");
+            // messaggio: Questo collegamento non è valido o è scaduto: ricomincia da "Collega una banca".
+            throw new ApiException(HttpStatus.BAD_REQUEST, "link.expired");
         }
 
         Session session = client.createSession(code);
@@ -165,7 +167,7 @@ public class BankLinkService {
 
         List<Account> accounts = connectionService.accountsOf(connection);
         int imported = 0;
-        List<String> errors = new ArrayList<>();
+        List<Message> errors = new ArrayList<>();
         for (Account account : accounts) {
             if (account.getRole() == AccountRole.EXCLUDED) {
                 continue;
@@ -174,7 +176,8 @@ public class BankLinkService {
             if (sync.ok()) {
                 imported += sync.result().inserted();
             } else {
-                errors.add(account.getName() + ": " + sync.error());
+                // messaggio: {0}: {1}   (il nome del conto e il motivo: "Conto corrente: La banca non ha accettato...")
+                errors.add(Message.of("link.account-error", account.getName(), sync.error()));
             }
         }
         classificationService.classifyAll();

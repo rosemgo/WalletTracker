@@ -23,6 +23,8 @@ describe('App', () => {
 
   beforeEach(() => {
     fakeApi = {
+      // La lingua dell'installazione è quella della pagina: niente da allineare (language-store.spec.ts).
+      language: () => of({ language: 'it', supported: ['it', 'en'] }),
       // Il PIN è già stato inserito: si vede l'app (la pagina del PIN ha i suoi test, pin-page.spec.ts).
       authStatus: () =>
         of<AuthStatus>({ pinSet: true, withoutPin: false, authenticated, local: true }),

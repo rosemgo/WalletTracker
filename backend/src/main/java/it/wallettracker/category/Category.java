@@ -31,6 +31,10 @@ public class Category {
     @Column(name = "builtin", nullable = false)
     private boolean builtin;
 
+    /** Quale categoria di partenza è (il nome di una voce di {@link BuiltinCategory}); null per quelle dell'utente. */
+    @Column(name = "builtin_key")
+    private String builtinKey;
+
     protected Category() {
     }
 
@@ -46,6 +50,15 @@ public class Category {
     public void update(String name, CategoryKind kind) {
         this.name = name;
         this.kind = kind;
+    }
+
+    /** Cambia solo il nome: lo usa il cambio di lingua, per le categorie di partenza non rinominate. */
+    void rename(String name) {
+        this.name = name;
+    }
+
+    public String getBuiltinKey() {
+        return builtinKey;
     }
 
     public Long getId() {

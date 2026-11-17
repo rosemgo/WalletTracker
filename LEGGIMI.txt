@@ -1,5 +1,6 @@
 WalletTracker - come cominciare
 ================================
+(English? Open the "English" folder and read README.txt.)
 
 1. Installa Docker Desktop (gratuito): https://www.docker.com/products/docker-desktop
    Aprilo e aspetta che dica "Engine running".
@@ -14,6 +15,8 @@ WalletTracker - come cominciare
    La prima volta:
    - Windows: "Windows ha protetto il PC" -> Ulteriori informazioni -> Esegui comunque;
    - Mac: tasto destro sul file -> Apri -> Apri.
+   Lo script chiede "Lingua / Language": scrivi 1 per l'italiano. Da li' in poi parla solo italiano,
+   e l'app si apre in italiano.
    Alla fine il browser si apre su http://localhost:8000
 
 Gli altri due file:

@@ -1,4 +1,4 @@
-import { DatePipe, NgTemplateOutlet, formatCurrency, formatDate } from '@angular/common';
+import { NgTemplateOutlet, formatCurrency } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -8,6 +8,8 @@ import { WalletApi } from '../api/wallet-api';
 import { InvestmentsCard } from '../investments/investments-card';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { LocalDatePipe, capitalized, formatLocalDate } from '../text/dates';
+import { plural } from '../text/plural';
 import { LiquidityCard } from './liquidity-card';
 import { MonthChart, Trend } from './month-chart';
 import { UpperFirstPipe } from '../text/upper-first.pipe';
@@ -30,11 +32,6 @@ export function monthOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** La prima lettera maiuscola: "ottobre 2026" → "Ottobre 2026". */
-function capitalized(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 /**
  * Il Riepilogo (docs/36): il mese in corso a colpo d'occhio. Una cifra grande (quanto hai speso finora) con la frase
  * che la spiega rispetto al solito, il grafico del mese, dove vanno i soldi, che cosa arriva nei prossimi giorni e
@@ -46,7 +43,7 @@ function capitalized(text: string): string {
   selector: 'app-overview-page',
   imports: [
     AlertsPanel,
-    DatePipe,
+    LocalDatePipe,
     InvestmentsCard,
     LiquidityCard,
     MoneyPipe,
@@ -79,7 +76,7 @@ export class OverviewPage implements OnInit {
 
   /** "Ottobre 2026". */
   protected readonly monthTitle = computed(() =>
-    capitalized(formatDate(`${this.month()}-01`, 'MMMM y', this.locale)),
+    capitalized(formatLocalDate(`${this.month()}-01`, 'monthYear', this.locale)),
   );
 
   /**
@@ -92,16 +89,16 @@ export class OverviewPage implements OnInit {
 
   /** "ott", per le date sotto il grafico. */
   protected readonly monthShort = computed(() =>
-    formatDate(`${this.shownMonth()}-01`, 'MMM', this.locale).replace('.', ''),
+    formatLocalDate(`${this.shownMonth()}-01`, 'monthShort', this.locale).replace('.', ''),
   );
 
   /** Sopra il titolo: "Domenica 25" per il mese in corso, "Tutto il mese" per uno passato. */
   protected readonly dayLabel = computed(() => {
     const o = this.overview();
     if (!this.isCurrent() || o === null) {
-      return 'Tutto il mese';
+      return $localize`Tutto il mese`;
     }
-    return capitalized(formatDate(o.day, 'EEEE d', this.locale));
+    return capitalized(formatLocalDate(o.day, 'weekdayDay', this.locale));
   });
 
   /** Il giorno su cui si scorre nel grafico (null = nessuno): la cifra grande mostra quel giorno (docs/41, parte G). */
@@ -115,9 +112,15 @@ export class OverviewPage implements OnInit {
     }
     const day = this.scrubDay();
     if (day !== null && day <= o.spentByDay.length) {
-      return { label: `Speso fino al ${day} ${this.monthShort()}`, value: o.spentByDay[day - 1] };
+      return {
+        label: $localize`Speso fino al ${day}:day: ${this.monthShort()}:monthShort:`,
+        value: o.spentByDay[day - 1],
+      };
     }
-    return { label: this.isCurrent() ? 'Speso finora' : 'Speso nel mese', value: o.spent };
+    return {
+      label: this.isCurrent() ? $localize`Speso finora` : $localize`Speso nel mese`,
+      value: o.spent,
+    };
   });
 
   /** La frase sotto la cifra grande: com'è il mese rispetto al solito. */
@@ -162,20 +165,26 @@ export class OverviewPage implements OnInit {
     if (o === null) {
       return '';
     }
-    const spent = `Spesa accumulata nel mese: ${this.euros(o.spent, o.currency)} al giorno ${o.spentByDay.length}`;
+    const spent = $localize`Spesa accumulata nel mese: ${this.euros(o.spent, o.currency)}:amount: al giorno ${o.spentByDay.length}:length:`;
     return o.usualSoFar === null
       ? spent
-      : `${spent}, contro ${this.euros(o.usualSoFar, o.currency)} di un mese tipico allo stesso giorno`;
+      : $localize`${spent}:spent:, contro ${this.euros(o.usualSoFar, o.currency)}:amount: di un mese tipico allo stesso giorno`;
   });
 
   protected readonly toReviewLabel = computed(() => {
     const n = this.overview()?.toReview ?? 0;
-    return n === 1 ? '1 movimento da verificare' : `${n} movimenti da verificare`;
+    return plural(n, {
+      one: $localize`1 movimento da verificare`,
+      other: $localize`${n}:n: movimenti da verificare`,
+    });
   });
 
   protected readonly suggestionsLabel = computed(() => {
     const n = this.overview()?.suggestions ?? 0;
-    return n === 1 ? '1 categoria suggerita' : `${n} categorie suggerite`;
+    return plural(n, {
+      one: $localize`1 categoria suggerita`,
+      other: $localize`${n}:n: categorie suggerite`,
+    });
   });
 
   ngOnInit(): void {
@@ -197,8 +206,8 @@ export class OverviewPage implements OnInit {
         if (request === this.lastRequest) {
           this.error.set(
             response.status === 400
-              ? (response.error?.detail ?? 'Richiesta non valida.')
-              : 'Impossibile caricare il riepilogo: il backend è avviato?',
+              ? (response.error?.detail ?? $localize`Richiesta non valida.`)
+              : $localize`Impossibile caricare il riepilogo: il backend è avviato?`,
           );
           this.loading.set(false);
         }
@@ -230,7 +239,7 @@ export class OverviewPage implements OnInit {
   }
 
   protected categoryName(category: OverviewCategory): string {
-    return category.name ?? 'Senza categoria';
+    return category.name ?? $localize`Senza categoria`;
   }
 
   /** Un importo senza decimali: "1.284 €". */
@@ -265,16 +274,16 @@ export function comparisonSentence(
   euros: (v: number) => string,
 ): string {
   if (o.usualSoFar === null) {
-    return 'Il confronto con il solito comincia dopo il primo mese completo di movimenti.';
+    return $localize`Il confronto con il solito comincia dopo il primo mese completo di movimenti.`;
   }
-  const when = isCurrent ? ' a questo punto del mese' : '';
+  const when = isCurrent ? $localize` a questo punto del mese` : '';
   const difference = o.spent - o.usualSoFar;
   if (Math.abs(difference) < SAME_AS_USUAL) {
-    return `In linea con il solito${when}.`;
+    return $localize`In linea con il solito${when}:when:.`;
   }
   return difference < 0
-    ? `${euros(-difference)} in meno del solito${when}.`
-    : `${euros(difference)} più del solito${when}.`;
+    ? $localize`${euros(-difference)}:amount: in meno del solito${when}:when:.`
+    : $localize`${euros(difference)}:amount: più del solito${when}:when:.`;
 }
 
 /**
@@ -286,22 +295,27 @@ export function comparisonSentence(
 export function yearLabel(month: string, isCurrent: boolean, monthShort: string): string {
   const [year, m] = month.split('-').map(Number);
   if (isCurrent) {
-    return `Da inizio ${year}`;
+    return $localize`Da inizio ${year}:year:`;
   }
   if (m === 12) {
-    return `Tutto il ${year}`;
+    return $localize`Tutto il ${year}:year:`;
   }
-  return m === 1 ? `Gen ${year}` : `Gen–${monthShort} ${year}`;
+  // "Gen": gennaio abbreviato, come lo scrive la lingua dell'app, con la maiuscola perché apre l'etichetta.
+  const january = capitalized(formatLocalDate(`${year}-01-01`, 'monthShort').replace('.', ''));
+  return m === 1 ? `${january} ${year}` : `${january}–${monthShort} ${year}`;
 }
 
 /** La riga sotto una categoria. */
 export function categoryNote(category: OverviewCategory, euros: (v: number) => string): string {
   if (category.usualSoFar === null) {
-    return category.movements === 1 ? '1 movimento' : `${category.movements} movimenti`;
+    return plural(category.movements, {
+      one: $localize`1 movimento`,
+      other: $localize`${category.movements}:movements: movimenti`,
+    });
   }
   const difference = category.amount - category.usualSoFar;
   if (Math.abs(difference) < SAME_AS_USUAL) {
-    return 'come al solito';
+    return $localize`come al solito`;
   }
-  return `${difference > 0 ? '+' : '−'}${euros(Math.abs(difference))} sul solito`;
+  return $localize`${difference > 0 ? '+' : '−'}:value:${euros(Math.abs(difference))}:amount: sul solito`;
 }

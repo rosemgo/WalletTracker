@@ -10,6 +10,8 @@ import java.util.Locale;
 
 import it.wallettracker.csvimport.ImportMapping.AmountMode;
 import it.wallettracker.csvimport.ImportMapping.DecimalSeparator;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageException;
 
 /**
  * Trasforma una riga del CSV in un movimento, secondo la mappatura scelta. Classe "pura", provata da
@@ -50,9 +52,9 @@ public final class RowReader {
         }
     }
 
-    /** Una riga che non si può leggere: il messaggio dice perché. */
-    public static class RowException extends RuntimeException {
-        public RowException(String message) {
+    /** Una riga che non si può leggere: il messaggio (codice e parametri) dice perché. */
+    public static class RowException extends MessageException {
+        public RowException(Message message) {
             super(message);
         }
     }
@@ -61,7 +63,7 @@ public final class RowReader {
         LocalDate date = parseDate(cell(row, mapping.dateColumn()), mapping.dateFormat());
         BigDecimal amount = switch (mapping.amountMode()) {
             case SINGLE -> required(parseAmount(cell(row, mapping.amountColumn()), mapping.decimalSeparator()),
-                    "l'importo");
+                    "import.row.missing-amount");
             case SPLIT -> splitAmount(row, mapping);
             case UNSIGNED -> unsignedAmount(row, mapping);
         };
@@ -83,10 +85,12 @@ public final class RowReader {
      */
     static LocalDate parseDate(String value, String format) {
         if (!DATE_FORMATS.contains(format)) {
-            throw new RowException("formato di data \"" + format + "\" non previsto");
+            // messaggio: formato di data "{0}" non previsto
+            throw new RowException(Message.of("import.row.unknown-date-format", format));
         }
         if (value == null || value.isBlank()) {
-            throw new RowException("manca la data");
+            // messaggio: manca la data
+            throw new RowException(Message.of("import.row.missing-date"));
         }
         String day = value.trim().split("[ T]")[0];
         try {
@@ -94,7 +98,8 @@ public final class RowReader {
                     Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
             return LocalDate.parse(day, formatter);
         } catch (DateTimeParseException e) {
-            throw new RowException("la data \"" + value.trim() + "\" non è nel formato " + humanFormat(format));
+            // messaggio: la data "{0}" non è nel formato {1}
+            throw new RowException(Message.of("import.row.wrong-date-format", value.trim(), humanFormat(format)));
         }
     }
 
@@ -126,10 +131,12 @@ public final class RowReader {
         try {
             amount = new BigDecimal(text);
         } catch (NumberFormatException e) {
-            throw new RowException("l'importo \"" + value.trim() + "\" non è un numero");
+            // messaggio: l'importo "{0}" non è un numero
+            throw new RowException(Message.of("import.row.amount-not-a-number", value.trim()));
         }
         if (amount.stripTrailingZeros().scale() > 2) {
-            throw new RowException("l'importo \"" + value.trim() + "\" ha più di due decimali: controlla il separatore");
+            // messaggio: l'importo "{0}" ha più di due decimali: controlla il separatore
+            throw new RowException(Message.of("import.row.amount-too-many-decimals", value.trim()));
         }
         amount = amount.setScale(2);
         return negative ? amount.negate() : amount;
@@ -140,7 +147,8 @@ public final class RowReader {
         BigDecimal income = parseAmount(cell(row, mapping.incomeColumn()), mapping.decimalSeparator());
         BigDecimal expense = parseAmount(cell(row, mapping.expenseColumn()), mapping.decimalSeparator());
         if (income == null && expense == null) {
-            throw new RowException("mancano sia l'entrata sia l'uscita");
+            // messaggio: mancano sia l'entrata sia l'uscita
+            throw new RowException(Message.of("import.row.no-income-no-expense"));
         }
         BigDecimal in = income == null ? BigDecimal.ZERO : income.abs();
         BigDecimal out = expense == null ? BigDecimal.ZERO : expense.abs();
@@ -154,7 +162,7 @@ public final class RowReader {
      */
     private static BigDecimal unsignedAmount(List<String> row, ImportMapping mapping) {
         BigDecimal amount = required(parseAmount(cell(row, mapping.amountColumn()), mapping.decimalSeparator()),
-                "l'importo").abs();
+                "import.row.missing-amount").abs();
         String text = cell(row, mapping.signColumn());
         String lower = text == null ? "" : text.toLowerCase(Locale.ROOT);
         boolean income = mapping.incomeWordList().stream().anyMatch(lower::contains);
@@ -167,7 +175,8 @@ public final class RowReader {
         }
         String code = value.trim().toUpperCase(Locale.ROOT);
         if (!code.matches("[A-Z]{3}")) {
-            throw new RowException("la valuta \"" + value.trim() + "\" non è un codice come EUR o USD");
+            // messaggio: la valuta "{0}" non è un codice come EUR o USD
+            throw new RowException(Message.of("import.row.invalid-currency", value.trim()));
         }
         return code;
     }
@@ -180,9 +189,10 @@ public final class RowReader {
         return text.length() > MAX_TEXT ? text.substring(0, MAX_TEXT) : text;
     }
 
-    private static <T> T required(T value, String what) {
+    /** @param code il codice del messaggio se il valore manca: {@code "import.row.missing-amount"} è "manca l'importo" */
+    private static <T> T required(T value, String code) {
         if (value == null) {
-            throw new RowException("manca " + what);
+            throw new RowException(Message.of(code));
         }
         return value;
     }
@@ -192,8 +202,19 @@ public final class RowReader {
         return column == null || column >= row.size() ? null : row.get(column);
     }
 
-    /** "dd/MM/yyyy" → "gg/mm/aaaa", come lo scrive un italiano. */
-    static String humanFormat(String format) {
-        return format.replace("dd", "gg").replace("MM", "mm").replace("yyyy", "aaaa").replace("yy", "aa");
+    /**
+     * Il formato come lo scrive una persona, con le lettere della sua lingua: in italiano "gg/mm/aaaa" (giorno, mese,
+     * anno). È un messaggio del catalogo, uno per ogni formato di {@link #DATE_FORMATS}.
+     */
+    static Message humanFormat(String format) {
+        return Message.of(switch (format) {
+            case "dd/MM/yyyy" -> "import.date-format.day-month-year-slash"; // messaggio: gg/mm/aaaa
+            case "dd-MM-yyyy" -> "import.date-format.day-month-year-dash";  // messaggio: gg-mm-aaaa
+            case "dd.MM.yyyy" -> "import.date-format.day-month-year-dot";   // messaggio: gg.mm.aaaa
+            case "yyyy-MM-dd" -> "import.date-format.year-month-day";       // messaggio: aaaa-mm-gg
+            case "MM/dd/yyyy" -> "import.date-format.month-day-year";       // messaggio: mm/gg/aaaa
+            case "dd/MM/yy" -> "import.date-format.day-month-short-year";   // messaggio: gg/mm/aa
+            default -> throw new IllegalArgumentException(format);
+        });
     }
 }

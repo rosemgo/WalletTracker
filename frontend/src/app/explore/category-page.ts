@@ -1,4 +1,4 @@
-import { DecimalPipe, formatCurrency, formatDate } from '@angular/common';
+import { formatCurrency, formatNumber } from '@angular/common';
 import { Component, LOCALE_ID, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -7,6 +7,8 @@ import { CategoryOverview, ExploreGroup } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
+import { capitalized, formatLocalDate } from '../text/dates';
+import { plural } from '../text/plural';
 import { merchantSearch } from '../transactions/merchant-search';
 import { BarChart } from './bar-chart';
 
@@ -22,13 +24,23 @@ const MONTH_INITIALS = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', '
  */
 @Component({
   selector: 'app-category-page',
-  imports: [BarChart, DecimalPipe, MoneyPipe, RouterLink],
+  imports: [BarChart, MoneyPipe, RouterLink],
   templateUrl: './category-page.html',
 })
 export class CategoryPage implements OnInit {
   private readonly api = inject(WalletApi);
   private readonly route = inject(ActivatedRoute);
   private readonly locale = inject(LOCALE_ID);
+
+  protected readonly noDescription = $localize`Senza descrizione`;
+
+  /** La barra del budget, a parole: "Budget usato al 62 per cento; a questo punto del mese il ritmo regolare è al 50 per cento". */
+  protected paceLabel(used: number, pace: number | null): string {
+    const percent = (value: number) => formatNumber(value, this.locale, '1.0-0');
+    return pace === null
+      ? $localize`Budget usato al ${percent(used)}:used: per cento`
+      : $localize`Budget usato al ${percent(used)}:used: per cento; a questo punto del mese il ritmo regolare è al ${percent(pace)}:pace: per cento`;
+  }
   private readonly privacy = inject(PrivacyStore);
 
   private readonly router = inject(Router);
@@ -51,7 +63,7 @@ export class CategoryPage implements OnInit {
   /** "ottobre": il mese guardato, in parole. */
   protected readonly monthName = computed(() => {
     const o = this.overview();
-    return o === null ? '' : formatDate(`${o.month}-01`, 'MMMM', this.locale);
+    return o === null ? '' : formatLocalDate(`${o.month}-01`, 'month', this.locale);
   });
 
   /** Il mese è quello in corso? (allora i numeri sono "finora") */
@@ -66,17 +78,22 @@ export class CategoryPage implements OnInit {
     if (o === null) {
       return '';
     }
-    const when = this.isCurrent() ? `a ${this.monthName()}, finora` : `a ${this.monthName()}`;
+    const when = this.isCurrent()
+      ? $localize`a ${this.monthName()}:monthName:, finora`
+      : $localize`a ${this.monthName()}:monthName:`;
     if (o.usualSoFar === null) {
       return `${when}.`;
     }
     const difference = o.amount - o.usualSoFar;
     const usual = this.euros(o.usualSoFar, o.currency);
     if (Math.abs(difference) < SAME_AS_USUAL) {
-      return `${when} · come al solito (${usual}).`;
+      return $localize`${when}:when: · come al solito (${usual}:usual:).`;
     }
     const delta = this.euros(Math.abs(difference), o.currency);
-    return `${when} · ${delta} ${difference > 0 ? 'più' : 'meno'} del solito (${usual}).`;
+    // Due frasi intere, non una con "più" o "meno" infilato dentro: in un'altra lingua l'ordine delle parole cambia.
+    return difference > 0
+      ? $localize`${when}:when: · ${delta}:delta: più del solito (${usual}:usual:).`
+      : $localize`${when}:when: · ${delta}:delta: meno del solito (${usual}:usual:).`;
   });
 
   /** Il budget, già pronto per la barra con la tacca. */
@@ -89,8 +106,8 @@ export class CategoryPage implements OnInit {
     const daysLeft = this.isCurrent() ? daysInMonth(o.month) - Number(o.day.slice(8, 10)) : 0;
     const remaining =
       b.remaining >= 0
-        ? `${this.euros(b.remaining, o.currency)} rimasti`
-        : `superato di ${this.euros(-b.remaining, o.currency)}`;
+        ? $localize`${this.euros(b.remaining, o.currency)}:amount: rimasti`
+        : $localize`superato di ${this.euros(-b.remaining, o.currency)}:amount:`;
     return {
       amount: b.monthlyAmount,
       used: Math.min(100, (b.spent / b.monthlyAmount) * 100),
@@ -99,7 +116,7 @@ export class CategoryPage implements OnInit {
       over: b.status === 'OVER',
       text:
         daysLeft > 0
-          ? `${remaining} · ${daysLeft === 1 ? '1 giorno' : daysLeft + ' giorni'}`
+          ? $localize`${remaining}:remaining: · ${plural(daysLeft, { one: $localize`1 giorno`, other: $localize`${daysLeft}:daysLeft: giorni` })}:count:`
           : remaining,
     };
   });
@@ -139,7 +156,7 @@ export class CategoryPage implements OnInit {
       return '';
     }
     const m = this.chartMonths()[i];
-    return `${formatDate(`${m.month}-01`, 'MMMM y', this.locale)}: ${this.euros(m.value, o.currency, 2)}`;
+    return $localize`${formatLocalDate(`${m.month}-01`, 'monthYear', this.locale)}:date:: ${this.euros(m.value, o.currency, 2)}:amount:`;
   });
 
   /** Il nome di ogni barra per il lettore di schermo: "ottobre 2026, 360 €". */
@@ -147,7 +164,7 @@ export class CategoryPage implements OnInit {
     const o = this.chart();
     return this.chartMonths().map(
       (m) =>
-        `${formatDate(`${m.month}-01`, 'MMMM y', this.locale)}, ${this.euros(m.value, o?.currency ?? 'EUR')}`,
+        $localize`${formatLocalDate(`${m.month}-01`, 'monthYear', this.locale)}:date:, ${this.euros(m.value, o?.currency ?? 'EUR')}:amount:`,
     );
   });
 
@@ -155,14 +172,18 @@ export class CategoryPage implements OnInit {
   protected readonly chartTitle = computed(() => {
     const o = this.chart();
     if (this.chartPeriod() === 'YEAR' || o === null) {
-      return 'Ultimi 12 mesi';
+      return $localize`Ultimi 12 mesi`;
     }
     if (o.month.slice(0, 4) === String(new Date().getFullYear())) {
-      return "Quest'anno";
+      return $localize`Quest'anno`;
     }
-    return o.month.endsWith('-01')
-      ? formatDate(`${o.month}-01`, 'MMMM y', this.locale).replace(/^./, (c) => c.toUpperCase())
-      : `Gennaio–${formatDate(`${o.month}-01`, 'MMMM y', this.locale)}`;
+    const month = formatLocalDate(`${o.month}-01`, 'monthYear', this.locale);
+    if (o.month.endsWith('-01')) {
+      return capitalized(month);
+    }
+    // Da gennaio al mese guardato: il nome di gennaio lo dà la lingua dell'app.
+    const january = formatLocalDate(`${o.month.slice(0, 4)}-01-01`, 'month', this.locale);
+    return `${capitalized(january)}–${month}`;
   });
 
   protected readonly chartDescription = computed(() => {
@@ -171,8 +192,11 @@ export class CategoryPage implements OnInit {
       return '';
     }
     const usual =
-      o.usualMonth === null ? '' : `, di solito ${this.euros(o.usualMonth, o.currency)} al mese`;
-    const when = this.chartPeriod() === 'YEAR' ? 'negli ultimi 12 mesi' : 'da gennaio';
+      o.usualMonth === null
+        ? ''
+        : $localize`, di solito ${this.euros(o.usualMonth, o.currency)}:amount: al mese`;
+    const when =
+      this.chartPeriod() === 'YEAR' ? $localize`negli ultimi 12 mesi` : $localize`da gennaio`;
     return `${o.name} ${when}${usual}; ${this.monthName()} ${this.euros(o.amount, o.currency)}`;
   });
 
@@ -181,7 +205,9 @@ export class CategoryPage implements OnInit {
 
   protected readonly averageLabel = computed(() => {
     const o = this.chart();
-    return o?.usualMonth == null ? '' : `di solito ${this.euros(o.usualMonth, o.currency)}`;
+    return o?.usualMonth == null
+      ? ''
+      : $localize`di solito ${this.euros(o.usualMonth, o.currency)}:amount:`;
   });
 
   /** I filtri di Movimenti per un esercente della categoria, nel mese guardato. */
@@ -220,8 +246,8 @@ export class CategoryPage implements OnInit {
         error: (response) =>
           this.error.set(
             response.status === 404
-              ? 'Questa categoria non esiste più.'
-              : 'Impossibile caricare la categoria: il backend è avviato?',
+              ? $localize`Questa categoria non esiste più.`
+              : $localize`Impossibile caricare la categoria: il backend è avviato?`,
           ),
       });
     });
@@ -255,7 +281,7 @@ export class CategoryPage implements OnInit {
       },
       error: () => {
         this.loadingMonth.set(false);
-        this.error.set('Impossibile caricare quel mese: il backend è avviato?');
+        this.error.set($localize`Impossibile caricare quel mese: il backend è avviato?`);
       },
     });
   }

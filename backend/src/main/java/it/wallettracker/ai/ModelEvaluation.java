@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
+import it.wallettracker.message.Message;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class ModelEvaluation {
      * @param seconds il tempo medio per domanda
      */
     public record State(String model, boolean running, int done, int total, int right, int wrong,
-            int unsure, double seconds, List<Mistake> mistakes, String error) {
+            int unsure, double seconds, List<Mistake> mistakes, Message error) {
     }
 
     private final CategoryModel categoryModel;

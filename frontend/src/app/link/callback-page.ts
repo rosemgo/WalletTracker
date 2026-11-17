@@ -40,11 +40,13 @@ export class CallbackPage implements OnInit {
     this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
 
     if (bankError) {
-      this.error.set(`La banca ha risposto: ${params.get('error_description') ?? bankError}`);
+      this.error.set(
+        $localize`La banca ha risposto: ${params.get('error_description') ?? bankError}:value:`,
+      );
       return;
     }
     if (!code || !state) {
-      this.error.set('In questo indirizzo mancano i dati del collegamento.');
+      this.error.set($localize`In questo indirizzo mancano i dati del collegamento.`);
       return;
     }
 
@@ -55,7 +57,7 @@ export class CallbackPage implements OnInit {
         this.working.set(false);
       },
       error: (response) => {
-        this.error.set(response.error?.detail ?? 'Il collegamento non è riuscito.');
+        this.error.set(response.error?.detail ?? $localize`Il collegamento non è riuscito.`);
         this.working.set(false);
       },
     });

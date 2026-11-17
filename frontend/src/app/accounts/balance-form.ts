@@ -1,9 +1,9 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 
 import { Account, Transaction } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe } from '../text/dates';
 import { nameOf } from '../transactions/day-groups';
 
 /**
@@ -16,44 +16,45 @@ import { nameOf } from '../transactions/day-groups';
  */
 @Component({
   selector: 'app-balance-form',
-  imports: [DatePipe, MoneyPipe],
+  imports: [LocalDatePipe, MoneyPipe],
   template: `
     <div class="balance-form">
       @if (loaded()) {
         @if (last(); as t) {
-          <p class="hint">
+          <p i18n class="hint">
             Apri l'app della banca e cerca l'ultimo movimento che c'è qui:
             <strong
-              >{{ t.bookingDate | date: 'd MMMM y' }} · {{ nameOf(t) }} ·
+              >{{ t.bookingDate | localDate: 'long' }} · {{ nameOf(t) }} ·
               {{ t.amount | money: t.currency }}</strong
             >. Scrivi il saldo che la banca mostra <strong>dopo</strong> quel movimento.
           </p>
         } @else {
-          <p class="hint">Il conto non ha ancora movimenti: scrivi il saldo di oggi.</p>
+          <p i18n class="hint">Il conto non ha ancora movimenti: scrivi il saldo di oggi.</p>
         }
         <div class="balance-row">
-          <label>
-            Saldo ({{ account().currency }})
-            <input
+          <label
+            ><ng-container i18n> Saldo ({{ account().currency }}) </ng-container
+            ><input
               #amount
               inputmode="decimal"
               autocomplete="off"
               placeholder="es. 1.234,56"
+              i18n-placeholder
               [value]="initial()"
               (keydown.enter)="save(amount.value)"
               (keydown.escape)="cancelled.emit()"
             />
           </label>
-          <button type="button" [disabled]="saving()" (click)="save(amount.value)">
+          <button i18n type="button" [disabled]="saving()" (click)="save(amount.value)">
             Salva il saldo
           </button>
-          <button type="button" class="link" (click)="cancelled.emit()">Annulla</button>
+          <button i18n type="button" class="link" (click)="cancelled.emit()">Annulla</button>
         </div>
         @if (error()) {
           <p class="error">{{ error() }}</p>
         }
       } @else {
-        <p class="hint">Caricamento...</p>
+        <p i18n class="hint">Caricamento...</p>
       }
     </div>
   `,
@@ -102,7 +103,9 @@ export class BalanceForm implements OnInit {
   save(text: string): void {
     const value = parseBalance(text);
     if (value === null) {
-      this.error.set('Scrivi un importo, come 1.234,56 (con il meno davanti se è negativo).');
+      this.error.set(
+        $localize`Scrivi un importo, come 1.234,56 (con il meno davanti se è negativo).`,
+      );
       return;
     }
     this.error.set(null);
@@ -114,7 +117,7 @@ export class BalanceForm implements OnInit {
       },
       error: () => {
         this.saving.set(false);
-        this.error.set('Impossibile salvare il saldo: il backend è avviato?');
+        this.error.set($localize`Impossibile salvare il saldo: il backend è avviato?`);
       },
     });
   }

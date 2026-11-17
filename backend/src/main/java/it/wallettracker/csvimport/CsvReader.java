@@ -6,6 +6,8 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageException;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -46,7 +48,7 @@ public final class CsvReader {
  * "AMAZON"}) è un carattere come gli altri, mentre del testo dopo la virgoletta di chiusura
  * ({@code "ab"c}) è un errore: il file è malformato, e non proviamo a indovinare che cosa volesse dire.
      *
-     * @throws IllegalArgumentException se il file non è un CSV valido (es. una virgoletta mai chiusa)
+     * @throws MessageException se il file non è un CSV valido (es. una virgoletta mai chiusa)
      */
     public static List<List<String>> read(String text, char delimiter) {
         CSVFormat format = CSVFormat.RFC4180.builder()
@@ -67,8 +69,9 @@ public final class CsvReader {
         } catch (IOException | UncheckedIOException e) {
             // Un file malformato: la libreria lancia una CSVException (una IOException), che mentre scorriamo le
             // righe arriva avvolta in una UncheckedIOException. Il messaggio è in inglese: lo traduciamo.
-            throw new IllegalArgumentException("Il file non è un CSV valido: controlla le virgolette (una "
-                    + "virgoletta aperta va chiusa) e il separatore.", e);
+            // messaggio: Il file non è un CSV valido: controlla le virgolette (una virgoletta aperta va chiusa) e il
+            //            separatore.
+            throw new MessageException(Message.of("import.csv.invalid"), e);
         }
         return rows;
     }

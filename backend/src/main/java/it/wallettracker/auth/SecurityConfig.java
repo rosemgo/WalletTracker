@@ -5,11 +5,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Map;
 
+import it.wallettracker.message.Message;
+import it.wallettracker.message.Messages;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -47,13 +50,16 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository,
-            PinService pins) throws Exception {
+            PinService pins, Messages messages) throws Exception {
         http
                 .authorizeHttpRequests(requests -> requests
                         // Le pagine di errore interne di Spring (una richiesta già controllata che finisce in errore):
                         // senza questa riga, l'errore vero (es. 413 file troppo grande) diventerebbe un 401.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        // La lingua dell'app: la dashboard la chiede prima di disegnare anche la pagina del PIN.
+                        // Solo la lettura: per cambiarla (PUT) serve il PIN, come per tutto il resto.
+                        .requestMatchers(HttpMethod.GET, "/api/language").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated())
                 // CSRF pensato per le app come la nostra, con il frontend separato (Single-Page Application): il
@@ -69,10 +75,13 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
                 .exceptionHandling(errors -> errors
+                        // Qui siamo in un filtro, prima dei controller: la lingua si legge dalla richiesta.
+                        // messaggio: Inserisci il PIN.
                         .authenticationEntryPoint((request, response, e) -> problem(response, 401,
-                                "Inserisci il PIN."))
+                                messages.text(Message.of("auth.pin-required"), request)))
+                        // messaggio: Richiesta rifiutata: ricarica la pagina e riprova.
                         .accessDeniedHandler((request, response, e) -> problem(response, 403,
-                                "Richiesta rifiutata: ricarica la pagina e riprova.")));
+                                messages.text(Message.of("auth.request-rejected"), request))));
         return http.build();
     }
 

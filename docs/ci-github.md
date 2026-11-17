@@ -73,6 +73,10 @@ Se un comando finisce con un errore, lo step diventa rosso, il job si ferma e il
 | `Backend (build e test)` | compila con Maven ed esegue tutti i test Java (con il database vero di Testcontainers) |
 | `Frontend (build e test)` | installa le dipendenze, controlla la formattazione con Prettier, esegue i test e fa la build di Angular |
 | `Installazione con Docker (installa.sh)` | lancia lo script come un utente, da zero, e prova davvero l'app: PIN, Tailscale finto, backup, ripristino |
+| `Aggiornamento (installa.sh --aggiorna)` | "Aggiorna" da una versione all'altra con un finto GitHub: ZIP manomesso, aggiornamento riuscito, ritorno da solo, e le lingue (`docs/50`, parte I; `docs/lingue-3-installazione.md`) |
+| `Script di Windows (installa.ps1)` | su una macchina Windows: lo script si legge senza errori e arriva in fondo, in italiano e in inglese, con un finto `docker` (`docs/lingue-3-installazione.md`, parte F) |
+
+Gli ultimi due sono arrivati dopo: tra i controlli obbligatori del ramo `main` (parte 4.1) ci sono solo se li aggiungi.
 
 ### 2.6 Dove si vede il risultato
 

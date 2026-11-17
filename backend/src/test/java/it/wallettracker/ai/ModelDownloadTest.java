@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import it.wallettracker.message.Message;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,6 @@ class ModelDownloadTest {
         }
 
         assertThat(download.state().error()).isNull();
-        assertThat(download.state().status()).isEqualTo("success");
+        assertThat(download.state().status()).isEqualTo(Message.verbatim("success"));
     }
 }

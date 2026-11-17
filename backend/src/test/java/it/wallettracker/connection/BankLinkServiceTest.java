@@ -1,5 +1,6 @@
 package it.wallettracker.connection;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -107,7 +108,7 @@ class BankLinkServiceTest {
         // pagina dove non risponde nessuno. Meglio dirlo prima, senza chiamare Enable Banking.
         assertThatThrownBy(() -> bankLinkService.start("ING", "IT", "http://localhost:8000"))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("prepara Tailscale");
+                .satisfies(says("prepara Tailscale"));
         verify(client, never()).startAuthorization(any());
     }
 
@@ -145,7 +146,7 @@ class BankLinkServiceTest {
     void anUnknownStateIsRejectedWithoutCallingTheBank() {
         assertThatThrownBy(() -> bankLinkService.complete("code-1", "stato-inventato", PSU))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("non è valido o è scaduto");
+                .satisfies(says("non è valido o è scaduto"));
         verify(client, never()).createSession(any());
     }
 

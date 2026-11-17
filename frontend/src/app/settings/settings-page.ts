@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -9,6 +8,8 @@ import { UpdateStore } from '../api/update-store';
 import { GUIDE_URL } from '../api/return-address';
 import { WalletApi } from '../api/wallet-api';
 import { BackupSection } from './backup-section';
+import { LocalDatePipe } from '../text/dates';
+import { LanguageSection } from '../language/language-section';
 import { ThemeSection } from '../theme/theme-section';
 import { FileDrop } from '../ui/file-drop';
 
@@ -28,9 +29,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     AccessSection,
     AiSettingsPanel,
     BackupSection,
-    DatePipe,
+    LocalDatePipe,
     FileDrop,
     RouterLink,
+    LanguageSection,
     ThemeSection,
   ],
   templateUrl: './settings-page.html',
@@ -110,7 +112,7 @@ export class SettingsPage {
   save(): void {
     const pem = this.pem();
     if (this.applicationId() === '' || pem === null) {
-      this.error.set("Scrivi l'Application ID e scegli il file .pem.");
+      this.error.set($localize`Scrivi l'Application ID e scegli il file .pem.`);
       return;
     }
     this.saving.set(true);
@@ -120,11 +122,11 @@ export class SettingsPage {
       next: (status) => {
         this.saving.set(false);
         this.setup.status.set(status); // aggiorna lo stato condiviso: l'avviso in alto sparisce
-        this.message.set('Credenziali verificate e salvate.');
+        this.message.set($localize`Credenziali verificate e salvate.`);
       },
       error: (response) => {
         this.saving.set(false);
-        this.error.set(response.error?.detail ?? 'Le credenziali non sono state salvate.');
+        this.error.set(response.error?.detail ?? $localize`Le credenziali non sono state salvate.`);
       },
     });
   }

@@ -980,6 +980,9 @@ Alcuni testi del backend sono **nomi di gruppi scritti in italiano**: "Altre ren
 etichette, e il codice non ci prende decisioni (la dashboard le confronta solo per scegliere il link). Se un giorno
 l'app avrà l'inglese, diventeranno chiavi tradotte dalla dashboard (il punto P2 dell'analisi sulla lingua).
 
+**Aggiornamento.** Fatto: le voci senza nome hanno un tipo (`GroupKind`) e la frase la scrive la dashboard
+(docs/lingue-1-messaggi-e-formati.md, parte B).
+
 ---
 
 ## Parte U: ogni ritenuta con la sua rendita, i ratei a parte

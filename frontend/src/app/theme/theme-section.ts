@@ -4,9 +4,12 @@ import { THEME_CHOICES, ThemeChoice, ThemeStore } from './theme-store';
 
 /** Le parole di ogni scelta, con la riga che dice che cosa fa. */
 const LABELS: Record<ThemeChoice, { name: string; hint: string }> = {
-  auto: { name: 'Automatico', hint: 'chiaro o scuro come il telefono o il computer' },
-  giorno: { name: 'Giorno', hint: 'sempre chiaro: si legge meglio al sole' },
-  notte: { name: 'Notte', hint: 'sempre scuro' },
+  auto: {
+    name: $localize`Automatico`,
+    hint: $localize`chiaro o scuro come il telefono o il computer`,
+  },
+  giorno: { name: $localize`Giorno`, hint: $localize`sempre chiaro: si legge meglio al sole` },
+  notte: { name: $localize`Notte`, hint: $localize`sempre scuro` },
 };
 
 /** La scelta del tema, nelle Impostazioni: tre pulsanti di opzione, si applica subito. */
@@ -14,7 +17,7 @@ const LABELS: Record<ThemeChoice, { name: string; hint: string }> = {
   selector: 'app-theme-section',
   template: `
     <fieldset class="choices">
-      <legend>Tema</legend>
+      <legend i18n>Tema</legend>
       @for (choice of choices; track choice) {
         <label>
           <input

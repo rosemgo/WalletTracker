@@ -1,5 +1,6 @@
 package it.wallettracker.explore;
 
+import static it.wallettracker.message.TestMessages.says;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -206,13 +207,13 @@ class ExploreServiceTest {
     @Test
     void wrongRequestsAreRejected() {
         assertThatThrownBy(() -> exploreService.series(Metric.EXPENSES, Period.YEAR, TODAY.plusDays(1), null, null,
-                TODAY)).isInstanceOf(ResponseStatusException.class).hasMessageContaining("non è ancora arrivato");
+                TODAY)).isInstanceOf(ResponseStatusException.class).satisfies(says("non è ancora arrivato"));
         assertThatThrownBy(() -> exploreService.groups(Metric.EXPENSES, TODAY, TODAY.minusDays(1), By.CATEGORY, null,
-                null, TODAY)).hasMessageContaining("al massimo un anno");
+                null, TODAY)).satisfies(says("al massimo un anno"));
         assertThatThrownBy(() -> exploreService.groups(Metric.EXPENSES, TODAY.plusDays(1), TODAY.plusDays(7),
-                By.CATEGORY, null, null, TODAY)).hasMessageContaining("non è ancora arrivato");
+                By.CATEGORY, null, null, TODAY)).satisfies(says("non è ancora arrivato"));
         assertThatThrownBy(() -> exploreService.groups(Metric.EXPENSES, TODAY.minusYears(2), TODAY, By.CATEGORY, null,
-                null, TODAY)).hasMessageContaining("al massimo un anno");
+                null, TODAY)).satisfies(says("al massimo un anno"));
 
         assertThat(mvc.get().uri("/api/explore/series?metric=EXPENSES&period=YEAR")).hasStatusOk();
         assertThat(mvc.get().uri("/api/explore/series?metric=BOH&period=YEAR")).hasStatus(400);

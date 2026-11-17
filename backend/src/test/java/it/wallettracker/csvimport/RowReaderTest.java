@@ -1,5 +1,7 @@
 package it.wallettracker.csvimport;
 
+import static it.wallettracker.message.TestMessages.says;
+import static it.wallettracker.message.TestMessages.saysExactly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -36,10 +38,10 @@ class RowReaderTest {
     void wrongAmountsAreRefusedWithAClearMessage() {
         assertThat(RowReader.parseAmount("  ", DecimalSeparator.COMMA)).isNull();
         assertThatThrownBy(() -> RowReader.parseAmount("dodici", DecimalSeparator.COMMA))
-                .isInstanceOf(RowException.class).hasMessage("l'importo \"dodici\" non è un numero");
+                .isInstanceOf(RowException.class).satisfies(saysExactly("l'importo \"dodici\" non è un numero"));
         // Letto con il separatore sbagliato, "1,2345" non è un importo in euro: meglio un errore che un numero sbagliato.
         assertThatThrownBy(() -> RowReader.parseAmount("1,2345", DecimalSeparator.COMMA))
-                .isInstanceOf(RowException.class).hasMessageContaining("più di due decimali");
+                .isInstanceOf(RowException.class).satisfies(says("più di due decimali"));
     }
 
     @Test
@@ -55,10 +57,10 @@ class RowReaderTest {
     void impossibleOrWronglyFormattedDatesAreErrors() {
         // Il 31 febbraio non esiste: con ResolverStyle.STRICT è un errore, non il 3 marzo.
         assertThatThrownBy(() -> RowReader.parseDate("31/02/2026", "dd/MM/yyyy"))
-                .isInstanceOf(RowException.class).hasMessage("la data \"31/02/2026\" non è nel formato gg/mm/aaaa");
+                .isInstanceOf(RowException.class).satisfies(saysExactly("la data \"31/02/2026\" non è nel formato gg/mm/aaaa"));
         assertThatThrownBy(() -> RowReader.parseDate("2026-10-03", "dd/MM/yyyy")).isInstanceOf(RowException.class);
-        assertThatThrownBy(() -> RowReader.parseDate("", "dd/MM/yyyy")).hasMessage("manca la data");
-        assertThatThrownBy(() -> RowReader.parseDate("03/10/2026", "yyyyMMdd")).hasMessageContaining("non previsto");
+        assertThatThrownBy(() -> RowReader.parseDate("", "dd/MM/yyyy")).satisfies(saysExactly("manca la data"));
+        assertThatThrownBy(() -> RowReader.parseDate("03/10/2026", "yyyyMMdd")).satisfies(says("non previsto"));
     }
 
     @Test
@@ -86,7 +88,7 @@ class RowReaderTest {
         assertThat(RowReader.read(List.of("02/10/2026", "", "-85,40", "Spesa"), mapping, "EUR").amount())
                 .isEqualByComparingTo("-85.40");
         assertThatThrownBy(() -> RowReader.read(List.of("02/10/2026", "", "", "?"), mapping, "EUR"))
-                .hasMessage("mancano sia l'entrata sia l'uscita");
+                .satisfies(saysExactly("mancano sia l'entrata sia l'uscita"));
     }
 
     @Test
@@ -136,6 +138,6 @@ class RowReaderTest {
         assertThat(RowReader.read(List.of("2026-10-03", "-40.00", "usd"), mapping, "EUR").currency()).isEqualTo("USD");
         assertThat(RowReader.read(List.of("2026-10-03", "-40.00", ""), mapping, "EUR").currency()).isEqualTo("EUR");
         assertThatThrownBy(() -> RowReader.read(List.of("2026-10-03", "-40.00", "Euro"), mapping, "EUR"))
-                .hasMessageContaining("non è un codice come EUR");
+                .satisfies(says("non è un codice come EUR"));
     }
 }

@@ -1,4 +1,3 @@
-import { DatePipe, formatDate } from '@angular/common';
 import {
   Component,
   LOCALE_ID,
@@ -16,6 +15,7 @@ import { Account, BalanceHistory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { TrendChart } from '../investments/trend-chart';
 import { MoneyPipe } from '../privacy/money.pipe';
+import { LocalDatePipe, formatLocalDate } from '../text/dates';
 
 /** Un conto della scheda, con il suo saldo. */
 interface Row {
@@ -53,13 +53,13 @@ interface Group {
  */
 @Component({
   selector: 'app-liquidity-card',
-  imports: [DatePipe, MoneyPipe, RouterLink, TrendChart],
+  imports: [LocalDatePipe, MoneyPipe, RouterLink, TrendChart],
   template: `
     @if (groups().length > 0) {
       <section class="card liquidity-card">
         <div class="card-head">
-          <h2>Liquidità</h2>
-          <a routerLink="/conti">Vedi i conti ›</a>
+          <h2 i18n>Liquidità</h2>
+          <a i18n routerLink="/conti">Vedi i conti ›</a>
         </div>
         <div class="liquidity-totals">
           @for (g of groups(); track g.currency) {
@@ -72,18 +72,24 @@ interface Group {
             }}</strong>
           }
         </div>
-        <span class="secondary">{{
-          (chartAccount() ? null : scrubbed()?.label) ??
-            (withBalance() === 1
-              ? 'Sul tuo conto, adesso'
-              : 'Su ' + withBalance() + ' conti, adesso')
-        }}</span>
+        <!-- Scorrendo il grafico di tutti i conti, il giorno scelto; altrimenti quanti conti ci sono nel totale. -->
+        <span class="secondary">
+          @if (!chartAccount() && scrubbed(); as s) {
+            {{ s.label }}
+          } @else {
+            <ng-container i18n>{withBalance(), plural,
+              =1 {Sul tuo conto, adesso}
+              other {Su {{ withBalance() }} conti, adesso}
+            }</ng-container>
+          }
+        </span>
         @if (groups().length > 1) {
           <!-- Con più valute, quale tracciare: una alla volta, ognuna con la sua scala, senza conversioni. -->
           <div
             class="segmented compact liquidity-currencies"
             role="group"
             aria-label="Valuta del grafico"
+            i18n-aria-label
             data-testid="chart-currency"
           >
             @for (g of groups(); track g.currency) {
@@ -109,7 +115,7 @@ interface Group {
                 >
               }
             </span>
-            <button type="button" class="link" (click)="chosenAccount.set(null)">
+            <button i18n type="button" class="link" (click)="chosenAccount.set(null)">
               Tutti i conti
             </button>
           </div>
@@ -127,14 +133,14 @@ interface Group {
           />
           <div class="chart-keys">
             @if (c.someSaved) {
-              <span><span class="key"></span>Saldi salvati</span>
+              <span i18n><span class="key"></span>Saldi salvati</span>
             }
             @if (c.someEstimated) {
-              <span><span class="key estimate"></span>Stima dai movimenti</span>
+              <span i18n><span class="key estimate"></span>Stima dai movimenti</span>
             }
           </div>
         } @else if (historyReady() && (groups().length > 1 || chartAccount())) {
-          <p class="secondary history-note">
+          <p i18n class="secondary history-note">
             Storico non ancora disponibile per
             {{ chartAccount()?.account?.label ?? chartCurrency() }}.
           </p>
@@ -156,7 +162,7 @@ interface Group {
                 >
                   <span>
                     {{ r.account.label }}
-                    <span class="secondary">al {{ r.date | date: 'd MMM' }}</span>
+                    <span i18n class="secondary">al {{ r.date | localDate: 'dayMonth' }}</span>
                   </span>
                   <strong>{{ r.amount | money: g.currency }}</strong>
                 </button>
@@ -165,12 +171,11 @@ interface Group {
           </ul>
         }
         @if (withoutBalance() > 0) {
-          <p class="secondary missing">
-            {{
-              withoutBalance() === 1
-                ? '1 conto senza saldo non è nel totale'
-                : withoutBalance() + ' conti senza saldo non sono nel totale'
-            }}
+          <p class="secondary missing" i18n>
+            {withoutBalance(), plural,
+              =1 {1 conto senza saldo non è nel totale}
+              other {{{ withoutBalance() }} conti senza saldo non sono nel totale}
+            }
           </p>
         }
       </section>
@@ -312,18 +317,17 @@ export class LiquidityCard implements OnInit {
       currency: h.currency,
       values,
       labels: points.map((p) =>
-        formatDate(p.date, long ? 'MMM yy' : 'd MMM', this.locale).replace('.', ''),
+        formatLocalDate(p.date, long ? 'monthShortYear' : 'dayMonth', this.locale).replace('.', ''),
       ),
-      names: points.map(
-        (p) => formatDate(p.date, 'd MMMM y', this.locale) + (p.estimated ? ' · stima' : ''),
-      ),
+      names: points.map((p) => this.dayName(p.date, p.estimated)),
       estimated,
       someEstimated: trueDays < points.length,
       // Un tratto pieno c'è solo tra due giorni salvati di fila: senza, la voce della legenda non avrebbe niente.
       someSaved: estimated.some((e, i) => !e && i + 1 < estimated.length && !estimated[i + 1]),
-      description:
-        `${this.chartAccount()?.account?.label ?? 'Liquidità'} in ${h.currency} giorno per giorno, dal ` +
-        `${formatDate(points[0].date, 'd MMMM y', this.locale)} a oggi. Le parti tratteggiate sono stimate dai movimenti.`,
+      description: this.description(
+        h.currency,
+        formatLocalDate(points[0].date, 'long', this.locale),
+      ),
     };
   });
 
@@ -337,11 +341,14 @@ export class LiquidityCard implements OnInit {
     if (point === undefined) {
       return null;
     }
-    const day = formatDate(point.date, 'd MMMM y', this.locale);
+    const day = formatLocalDate(point.date, 'long', this.locale);
     return {
       amount: point.amount,
-      day: day + (point.estimated ? ' · stima' : ''),
-      label: `Il ${day}` + (point.estimated ? ' · stima dai movimenti' : ''),
+      day: this.dayName(point.date, point.estimated),
+      // Due frasi intere: in un'altra lingua "Il 3 agosto 2026" non si scrive mettendo "Il" davanti.
+      label: point.estimated
+        ? $localize`Il ${day}:day: · stima dai movimenti`
+        : $localize`Il ${day}:day:`,
     };
   });
 
@@ -359,6 +366,20 @@ export class LiquidityCard implements OnInit {
       },
       error: () => this.history.set(null), // senza storico la scheda resta com'era
     });
+  }
+
+  /** Il nome di un giorno del grafico: "3 agosto 2026", con " · stima" se è stimato dai movimenti. */
+  private dayName(date: string, estimated: boolean): string {
+    const day = formatLocalDate(date, 'long', this.locale);
+    return estimated ? $localize`${day}:day: · stima` : day;
+  }
+
+  /** La descrizione del grafico per chi usa un lettore di schermo: di tutti i conti, o del conto scelto. */
+  private description(currency: string, from: string): string {
+    const account = this.chartAccount()?.account?.label;
+    return account === undefined
+      ? $localize`Liquidità in ${currency}:currency: giorno per giorno, dal ${from}:day: a oggi. Le parti tratteggiate sono stimate dai movimenti.`
+      : $localize`${account}:account: in ${currency}:currency: giorno per giorno, dal ${from}:day: a oggi. Le parti tratteggiate sono stimate dai movimenti.`;
   }
 
   ngOnInit(): void {

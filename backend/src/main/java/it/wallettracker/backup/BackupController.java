@@ -4,6 +4,7 @@ import java.nio.file.Path;
 
 import it.wallettracker.auth.RequestOrigin;
 import it.wallettracker.backup.BackupService.Status;
+import it.wallettracker.message.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * I backup nella dashboard (Impostazioni → Backup, docs/48 parte Q):
@@ -54,8 +54,8 @@ public class BackupController {
     @GetMapping("/{name}")
     public ResponseEntity<Resource> download(@PathVariable String name, HttpServletRequest request) {
         if (!RequestOrigin.isLocal(request)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "I backup si scaricano solo dal server, su http://localhost:8000.");
+            // messaggio: I backup si scaricano solo dal server, su http://localhost:8000.
+            throw new ApiException(HttpStatus.FORBIDDEN, "backup.download-local-only");
         }
         Path file = backups.file(name);
         return ResponseEntity.ok()

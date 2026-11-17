@@ -8,19 +8,19 @@ import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import it.wallettracker.budget.BudgetDto.BudgetStatus;
 import it.wallettracker.category.Category;
 import it.wallettracker.category.CategoryService;
+import it.wallettracker.language.LanguageService;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.BankTransactionRepository.CategoryTotal;
 import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * I budget mensili: elenco con l'andamento del mese, creazione, modifica, cancellazione.
@@ -38,12 +38,14 @@ public class BudgetService {
     private final BudgetRepository budgetRepository;
     private final BankTransactionRepository transactionRepository;
     private final CategoryService categoryService;
+    private final LanguageService languages;
 
     public BudgetService(BudgetRepository budgetRepository, BankTransactionRepository transactionRepository,
-            CategoryService categoryService) {
+            CategoryService categoryService, LanguageService languages) {
         this.budgetRepository = budgetRepository;
         this.transactionRepository = transactionRepository;
         this.categoryService = categoryService;
+        this.languages = languages;
     }
 
     /** I budget con l'andamento del mese {@code month}, in ordine alfabetico di categoria. */
@@ -51,7 +53,7 @@ public class BudgetService {
     public List<BudgetDto> budgets(YearMonth month) {
         Map<String, BigDecimal> spentInMonth = expensesByKey(month, month);
         Map<String, BigDecimal> spentInLast3Months = expensesByKey(month.minusMonths(3), month.minusMonths(1));
-        Collator collator = Collator.getInstance(Locale.ITALIAN);
+        Collator collator = Collator.getInstance(languages.locale()); // l'ordine alfabetico della lingua dell'app
         return budgetRepository.findAll().stream()
                 .sorted(Comparator.comparing((Budget b) -> b.getCategory().getName(), collator)
                         .thenComparing(Budget::getCurrency))
@@ -88,8 +90,8 @@ public class BudgetService {
         boolean sameAsCurrent = current != null
                 && current.getCategory().getId().equals(category.getId()) && current.getCurrency().equals(currency);
         if (!sameAsCurrent && budgetRepository.existsByCategoryAndCurrency(category, currency)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Esiste già un budget per \"" + category.getName() + "\" in " + currency + ".");
+            // messaggio: Esiste già un budget per "{0}" in {1}.
+            throw new ApiException(HttpStatus.CONFLICT, "budget.duplicate", category.getName(), currency);
         }
     }
 
@@ -149,6 +151,7 @@ public class BudgetService {
     }
 
     private Budget find(Long id) {
-        return budgetRepository.findById(id).orElseThrow(() -> new NotFoundException("Budget", id));
+        // messaggio: Budget {0} non trovato
+        return budgetRepository.findById(id).orElseThrow(() -> new NotFoundException("not-found.budget", id));
     }
 }

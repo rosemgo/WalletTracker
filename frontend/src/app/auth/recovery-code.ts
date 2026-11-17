@@ -9,19 +9,24 @@ import { Component, input, output, signal } from '@angular/core';
   selector: 'app-recovery-code',
   template: `
     <div class="card recovery">
-      <h2>Il tuo codice di recupero</h2>
-      <p class="recovery-code" aria-label="Codice di recupero">{{ code() }}</p>
+      <h2 i18n>Il tuo codice di recupero</h2>
+      <p class="recovery-code" aria-label="Codice di recupero" i18n-aria-label>{{ code() }}</p>
       <button type="button" class="link" (click)="copy()">
-        {{ copied() ? 'Copiato ✓' : 'Copia il codice' }}
+        <ng-container i18n>{!!copied(), select,
+          true {Copiato ✓}
+          other {Copia il codice}
+        }</ng-container>
       </button>
-      <p class="hint">
+      <p i18n class="hint">
         Se dimentichi il PIN, con questo codice ne scegli uno nuovo, anche da un dispositivo remoto.
         Salvalo adesso dove salvi le cose importanti (un gestore di password, un foglio in un
         cassetto):
         <strong>non lo vedrai più</strong>. Vale una volta sola: dopo l'uso, l'app te ne dà uno
         nuovo.
       </p>
-      <button type="button" class="primary" (click)="saved.emit()">L'ho salvato, continua</button>
+      <button i18n type="button" class="primary" (click)="saved.emit()">
+        L'ho salvato, continua
+      </button>
     </div>
   `,
 })

@@ -23,6 +23,9 @@ import it.wallettracker.csvimport.ImportDtos.Preview;
 import it.wallettracker.csvimport.ImportDtos.PreviewRow;
 import it.wallettracker.csvimport.RowReader.ParsedRow;
 import it.wallettracker.csvimport.RowReader.RowException;
+import it.wallettracker.message.ApiException;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageException;
 import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionStatus;
@@ -30,7 +33,6 @@ import it.wallettracker.web.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -84,8 +86,9 @@ public class CsvImportService {
     }
 
     /** Il messaggio per un conto collegato che non ha ancora movimenti dalla banca: non si sa da che giorno li porta. */
-    private static final String NO_BANK_MOVEMENTS = "Questo conto non ha ancora movimenti arrivati dalla banca: "
-            + "aggiornalo prima (pagina Conti), così si sa da quale giorno li porta la banca e quali aggiungere dal file.";
+    // messaggio: Questo conto non ha ancora movimenti arrivati dalla banca: aggiornalo prima (pagina Conti), così si
+    //            sa da quale giorno li porta la banca e quali aggiungere dal file.
+    private static final String NO_BANK_MOVEMENTS = "import.no-bank-movements";
 
     /**
      * Il file letto: intestazione, righe, separatore.
@@ -119,7 +122,7 @@ public class CsvImportService {
      * @param skipped le righe saltate perché non muovono denaro (le operazioni sui titoli di Trade Republic)
      * @param tradeRepublic il file di Trade Republic così come lo legge TradeRepublicCsv, o null per gli altri file
      */
-    private record Reading(List<ParsedRow> parsed, List<List<String>> rawRows, int errorCount, List<String> errors,
+    private record Reading(List<ParsedRow> parsed, List<List<String>> rawRows, int errorCount, List<Message> errors,
             List<String> fileIds, int skipped, TradeRepublicCsv.Reading tradeRepublic) {
 
         /** Il file di Trade Republic, senza errori e con righe di denaro: in un conto collegato si completa. */
@@ -132,7 +135,8 @@ public class CsvImportService {
     @Transactional(readOnly = true)
     public Preview preview(byte[] content, ImportMapping mapping, Long accountId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Conto", accountId));
+                // messaggio: Conto {0} non trovato
+                .orElseThrow(() -> new NotFoundException("not-found.account", accountId));
         CsvFile file = read(content, mapping);
         List<List<String>> samples = file.rows().subList(0, Math.min(file.rows().size(), PREVIEW_ROWS));
         ImportMapping used = mapping != null ? mapping
@@ -144,9 +148,9 @@ public class CsvImportService {
         Reading reading;
         try {
             reading = readRows(file, used, account.getCurrency());
-        } catch (ResponseStatusException e) {
+        } catch (ApiException e) {
             return new Preview(file.headers(), samples, file.rows().size(), used, List.of(), file.rows().size(),
-                    List.of(e.getReason()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0, 0, List.of(), List.of());
+                    List.of(e.message()), file.spreadsheet(), linked, bankFrom, 0, 0, 0, file.tradeRepublic(), 0, 0, List.of(), List.of());
         }
         if (linked && reading.completable()) {
             return completionPreview(file, samples, used, completionPlan(account, reading), reading.skipped());
@@ -179,7 +183,7 @@ public class CsvImportService {
     private CompletionService.Plan completionPlan(Account account, Reading reading) {
         CompletionService.Plan plan = completionService.plan(account, reading.tradeRepublic());
         if (plan.bankFrom() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NO_BANK_MOVEMENTS);
+            throw new ApiException(HttpStatus.BAD_REQUEST, NO_BANK_MOVEMENTS);
         }
         return plan;
     }
@@ -213,12 +217,13 @@ public class CsvImportService {
     @Transactional
     public ImportResult importFile(byte[] content, Long accountId, ImportMapping mapping) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Conto", accountId));
+                // messaggio: Conto {0} non trovato
+                .orElseThrow(() -> new NotFoundException("not-found.account", accountId));
         CsvFile file = read(content, mapping);
         Reading reading = readRows(file, mapping, account.getCurrency());
         if (reading.errorCount() > 0) {
-            throw new ImportRejectedException(reading.errorCount() + " righe non si possono leggere: correggi la "
-                    + "mappatura o il file. Non è stato importato niente.", reading.errors());
+            // messaggio: {0} righe non si possono leggere: correggi la mappatura o il file. Non è stato importato niente.
+            throw new ImportRejectedException(Message.of("import.rejected", reading.errorCount()), reading.errors());
         }
         if (!account.isManual() && reading.completable()) {
             // Il file di Trade Republic in un conto collegato: si completa (parti I e J).
@@ -277,7 +282,7 @@ public class CsvImportService {
         if (linked) {
             bankFrom = bankFrom(account);
             if (bankFrom == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NO_BANK_MOVEMENTS);
+                throw new ApiException(HttpStatus.BAD_REQUEST, NO_BANK_MOVEMENTS);
             }
             edge = transactionRepository.findByAccountAndStatusAndBookingDateBetweenOrderByBookingDateAscIdAsc(
                     account, TransactionStatus.BOOKED, bankFrom, bankFrom.plusDays(DAYS_TOLERANCE)).stream()
@@ -339,8 +344,9 @@ public class CsvImportService {
      */
     private static CsvFile read(byte[] content, ImportMapping mapping) {
         if (SpreadsheetReader.isOldExcel(content)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "È un file Excel del vecchio formato (.xls): "
-                    + "aprilo con Excel e salvalo come .xlsx, oppure come CSV.");
+            // messaggio: È un file Excel del vecchio formato (.xls): aprilo con Excel e salvalo come .xlsx, oppure
+            //            come CSV.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "import.old-excel");
         }
         boolean spreadsheet = SpreadsheetReader.isSpreadsheet(content);
         char delimiter;
@@ -354,17 +360,18 @@ public class CsvImportService {
                 delimiter = mapping != null ? mapping.delimiterChar() : CsvReader.detectDelimiter(text);
                 all = CsvReader.read(text, delimiter);
             }
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (MessageException e) {
+            // Chi legge il file non sa di HTTP: dice solo che cosa non va. Qui diventa una risposta 400.
+            throw new ApiException(HttpStatus.BAD_REQUEST, e.message());
         }
         int header = ColumnGuesser.headerRow(all);
         if (all.size() - header < 2) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il file deve avere una riga di intestazione e almeno un movimento.");
+            // messaggio: Il file deve avere una riga di intestazione e almeno un movimento.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "import.too-few-rows");
         }
         if (all.size() - header - 1 > MAX_ROWS) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Il file ha troppe righe: al massimo " + MAX_ROWS + ".");
+            // messaggio: Il file ha troppe righe: al massimo {0}.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "import.too-many-rows", MAX_ROWS);
         }
         List<String> headers = all.get(header);
         return new CsvFile(delimiter, headers, all.subList(header + 1, all.size()), header + 1, spreadsheet,
@@ -382,7 +389,7 @@ public class CsvImportService {
         checkColumns(mapping, file.headers().size());
         List<ParsedRow> parsed = new ArrayList<>();
         List<List<String>> rawRows = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        List<Message> errors = new ArrayList<>();
         List<String> fileIds = new ArrayList<>();
         int errorCount = 0;
         for (int i = 0; i < file.rows().size(); i++) {
@@ -393,7 +400,8 @@ public class CsvImportService {
             } catch (RowException e) {
                 errorCount++;
                 if (errors.size() < MAX_ERRORS) {
-                    errors.add("Riga " + (file.headerLine() + i + 1) + ": " + e.getMessage() + ".");
+                    // messaggio: Riga {0}: {1}.   ({1} è il motivo: "manca la data", "l'importo ... non è un numero")
+                    errors.add(Message.of("import.row-error", file.headerLine() + i + 1, e.message()));
                 }
             }
         }
@@ -416,38 +424,40 @@ public class CsvImportService {
             rawRows.add(file.rows().get(row.line() - file.headerLine() - 1));
             fileIds.add(row.transactionId());
         }
-        List<String> errors = read.errors().subList(0, Math.min(read.errors().size(), MAX_ERRORS));
+        List<Message> errors = read.errors().subList(0, Math.min(read.errors().size(), MAX_ERRORS));
         return new Reading(parsed, rawRows, read.errors().size(), errors, fileIds, read.skipped(), read);
     }
 
     /** Le colonne indispensabili devono essere indicate, e ogni colonna indicata deve esistere nel file. */
     private static void checkColumns(ImportMapping mapping, int columns) {
         if (mapping.dateColumn() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica la colonna della data.");
+            // messaggio: Indica la colonna della data.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "import.mapping.no-date");
         }
         List<Integer> used = new ArrayList<>();
         used.add(mapping.dateColumn());
         if (mapping.amountMode() == ImportMapping.AmountMode.SINGLE) {
             if (mapping.amountColumn() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica la colonna dell'importo.");
+                // messaggio: Indica la colonna dell'importo.
+                throw new ApiException(HttpStatus.BAD_REQUEST, "import.mapping.no-amount");
             }
             used.add(mapping.amountColumn());
         } else if (mapping.amountMode() == ImportMapping.AmountMode.UNSIGNED) {
             // Senza segno: l'importo, la colonna in cui cercare le parole e almeno una parola (docs/tinaba.md).
             if (mapping.amountColumn() == null || mapping.signColumn() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Indica la colonna dell'importo e quella in cui cercare le parole delle entrate.");
+                // messaggio: Indica la colonna dell'importo e quella in cui cercare le parole delle entrate.
+                throw new ApiException(HttpStatus.BAD_REQUEST, "import.mapping.no-sign-column");
             }
             if (mapping.incomeWordList().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Scrivi almeno una parola delle entrate (per esempio \"ricevuto\").");
+                // messaggio: Scrivi almeno una parola delle entrate (per esempio "ricevuto").
+                throw new ApiException(HttpStatus.BAD_REQUEST, "import.mapping.no-income-words");
             }
             used.add(mapping.amountColumn());
             used.add(mapping.signColumn());
         } else {
             if (mapping.incomeColumn() == null || mapping.expenseColumn() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Indica le colonne delle entrate e delle uscite.");
+                // messaggio: Indica le colonne delle entrate e delle uscite.
+                throw new ApiException(HttpStatus.BAD_REQUEST, "import.mapping.no-split-columns");
             }
             used.add(mapping.incomeColumn());
             used.add(mapping.expenseColumn());
@@ -457,8 +467,8 @@ public class CsvImportService {
         used.add(mapping.currencyColumn());
         for (Integer column : used) {
             if (column != null && column >= columns) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Il file ha " + columns + " colonne: la colonna " + (column + 1) + " non esiste.");
+                // messaggio: Il file ha {0} colonne: la colonna {1} non esiste.
+                throw new ApiException(HttpStatus.BAD_REQUEST, "import.mapping.column-missing", columns, column + 1);
             }
         }
     }

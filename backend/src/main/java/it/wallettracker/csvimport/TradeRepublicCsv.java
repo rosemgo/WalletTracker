@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.MessageException;
 
 /**
  * Il file "Esportazione transazioni" di Trade Republic (docs/31). A differenza degli estratti conto delle banche
@@ -50,7 +52,7 @@ final class TradeRepublicCsv {
     }
 
     /** Le righe lette, quelle saltate perché non muovono denaro, e gli errori. */
-    record Reading(List<Row> rows, int skipped, List<String> errors) {
+    record Reading(List<Row> rows, int skipped, List<Message> errors) {
     }
 
     /** Il formato di una data letta da un file Excel (SpreadsheetReader). */
@@ -74,7 +76,7 @@ final class TradeRepublicCsv {
     static Reading read(List<String> headers, List<List<String>> rows, int headerLine) {
         List<String> names = headers.stream().map(TradeRepublicCsv::normalized).toList();
         List<Row> read = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        List<Message> errors = new ArrayList<>();
         int skipped = 0;
         for (int i = 0; i < rows.size(); i++) {
             int line = headerLine + 1 + i;
@@ -96,8 +98,9 @@ final class TradeRepublicCsv {
                 }
                 read.add(new Row(line, cells.date("date"), net, cells.required("currency"), cells.get("type"),
                         cells.get("description"), counterparty, cells.get("transaction_id"), cells.asMap()));
-            } catch (IllegalArgumentException e) {
-                errors.add("Riga " + line + ": " + e.getMessage() + ".");
+            } catch (MessageException e) {
+                // messaggio: Riga {0}: {1}.
+                errors.add(Message.of("import.row-error", line, e.message()));
             }
         }
         return new Reading(read, skipped, errors);
@@ -122,7 +125,8 @@ final class TradeRepublicCsv {
         String required(String column) {
             String value = get(column);
             if (value == null) {
-                throw new IllegalArgumentException("manca " + column);
+                // messaggio: manca {0}
+                throw new MessageException(Message.of("import.trade-republic.missing", column));
             }
             return value;
         }
@@ -145,7 +149,8 @@ final class TradeRepublicCsv {
             try {
                 return new BigDecimal(value);
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(column + " \"" + value + "\" non è un numero");
+                // messaggio: {0} "{1}" non è un numero
+                throw new MessageException(Message.of("import.trade-republic.not-a-number", column, value));
             }
         }
 
@@ -158,7 +163,8 @@ final class TradeRepublicCsv {
             try {
                 return value.contains("/") ? LocalDate.parse(value, SPREADSHEET_DATE) : LocalDate.parse(value);
             } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException(column + " \"" + value + "\" non è una data");
+                // messaggio: {0} "{1}" non è una data
+                throw new MessageException(Message.of("import.trade-republic.not-a-date", column, value));
             }
         }
     }

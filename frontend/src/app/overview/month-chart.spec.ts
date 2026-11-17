@@ -78,8 +78,9 @@ describe('MonthChart', () => {
     const { chart } = await render([0, 1800], [0, 2000]);
     const labels = Array.from(chart.querySelectorAll('text')).map((t) => t.textContent?.trim());
 
-    expect(labels).toContain('1.000 €');
-    expect(labels).toContain('2.000 €');
+    // \s: tra la cifra e il simbolo Angular mette uno spazio che non va a capo.
+    expect(labels.some((label) => /^1\.000\s€$/.test(label ?? ''))).toBe(true);
+    expect(labels.some((label) => /^2\.000\s€$/.test(label ?? ''))).toBe(true);
   });
 
   it('with the arrow keys moves along the days and tells the amount of each', async () => {

@@ -49,7 +49,7 @@ export class CategoriesPage implements OnInit {
     const { name, kind } = this.form.getRawValue();
     this.api.createCategory({ name: name.trim(), kind }).subscribe({
       next: (category) => {
-        this.done(`Categoria "${category.name}" aggiunta.`);
+        this.done($localize`Categoria "${category.name}:name:" aggiunta.`);
         this.form.reset({ name: '', kind });
       },
       error: (response) => this.fail(response),
@@ -67,7 +67,7 @@ export class CategoriesPage implements OnInit {
       next: () => {
         this.renaming.set(null);
         this.done(
-          `"${category.name}" ora si chiama "${name}": movimenti, regole e budget sono aggiornati.`,
+          $localize`"${category.name}:name:" ora si chiama "${name}:name2:": movimenti, regole e budget sono aggiornati.`,
         );
       },
       error: (response) => this.fail(response),
@@ -77,7 +77,8 @@ export class CategoriesPage implements OnInit {
   /** Sposta una categoria in un altro gruppo. */
   changeKind(category: Category, kind: CategoryKind): void {
     this.api.updateCategory(category.id, { name: category.name, kind }).subscribe({
-      next: () => this.done(`"${category.name}" spostata in "${KIND_LABELS[kind]}".`),
+      next: () =>
+        this.done($localize`"${category.name}:name:" spostata in "${KIND_LABELS[kind]}:value:".`),
       error: (response) => this.fail(response),
     });
   }
@@ -86,7 +87,7 @@ export class CategoriesPage implements OnInit {
     this.api.deleteCategory(category.id).subscribe({
       next: () => {
         this.confirmingDelete.set(null);
-        this.done(`Categoria "${category.name}" eliminata.`);
+        this.done($localize`Categoria "${category.name}:name:" eliminata.`);
       },
       error: (response) => {
         this.confirmingDelete.set(null);
@@ -107,13 +108,14 @@ export class CategoriesPage implements OnInit {
 
   private fail(response: { error?: { detail?: string } }): void {
     this.message.set(null);
-    this.error.set(response.error?.detail ?? 'Operazione non riuscita.');
+    this.error.set(response.error?.detail ?? $localize`Operazione non riuscita.`);
   }
 
   private load(): void {
     this.api.categories().subscribe({
       next: (categories) => this.categories.set(categories),
-      error: () => this.error.set('Impossibile caricare le categorie: il backend è avviato?'),
+      error: () =>
+        this.error.set($localize`Impossibile caricare le categorie: il backend è avviato?`),
     });
   }
 }

@@ -8,10 +8,10 @@ import { Category, CategoryKind, TransactionType } from './models';
 
 /** Come si chiama ogni gruppo nei menu (l'elemento HTML <optgroup>). */
 export const KIND_LABELS: Record<CategoryKind, string> = {
-  EXPENSE: 'Categorie di spesa',
-  INCOME: 'Categorie di entrata',
-  INVESTMENT: 'Categorie di investimento',
-  OTHER: 'Altre categorie',
+  EXPENSE: $localize`Categorie di spesa`,
+  INCOME: $localize`Categorie di entrata`,
+  INVESTMENT: $localize`Categorie di investimento`,
+  OTHER: $localize`Altre categorie`,
 };
 
 export const KINDS = Object.keys(KIND_LABELS) as CategoryKind[];
@@ -54,14 +54,14 @@ export function needsCategory(type: TransactionType | null): boolean {
 
 /** "Per un acquisto di titoli non serve una categoria": come dirlo per ogni tipo che non ne ha bisogno. */
 export const WITHOUT_CATEGORY: Partial<Record<TransactionType, string>> = {
-  SECURITIES_BUY: 'un acquisto di titoli',
-  SECURITIES_SELL: 'una vendita di titoli',
-  INVESTMENT_DEPOSIT: 'un versamento negli investimenti',
-  INVESTMENT_WITHDRAWAL: 'un prelievo dagli investimenti',
-  INTERNAL_TRANSFER: 'un trasferimento tra i tuoi conti',
-  CARD_SETTLEMENT: 'il saldo della carta di credito',
-  IGNORED: 'un movimento ignorato',
-  WITHHOLDING_TAX: 'una ritenuta', // docs/investimenti.md, parte T: il tipo dice già tutto
+  SECURITIES_BUY: $localize`un acquisto di titoli`,
+  SECURITIES_SELL: $localize`una vendita di titoli`,
+  INVESTMENT_DEPOSIT: $localize`un versamento negli investimenti`,
+  INVESTMENT_WITHDRAWAL: $localize`un prelievo dagli investimenti`,
+  INTERNAL_TRANSFER: $localize`un trasferimento tra i tuoi conti`,
+  CARD_SETTLEMENT: $localize`il saldo della carta di credito`,
+  IGNORED: $localize`un movimento ignorato`,
+  WITHHOLDING_TAX: $localize`una ritenuta`, // docs/investimenti.md, parte T: il tipo dice già tutto
 };
 
 /** Un gruppo pronto per un <optgroup>: il titolo e le sue categorie. */

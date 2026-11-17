@@ -3,6 +3,9 @@ package it.wallettracker.auth;
 import java.time.Duration;
 import java.util.List;
 
+import it.wallettracker.message.ApiException;
+import it.wallettracker.message.Message;
+import it.wallettracker.message.Messages;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -20,7 +23,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Le richieste per entrare (docs/46, parte D). Sono le uniche API raggiungibili senza sessione ({@link SecurityConfig}).
@@ -44,10 +46,12 @@ public class AuthController {
 
     private final PinService pins;
     private final SecurityContextRepository contextRepository;
+    private final Messages messages;
 
-    public AuthController(PinService pins, SecurityContextRepository contextRepository) {
+    public AuthController(PinService pins, SecurityContextRepository contextRepository, Messages messages) {
         this.pins = pins;
         this.contextRepository = contextRepository;
+        this.messages = messages;
     }
 
     /**
@@ -83,14 +87,16 @@ public class AuthController {
 
     @PostMapping("/no-pin")
     public ResponseEntity<Void> withoutPin(HttpServletRequest request) {
-        requireLocal(request, "La scelta si fa solo dal server, il computer su cui è installata l'app.");
+        // messaggio: La scelta si fa solo dal server, il computer su cui è installata l'app.
+        requireLocal(request, "auth.local-only.choice");
         pins.chooseWithoutPin();
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/pin")
     public RecoveryCode create(@RequestBody PinRequest body, HttpServletRequest request, HttpServletResponse response) {
-        requireLocal(request, "Il PIN si crea solo dal server, il computer su cui è installata l'app (http://localhost:8000).");
+        // messaggio: Il PIN si crea solo dal server, il computer su cui è installata l'app (http://localhost:8000).
+        requireLocal(request, "auth.local-only.create-pin");
         PinService.Created created = pins.createPin(body.pin());
         openSession(created.generation(), request, response);
         return new RecoveryCode(created.recoveryCode());
@@ -99,26 +105,30 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody PinRequest body, HttpServletRequest request,
             HttpServletResponse response) {
-        return answer(pins.check(body.pin()), "PIN sbagliato", request, response);
+        // messaggio: PIN sbagliato. Ancora 1 tentativo prima di una pausa. (oppure: Ancora {0} tentativi)
+        return answer(pins.check(body.pin()), "auth.wrong-pin", request, response);
     }
 
     /** Il PIN dimenticato. Da qualsiasi dispositivo: senza il codice non serve a niente, e conta come un errore. */
     @PostMapping("/recover")
     public ResponseEntity<?> recover(@RequestBody RecoverRequest body, HttpServletRequest request,
             HttpServletResponse response) {
-        return answer(pins.recover(body.code(), body.pin()), "Codice di recupero sbagliato", request, response);
+        // messaggio: Codice di recupero sbagliato. Ancora 1 tentativo prima di una pausa. (oppure: Ancora {0} tentativi)
+        return answer(pins.recover(body.code(), body.pin()), "auth.wrong-recovery-code", request, response);
     }
 
     /** Toglie il PIN. Solo dal PC: dal telefono, senza PIN, non si entrerebbe più. */
     @PostMapping("/pin/remove")
     public ResponseEntity<?> remove(@RequestBody PinRequest body, HttpServletRequest request) {
-        requireLocal(request, "Il PIN si toglie solo dal server, il computer su cui è installata l'app.");
+        // messaggio: Il PIN si toglie solo dal server, il computer su cui è installata l'app.
+        requireLocal(request, "auth.local-only.remove-pin");
         PinService.Attempt attempt = pins.removePin(body.pin());
         if (attempt instanceof PinService.Attempt.Correct) {
             closeSession(request); // dal PC si entra ora senza PIN; le altre sessioni le chiude la generazione
             return ResponseEntity.noContent().build();
         }
-        return answer(attempt, "PIN sbagliato", request, null);
+        // messaggio: PIN sbagliato. Ancora 1 tentativo prima di una pausa. (oppure: Ancora {0} tentativi)
+        return answer(attempt, "auth.wrong-pin", request, null);
     }
 
     /** Esce: la sessione si chiude, e il cookie che la indicava non vale più niente. */
@@ -129,7 +139,7 @@ public class AuthController {
     }
 
     /** La risposta a un tentativo: 200/204 dentro, 401 sbagliato (quanti ne restano), 429 in pausa (quanto manca). */
-    private ResponseEntity<?> answer(PinService.Attempt attempt, String wrongMessage, HttpServletRequest request,
+    private ResponseEntity<?> answer(PinService.Attempt attempt, String wrongCode, HttpServletRequest request,
             HttpServletResponse response) {
         return switch (attempt) {
             case PinService.Attempt.Correct correct -> {
@@ -140,16 +150,19 @@ public class AuthController {
                         : ResponseEntity.ok(new RecoveryCode(correct.recoveryCode()));
             }
             case PinService.Attempt.Wrong wrong -> {
+                // Il singolare e il plurale ("1 tentativo", "3 tentativi") li sceglie la frase del catalogo, dal numero.
                 ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,
-                        wrongMessage + ". " + (wrong.attemptsLeft() == 1 ? "Ancora 1 tentativo"
-                                : "Ancora " + wrong.attemptsLeft() + " tentativi") + " prima di una pausa.");
+                        messages.text(wrongCode, wrong.attemptsLeft()));
+                problem.setProperty("code", wrongCode);
                 problem.setProperty("attemptsLeft", wrong.attemptsLeft());
                 yield ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem);
             }
             case PinService.Attempt.Locked locked -> {
                 long seconds = Math.max(1, locked.retryAfter().toSeconds());
+                // messaggio: Troppi tentativi sbagliati: riprova tra {0}.
                 ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
-                        "Troppi tentativi sbagliati: riprova tra " + readable(locked.retryAfter()) + ".");
+                        messages.text("auth.too-many-attempts", readable(locked.retryAfter())));
+                problem.setProperty("code", "auth.too-many-attempts");
                 problem.setProperty("retryAfterSeconds", seconds);
                 yield ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                         .header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds))
@@ -185,22 +198,25 @@ public class AuthController {
         SecurityContextHolder.clearContext();
     }
 
-    private static void requireLocal(HttpServletRequest request, String message) {
+    private static void requireLocal(HttpServletRequest request, String code) {
         if (!RequestOrigin.isLocal(request)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, message);
+            throw new ApiException(HttpStatus.FORBIDDEN, code);
         }
     }
 
     /** "45 secondi", "1 minuto", "15 minuti", "1 ora". */
-    private static String readable(Duration wait) {
+    private static Message readable(Duration wait) {
         long seconds = Math.max(1, wait.toSeconds());
         if (seconds < 60) {
-            return seconds == 1 ? "1 secondo" : seconds + " secondi";
+            // messaggio: 1 secondo (oppure: {0} secondi)
+            return Message.of("duration.seconds", seconds);
         }
         long minutes = (seconds + 59) / 60;
         if (minutes < 60) {
-            return minutes == 1 ? "1 minuto" : minutes + " minuti";
+            // messaggio: 1 minuto (oppure: {0} minuti)
+            return Message.of("duration.minutes", minutes);
         }
-        return "1 ora";
+        // messaggio: 1 ora
+        return Message.of("duration.one-hour");
     }
 }

@@ -13,6 +13,7 @@ import {
   Transaction,
 } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { plural } from '../text/plural';
 import { merchantSearch } from '../transactions/merchant-search';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { PrivacyStore } from '../privacy/privacy-store';
@@ -27,25 +28,25 @@ const SAME_AS_USUAL = 5;
 
 // Le scelte, con le parole che usa la pagina e quelle dell'indirizzo (/analisi?cosa=entrate&periodo=anno).
 export const METRICS: { value: Metric; label: string; slug: string }[] = [
-  { value: 'EXPENSES', label: 'Spese', slug: 'spese' },
-  { value: 'INCOME', label: 'Entrate', slug: 'entrate' },
-  { value: 'NET', label: 'Netto', slug: 'netto' },
+  { value: 'EXPENSES', label: $localize`Spese`, slug: 'spese' },
+  { value: 'INCOME', label: $localize`Entrate`, slug: 'entrate' },
+  { value: 'NET', label: $localize`Netto`, slug: 'netto' },
 ];
 // Come in tutte le barre dei periodi (Investimenti, il grafico di una categoria): prima "Quest'anno", la scelta di serie,
 // poi "12 mesi", poi gli altri allontanandosi dai 12 mesi.
 export const PERIODS: { value: ExplorePeriod; label: string; slug: string }[] = [
   // L'anno in corso, da gennaio a oggi (YTD).
-  { value: 'YEAR_TO_DATE', label: "Quest'anno", slug: 'questanno' },
+  { value: 'YEAR_TO_DATE', label: $localize`Quest'anno`, slug: 'questanno' },
   // "anno" resta nell'indirizzo per i link già salvati: sono gli ultimi 12 mesi.
-  { value: 'YEAR', label: '12 mesi', slug: 'anno' },
-  { value: 'SIX_MONTHS', label: '6 mesi', slug: '6mesi' },
-  { value: 'MONTH', label: 'Mese', slug: 'mese' },
-  { value: 'WEEK', label: 'Settimana', slug: 'settimana' },
+  { value: 'YEAR', label: $localize`12 mesi`, slug: 'anno' },
+  { value: 'SIX_MONTHS', label: $localize`6 mesi`, slug: '6mesi' },
+  { value: 'MONTH', label: $localize`Mese`, slug: 'mese' },
+  { value: 'WEEK', label: $localize`Settimana`, slug: 'settimana' },
 ];
 export const GROUPINGS: { value: GroupBy; label: string; slug: string }[] = [
-  { value: 'CATEGORY', label: 'Categoria', slug: 'categoria' },
-  { value: 'MERCHANT', label: 'Esercente', slug: 'esercente' },
-  { value: 'ACCOUNT', label: 'Conto', slug: 'conto' },
+  { value: 'CATEGORY', label: $localize`Categoria`, slug: 'categoria' },
+  { value: 'MERCHANT', label: $localize`Esercente`, slug: 'esercente' },
+  { value: 'ACCOUNT', label: $localize`Conto`, slug: 'conto' },
 ];
 
 /** Una riga dell'elenco, già messa in parole. */
@@ -166,16 +167,18 @@ export class ExplorePage implements OnInit {
         return '';
       }
       const sum = (list: ExploreGroup[]) => list.reduce((t, x) => t + x.amount, 0);
-      return `Entrate ${this.euros(sum(g.income), s.currency)} · Uscite ${this.euros(sum(g.expenses), s.currency)}`;
+      return $localize`Entrate ${this.euros(sum(g.income), s.currency)}:amount: · Uscite ${this.euros(sum(g.expenses), s.currency)}:amount2:`;
     }
     return s.averagePerUnit === null
       ? ''
-      : `Di solito ${this.euros(s.averagePerUnit, s.currency)} ${perUnit(s.unit)}`;
+      : $localize`Di solito ${this.euros(s.averagePerUnit, s.currency)}:amount: ${perUnit(s.unit)}:perUnit:`;
   });
 
   protected readonly averageLabel = computed(() => {
     const s = this.series();
-    return s?.averagePerUnit == null ? '' : `media ${this.euros(s.averagePerUnit, s.currency)}`;
+    return s?.averagePerUnit == null
+      ? ''
+      : $localize`media ${this.euros(s.averagePerUnit, s.currency)}:amount:`;
   });
 
   protected readonly chartDescription = computed(() => {
@@ -190,8 +193,8 @@ export class ExplorePage implements OnInit {
   protected readonly incomeRows = computed(() => this.toRows(this.groups()?.income ?? []));
   protected readonly expenseRows = computed(() => this.toRows(this.groups()?.expenses ?? []));
   protected readonly netSections = computed(() => [
-    { title: 'Entrate', rows: this.incomeRows() },
-    { title: 'Uscite', rows: this.expenseRows() },
+    { title: $localize`Entrate`, rows: this.incomeRows() },
+    { title: $localize`Uscite`, rows: this.expenseRows() },
   ]);
 
   /** I movimenti della categoria scelta, giorno per giorno. */
@@ -269,7 +272,10 @@ export class ExplorePage implements OnInit {
     this.by.set(find(GROUPINGS, q.get('per')) ?? 'CATEGORY');
     const categoryId = Number(q.get('categoria'));
     if (Number.isInteger(categoryId) && categoryId > 0) {
-      this.category.set({ id: categoryId, name: (q.get('nome') ?? 'Categoria').slice(0, 100) });
+      this.category.set({
+        id: categoryId,
+        name: (q.get('nome') ?? $localize`Categoria`).slice(0, 100),
+      });
       if (this.by() === 'CATEGORY') {
         this.by.set('MERCHANT'); // come quando la si sceglie toccandola
       }
@@ -387,8 +393,8 @@ export class ExplorePage implements OnInit {
           if (request === this.lastSeries) {
             this.error.set(
               response.status === 400
-                ? (response.error?.detail ?? 'Richiesta non valida.')
-                : "Impossibile caricare l'analisi: il backend è avviato?",
+                ? (response.error?.detail ?? $localize`Richiesta non valida.`)
+                : $localize`Impossibile caricare l'analisi: il backend è avviato?`,
             );
             this.loading.set(false);
           }
@@ -428,7 +434,7 @@ export class ExplorePage implements OnInit {
             this.groups.set(null);
             this.groupsLoading.set(false);
             this.error.set(
-              response.error?.detail ?? 'Impossibile caricare i movimenti del periodo.',
+              response.error?.detail ?? $localize`Impossibile caricare i movimenti del periodo.`,
             );
           }
         },
@@ -483,7 +489,9 @@ export class ExplorePage implements OnInit {
     const highest = Math.max(1, ...groups.map((g) => g.amount));
     return groups.map((group) => ({
       group,
-      name: group.name ?? (this.by() === 'CATEGORY' ? 'Senza categoria' : 'Senza descrizione'),
+      name:
+        group.name ??
+        (this.by() === 'CATEGORY' ? $localize`Senza categoria` : $localize`Senza descrizione`),
       share: total > 0 ? `${Math.round((Math.max(0, group.amount) / total) * 100)}%` : '',
       note: this.privacy.hide(groupNote(group, (v) => this.euros(v, currency))), // anche il segno (docs/42)
       width: Math.max(0, (group.amount / highest) * 100),
@@ -507,13 +515,16 @@ export class ExplorePage implements OnInit {
 
 /** La riga sotto un gruppo: la differenza dal solito, o quanti movimenti. Esportata per i test. */
 export function groupNote(group: ExploreGroup, euros: (v: number) => string): string {
-  const count = group.movements === 1 ? '1 movimento' : `${group.movements} movimenti`;
+  const count = plural(group.movements, {
+    one: $localize`1 movimento`,
+    other: $localize`${group.movements}:movements: movimenti`,
+  });
   if (group.usual === null) {
     return count;
   }
   const difference = group.amount - group.usual;
   if (Math.abs(difference) < SAME_AS_USUAL) {
-    return `${count} · come al solito`;
+    return $localize`${count}:count: · come al solito`;
   }
-  return `${count} · ${difference > 0 ? '+' : '−'}${euros(Math.abs(difference))} sul solito`;
+  return $localize`${count}:count: · ${difference > 0 ? '+' : '−'}:value:${euros(Math.abs(difference))}:amount: sul solito`;
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import it.wallettracker.message.Message;
 
 /**
  * Un avviso per la dashboard.
@@ -20,7 +21,7 @@ import java.util.List;
  * @param date     la scadenza del consenso, altrimenti null
  * @param daysLeft i giorni che mancano alla scadenza (negativo = scaduto da tanti giorni), altrimenti null
  * @param items    le categorie dei budget superati, altrimenti vuoto
- * @param message  il motivo dell'errore di sincronizzazione, altrimenti null
+ * @param message  il motivo dell'errore di sincronizzazione (nella risposta: la sua frase), altrimenti null
  * @param mismatch i saldi che non tornano con i movimenti (docs/saldi.md, parte N), altrimenti null
  */
 public record AlertDto(
@@ -32,12 +33,12 @@ public record AlertDto(
         Instant date,
         Long daysLeft,
         List<String> items,
-        String message,
+        Message message,
         Mismatch mismatch) {
 
     /** Un avviso senza i dati di un saldo che non torna: tutti tranne BALANCE_MISMATCH. */
     public AlertDto(AlertKind kind, Severity severity, String bank, String country, String account, Instant date,
-            Long daysLeft, List<String> items, String message) {
+            Long daysLeft, List<String> items, Message message) {
         this(kind, severity, bank, country, account, date, daysLeft, items, message, null);
     }
 

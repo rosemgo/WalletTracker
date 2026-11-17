@@ -11,13 +11,13 @@ import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
 import it.wallettracker.bank.enablebanking.EnableBankingApi.Aspsp;
 import it.wallettracker.bank.enablebanking.EnableBankingClient;
+import it.wallettracker.message.ApiException;
 import it.wallettracker.web.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * I loghi dei conti (docs/loghi.md): quello della banca per i conti collegati, scaricato una volta; quello caricato
@@ -99,8 +99,9 @@ public class LogoService {
     @Transactional
     public AccountLogo upload(Long accountId, byte[] data, Instant now) {
         Account account = manual(accountId);
-        String type = LogoImage.typeOf(data, false).orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.BAD_REQUEST, "Il logo deve essere un'immagine PNG, JPEG o WebP, al massimo di 256 KB."));
+        // messaggio: Il logo deve essere un'immagine PNG, JPEG o WebP, al massimo di 256 KB.
+        String type = LogoImage.typeOf(data, false).orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST,
+                "logo.invalid-image"));
         return logoRepository.save(new AccountLogo(account.getId(), AccountLogo.Source.UPLOAD, type, data, now));
     }
 
@@ -113,10 +114,11 @@ public class LogoService {
 
     private Account manual(Long accountId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new NotFoundException("Conto", accountId));
+                // messaggio: Conto {0} non trovato
+                .orElseThrow(() -> new NotFoundException("not-found.account", accountId));
         if (!account.isManual()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Il logo di un conto collegato è quello della banca: si carica solo per un conto manuale.");
+            // messaggio: Il logo di un conto collegato è quello della banca: si carica solo per un conto manuale.
+            throw new ApiException(HttpStatus.CONFLICT, "logo.linked-account");
         }
         return account;
     }

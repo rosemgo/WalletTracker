@@ -14,7 +14,9 @@
 #      (che rinvia a .../releases/tag/v0.9.1), scarica dagli indirizzi ricavati, e rifiuta lo ZIP per l'impronta;
 #   3. l'aggiornamento 0.9.0 → 0.9.1: backup, file nuovi, backend nuovo acceso, dati al loro posto;
 #   4. l'aggiornamento 0.9.1 → 0.9.2 che fallisce: lo script torna da solo alla 0.9.1, con i dati di prima;
-#   5. Enable Banking: nessun indirizzo di ritorno di serie, e --tailscale che scrive solo quello di Tailscale.
+#   5. Enable Banking: nessun indirizzo di ritorno di serie, e --tailscale che scrive solo quello di Tailscale;
+#   6. le lingue (docs/lingue-3-installazione.md): la domanda "Lingua / Language" della prima installazione, e lo
+#      script e il container dei backup che passano all'inglese e tornano all'italiano.
 # Le versioni 0.9.x non esistono su GitHub Container Registry: "docker compose pull" fallisce, e lo script usa le
 # immagini costruite qui (lo stesso percorso di chi non ha Internet).
 set -euo pipefail
@@ -62,6 +64,8 @@ mkdir -p "$copia/.github/ci" "$github"
 # Tutti i file della radice del progetto (non un elenco a mano: due volte un file nuovo dello ZIP mancava qui, e
 # prepara-zip.sh si fermava). -p tiene il permesso di esecuzione dei .command.
 find "$radice" -maxdepth 1 -type f -exec cp -p {} "$copia/" \;
+# La cartella "English" dello ZIP: il LEGGIMI e i file da doppio clic con i nomi inglesi.
+cp -rp "$radice/English" "$copia/"
 cp "$radice/docker-compose.yml" "$lavoro/compose-originale.yml"
 cp "$radice/.github/ci/prepara-zip.sh" "$copia/.github/ci/"
 cat >"$copia/NOVITA.md" <<'FINE'
@@ -78,6 +82,22 @@ cat >"$copia/NOVITA.md" <<'FINE'
 ## 0.9.0
 
 - La prima versione di prova.
+FINE
+# Le stesse novità in inglese: prepara-zip.sh vuole la sezione della versione in tutti e due i file.
+cat >"$copia/CHANGELOG.md" <<'FINE'
+# What is new (test)
+
+## 0.9.2
+
+- A version broken on purpose: the backend does not start.
+
+## 0.9.1
+
+- **Something new** for the test, with `code`.
+
+## 0.9.0
+
+- The first test version.
 FINE
 for v in 0.9.0 0.9.1 0.9.2; do
   cp "$lavoro/compose-originale.yml" "$copia/docker-compose.yml"
@@ -189,6 +209,11 @@ grep -q "Aggiornamento completato: WalletTracker 0.9.1 è avviato" "$lavoro/caso
 [ "$(etichetta)" = 0.9.1 ] && [ "$(salute)" = healthy ] || fallito "caso 3: il backend non è la 0.9.1 acceso ($(etichetta), $(salute))"
 grep -q 'WALLETTRACKER_VERSION:-0.9.1}' docker-compose.yml || fallito "caso 3: docker-compose.yml non è quello nuovo"
 [ -x "Avvia WalletTracker.command" ] && [ -f "Avvia WalletTracker.cmd" ] || fallito "caso 3: mancano i file da doppio clic"
+[ -x "English/Start WalletTracker.command" ] && [ -f "English/Update WalletTracker.cmd" ] && [ -f English/README.txt ] && [ -f CHANGELOG.md ] ||
+  fallito "caso 3: mancano i file in inglese (la cartella English, CHANGELOG.md)"
+# Il .env di questa prova è stato copiato da .env.example: la lingua non c'è, quindi lo script parla italiano (come per
+# chi aggiorna da una versione di prima delle lingue) e non la scrive.
+if grep -q '^WALLETTRACKER_LANGUAGE=' .env; then fallito "caso 3: lo script ha scritto la lingua in un .env che non l'aveva"; fi
 [ "$(cat .aggiornamento/precedente/VERSION)" = 0.9.0 ] || fallito "caso 3: la 0.9.0 non è stata messa da parte"
 come_1000 ls backup | grep -q '^wallettracker-prima-dell-aggiornamento-.*\.backup$' || fallito "caso 3: manca il backup di prima dell'aggiornamento"
 grep -q "^WALLETTRACKER_BACKUP_PASSWORD=$password_backup$" .env || fallito "caso 3: il .env è cambiato"
@@ -221,5 +246,55 @@ PATH="$radice/.github/ci:$PATH" ./installa.sh --tailscale --senza-browser >"$lav
   { cat "$lavoro/caso5.log"; fallito "caso 5: --tailscale non è riuscito"; }
 grep -q '^ENABLE_BANKING_REDIRECT_URL=https://pc-casa.tail0000.ts.net/callback$' .env ||
   { grep '^ENABLE_BANKING_REDIRECT_URL' .env; fallito "caso 5: l'indirizzo di ritorno non è solo quello di Tailscale"; }
+
+# --- 6. Le lingue (docs/lingue-3-installazione.md) ---
+passo "Caso 6: la domanda sulla lingua, e lo script in inglese"
+# 6a. La domanda arriva solo alla prima installazione (senza .env) e solo da un terminale vero ("script" ne simula uno).
+#     Si prova in una cartella a parte, con un finto docker che non risponde: la domanda viene prima di Docker, quindi
+#     si vede la domanda, poi l'errore di Docker nella lingua scelta. Niente viene avviato.
+domanda="$lavoro/domanda"
+rm -rf "$domanda" "$lavoro/finto-docker"
+mkdir -p "$domanda" "$lavoro/finto-docker"
+unzip -q "$github/download/v0.9.1/WalletTracker-0.9.1.zip" -d "$domanda"
+printf '#!/bin/sh\nexit 1\n' >"$lavoro/finto-docker/docker"
+chmod +x "$lavoro/finto-docker/docker"
+(
+  cd "$domanda/WalletTracker-0.9.1"
+  printf '2\n' | PATH="$lavoro/finto-docker:$PATH" script -qec '"./English/Start WalletTracker.command"' /dev/null >"$lavoro/caso6-en.log" 2>&1 || true
+  printf '1\n' | PATH="$lavoro/finto-docker:$PATH" script -qec './installa.sh' /dev/null >"$lavoro/caso6-it.log" 2>&1 || true
+  PATH="$lavoro/finto-docker:$PATH" ./installa.sh </dev/null >"$lavoro/caso6-senza.log" 2>&1 || true
+)
+cat "$lavoro/caso6-en.log"
+grep -q "Lingua / Language" "$lavoro/caso6-en.log" || fallito "caso 6: la domanda sulla lingua non è arrivata"
+grep -q "==> Checking Docker" "$lavoro/caso6-en.log" && grep -q "ERROR: Docker does not answer" "$lavoro/caso6-en.log" ||
+  fallito "caso 6: dopo aver risposto 2 lo script non parla inglese"
+grep -q "Press Enter to close this window." "$lavoro/caso6-en.log" || fallito "caso 6: il file da doppio clic inglese non ha aspettato Invio"
+if grep -q "Controllo Docker" "$lavoro/caso6-en.log"; then fallito "caso 6: dopo aver risposto 2 c'è ancora dell'italiano"; fi
+grep -q "Lingua / Language" "$lavoro/caso6-it.log" && grep -q "ERRORE: Docker non risponde" "$lavoro/caso6-it.log" ||
+  fallito "caso 6: dopo aver risposto 1 lo script non parla italiano"
+# Senza un terminale non può chiedere: niente domanda, e italiano, come è sempre stato.
+if grep -q "Lingua / Language" "$lavoro/caso6-senza.log"; then fallito "caso 6: la domanda è arrivata senza un terminale"; fi
+grep -q "ERRORE: Docker non risponde" "$lavoro/caso6-senza.log" || fallito "caso 6: senza terminale lo script non parla italiano"
+
+# 6b. L'installazione vera passa all'inglese con --language: lo script, il backup (le righe del container) e la lingua
+#     che il backend propone alla dashboard. Poi torna all'italiano.
+./installa.sh --language en --no-browser | tee "$lavoro/caso6b.log"
+grep -q "From now on this script speaks English" "$lavoro/caso6b.log" || fallito "caso 6: --language en non lo dice"
+grep -q "WalletTracker 0.9.1 is running" "$lavoro/caso6b.log" || fallito "caso 6: lo script non parla inglese"
+if grep -q "è avviato" "$lavoro/caso6b.log"; then fallito "caso 6: in inglese c'è ancora dell'italiano"; fi
+grep -qx 'WALLETTRACKER_LANGUAGE=en' .env || fallito "caso 6: la lingua non è nel .env"
+ultima 0.9.1
+./installa.sh --update --no-browser </dev/null | tee "$lavoro/caso6c.log"
+grep -q "You already have the latest version: WalletTracker 0.9.1" "$lavoro/caso6c.log" || fallito "caso 6: --update non parla inglese"
+./installa.sh --backup --no-browser | tee "$lavoro/caso6d.log"
+grep -q "Backup created: wallettracker-manuale-" "$lavoro/caso6d.log" || fallito "caso 6: il container dei backup non parla inglese"
+grep -q "The backup is in the folder" "$lavoro/caso6d.log" || fallito "caso 6: il backup in inglese non è finito"
+# La lingua scelta installando è una proposta per la dashboard, finché nessuno sceglie dall'app (qui nessuno è entrato).
+curl -fsS http://localhost:8000/api/language | tee "$lavoro/caso6-lingua.json"
+grep -q '"language":null' "$lavoro/caso6-lingua.json" && grep -q '"suggested":"en"' "$lavoro/caso6-lingua.json" ||
+  fallito "caso 6: il backend non propone l'inglese alla dashboard"
+./installa.sh --lingua it --senza-browser | tee "$lavoro/caso6e.log"
+grep -q "Da adesso questo script parla italiano" "$lavoro/caso6e.log" && grep -q "WalletTracker 0.9.1 è avviato" "$lavoro/caso6e.log" ||
+  fallito "caso 6: --lingua it non riporta all'italiano"
 
 passo "Tutte le prove dell'aggiornamento sono passate"
