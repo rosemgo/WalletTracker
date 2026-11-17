@@ -9,7 +9,7 @@ import it.wallettracker.language.Language;
 /**
  * Le categorie di partenza (V12) e il loro nome in ogni lingua.
  *
- * <p>Nel database una categoria di partenza si riconosce dalla chiave ({@code category.builtin_key}, V42), che è il
+ * <p>Nel database una categoria di partenza si riconosce dalla chiave ({@code category.builtin_key}, V43), che è il
  * nome di una di queste voci. Il nome è un dato dell'utente e lo può cambiare: finché è ancora uno di quelli scritti
  * qui, la categoria è "com'era" e segue la lingua dell'app; se l'utente l'ha rinominata, resta come l'ha scritta lui.
  *

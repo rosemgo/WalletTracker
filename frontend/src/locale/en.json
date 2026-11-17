@@ -869,6 +869,26 @@
       "it": "Vai ai conti",
       "en": "Go to the accounts"
     },
+    "6879498246629900897": {
+      "it": "I movimenti di {$INTERPOLATION} non tornano con il saldo {$ICU}.",
+      "en": "The transactions of {$INTERPOLATION} do not match {$ICU}."
+    },
+    "125192974572397228": {
+      "it": "{VAR_SELECT, select, BANK {della banca} other {che hai scritto}}",
+      "en": "{VAR_SELECT, select, BANK {the balance of the bank} other {the balance you wrote}}"
+    },
+    "4421317926775817445": {
+      "it": "Dal {$INTERPOLATION} al {$INTERPOLATION_1} il saldo è cambiato di {$INTERPOLATION_2} {$ICU} rispetto ai movimenti: {$ICU_1} Se manca, si può caricare il file della banca in Importa.",
+      "en": "From {$INTERPOLATION} to {$INTERPOLATION_1} the balance changed by {$INTERPOLATION_2} {$ICU} than the transactions: {$ICU_1} If it is missing, you can load the bank's file in Import."
+    },
+    "3492956599867661227": {
+      "it": "{VAR_SELECT, select, true {in più} other {in meno}}",
+      "en": "{VAR_SELECT, select, true {more} other {less}}"
+    },
+    "1701155514522880724": {
+      "it": "{VAR_SELECT, select, true {probabilmente manca un'entrata o c'è un'uscita doppia.} other {probabilmente manca un'uscita o c'è un'entrata doppia.}}",
+      "en": "{VAR_SELECT, select, true {probably an income is missing or an expense is there twice.} other {probably an expense is missing or an income is there twice.}}"
+    },
     "8764006015527409608": {
       "it": "Budget superati questo mese:",
       "en": "Budgets exceeded this month:"

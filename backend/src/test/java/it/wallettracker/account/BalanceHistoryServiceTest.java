@@ -144,6 +144,36 @@ class BalanceHistoryServiceTest {
     }
 
     @Test
+    void aMovementArrivedAfterTheBankBalanceBelongsToItsDayNotToTheDaysBefore() {
+        BankConnection connection = connectionRepository.save(new BankConnection("FinecoBank", "IT", "s-5",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account fineco = accountRepository.save(new Account(connection, "k-5", "u-5", null, "Dossier", "EUR"));
+        movement(fineco, "2026-11-10", "100");
+        accountRepository.recordBalance(fineco.getId(), new BigDecimal("2595.30"), TODAY, BalanceSource.BANK,
+                Instant.now().minusSeconds(5));
+        movement(fineco, "2026-11-16", "1458.50"); // la cedola netta di oggi, scaricata dopo il saldo
+
+        historyService.recordToday(TODAY);
+        assertThat(snapshotRepository.findAll()).singleElement().satisfies(shot -> {
+            assertThat(shot.getDate()).isEqualTo(TODAY);
+            assertThat(shot.getAmount()).isEqualByComparingTo("4053.80");
+        });
+
+        BalanceHistory history = historyService.history("EUR", TODAY);
+        // Oggi vero, con la cedola; ieri senza: i giorni prima non perdono 1.458,50 €.
+        assertThat(history.points()).last().satisfies(p -> {
+            assertThat(p.amount()).isEqualByComparingTo("4053.80");
+            assertThat(p.estimated()).isFalse();
+        });
+        assertThat(history.points()).filteredOn(p -> p.date().equals(TODAY.minusDays(1))).singleElement()
+                .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("2595.30"));
+        assertThat(history.points()).first().satisfies(p -> {
+            assertThat(p.date()).isEqualTo(LocalDate.of(2026, 11, 10));
+            assertThat(p.amount()).isEqualByComparingTo("2595.30");
+        });
+    }
+
+    @Test
     void deletingAManualAccountDeletesItsPhotos() {
         Account wallet = accountRepository.save(Account.manual("Tinaba", "Wallet", null, "EUR", AccountRole.MAIN));
         snapshotRepository.upsert(wallet.getId(), TODAY, new BigDecimal("10"));

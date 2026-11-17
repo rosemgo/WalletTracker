@@ -7,6 +7,7 @@ describe('formatLocalDate', () => {
     const day = '2026-10-10';
     expect(formatLocalDate(day, 'numeric')).toBe('10/10/2026');
     expect(formatLocalDate(day, 'dayMonth')).toBe('10 ott');
+    expect(formatLocalDate(day, 'dayMonthLong')).toBe('10 ottobre');
     expect(formatLocalDate(day, 'medium')).toBe('10 ott 2026');
     expect(formatLocalDate(day, 'long')).toBe('10 ottobre 2026');
     expect(formatLocalDate(day, 'weekday')).toBe('sabato 10 ottobre');

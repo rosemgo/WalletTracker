@@ -70,6 +70,15 @@ changes something important for those who use it.
   at a time, without conversions). Tapping an account in the list, the chart shows only that account, to compare it
   with its statement. You get to Accounts with "See the accounts", at the top of the card.
 
+- **The balance of the linked accounts is always up to date**: the bank gives the balance at most once a day, the
+  transactions more often. Now a transaction that arrives after the last balance (for example a coupon) is added at once
+  to the balance in the Accounts page, in the Overview and in the cash chart, instead of waiting for the bank to give
+  the balance again.
+- **The balance check**: every time the bank gives a new balance (or you write one), the app checks that it matches the
+  previous balance plus the transactions that arrived in between. If it does not, a notice in the Overview says which
+  account, in which period and by how much, with the transactions to check: usually a transaction is missing, and it
+  can be recovered by loading the bank's file in Import. When it arrives, the notice disappears by itself.
+
 Already using WalletTracker? Nothing changes: the app and the scripts stay in Italian until you choose otherwise.
 
 ## 1.2.7

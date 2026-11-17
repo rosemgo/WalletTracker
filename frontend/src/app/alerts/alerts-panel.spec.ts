@@ -155,6 +155,58 @@ describe('AlertsPanel', () => {
     expect(alertKey(budget, new Date(2026, 11, 1))).toBe('alert:BUDGET_OVER:2026-12:Viaggi');
   });
 
+  it('says which account does not add up with its balance, when, by how much, and links its movements', async () => {
+    alerts = [
+      {
+        ...NONE,
+        kind: 'BALANCE_MISMATCH',
+        severity: 'WARNING',
+        bank: 'FinecoBank',
+        account: 'FinecoBank ··3288',
+        mismatch: {
+          accountId: 7,
+          source: 'BANK',
+          from: '2026-11-10',
+          to: '2026-11-16',
+          difference: 1458.5,
+          currency: 'EUR',
+        },
+      },
+      {
+        ...NONE,
+        kind: 'BALANCE_MISMATCH',
+        severity: 'WARNING',
+        account: 'Tinaba',
+        mismatch: {
+          accountId: 9,
+          source: 'MANUAL',
+          from: '2026-10-01',
+          to: '2026-10-28',
+          difference: -50,
+          currency: 'EUR',
+        },
+      },
+    ];
+    const page = await render();
+    const [bank, written] = Array.from(page.querySelectorAll('.alert-body')).map((b) =>
+      b.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+
+    expect(bank).toContain(
+      'I movimenti di FinecoBank ··3288 non tornano con il saldo della banca.',
+    );
+    expect(bank).toMatch(
+      /Dal 10 novembre al 16 novembre 2026 il saldo è cambiato di 1\.458,50\s€ in più/,
+    );
+    expect(bank).toContain("probabilmente manca un'entrata o c'è un'uscita doppia.");
+    expect(written).toContain('non tornano con il saldo che hai scritto.');
+    expect(written).toMatch(/50,00\s€ in meno/);
+    expect(written).toContain("probabilmente manca un'uscita o c'è un'entrata doppia.");
+    const link = page.querySelector<HTMLAnchorElement>('.alert-body a')!;
+    expect(link.getAttribute('href')).toBe('/movimenti?accountId=7&from=2026-11-10&to=2026-11-16');
+    expect(alertKey(alerts[0])).toBe('alert:BALANCE_MISMATCH:7:2026-11-10:2026-11-16:1458.5');
+  });
+
   it('says "domani" and "oggi" for the last days', async () => {
     alerts = [
       { ...NONE, kind: 'CONSENT_EXPIRING', severity: 'WARNING', bank: 'A', daysLeft: 1 },

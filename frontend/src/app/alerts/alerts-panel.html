@@ -43,6 +43,28 @@
               {{ alert.message }}
               <a i18n routerLink="/conti">Vai ai conti</a>
             }
+            @case ('BALANCE_MISMATCH') {
+              @if (alert.mismatch; as m) {
+                <strong i18n
+                  >I movimenti di {{ alert.account }} non tornano con il saldo
+                  {m.source, select, BANK {della banca} other {che hai scritto}}.</strong
+                >
+                <ng-container i18n
+                  >Dal {{ m.from | localDate: 'dayMonthLong' }} al {{ m.to | localDate: 'long' }} il
+                  saldo è cambiato di
+                  {{ (m.difference < 0 ? -m.difference : m.difference) | money: m.currency }}
+                  {m.difference > 0, select, true {in più} other {in meno}} rispetto ai movimenti:
+                  {m.difference > 0, select,
+                    true {probabilmente manca un'entrata o c'è un'uscita doppia.}
+                    other {probabilmente manca un'uscita o c'è un'entrata doppia.}
+                  }
+                  Se manca, si può caricare il file della banca in Importa.</ng-container
+                >
+                <a routerLink="/movimenti" [queryParams]="mismatchQuery(alert)" i18n
+                  >Vedi i movimenti</a
+                >
+              }
+            }
             @case ('BUDGET_OVER') {
               <strong i18n>Budget superati questo mese:</strong> {{ alert.items.join(', ') }}.
               <a i18n routerLink="/budget">Vai ai budget</a>

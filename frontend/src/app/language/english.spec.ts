@@ -181,4 +181,52 @@ describe('the app in English', () => {
     expect(many).toContain('Estimated from the transactions');
     expect(many).toContain('Cash in EUR day by day, from 8 October 2026 to today.');
   });
+
+  it('the notice of a balance that does not match is in English, with its dates and amount', async () => {
+    const { AlertsPanel } = await import('../alerts/alerts-panel');
+    const { WalletApi } = await import('../api/wallet-api');
+    const { provideRouter } = await import('@angular/router');
+    const { of } = await import('rxjs');
+    const mismatch = (difference: number) => ({
+      kind: 'BALANCE_MISMATCH',
+      severity: 'WARNING',
+      bank: 'Fineco',
+      country: null,
+      account: 'Fineco ··3288',
+      date: null,
+      daysLeft: null,
+      items: [],
+      message: null,
+      mismatch: {
+        accountId: 7,
+        source: 'BANK',
+        from: '2026-11-10',
+        to: '2026-11-16',
+        difference,
+        currency: 'EUR',
+      },
+    });
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: WalletApi, useValue: { alerts: () => of([mismatch(12.5)]) } },
+        { provide: LOCALE_ID, useValue: 'en-GB' },
+      ],
+    });
+    localStorage.clear();
+    const fixture = TestBed.createComponent(AlertsPanel);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = ((fixture.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ');
+
+    expect(text).toContain(
+      'The transactions of Fineco ··3288 do not match the balance of the bank.',
+    );
+    expect(text).toContain(
+      'From 10 November to 16 November 2026 the balance changed by €12.50 more than the transactions:',
+    );
+    expect(text).toContain('probably an income is missing or an expense is there twice.');
+    expect(text).toContain('See the transactions');
+  });
 });

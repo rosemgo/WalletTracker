@@ -281,6 +281,33 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             """)
     BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
 
+    /**
+     * La somma dei movimenti contabilizzati di un conto con una data successiva a {@code date}: per portare il saldo di
+     * adesso alla fine del giorno {@code date} (lo storico dei saldi, docs/saldi.md parte M).
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND t.bookingDate > :date
+            """)
+    BigDecimal sumBookedAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date);
+
+    /**
+     * I movimenti contabilizzati arrivati tra due saldi di un conto (il controllo dei saldi, docs/saldi.md parte N):
+     * dopo il primo (una data successiva, o lo stesso giorno importati dopo la sua lettura) e dentro il secondo (una
+     * data precedente, o lo stesso giorno importati prima della sua lettura). È la stessa regola di {@link #sumAfter}.
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.bookingDate > :fromDate OR (t.bookingDate = :fromDate AND t.importedAt > :fromAt))
+              AND (t.bookingDate < :toDate OR (t.bookingDate = :toDate AND t.importedAt <= :toAt))
+            """)
+    BigDecimal sumBetween(@Param("accountId") Long accountId, @Param("fromDate") LocalDate fromDate,
+            @Param("fromAt") Instant fromAt, @Param("toDate") LocalDate toDate, @Param("toAt") Instant toAt);
+
     /** Il giorno dell'ultimo movimento contabilizzato di un conto, o null se non ne ha. */
     @Query("""
             SELECT MAX(t.bookingDate) FROM BankTransaction t

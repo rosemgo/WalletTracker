@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { Alert } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
+import { MoneyPipe } from '../privacy/money.pipe';
 import { LocalDatePipe } from '../text/dates';
 import { plural } from '../text/plural';
 import { CloseButton } from '../ui/close-button';
@@ -15,7 +16,8 @@ import { DismissedNotices } from '../ui/dismissed-notices';
  *   chiuso due settimane prima ricompare a ridosso della scadenza);
  * - consenso scaduto: la banca e la scadenza (ricollegata, la scadenza cambia);
  * - aggiornamento non riuscito: il conto e il motivo;
- * - budget superati: il mese e le categorie (una categoria in più, o il mese dopo, è un avviso nuovo).
+ * - budget superati: il mese e le categorie (una categoria in più, o il mese dopo, è un avviso nuovo);
+ * - saldi che non tornano: il conto, il periodo e la differenza (un'altra differenza è un avviso nuovo).
  */
 export function alertKey(alert: Alert, today: Date = new Date()): string {
   switch (alert.kind) {
@@ -30,6 +32,10 @@ export function alertKey(alert: Alert, today: Date = new Date()): string {
     case 'BUDGET_OVER': {
       const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
       return `alert:BUDGET_OVER:${month}:${[...alert.items].sort().join(',')}`;
+    }
+    case 'BALANCE_MISMATCH': {
+      const m = alert.mismatch;
+      return `alert:BALANCE_MISMATCH:${m?.accountId}:${m?.from}:${m?.to}:${m?.difference}`;
     }
     default:
       return `alert:${JSON.stringify(alert)}`;
@@ -46,7 +52,7 @@ export function alertKey(alert: Alert, today: Date = new Date()): string {
  */
 @Component({
   selector: 'app-alerts-panel',
-  imports: [CloseButton, LocalDatePipe, RouterLink],
+  imports: [CloseButton, LocalDatePipe, MoneyPipe, RouterLink],
   templateUrl: './alerts-panel.html',
 })
 export class AlertsPanel implements OnInit {
@@ -67,6 +73,12 @@ export class AlertsPanel implements OnInit {
 
   protected close(alert: Alert): void {
     this.dismissed.dismiss(alertKey(alert));
+  }
+
+  /** I movimenti del conto nel periodo dei due saldi, per Movimenti. */
+  protected mismatchQuery(alert: Alert): Record<string, string> {
+    const m = alert.mismatch;
+    return m ? { accountId: String(m.accountId), from: m.from, to: m.to } : {};
   }
 
   /** "tra 5 giorni", "domani", "oggi". */

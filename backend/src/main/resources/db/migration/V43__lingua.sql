@@ -1,4 +1,4 @@
--- V42: la lingua dell'app (docs/lingue-2-inglese.md).
+-- V43: la lingua dell'app (docs/lingue-2-inglese.md).
 --
 -- 1. La lingua è un'impostazione dell'installazione: una sola riga (id = 1), come per l'IA (V18).
 --    language NULL = non ancora scelta: succede solo in un'installazione nuova, finché non si passa dalla prima

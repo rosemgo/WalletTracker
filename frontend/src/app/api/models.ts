@@ -363,7 +363,8 @@ export interface Budget extends BudgetRequest {
 }
 
 /** I tipi di avviso (enum AlertKind nel backend). */
-export type AlertKind = 'CONSENT_EXPIRED' | 'CONSENT_EXPIRING' | 'SYNC_FAILED' | 'BUDGET_OVER';
+export type AlertKind =
+  'CONSENT_EXPIRED' | 'CONSENT_EXPIRING' | 'SYNC_FAILED' | 'BUDGET_OVER' | 'BALANCE_MISMATCH';
 
 /**
  * Un avviso (GET /api/alerts). Il backend manda i dati, non la frase: il testo lo scrive la dashboard
@@ -379,6 +380,17 @@ export interface Alert {
   daysLeft: number | null; // giorni alla scadenza; negativo = scaduto
   items: string[]; // le categorie dei budget superati
   message: string | null; // il motivo dell'errore di sincronizzazione
+  mismatch?: BalanceMismatch | null; // due saldi che non tornano con i movimenti (BALANCE_MISMATCH)
+}
+
+/** Due saldi di un conto che non tornano con i movimenti arrivati in mezzo (docs/saldi.md, parte N). */
+export interface BalanceMismatch {
+  accountId: number;
+  source: 'BANK' | 'MANUAL'; // due saldi della banca, o due scritti dall'utente
+  from: string; // "2026-11-10"
+  to: string;
+  difference: number; // il secondo saldo meno (il primo più i movimenti): positivo = la banca ha di più
+  currency: string;
 }
 
 /** Ogni quanto si ripete un abbonamento (enum Frequency nel backend). */

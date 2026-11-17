@@ -11,6 +11,8 @@ import java.util.List;
 
 import it.wallettracker.account.Account;
 import it.wallettracker.account.AccountRepository;
+import it.wallettracker.account.BalanceCheckService;
+import it.wallettracker.account.BalanceCheckService.Mismatch;
 import it.wallettracker.alert.AlertDto.AlertKind;
 import it.wallettracker.alert.AlertDto.Severity;
 import it.wallettracker.budget.BudgetDto;
@@ -41,12 +43,14 @@ public class AlertService {
     private final BankConnectionRepository connectionRepository;
     private final AccountRepository accountRepository;
     private final BudgetService budgetService;
+    private final BalanceCheckService balanceCheckService;
 
     public AlertService(BankConnectionRepository connectionRepository, AccountRepository accountRepository,
-            BudgetService budgetService) {
+            BudgetService budgetService, BalanceCheckService balanceCheckService) {
         this.connectionRepository = connectionRepository;
         this.accountRepository = accountRepository;
         this.budgetService = budgetService;
+        this.balanceCheckService = balanceCheckService;
     }
 
     /** Gli avvisi di adesso, dal più urgente. */
@@ -95,6 +99,15 @@ public class AlertService {
         if (!overBudget.isEmpty()) {
             alerts.add(new AlertDto(AlertKind.BUDGET_OVER, Severity.WARNING, null, null, null, null, null,
                     overBudget, null));
+        }
+
+        // 4. I saldi che non tornano con i movimenti (docs/saldi.md, parte N): uno per conto e periodo.
+        for (Mismatch m : balanceCheckService.mismatches()) {
+            Account account = m.account();
+            String bank = account.getConnection() != null ? account.getConnection().getAspspName() : null;
+            alerts.add(new AlertDto(AlertKind.BALANCE_MISMATCH, Severity.WARNING, bank, null, account.label(), null,
+                    null, List.of(), null, new AlertDto.Mismatch(account.getId(), m.source().name(), m.from(), m.to(),
+                            m.difference(), account.getCurrency())));
         }
 
         // Dal più urgente; a parità, prima la scadenza più vicina. sort() mantiene l'ordine di arrivo

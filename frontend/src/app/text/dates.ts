@@ -19,6 +19,8 @@ export const DATE_FORMATS = {
   numericTime: 'dd/MM/yyyy HH:mm',
   /** 10 ott */
   dayMonth: 'd MMM',
+  /** 10 ottobre */
+  dayMonthLong: 'd MMMM',
   /** 10 ott 2026 */
   medium: 'mediumDate',
   /** 10 ott 2026, 08:30 */

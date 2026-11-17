@@ -68,6 +68,15 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   volta, senza conversioni). Toccando un conto dell'elenco il grafico mostra solo quel conto, per confrontarlo con il
   suo estratto. A Conti si va con "Vedi i conti", in alto nella scheda.
 
+- **Il saldo dei conti collegati è sempre aggiornato**: la banca dà il saldo al massimo una volta al giorno, i movimenti
+  più spesso. Ora un movimento arrivato dopo l'ultimo saldo (per esempio una cedola) si aggiunge subito al saldo nella
+  pagina Conti, nel Riepilogo e nel grafico della liquidità, invece di aspettare che la banca ridia il saldo.
+
+- **Il controllo dei saldi**: ogni volta che la banca dà un saldo nuovo (o ne scrivi uno tu), l'app verifica che torni
+  con il saldo di prima più i movimenti arrivati in mezzo. Se non torna, un avviso nel Riepilogo dice quale conto, in
+  quale periodo e di quanto, con i movimenti da controllare: di solito manca un movimento, che si recupera caricando il
+  file della banca in Importa. Quando arriva, l'avviso sparisce da solo.
+
 Usi già WalletTracker? Non cambia niente: l'app e gli script restano in italiano finché non scegli tu.
 
 ## 1.2.7

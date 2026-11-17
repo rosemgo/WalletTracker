@@ -5,7 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Le impostazioni dell'installazione (tabella {@code app_settings}, V42): una sola riga. Per ora, la lingua. */
+/** Le impostazioni dell'installazione (tabella {@code app_settings}, V43): una sola riga. Per ora, la lingua. */
 @Entity
 @Table(name = "app_settings")
 public class AppSettings {
