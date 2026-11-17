@@ -45,21 +45,11 @@
             }
             @case ('BALANCE_MISMATCH') {
               @if (alert.mismatch; as m) {
-                <strong i18n
-                  >I movimenti di {{ alert.account }} non tornano con il saldo
-                  {m.source, select, BANK {della banca} other {che hai scritto}}.</strong
-                >
-                <ng-container i18n
-                  >Dal {{ m.from | localDate: 'dayMonthLong' }} al {{ m.to | localDate: 'long' }} il
-                  saldo è cambiato di
-                  {{ (m.difference < 0 ? -m.difference : m.difference) | money: m.currency }}
-                  {m.difference > 0, select, true {in più} other {in meno}} rispetto ai movimenti:
-                  {m.difference > 0, select,
-                    true {probabilmente manca un'entrata o c'è un'uscita doppia.}
-                    other {probabilmente manca un'uscita o c'è un'entrata doppia.}
-                  }
-                  Se manca, si può caricare il file della banca in Importa.</ng-container
-                >
+                <!-- Frasi intere per ogni caso (docs/lingue-2-inglese.md, parte E), su una riga sola perché gli a capo
+                     non finiscano nel testo da tradurre. Tra una frase e l'altra uno spazio da tenere (&ngsp;): Angular
+                     toglie quelli tra due elementi. -->
+                <!-- prettier-ignore -->
+                <span><strong i18n>{m.source, select, BANK {I movimenti di {{ alert.account }} non tornano con il saldo della banca.} other {I movimenti di {{ alert.account }} non tornano con il saldo che hai scritto.}}</strong>&ngsp;<ng-container i18n>{m.difference > 0, select, true {Dal {{ m.from | localDate: 'dayMonthLong' }} al {{ m.to | localDate: 'long' }} il saldo è cambiato di {{ mismatchAmount(m) | money: m.currency }} in più rispetto ai movimenti: probabilmente manca un'entrata o c'è un'uscita doppia.} other {Dal {{ m.from | localDate: 'dayMonthLong' }} al {{ m.to | localDate: 'long' }} il saldo è cambiato di {{ mismatchAmount(m) | money: m.currency }} in meno rispetto ai movimenti: probabilmente manca un'uscita o c'è un'entrata doppia.}}</ng-container>&ngsp;<ng-container i18n>Se manca, si può caricare il file della banca in Importa.</ng-container></span>
                 <a routerLink="/movimenti" [queryParams]="mismatchQuery(alert)" i18n
                   >Vedi i movimenti</a
                 >

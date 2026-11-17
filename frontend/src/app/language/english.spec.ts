@@ -220,13 +220,13 @@ describe('the app in English', () => {
     fixture.detectChanges();
     const text = ((fixture.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ');
 
+    // Frasi intere, separate da uno spazio (ogni frase è un elemento a sé: lo spazio va tenuto apposta).
     expect(text).toContain(
-      'The transactions of Fineco ··3288 do not match the balance of the bank.',
+      'The transactions of Fineco ··3288 do not match the balance from the bank. ' +
+        'From 10 November to 16 November 2026 the balance is €12.50 higher than the transactions account for: ' +
+        'an income is probably missing, or an expense was counted twice. ' +
+        "If something is missing, you can upload the bank's file in Import.",
     );
-    expect(text).toContain(
-      'From 10 November to 16 November 2026 the balance changed by €12.50 more than the transactions:',
-    );
-    expect(text).toContain('probably an income is missing or an expense is there twice.');
     expect(text).toContain('See the transactions');
   });
 });
