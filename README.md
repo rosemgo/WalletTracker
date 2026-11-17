@@ -16,6 +16,7 @@
   <img src="https://img.shields.io/badge/Spring%20Boot-4-6DB33F" alt="Spring Boot 4">
   <img src="https://img.shields.io/badge/Angular-22-DD0031" alt="Angular 22">
   <img src="https://img.shields.io/badge/lingue-IT%20%7C%20EN-blue" alt="Italiano e inglese">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licenza-MIT-green" alt="Licenza MIT"></a>
 </p>
 
 > **English.** WalletTracker is a self-hosted personal finance app: it reads your transactions from the banks through
@@ -327,3 +328,7 @@ La sicurezza ha la precedenza su ogni funzione: modello, protezioni attive e pia
 
 `.env`, la cartella `secrets/` e i file `.pem` non vanno mai inclusi in un commit: il `.gitignore` li esclude, ma
 conviene sempre controllare con `git status` prima di un commit.
+
+## Licenza
+
+WalletTracker è distribuito con licenza [MIT](LICENSE). © 2026 Rosario Goglia.
