@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Alert } from '../api/models';
+import { Alert, BalanceMismatch } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { LocalDatePipe } from '../text/dates';
@@ -73,6 +73,11 @@ export class AlertsPanel implements OnInit {
 
   protected close(alert: Alert): void {
     this.dismissed.dismiss(alertKey(alert));
+  }
+
+  /** La differenza senza segno: il verso ("in più", "in meno") lo dice la frase. */
+  protected mismatchAmount(m: BalanceMismatch): number {
+    return Math.abs(m.difference);
   }
 
   /** I movimenti del conto nel periodo dei due saldi, per Movimenti. */

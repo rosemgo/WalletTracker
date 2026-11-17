@@ -11,6 +11,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+
+import it.wallettracker.message.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,6 +41,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/accounts")
 public class AccountController {
 
+    /** Un codice di valuta: tre lettere (maiuscole o minuscole). */
+    private static final java.util.regex.Pattern CURRENCY = java.util.regex.Pattern.compile("[A-Za-z]{3}");
+
     private final AccountService accountService;
     private final BalanceHistoryService historyService;
 
@@ -58,12 +63,15 @@ public class AccountController {
      * (docs/saldi.md, parte L). Con {@code &accountId=7}, di quel conto solo.
      */
     @GetMapping("/balance-history")
-    public BalanceHistory balanceHistory(
-            @RequestParam @Pattern(regexp = "[A-Za-z]{3}", message = "La valuta è un codice di tre lettere, come EUR.")
-            String currency,
+    public BalanceHistory balanceHistory(@RequestParam String currency,
             @RequestParam(required = false) Long accountId) {
+        if (!CURRENCY.matcher(currency).matches()) {
+            // messaggio: La valuta è un codice di tre lettere, come EUR.
+            throw new ApiException(HttpStatus.BAD_REQUEST, "currency.invalid");
+        }
         return historyService.history(currency, accountId, LocalDate.now());
     }
+
 
     /**
      * {@code PUT /api/accounts/{id}/role} con corpo {@code {"role": "INVESTMENT"}}: cambia il ruolo di un conto.
