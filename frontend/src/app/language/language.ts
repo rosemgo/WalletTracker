@@ -63,18 +63,32 @@ export function browserLanguage(
   return 'en';
 }
 
-/** La lingua scelta per l'installazione (GET /api/language), o null se non c'è ancora o il server non risponde. */
-export async function serverLanguage(timeoutMs: number): Promise<Language | null> {
+/**
+ * Che cosa dice il server della lingua (GET /api/language).
+ *
+ * - `chosen`: la lingua dell'installazione, o null se nessuno l'ha ancora scelta (o il server non risponde);
+ * - `suggested`: solo in un'installazione nuova, la lingua scelta nello script di installazione (la domanda
+ *   "Lingua / Language" del primo avvio: docs/lingue-3-installazione.md), o null se non c'è.
+ */
+export interface ServerLanguage {
+  chosen: Language | null;
+  suggested: Language | null;
+}
+
+export async function serverLanguage(timeoutMs: number): Promise<ServerLanguage> {
+  const nothing: ServerLanguage = { chosen: null, suggested: null };
   try {
     const response = await fetch('/api/language', { signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) {
-      return null;
+      return nothing;
     }
-    const body: unknown = await response.json();
-    const language = (body as { language?: unknown } | null)?.language;
-    return isLanguage(language) ? language : null;
+    const body = (await response.json()) as { language?: unknown; suggested?: unknown } | null;
+    return {
+      chosen: isLanguage(body?.language) ? body.language : null,
+      suggested: isLanguage(body?.suggested) ? body.suggested : null,
+    };
   } catch {
-    return null;
+    return nothing;
   }
 }
 
@@ -85,17 +99,20 @@ export async function serverLanguage(timeoutMs: number): Promise<Language | null
  *    altro dispositivo, se ne accorge LanguageStore appena l'app è aperta, e ricarica la pagina.
  * 2. Altrimenti (la prima volta da questo browser) quella dell'installazione, chiesta al server: chi usa già l'app
  *    la trova in italiano anche con il browser in inglese. Si aspetta poco: se il server tarda, si passa oltre.
- * 3. Altrimenti (un'installazione nuova, dove nessuno ha ancora scelto) quella del browser.
+ * 3. Altrimenti (un'installazione nuova, dove nessuno ha ancora scelto dall'app) quella scelta installando, se il
+ *    server la dice: chi ha risposto "English" allo script di installazione trova la prima schermata in inglese,
+ *    anche con il browser in italiano. Non la si ricorda: è una proposta, e la prima schermata la può cambiare.
+ * 4. Altrimenti quella del browser.
  */
 export async function startLanguage(): Promise<Language> {
   const remembered = rememberedLanguage();
   if (remembered !== null) {
     return remembered;
   }
-  const chosen = await serverLanguage(1500);
+  const { chosen, suggested } = await serverLanguage(1500);
   if (chosen !== null) {
     rememberLanguage(chosen);
     return chosen;
   }
-  return browserLanguage();
+  return suggested ?? browserLanguage();
 }

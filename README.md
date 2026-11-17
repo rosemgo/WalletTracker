@@ -1,5 +1,12 @@
 # WalletTracker
 
+> **English.** WalletTracker is a self-hosted personal finance app: it reads your transactions from the banks through
+> European open banking (PSD2), or from a file, and shows them in a dashboard with categories, budgets, subscriptions
+> and investments. It runs on your own computer with Docker, and the data stays there. The app and the installation
+> are available in Italian and English: the installer asks for the language at the first start. To install and use
+> it, read **[GUIDE.md](GUIDE.md)**; what is new in each version is in [CHANGELOG.md](CHANGELOG.md). The rest of this
+> page and the developer documentation in `docs/` are in Italian.
+
 Progetto personale (e didattico) per tracciare le spese in automatico: i movimenti vengono letti
 direttamente dalle banche (Revolut, ING, e altre in futuro) tramite l'open banking europeo (PSD2)
 e mostrati in una dashboard con elenco movimenti, categorie e grafici.
@@ -53,6 +60,7 @@ server. Ognuno ha i propri conti, le proprie regole e il proprio database. I pri
 
 ```
 .github/    pipeline di integrazione continua (GitHub Actions): build e test a ogni push
+English/    per chi non legge l'italiano: il LEGGIMI in inglese e i file da doppio clic con i nomi inglesi
 backend/    applicazione Spring Boot
 frontend/   dashboard Angular
 docs/       guide passo passo
@@ -65,7 +73,9 @@ Ollama (`docs/44`). `docker-compose.dev.yml` aggiunge la porta del database per 
 
 ## Guide
 
-> **Per installare e usare WalletTracker senza essere informatici: [GUIDA.md](GUIDA.md).**
+> **Per installare e usare WalletTracker senza essere informatici: [GUIDA.md](GUIDA.md)** (in inglese: [GUIDE.md](GUIDE.md)).
+
+> **Le lingue (italiano e inglese), fuori dalla numerazione:** [1. i messaggi del backend come codici, i plurali e le date](docs/lingue-1-messaggi-e-formati.md) · [2. l'app in inglese: la lingua dell'installazione, le categorie di partenza, come si traduce](docs/lingue-2-inglese.md) · [3. l'installazione: la domanda sulla lingua, gli script, il container dei backup, la guida e le novità in inglese](docs/lingue-3-installazione.md).
 
 > **Promemoria per lo sviluppo: [quali comandi lanciare, mai due backend insieme, e come portare le modifiche in `main` con una pull request](docs/sviluppo-comandi.md).**
 
@@ -195,6 +205,7 @@ Dalla radice del progetto:
 ```bash
 ./installa.sh                                 # primo avvio e avvii successivi: crea il .env se manca e avvia (docs/45)
 ./installa.sh --aggiorna                      # dalla cartella di una versione scaricata: passa all'ultima (docs/50, parte I)
+./installa.sh --lingua en                     # lo script in inglese (--lingua it per tornare): docs/lingue-3-installazione.md
                                               # su Windows: powershell -ExecutionPolicy Bypass -File installa.ps1
 docker compose down                           # ferma tutto (i dati restano)
 
@@ -202,7 +213,7 @@ docker compose down                           # ferma tutto (i dati restano)
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build                 # l'app completa su http://localhost:8000
 docker compose -f docker-compose.yml -f docker-compose.build.yml --profile ia up -d --build    # la stessa, con anche Ollama (l'IA locale)
 
-# Pubblicare una versione (docs/50, parte E): prima la sezione "## 1.0.0" in NOVITA.md, poi
+# Pubblicare una versione (docs/50, parte E): prima la sezione "## 1.0.0" in NOVITA.md e, in inglese, in CHANGELOG.md, poi
 git tag -a v1.0.0 -m "WalletTracker 1.0.0" && git push origin v1.0.0
 
 # Per lo sviluppo: solo il database, raggiungibile dal PC (poi backend con ./mvnw e dashboard con npm start).

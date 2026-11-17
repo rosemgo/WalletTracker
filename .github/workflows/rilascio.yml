@@ -6,7 +6,8 @@
 #   1. la CI completa (ci.yml): se un test fallisce, non si pubblica niente;
 #   2. le tre immagini (backend, web, backup), per i PC (amd64) e per i Mac con chip Apple (arm64), pubblicate su
 #      GitHub Container Registry: ghcr.io/rosemgo/wallettracker-<nome>:<versione> (e :latest);
-#   3. la release su GitHub: lo ZIP per chi installa, la sua impronta (SHA256SUMS) e le novità (da NOVITA.md).
+#   3. la release su GitHub: lo ZIP per chi installa, la sua impronta (SHA256SUMS) e le novità, in italiano (da
+#      NOVITA.md) e in inglese (da CHANGELOG.md).
 #
 # Quando cambia un Dockerfile (o questo file), le immagini si COSTRUISCONO anche senza tag, per provarle, ma non si
 # pubblicano.
@@ -34,8 +35,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/ci.yml
 
-  # 1b. Le novità ci sono? Ogni versione ha la sua sezione "## X.Y.Z" in NOVITA.md, che diventa la descrizione della
-  #     release. Si controlla PRIMA di pubblicare le immagini: con la 1.2.4 il controllo era solo alla fine (in
+  # 1b. Le novità ci sono? Ogni versione ha la sua sezione "## X.Y.Z" in NOVITA.md e in CHANGELOG.md (la stessa cosa in
+  #     inglese), che insieme diventano la descrizione della release. Si controlla PRIMA di pubblicare le immagini: con la 1.2.4 il controllo era solo alla fine (in
   #     prepara-zip.sh), e le immagini erano già su GitHub Container Registry quando la release si è fermata.
   novita:
     name: Le novità della versione
@@ -45,13 +46,15 @@ jobs:
       - name: Scarica il codice
         uses: actions/checkout@v7
 
-      - name: NOVITA.md ha la sezione di questa versione
+      - name: NOVITA.md e CHANGELOG.md hanno la sezione di questa versione
         run: |
           versione="${GITHUB_REF_NAME#v}"
-          grep -qx "## $versione" NOVITA.md || {
-            echo "::error::In NOVITA.md manca la sezione \"## $versione\": scrivi le novità, fai il merge, poi rimetti il tag (docs/50, parte S)."
-            exit 1
-          }
+          for file in NOVITA.md CHANGELOG.md; do
+            grep -qx "## $versione" "$file" || {
+              echo "::error::In $file manca la sezione \"## $versione\": scrivi le novità (in italiano in NOVITA.md, in inglese in CHANGELOG.md), fai il merge, poi rimetti il tag (docs/50, parte S)."
+              exit 1
+            }
+          done
 
   # 2. Le immagini. Una "matrix": lo stesso job tre volte, una per immagine, in parallelo.
   immagini:
@@ -141,5 +144,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           versione="${GITHUB_REF_NAME#v}"
+          # La descrizione: le novità in italiano e, sotto una riga, le stesse in inglese (prepara-zip.sh le ha
+          # scritte in novita-X.Y.Z.md e changelog-X.Y.Z.md).
+          {
+            cat "novita-$versione.md"
+            printf '\n---\n\n**English**\n\n'
+            cat "changelog-$versione.md"
+          } > "note-$versione.md"
           gh release create "$GITHUB_REF_NAME" "WalletTracker-$versione.zip" SHA256SUMS \
-            --title "WalletTracker $versione" --notes-file "novita-$versione.md"
+            --title "WalletTracker $versione" --notes-file "note-$versione.md"

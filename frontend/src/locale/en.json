@@ -1233,6 +1233,10 @@
       "it": "Nascondi gli importi",
       "en": "Hide the amounts"
     },
+    "3075026350666322158": {
+      "it": "Le tue spese e i tuoi conti, a colpo d'occhio.",
+      "en": "Your expenses and your accounts, at a glance."
+    },
     "5230112506462533810": {
       "it": "✓ L'app è protetta da un PIN: lo chiede su ogni dispositivo.",
       "en": "✓ The app is protected by a PIN: it is asked on every device."
@@ -3487,7 +3491,7 @@
     },
     "2932432317883573862": {
       "it": " Per cambiarla (un disco esterno, Google Drive) lancia dal server lo script di installazione con {$START_TAG_CODE}-CartellaBackup{$CLOSE_TAG_CODE} (Windows) o {$START_TAG_CODE}--cartella-backup{$CLOSE_TAG_CODE}. Il ripristino si fa dal server, con {$START_TAG_CODE}-Ripristina{$CLOSE_TAG_CODE}: docs/48. ",
-      "en": "To change it (an external disk, Google Drive) run the installation script from the server with {$START_TAG_CODE}-CartellaBackup{$CLOSE_TAG_CODE} (Windows) or {$START_TAG_CODE}--cartella-backup{$CLOSE_TAG_CODE}. A restore is done from the server, with {$START_TAG_CODE}-Ripristina{$CLOSE_TAG_CODE}: docs/48."
+      "en": "To change it (an external disk, Google Drive) run the installation script from the server with {$START_TAG_CODE}-BackupFolder{$CLOSE_TAG_CODE} (Windows) or {$START_TAG_CODE}--backup-folder{$CLOSE_TAG_CODE}. A restore is done from the server, with {$START_TAG_CODE}-Restore{$CLOSE_TAG_CODE}: docs/48."
     },
     "473385895034229120": {
       "it": "Caricamento…",
@@ -3635,11 +3639,11 @@
     },
     "830968417171161765": {
       "it": " Windows: {$START_TAG_CODE}powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna{$CLOSE_TAG_CODE}",
-      "en": "Windows: {$START_TAG_CODE}powershell -ExecutionPolicy Bypass -File installa.ps1 -Aggiorna{$CLOSE_TAG_CODE}"
+      "en": "Windows: {$START_TAG_CODE}powershell -ExecutionPolicy Bypass -File installa.ps1 -Update{$CLOSE_TAG_CODE}"
     },
     "6901096111354770204": {
       "it": "Mac e Linux: {$START_TAG_CODE}./installa.sh --aggiorna{$CLOSE_TAG_CODE}",
-      "en": "Mac and Linux: {$START_TAG_CODE}./installa.sh --aggiorna{$CLOSE_TAG_CODE}"
+      "en": "Mac and Linux: {$START_TAG_CODE}./installa.sh --update{$CLOSE_TAG_CODE}"
     },
     "4352942394312107062": {
       "it": " Prima di cambiare qualcosa fa un backup; se la versione nuova non parte, torna da solo a quella di adesso, con i dati di prima. ",

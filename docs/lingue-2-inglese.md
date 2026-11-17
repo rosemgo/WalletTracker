@@ -20,7 +20,7 @@ singolo browser. I motivi:
 | Situazione | In che lingua si apre |
 |---|---|
 | Chi usa già l'app (aggiorna da una versione precedente) | italiano: la migrazione V42 lo scrive nel database |
-| Installazione nuova, prima schermata | quella del browser (italiano o inglese; un browser tedesco → inglese) |
+| Installazione nuova, prima schermata | quella scelta installando (docs/lingue-3-installazione.md); se non c'è, quella del browser (italiano o inglese; un browser tedesco → inglese) |
 | Installazione nuova, dopo la prima schermata | quella della prima schermata, che diventa la lingua dell'installazione |
 | Un altro dispositivo | quella dell'installazione, anche se il browser è in un'altra lingua |
 
@@ -138,10 +138,7 @@ Se ci si accorgesse di uno sbaglio, si può tornare alla versione di prima di qu
 Un'avvertenza: **prima di tornare indietro, rimetti la lingua in italiano** da Impostazioni. La versione di prima non sa
 tradurre le categorie: se l'installazione fosse in inglese, resterebbero con i nomi inglesi ("Groceries").
 
-## Che cosa resta in italiano (terza consegna)
+## Il resto: la terza consegna
 
-- lo script di installazione, `GUIDA.md`, `LEGGIMI.txt`, `NOVITA.md`;
-- il manifest dell'app installabile (`manifest.webmanifest`: nome, descrizione e scorciatoie) e la riga per chi ha
-  JavaScript spento in `index.html`: sono file fissi, uno solo per tutte le lingue;
-- l'errore dell'ultimo backup, scritto dallo script del container;
-- i link alla guida, che punta alla `GUIDA.md` italiana.
+Lo script di installazione, il container dei backup, la guida, le novità, il manifest dell'app installabile e la
+lingua in cui si apre un'installazione nuova sono nella terza consegna: docs/lingue-3-installazione.md.

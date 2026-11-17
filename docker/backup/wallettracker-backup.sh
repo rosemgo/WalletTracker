@@ -20,6 +20,11 @@
 #   stato.txt   lo scrive questo script: backup automatico acceso o spento, un backup in corso, l'ultimo errore, e
 #               "aggiornato" (almeno ogni minuto: se è vecchio, il servizio dei backup non è acceso).
 #
+# Le lingue (docs/lingue-3-installazione.md): le righe che questo script scrive nel terminale e nei log sono in
+# italiano o in inglese, secondo WALLETTRACKER_LANGUAGE (la lingua dello script di installazione, dal .env). Ogni
+# frase è scritta due volte, una accanto all'altra. Alla dashboard invece non arriva una frase ma un CODICE
+# ("errore-codice" in stato.txt): la frase la scrive il backend, nella lingua dell'app (messages.properties).
+#
 # Come parla con il database: pg_dump, pg_restore e psql leggono PGHOST, PGDATABASE, PGUSER e PGPASSWORD
 # (docker-compose.yml). I file: la cartella dei backup è montata su /backup, quella della chiave (.data) su /data.
 #
@@ -42,20 +47,25 @@ STATO=/data/backup-stato
 ITERAZIONI=600000
 : "${WALLETTRACKER_BACKUP_PASSWORD:=}"
 
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+# La lingua dei messaggi: en per l'inglese, qualsiasi altra cosa (anche niente) per l'italiano.
+LINGUA=${WALLETTRACKER_LANGUAGE:-it}
+# t ITALIANO INGLESE: la frase nella lingua dei messaggi.
+t() { if [ "$LINGUA" = en ]; then printf '%s' "$2"; else printf '%s' "$1"; fi; }
 
-# errore CODICE MESSAGGIO: scrive il messaggio ed esce con quel codice.
+# log ITALIANO INGLESE: una riga con data e ora.
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $(t "$1" "$2")"; }
+
+# errore CODICE ITALIANO INGLESE: scrive il messaggio ed esce con quel codice.
 errore() {
-  local codice=$1
-  shift
-  echo "ERRORE: $*" >&2
-  exit "$codice"
+  echo "$(t ERRORE ERROR): $(t "$2" "$3")" >&2
+  exit "$1"
 }
 
 # La password deve esserci, ed essere lunga almeno 12 caratteri (lo stesso controllo dello script di installazione).
 controlla_password() {
   [ ${#WALLETTRACKER_BACKUP_PASSWORD} -ge 12 ] ||
-    errore 4 "Manca la password dei backup (WALLETTRACKER_BACKUP_PASSWORD nel .env): ./installa.sh --backup la chiede (docs/48)."
+    errore 4 "Manca la password dei backup (WALLETTRACKER_BACKUP_PASSWORD nel .env): ./installa.sh --backup la chiede (docs/48)." \
+      "The backup password is missing (WALLETTRACKER_BACKUP_PASSWORD in the .env): ./installa.sh --backup asks for it."
 }
 
 # "nome.backup" vuol dire un file della cartella dei backup; un percorso con "/" resta com'è.
@@ -71,10 +81,12 @@ crea() {
   local tipo=${1:-manuale}
   case "$tipo" in
     manuale | automatico | prima-del-ripristino | prima-dell-aggiornamento) ;;
-    *) errore 2 "Tipo di backup sconosciuto: $tipo" ;;
+    *) errore 2 "Tipo di backup sconosciuto: $tipo" "Unknown backup type: $tipo" ;;
   esac
   controlla_password
-  [ -r "$CHIAVE" ] || errore 2 "Non trovo la chiave di cifratura ($CHIAVE): l'app è mai stata avviata?"
+  [ -r "$CHIAVE" ] ||
+    errore 2 "Non trovo la chiave di cifratura ($CHIAVE): l'app è mai stata avviata?" \
+      "I cannot find the encryption key ($CHIAVE): has the app ever been started?"
 
   # 0. Il database ha le tabelle di WalletTracker? L'ultima migrazione di Flyway c'è solo se il backend l'ha preparato.
   #    Un database appena creato, o un altro database, darebbe un backup "vuoto" (pochi kB) che non contiene i tuoi
@@ -83,10 +95,12 @@ crea() {
   local migrazione
   # Prima: il database risponde? Se no, la domanda qui sotto tornerebbe vuota, e il messaggio sarebbe sbagliato.
   psql -tAc 'SELECT 1' >/dev/null 2>&1 ||
-    errore 2 "Non riesco a collegarmi al database ($PGDATABASE): è acceso? Backup non fatto."
+    errore 2 "Non riesco a collegarmi al database ($PGDATABASE): è acceso? Backup non fatto." \
+      "I cannot connect to the database ($PGDATABASE): is it running? Backup not made."
   migrazione=$(psql -tAc 'SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1' 2>/dev/null || true)
   [ -n "$migrazione" ] ||
-    errore 6 "Il database ($PGDATABASE) non ha le tabelle di WalletTracker: non c'è niente da salvare. Backup non fatto, e i backup di prima restano tutti (docs/48, parte G4)."
+    errore 6 "Il database ($PGDATABASE) non ha le tabelle di WalletTracker: non c'è niente da salvare. Backup non fatto, e i backup di prima restano tutti (docs/48, parte G4)." \
+      "The database ($PGDATABASE) does not have the WalletTracker tables: there is nothing to save. Backup not made, and the previous backups all stay."
 
   local nome lavoro
   nome="wallettracker-$tipo-$(date +%Y%m%d-%H%M%S).backup"
@@ -116,7 +130,10 @@ crea() {
   mv "$CARTELLA/.$nome.in-corso" "$CARTELLA/$nome"
   rm -rf "$lavoro"
 
-  log "Backup creato: $nome ($(du -h "$CARTELLA/$nome" | cut -f1))"
+  # Lo script di installazione legge da questa riga il NOME del file (non la frase, che cambia con la lingua).
+  local grandezza
+  grandezza=$(du -h "$CARTELLA/$nome" | cut -f1)
+  log "Backup creato: $nome ($grandezza)" "Backup created: $nome ($grandezza)"
   sfoltisci "$tipo"
 }
 
@@ -141,34 +158,39 @@ sfoltisci() {
   find "$CARTELLA" -maxdepth 1 -name "wallettracker-$tipo-*.backup" | sort -r | tail -n +"$((tieni + 1))" |
     while read -r vecchio; do
       rm -f "$vecchio"
-      log "Tolto il backup vecchio ($tipo, se ne tengono $tieni): $(basename "$vecchio")"
+      log "Tolto il backup vecchio ($tipo, se ne tengono $tieni): $(basename "$vecchio")" \
+        "Removed the old backup ($tipo, $tieni are kept): $(basename "$vecchio")"
     done
 }
 
 # --- apri: decifra e controlla (usato da verifica e da ripristina) ---------------------------------------------
 apri() {
   local file=$1 dove=$2
-  [ -f "$file" ] || errore 2 "Non trovo il file $file (deve stare nella cartella dei backup)."
-  [ -n "$WALLETTRACKER_BACKUP_PASSWORD" ] || errore 4 "Manca la password dei backup."
+  [ -f "$file" ] ||
+    errore 2 "Non trovo il file $file (deve stare nella cartella dei backup)." \
+      "I cannot find the file $file (it must be in the backup folder)."
+  [ -n "$WALLETTRACKER_BACKUP_PASSWORD" ] || errore 4 "Manca la password dei backup." "The backup password is missing."
   # Con la password sbagliata, di solito openssl se ne accorge subito ("bad decrypt"); in rari casi produce byte
   # senza senso, e allora se ne accorge tar. In tutti e due i casi: codice 3.
   if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter "$ITERAZIONI" -md sha256 \
     -pass env:WALLETTRACKER_BACKUP_PASSWORD -in "$file" -out "$dove/archivio.tar" 2>/dev/null ||
     ! tar -C "$dove" -xf "$dove/archivio.tar" 2>/dev/null; then
-    errore 3 "Password sbagliata, oppure il file non è un backup di WalletTracker (o è rovinato)."
+    errore 3 "Password sbagliata, oppure il file non è un backup di WalletTracker (o è rovinato)." \
+      "Wrong password, or the file is not a WalletTracker backup (or it is damaged)."
   fi
   rm -f "$dove/archivio.tar"
   # Le impronte: se anche un solo byte del database o della chiave fosse cambiato, qui ce ne accorgiamo.
   (cd "$dove" && sha256sum -c SHA256SUMS >/dev/null 2>&1) ||
-    errore 5 "Il backup si apre, ma il suo contenuto non corrisponde alle impronte: è rovinato. Usane un altro."
+    errore 5 "Il backup si apre, ma il suo contenuto non corrisponde alle impronte: è rovinato. Usane un altro." \
+      "The backup opens, but its content does not match the checksums: it is damaged. Use another one."
 }
 
 verifica() {
   local file lavoro
-  file=$(percorso "${1:?manca il nome del file}")
+  file=$(percorso "${1:?manca il nome del file - the file name is missing}")
   lavoro=$(mktemp -d)
   apri "$file" "$lavoro"
-  log "Il backup $(basename "$file") è integro:"
+  log "Il backup $(basename "$file") è integro:" "The backup $(basename "$file") is intact:"
   sed 's/^/    /' "$lavoro/manifest.txt"
   rm -rf "$lavoro"
 }
@@ -178,21 +200,22 @@ verifica() {
 # sicurezza: qui il database deve essere fermo.
 ripristina() {
   local file lavoro
-  file=$(percorso "${1:?manca il nome del file}")
+  file=$(percorso "${1:?manca il nome del file - the file name is missing}")
   lavoro=$(mktemp -d)
 
   # 1. Prima si apre e si controlla tutto: se il backup non va, non si è ancora toccato niente.
   apri "$file" "$lavoro"
-  log "Backup integro. Dentro:"
+  log "Backup integro. Dentro:" "Backup intact. Inside:"
   sed 's/^/    /' "$lavoro/manifest.txt"
 
   # 2. Il database: via tutto quello che c'è (lo schema "public", con tabelle, dati e la storia di Flyway), poi
   #    pg_restore ricarica il backup. --no-owner: le tabelle appartengono all'utente che ripristina, anche se il
   #    backup arriva da un'installazione con un nome utente diverso.
-  log "Svuoto il database e ci carico il backup..."
+  log "Svuoto il database e ci carico il backup..." "Emptying the database and loading the backup into it..."
   psql -q -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
   if ! pg_restore --no-owner --exit-on-error --dbname="$PGDATABASE" "$lavoro/database.dump"; then
-    errore 2 "Il caricamento si è fermato a metà: il database è incompleto. Rilancia il ripristino; i dati di prima sono nel backup \"prima-del-ripristino\"."
+    errore 2 "Il caricamento si è fermato a metà: il database è incompleto. Rilancia il ripristino; i dati di prima sono nel backup \"prima-del-ripristino\"." \
+      "The loading stopped halfway: the database is incomplete. Run the restore again; the previous data is in the \"prima-del-ripristino\" backup."
   fi
 
   # 3. La chiave di cifratura: quella del backup, perché è quella con cui sono cifrati i segreti del database
@@ -202,10 +225,11 @@ ripristina() {
       cp "$CHIAVE" "$CHIAVE.prima-del-ripristino-$(date +%Y%m%d-%H%M%S)"
     fi
     cat "$lavoro/encryption.key" >"$CHIAVE"
-    log "Chiave di cifratura rimessa com'era nel backup (quella di prima è accanto, in .data)."
+    log "Chiave di cifratura rimessa com'era nel backup (quella di prima è accanto, in .data)." \
+      "Encryption key put back as it was in the backup (the previous one is next to it, in .data)."
   fi
   rm -rf "$lavoro"
-  log "Ripristino completato."
+  log "Ripristino completato." "Restore completed."
 }
 
 # --- automatico ------------------------------------------------------------------------------------------------
@@ -233,15 +257,16 @@ scrivi_stato() {
     echo "tieni-prima=$TIENI_PRIMA"
     echo "in-corso=$IN_CORSO"
     echo "errore-quando=$ERRORE_QUANDO"
-    echo "errore=$ERRORE"
+    echo "errore-codice=$ERRORE"
   } >"$STATO/.stato.provvisorio"
   mv "$STATO/.stato.provvisorio" "$STATO/stato.txt"
   ULTIMO_STATO=$(date +%s)
 }
 
 # Un backup del tipo $1, con lo stato aggiornato prima e dopo. Tra parentesi: in un sotto-processo, così un errore
-# (che fa "exit") non spegne il ciclo. I messaggi d'errore per la dashboard li scegliamo noi: mai il testo di un
-# programma, che potrebbe contenere dettagli interni.
+# (che fa "exit") non spegne il ciclo. Alla dashboard va un CODICE, uno dei tre qui sotto: mai il testo di un
+# programma, che potrebbe contenere dettagli interni, e mai una frase, che sarebbe in una lingua sola. La frase di
+# ogni codice è nel catalogo del backend (messages.properties, backup.error.*): BackupService.
 esegui() {
   local codice=0
   IN_CORSO=$(date +%s)
@@ -254,11 +279,14 @@ esegui() {
   else
     ERRORE_QUANDO=$(date +%s)
     if [ "$codice" = 4 ]; then
-      ERRORE="Manca la password dei backup: dal server, lancia lo script di installazione con -Backup (docs/48)."
+      # frase: Manca la password dei backup: dal server, lancia lo script di installazione con -Backup (docs/48).
+      ERRORE=password-mancante
     elif [ "$codice" = 6 ]; then
-      ERRORE="Backup non fatto: il database non ha ancora i dati di WalletTracker. I backup di prima restano tutti (docs/48, parte G4)."
+      # frase: Backup non fatto: il database non ha ancora i dati di WalletTracker. I backup di prima restano tutti (docs/48, parte G4).
+      ERRORE=database-vuoto
     else
-      ERRORE="Backup non riuscito: dal server, guarda i log con  docker compose logs backup"
+      # frase: Backup non riuscito: dal server, guarda i log con  docker compose logs backup
+      ERRORE=non-riuscito
     fi
   fi
   scrivi_stato
@@ -268,7 +296,8 @@ esegui() {
 automatico() {
   ORA=${BACKUP_TIME:-03:15}
   local avvisato=false soglia adesso oggi riprova_dopo=0
-  [[ "$ORA" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || errore 2 "BACKUP_TIME deve essere un'ora come 03:15 (è \"$ORA\")."
+  [[ "$ORA" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] ||
+    errore 2 "BACKUP_TIME deve essere un'ora come 03:15 (è \"$ORA\")." "BACKUP_TIME must be a time like 03:15 (it is \"$ORA\")."
   # "03:15" diventa il numero 315 (10# vuol dire "in base 10": senza, "0315" sarebbe letto come un numero ottale).
   soglia=$((10#${ORA/:/}))
   # docker stop manda il segnale TERM: usciamo subito, invece di farci aspettare 10 secondi e poi chiudere a forza.
@@ -277,16 +306,18 @@ automatico() {
   # Una richiesta rimasta da prima (il container era spento) non vale più: chi l'ha fatta non sta più aspettando.
   rm -f "$STATO/richiesta"
   scrivi_stato
-  log "Backup automatico: uno al giorno, dalle $ORA; tengo gli ultimi ${BACKUP_KEEP:-14} (cartella del .env: BACKUP_DIR)."
+  log "Backup automatico: uno al giorno, dalle $ORA; tengo gli ultimi ${BACKUP_KEEP:-14} (cartella del .env: BACKUP_DIR)." \
+    "Automatic backup: one a day, from $ORA; I keep the last ${BACKUP_KEEP:-14} (folder of the .env: BACKUP_DIR)."
   while true; do
     if [ -f "$STATO/richiesta" ]; then
       rm -f "$STATO/richiesta"
-      log "Backup chiesto dalla dashboard."
+      log "Backup chiesto dalla dashboard." "Backup requested from the dashboard."
       esegui manuale || true
     fi
     if [ ${#WALLETTRACKER_BACKUP_PASSWORD} -lt 12 ]; then
       if [ "$avvisato" = false ]; then
-        log "Backup automatico SPENTO: manca la password. Per accenderlo: ./installa.sh --backup (docs/48)."
+        log "Backup automatico SPENTO: manca la password. Per accenderlo: ./installa.sh --backup (docs/48)." \
+          "Automatic backup OFF: the password is missing. To turn it on: ./installa.sh --backup"
         avvisato=true
       fi
     elif [ ! -r "$CHIAVE" ]; then
@@ -299,7 +330,7 @@ automatico() {
       if [ "$adesso" -ge "$soglia" ] && [ "$(date +%s)" -ge "$riprova_dopo" ] &&
         [ -z "$(find "$CARTELLA" -maxdepth 1 -name "wallettracker-automatico-$oggi-*.backup" | head -n 1)" ]; then
         if ! esegui automatico; then
-          log "Backup automatico non riuscito: riprovo tra mezz'ora."
+          log "Backup automatico non riuscito: riprovo tra mezz'ora." "Automatic backup failed: I try again in half an hour."
           riprova_dopo=$(($(date +%s) + 1800))
         fi
       fi
@@ -319,5 +350,5 @@ case "${1:-automatico}" in
   crea) crea "${2:-manuale}" ;;
   verifica) verifica "${2:-}" ;;
   ripristina) ripristina "${2:-}" ;;
-  *) errore 2 "Comando sconosciuto: $1 (automatico, crea, verifica, ripristina)" ;;
+  *) errore 2 "Comando sconosciuto: $1 (automatico, crea, verifica, ripristina)" "Unknown command: $1 (automatico, crea, verifica, ripristina)" ;;
 esac

@@ -1,5 +1,7 @@
 # WalletTracker: come installarlo e usarlo
 
+*This guide in English: [GUIDE.md](GUIDE.md).*
+
 Questa guida è pensata per chi non ha mai installato un programma "da informatici". Non dovrai scrivere comandi, se
 non in un paio di casi che spiego passo per passo: quasi tutto si fa con un doppio clic. Se a un certo punto quello che
 vedi non corrisponde a quello che c'è scritto, guarda l'ultimo capitolo, "Se qualcosa non va".
@@ -85,7 +87,8 @@ Dentro trovi tre file da usare con il doppio clic (su Windows finiscono con `.cm
 | **Backup WalletTracker** | fa subito un backup (capitolo 8) |
 
 Gli altri file (`installa.ps1`, `installa.sh`, `docker-compose.yml` e così via) li usano questi tre. Lasciali dove
-sono e non modificarli.
+sono e non modificarli. Nella cartella **English** ci sono gli stessi tre file con i nomi inglesi (Start, Update,
+Backup) e le prime istruzioni in inglese: fanno le stesse cose, servono a chi non legge l'italiano.
 
 ## 4. Il primo avvio
 
@@ -100,13 +103,22 @@ sono e non modificarli.
    poi fai clic destro sul file e scegli **Apri**, e ancora **Apri**. Sui Mac più recenti a volte non basta: vai in
    Impostazioni di Sistema → Privacy e sicurezza, scorri fino in fondo e premi **Apri comunque**.
 
-2. Si apre una finestra nera piena di scritte. È lo script che prepara tutto: crea la configurazione, scarica l'app
-   (qualche centinaio di MB, quindi la prima volta ci vuole qualche minuto) e la avvia. Se Docker Desktop era spento,
-   lo accende lui.
-3. A un certo punto ti chiede dove salvare i backup. Lo chiede solo la prima volta. Se non sai cosa rispondere premi
+2. Si apre una finestra nera piena di scritte. Per prima cosa chiede la lingua:
+
+   ```
+   Lingua / Language
+     1) Italiano
+     2) English
+   ```
+
+   Scrivi **1** e premi Invio. Lo chiede solo questa prima volta: da lì in poi lo script parla solo italiano, e l'app
+   si apre in italiano.
+3. Poi lo script prepara tutto: crea la configurazione, scarica l'app (qualche centinaio di MB, quindi la prima volta
+   ci vuole qualche minuto) e la avvia. Se Docker Desktop era spento, lo accende lui.
+4. A un certo punto ti chiede dove salvare i backup. Lo chiede solo la prima volta. Se non sai cosa rispondere premi
    Invio: i backup andranno nella cartella **backup**, dentro quella di WalletTracker, e potrai cambiarla quando vuoi
    (capitolo 8).
-4. Quando ha finito, la finestra scrive "WalletTracker … è avviato: http://localhost:8000" e il browser si apre da
+5. Quando ha finito, la finestra scrive "WalletTracker … è avviato: http://localhost:8000" e il browser si apre da
    solo su quell'indirizzo.
 
    ![La finestra alla fine dell'avvio](docs/img/guida/fine-avvio.png)
@@ -116,6 +128,13 @@ sono e non modificarli.
 
 Salva **http://localhost:8000** tra i preferiti del browser: è l'indirizzo dell'app. "localhost" vuol dire "questo
 computer", quindi funziona solo sul server. Per aprire l'app dal telefono c'è il capitolo 6.
+
+**Cambiare lingua dopo.** La lingua dell'app si cambia dall'app, quando vuoi e nei due versi: **Altro → Impostazioni →
+Lingua**. Vale per tutta l'installazione, il computer e il telefono. Le categorie di partenza che non hai rinominato
+prendono il nome nella lingua nuova; i testi dei movimenti mandati dalle banche, le regole di partenza e tutto quello
+che hai scritto tu restano come sono. La lingua delle finestre nere (Avvia, Aggiorna, Backup) è quella scelta al primo
+avvio: per cambiare anche quella, lancia lo script con l'opzione `-Lingua en` (`./installa.sh --lingua en` sul Mac),
+come mostrato per `-Tailscale` nel capitolo 6.
 
 ## 5. Il PIN
 

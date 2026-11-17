@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import it.wallettracker.message.ApiException;
+import it.wallettracker.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -100,6 +101,8 @@ public class BackupService {
      * @param keepManual       quanti backup fatti a mano si tengono (10), 0 se il container non lo dice
      * @param keepBefore       quanti backup di prima di un aggiornamento, o di un ripristino, si tengono (3)
      * @param inProgress       un backup chiesto o in corso
+     * @param lastError        l'ultimo errore, se è più recente dell'ultimo backup riuscito: alla dashboard arriva
+     *                         come frase, nella lingua della richiesta
      * @param lastSuccessAt    il backup più nuovo (null se non ce n'è nessuno)
      * @param attention        c'è qualcosa da sistemare: la dashboard mostra un avviso
      * @param canDownload      la richiesta arriva dal server: i backup si possono scaricare
@@ -107,7 +110,7 @@ public class BackupService {
      *                         WalletTracker: la dashboard lo mostra, in sola lettura (si cambia con lo script)
      */
     public record Status(boolean available, boolean serviceRunning, boolean automaticEnabled, String backupTime,
-            int keep, int keepManual, int keepBefore, boolean inProgress, Instant lastErrorAt, String lastError,
+            int keep, int keepManual, int keepBefore, boolean inProgress, Instant lastErrorAt, Message lastError,
             Instant lastSuccessAt, boolean attention, List<BackupFile> backups, boolean canDownload,
             String serverDirectory) {
 
@@ -130,7 +133,7 @@ public class BackupService {
         boolean inProgress = Files.exists(stateDirectory.resolve(REQUEST_FILE))
                 || (running && !state.getOrDefault("in-corso", "").isEmpty());
         Instant errorAt = epoch(state.get("errore-quando"));
-        String error = blankToNull(state.get("errore"));
+        Message error = lastError(state);
 
         List<BackupFile> backups = list();
         Instant lastSuccess = backups.isEmpty() ? null : backups.getFirst().createdAt();
@@ -142,6 +145,35 @@ public class BackupService {
                 parseInt(state.get("tieni-manuali")), parseInt(state.get("tieni-prima")), inProgress,
                 errorAfterSuccess ? errorAt : null, errorAfterSuccess ? error : null, lastSuccess, attention, backups,
                 false, serverDirectory);
+    }
+
+    /**
+     * L'ultimo errore del container. Il container scrive un <b>codice</b> ({@code errore-codice}), non una frase: lui
+     * parla la lingua dello script di installazione, la dashboard quella dell'app, e non è detto che coincidano
+     * (docs/lingue-3-installazione.md). La frase di ogni codice è nel catalogo.
+     */
+    private static Message lastError(Map<String, String> state) {
+        String code = state.getOrDefault("errore-codice", "").trim();
+        return switch (code) {
+            // messaggio: Manca la password dei backup: dal server, lancia lo script di installazione con -Backup
+            //            (docs/48).
+            case "password-mancante" -> Message.of("backup.no-password");
+            // messaggio: Backup non fatto: il database non ha ancora i dati di WalletTracker. I backup di prima
+            //            restano tutti (docs/48, parte G4).
+            case "database-vuoto" -> Message.of("backup.error.empty-database");
+            // messaggio: Backup non riuscito: dal server, guarda i log con  docker compose logs backup
+            case "non-riuscito" -> Message.of("backup.error.failed");
+            default -> {
+                // Un container di prima delle lingue (per pochi secondi, durante un aggiornamento) scrive ancora la
+                // frase, in italiano, nella riga "errore": la si mostra così com'è.
+                String text = blankToNull(state.get("errore"));
+                if (text != null) {
+                    yield Message.verbatim(text);
+                }
+                // Un codice che questo backend non conosce: comunque un backup non riuscito.
+                yield code.isEmpty() ? null : Message.of("backup.error.failed");
+            }
+        };
     }
 
     /**

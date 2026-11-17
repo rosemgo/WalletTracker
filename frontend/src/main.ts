@@ -27,6 +27,13 @@ async function start(): Promise<void> {
   }
   // La lingua della pagina: la leggono i lettori di schermo, e da qui la legge l'app (text/locale.ts).
   document.documentElement.lang = language;
+  // Il manifest dell'app installabile (il nome delle scorciatoie, la descrizione) è un file fisso: ce n'è uno per
+  // lingua, e index.html indica quello italiano. Va cambiato qui, prima che il browser proponga di installare l'app.
+  if (language !== SOURCE_LANGUAGE) {
+    document
+      .querySelector('link[rel="manifest"]')
+      ?.setAttribute('href', `manifest.${language}.webmanifest`);
+  }
 
   const { bootstrap } = await import('./bootstrap');
   await bootstrap();

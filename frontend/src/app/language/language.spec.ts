@@ -18,11 +18,13 @@ describe('the language the app opens in', () => {
   });
 
   /** Il server risponde con questa lingua (o null: nessuno ha ancora scelto). Conta quante volte lo si chiede. */
-  function server(language: string | null): { calls: number } {
+  function server(language: string | null, suggested: string | null = null): { calls: number } {
     const seen = { calls: 0 };
     globalThis.fetch = (() => {
       seen.calls++;
-      return Promise.resolve(new Response(JSON.stringify({ language, supported: ['it', 'en'] })));
+      return Promise.resolve(
+        new Response(JSON.stringify({ language, supported: ['it', 'en'], suggested })),
+      );
     }) as typeof fetch;
     return seen;
   }
@@ -73,6 +75,28 @@ describe('the language the app opens in', () => {
 
     expect(await startLanguage()).toBe(browserLanguage());
     expect(rememberedLanguage()).toBeNull();
+  });
+
+  it('on a new installation opens in the language chosen in the installer, whatever the browser says', async () => {
+    // docs/lingue-3-installazione.md: chi ha risposto "English" allo script trova la prima schermata in inglese.
+    const other = browserLanguage() === 'en' ? 'it' : 'en';
+    server(null, other);
+
+    expect(await startLanguage()).toBe(other);
+    // Una proposta, non una scelta: non si ricorda, e la prima schermata la può ancora cambiare.
+    expect(rememberedLanguage()).toBeNull();
+  });
+
+  it('the language chosen in the app wins over the one chosen in the installer', async () => {
+    server('it', 'en');
+
+    expect(await startLanguage()).toBe('it');
+  });
+
+  it('an installer language we do not know is ignored', async () => {
+    server(null, 'klingon');
+
+    expect(await startLanguage()).toBe(browserLanguage());
   });
 
   it('if the server does not answer, or answers nonsense, follows the browser', async () => {

@@ -12,7 +12,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Locale;
 
+import it.wallettracker.message.Message;
+import it.wallettracker.message.TestMessages;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -112,14 +115,28 @@ class BackupServiceTest {
         writeState(30, false, ""); // nessuna password
         assertThat(service.status().attention()).isTrue();
 
-        writeState(30, true, "errore-quando=" + NOW.minusSeconds(60).getEpochSecond()
-                + "\nerrore=Backup non riuscito: dal server, guarda i log\n");
+        // Il container scrive un codice, non una frase: la frase è nel catalogo, in ogni lingua.
+        writeState(30, true, "errore-quando=" + NOW.minusSeconds(60).getEpochSecond() + "\nerrore-codice=non-riuscito\n");
         BackupService.Status failed = service.status();
         assertThat(failed.attention()).isTrue();
-        assertThat(failed.lastError()).startsWith("Backup non riuscito");
+        assertThat(failed.lastError()).isEqualTo(Message.of("backup.error.failed"));
+        assertThat(TestMessages.text(failed.lastError())).startsWith("Backup non riuscito");
+        assertThat(TestMessages.messages().text(failed.lastError(), Locale.ENGLISH)).startsWith("Backup failed");
+        writeState(30, true, "errore-quando=" + NOW.minusSeconds(60).getEpochSecond() + "\nerrore-codice=database-vuoto\n");
+        assertThat(service.status().lastError()).isEqualTo(Message.of("backup.error.empty-database"));
+        writeState(30, true, "errore-quando=" + NOW.minusSeconds(60).getEpochSecond() + "\nerrore-codice=password-mancante\n");
+        assertThat(service.status().lastError()).isEqualTo(Message.of("backup.no-password"));
+        // Un codice di una versione più nuova, che questo backend non conosce: resta un backup non riuscito.
+        writeState(30, true, "errore-quando=" + NOW.minusSeconds(60).getEpochSecond() + "\nerrore-codice=mai-visto\n");
+        assertThat(service.status().lastError()).isEqualTo(Message.of("backup.error.failed"));
+        // La frase di un container di prima delle lingue si mostra com'è.
+        writeState(30, true, "errore-quando=" + NOW.minusSeconds(60).getEpochSecond()
+                + "\nerrore=Backup non riuscito: dal server, guarda i log\n");
+        assertThat(TestMessages.text(service.status().lastError())).isEqualTo("Backup non riuscito: dal server, guarda i log");
 
         // Un errore più vecchio dell'ultimo backup riuscito non conta più.
-        writeState(30, true, "errore-quando=" + NOW.minus(Duration.ofDays(1)).getEpochSecond() + "\nerrore=vecchio\n");
+        writeState(30, true, "errore-quando=" + NOW.minus(Duration.ofDays(1)).getEpochSecond()
+                + "\nerrore-codice=non-riuscito\n");
         assertThat(service.status().attention()).isFalse();
         assertThat(service.status().lastError()).isNull();
 

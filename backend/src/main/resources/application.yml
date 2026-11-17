@@ -119,6 +119,10 @@ wallettracker:
   # La versione dell'app (docs/50, parte B): nelle immagini pubblicate la scrive il Dockerfile (es. 1.0.0); costruendo
   # dal codice, o con ./mvnw, è "sviluppo". La mostra la pagina Impostazioni (GET /api/version).
   version: ${WALLETTRACKER_VERSION:sviluppo}
+  # La lingua scelta all'installazione (docs/lingue-3-installazione.md): lo script la chiede al primo avvio e la scrive
+  # nel .env (WALLETTRACKER_LANGUAGE: it o en). In un'installazione nuova, finché nessuno sceglie dall'app, è la lingua
+  # in cui la dashboard si apre. Vuota (./mvnw, o un .env di prima delle lingue): decide il browser.
+  installer-language: ${WALLETTRACKER_LANGUAGE:}
   # C'è una versione nuova? (docs/50, parte J). Una volta al giorno il backend chiede a GitHub l'ultima versione
   # pubblicata (GitHub vede solo l'indirizzo IP) e la dashboard lo dice. WALLETTRACKER_UPDATE_CHECK=false nel .env lo
   # spegne. Dal codice ("sviluppo") non si chiede mai niente. L'indirizzo si cambia solo per le prove.

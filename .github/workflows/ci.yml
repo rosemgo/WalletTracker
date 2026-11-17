@@ -143,6 +143,50 @@ jobs:
           printf '\n' | "./Avvia WalletTracker.command" --senza-browser | tee avvio.log
           grep -q 'è avviato' avvio.log
           grep -q 'Premi Invio' avvio.log
+          # La cartella "English" (docs/lingue-3-installazione.md): gli stessi tre file con i nomi inglesi, con le
+          # stesse regole, e il LEGGIMI in inglese (README.txt). Lanciano lo script della cartella sopra, che parla
+          # la lingua dell'installazione: qui ancora l'italiano.
+          test "$(ls English/*.cmd | wc -l)" = 3 && test "$(ls English/*.command | wc -l)" = 3
+          for f in English/*.cmd English/README.txt LEGGIMI.txt; do
+            if [ "$(grep -c $'\r$' "$f")" != "$(wc -l < "$f")" ]; then echo "$f: fini riga non di Windows"; exit 1; fi
+            if LC_ALL=C grep -q '[^ -~[:cntrl:]]' "$f"; then echo "$f: caratteri non ASCII"; exit 1; fi
+          done
+          for f in English/*.cmd; do grep -q '%~dp0..\\installa.ps1' "$f"; done
+          for f in English/*.command; do
+            test -x "$f"
+            if grep -q $'\r' "$f"; then echo "$f: fini riga di Windows"; exit 1; fi
+          done
+          printf '\n' | "./English/Start WalletTracker.command" --no-browser | tee start.log
+          grep -q 'è avviato' start.log
+          grep -q 'Press Enter' start.log
+
+      # Le lingue (docs/lingue-3-installazione.md). Lo script passa all'inglese con --language e torna all'italiano
+      # con --lingua; in inglese parla inglese anche il container dei backup; il backend propone alla dashboard la
+      # lingua scelta installando (qui nessuno ha ancora scelto dall'app); nginx serve il manifest inglese con il
+      # tipo giusto. Alla fine la lingua resta scritta nel .env (it): i passi dopo controllano frasi italiane.
+      - name: Le due lingue
+        run: |
+          ./installa.sh --language en --no-browser | tee inglese.log
+          grep -q 'From now on this script speaks English' inglese.log
+          grep -q 'WalletTracker sviluppo is running: http://localhost:8000' inglese.log
+          if grep -q 'è avviato' inglese.log; then echo "in inglese c'è ancora dell'italiano"; exit 1; fi
+          grep -qx 'WALLETTRACKER_LANGUAGE=en' .env
+          curl -fsS http://localhost:8000/api/language | tee lingua.json
+          grep -q '"language":null' lingua.json
+          grep -q '"suggested":"en"' lingua.json
+          curl -fsS -D - -o /dev/null http://localhost:8000/manifest.en.webmanifest | grep -i '^content-type: application/manifest+json'
+          curl -fsS http://localhost:8000/manifest.en.webmanifest | grep -q '"name": "Transactions"'
+          # Un comando che non esiste: il container risponde con un errore, in inglese (il codice d'uscita è 2).
+          docker compose run --rm -T backup boh > backup-inglese.log 2>&1 || true
+          cat backup-inglese.log
+          grep -q 'ERROR: Unknown command: boh' backup-inglese.log
+          ./installa.sh --help | grep -q -- '--backup-folder'
+          ./installa.sh --lingua it --senza-browser | tee italiano.log
+          grep -q 'Da adesso questo script parla italiano' italiano.log
+          grep -q 'WalletTracker sviluppo è avviato' italiano.log
+          grep -qx 'WALLETTRACKER_LANGUAGE=it' .env
+          curl -fsS http://localhost:8000/api/language | grep -q '"suggested":"it"'
+          ./installa.sh --aiuto | grep -q -- '--cartella-backup'
 
       # -f: curl fallisce se la risposta è un errore (4xx, 5xx). Dal passo 3 (docs/46) le API vogliono il PIN: senza,
       # 401. Poi facciamo quello che fa la dashboard: lo stato (che dà il cookie XSRF-TOKEN), il PIN creato dal PC
@@ -383,6 +427,34 @@ jobs:
       - name: Log dei container
         if: failure()
         run: docker compose logs --tail 200
+
+  # Lo script di Windows (docs/lingue-3-installazione.md). installa.ps1 fa le stesse cose di installa.sh, ma fino a
+  # qui nessuna prova lo eseguiva. Su una macchina Windows, con Windows PowerShell 5.1 (quello di ogni PC) e con un
+  # FINTO docker (.github/ci/docker.cmd: risponde "tutto bene" senza avviare niente): lo script deve essere letto
+  # senza errori dalle due versioni di PowerShell, arrivare in fondo in italiano e in inglese, scrivere il .env, e
+  # fermarsi con un errore chiaro quando manca la password dei backup. I container veri li prova il job "docker".
+  windows:
+    name: Script di Windows (installa.ps1)
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v7
+
+      # Il lettore di PowerShell dice gli errori di scrittura (una virgoletta non chiusa, una graffa in più) senza
+      # eseguire niente. Con tutte e due le versioni: quello che PowerShell 7 accetta, la 5.1 a volte no.
+      - name: installa.ps1 si legge senza errori (PowerShell 7)
+        shell: pwsh
+        run: ./.github/ci/prova-windows.ps1 -SoloLettura
+
+      - name: installa.ps1 si legge senza errori (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./.github/ci/prova-windows.ps1 -SoloLettura
+
+      - name: installa.ps1 dall'inizio alla fine, in italiano e in inglese
+        shell: powershell
+        run: ./.github/ci/prova-windows.ps1
 
   # "Aggiorna" (Fase 4, passo 6b: docs/50, parte I), da una versione all'altra, con un finto GitHub sulla macchina
   # stessa: l'ultima già installata, uno ZIP manomesso (rifiutato), un aggiornamento riuscito e uno che fallisce (lo

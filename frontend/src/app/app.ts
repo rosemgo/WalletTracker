@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, effect, inject, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Meta } from '@angular/platform-browser';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
@@ -126,6 +127,11 @@ export class App implements OnInit {
     inject(ThemeStore);
     // Tiene la lingua di questa pagina allineata a quella dell'installazione (anche qui: basta crearla).
     inject(LanguageStore);
+    // La descrizione della pagina (index.html la porta in italiano, e index.html è uno solo), nella lingua dell'app.
+    inject(Meta).updateTag({
+      name: 'description',
+      content: $localize`Le tue spese e i tuoi conti, a colpo d'occhio.`,
+    });
 
     // Appena si entra (PIN giusto, o sessione ancora aperta) si chiede lo stato di Enable Banking: prima il backend
     // risponderebbe 401.

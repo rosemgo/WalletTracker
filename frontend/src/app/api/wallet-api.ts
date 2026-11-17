@@ -70,6 +70,14 @@ import {
  * Gli indirizzi iniziano con `/api`: durante lo sviluppo il server di Angular li inoltra al backend
  * (vedi proxy.conf.json), quindi qui non serve scrivere `http://localhost:8080`.
  */
+
+/** GET /api/language (docs/lingue-2-inglese.md, docs/lingue-3-installazione.md). */
+export interface LanguageInfo {
+  language: string | null;
+  supported: string[];
+  suggested?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class WalletApi {
   private readonly http = inject(HttpClient);
@@ -277,9 +285,12 @@ export class WalletApi {
 
   /** GET /api/setup */
   /** GET /api/auth/status: lo stato del PIN. Dà anche il cookie XSRF-TOKEN, che Angular rimanda da solo. */
-  /** GET /api/language: la lingua dell'installazione (null se nessuno l'ha ancora scelta). Risponde anche senza PIN. */
-  language(): Observable<{ language: string | null; supported: string[] }> {
-    return this.http.get<{ language: string | null; supported: string[] }>('/api/language');
+  /**
+   * GET /api/language: la lingua dell'installazione (null se nessuno l'ha ancora scelta). Risponde anche senza PIN.
+   * In un'installazione nuova c'è anche `suggested`, la lingua scelta installando: la usa l'avvio (language.ts).
+   */
+  language(): Observable<LanguageInfo> {
+    return this.http.get<LanguageInfo>('/api/language');
   }
 
   /** PUT /api/language: cambia la lingua dell'installazione; le categorie di partenza non rinominate la seguono. */

@@ -1,3 +1,5 @@
+import { APP_LANGUAGE } from '../text/locale';
+
 /**
  * Quale indirizzo di ritorno userà il backend per un collegamento avviato da questa pagina (docs/47, parte Q). È la
  * stessa regola di EnableBankingProperties.redirectUrlFor, ripetuta qui solo per DIRLO PRIMA all'utente ("al ritorno si
@@ -65,5 +67,7 @@ export function isDevServer(origin: string): boolean {
   }
 }
 
-/** La guida, per i passi di Tailscale (capitolo "Tailscale"). */
-export const GUIDE_URL = 'https://github.com/rosemgo/WalletTracker/blob/main/GUIDA.md';
+/** La guida, per i passi di Tailscale (capitolo "Tailscale"): GUIDA.md in italiano, GUIDE.md in inglese. */
+export const GUIDE_URL =
+  'https://github.com/rosemgo/WalletTracker/blob/main/' +
+  (APP_LANGUAGE === 'en' ? 'GUIDE.md' : 'GUIDA.md');
