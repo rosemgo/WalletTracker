@@ -32,7 +32,7 @@ novita_di CHANGELOG.md "$uscita/changelog-$versione.md"
 cartella="$uscita/WalletTracker-$versione"
 rm -rf "$cartella" "$cartella.zip"
 mkdir -p "$cartella"
-cp installa.sh installa.ps1 .env.example NOVITA.md CHANGELOG.md LEGGIMI.txt "$cartella/"
+cp installa.sh installa.ps1 .env.example NOVITA.md CHANGELOG.md LEGGIMI.txt LICENSE "$cartella/"
 # I file da doppio clic (docs/50, parte N): .cmd per Windows, .command per il Mac. cp -p tiene il permesso di
 # esecuzione dei .command, e zip lo scrive nello ZIP: senza, il Mac non li aprirebbe con un doppio clic.
 cp -p ./*.cmd ./*.command "$cartella/"
