@@ -11,7 +11,7 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   conto dei pagamenti in attesa compresi nel saldo, e non li conta una seconda volta quando vengono contabilizzati:
   niente più avviso "i movimenti non tornano" ogni giorno, né pagamenti contati due volte. Il saldo comprende i
   pagamenti in attesa, come nell'app della banca e come le spese; nella pagina Conti, se ce ne sono, una riga mostra
-  anche il saldo contabile.
+  anche il saldo contabile. Lo stesso per un saldo scritto da te su un conto collegato.
 
 ## 1.3.0
 

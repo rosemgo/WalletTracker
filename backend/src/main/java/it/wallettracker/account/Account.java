@@ -256,11 +256,21 @@ public class Account {
 
     /** Salva un saldo (o lo toglie, con {@code balance} null). */
     public void changeBalance(BigDecimal balance, LocalDate date, BalanceSource source, Instant at) {
+        changeBalance(balance, date, source, at, null);
+    }
+
+    /**
+     * Come {@link #changeBalance(BigDecimal, LocalDate, BalanceSource, Instant)}, con i movimenti in attesa compresi nel
+     * saldo ({@code pending}, null se nessuno): chi scrive il saldo copia quello dell'app della banca, che di solito li
+     * comprende (docs/saldi.md, parte O).
+     */
+    public void changeBalance(BigDecimal balance, LocalDate date, BalanceSource source, Instant at,
+            BigDecimal pending) {
         this.balance = balance;
         this.balanceDate = balance == null ? null : date;
         this.balanceSource = balance == null ? null : source;
         this.balanceUpdatedAt = balance == null ? null : at;
-        this.balancePending = null; // scritto a mano: è già senza i movimenti in attesa
+        this.balancePending = balance == null ? null : pending;
     }
 
     public BigDecimal getBalancePending() {

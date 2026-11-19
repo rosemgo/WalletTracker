@@ -199,6 +199,34 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aWrittenBalanceOfALinkedAccountIncludesItsPendingMovementsLikeTheBankApp() throws InterruptedException {
+        // Un conto collegato di cui la banca non dà il saldo: lo scrive l'utente, copiandolo dall'app della banca, con
+        // dentro un pagamento in attesa arrivato dal collegamento (docs/saldi.md, parte O).
+        BankConnection connection = connectionRepository.save(new BankConnection("Trade Republic", "DE", "s-6",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account broker = accountRepository.save(new Account(connection, "k-6", "u-6", null, "Conto", "EUR"));
+        movement(broker, "2026-11-10", "-20");
+        Account reloaded = accountRepository.findById(broker.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "p-6", TransactionStatus.PENDING,
+                LocalDate.of(2026, 11, 18), null, new BigDecimal("-10.00"), "EUR", null, "Pizza", "{}"));
+
+        assertThat(balance(broker, "{\"balance\": 490.00}")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$.balance.amount").isEqualTo(490.0); // come nell'app della banca
+            json.assertThat().extractingPath("$.balance.booked").isEqualTo(500.0);
+        });
+
+        // Il pagamento viene contabilizzato: conta una volta sola.
+        Thread.sleep(5);
+        transactionRepository.deleteAll(transactionRepository.findAll().stream()
+                .filter(t -> t.getStatus() == TransactionStatus.PENDING).toList());
+        movement(reloaded, "2026-11-19", "-10.00");
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(490.0);
+            json.assertThat().extractingPath("$[0].balance.booked").isNull();
+        });
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));

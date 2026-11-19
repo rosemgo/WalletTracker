@@ -599,6 +599,19 @@ con le spese ha deciso. Lo storico, le fotografie e il controllo dei saldi resta
 reimportano), il contabile no. Nel grafico solo il punto di oggi aggiunge i movimenti in attesa di adesso: quelli dei
 giorni prima intanto sono stati contabilizzati, e sono già nei movimenti.
 
+**Anche il saldo scritto a mano.** Un conto collegato di cui la banca non dà il saldo (parte G) ha un saldo scritto
+dall'utente, copiato dall'app della banca, che di solito comprende i pagamenti in attesa; e il collegamento porta
+comunque i movimenti in attesa. `AccountService.changeBalance` salva quanto è in attesa in quel momento, come per un
+saldo previsto della banca: senza, un pagamento in attesa si sarebbe contato due volte (tre, una volta contabilizzato).
+Un conto caricato da file non ne ha: i file danno solo movimenti contabilizzati.
+
+**Quanto ci si può fidare del tipo di saldo.** Enable Banking passa i codici ISO 20022 (`CLBD`, `ITBD`, `XPCD`, `ITAV`,
+`CLAV`, `FWAV`, `OPBD`, `PRCD`, `VALU`, `INFO`, `OTHR`) e un nome libero della banca, ma la sua documentazione non dice
+se il tipo è controllato o normalizzato, né c'è un campo che dica se i movimenti in attesa sono compresi; nel suo stesso
+esempio un saldo di nome "Booked balance" ha il tipo `CLAV`. Una banca che dichiarasse il tipo sbagliato non si può
+riconoscere prima: la rete di sicurezza è il controllo dei saldi (parte N), che segnala una differenza uguale alla somma
+dei movimenti in attesa, come è successo con Revolut.
+
 **La migrazione V44** cancella anche i controlli fatti con la regola vecchia (per Revolut segnalavano una differenza che
 non c'era) e le fotografie dei saldi dei giorni scorsi (per Revolut avevano dentro i movimenti in attesa): sono valori
 calcolati, quei giorni tornano stimati dai movimenti e le fotografie ripartono dalla prossima ora.
@@ -607,7 +620,7 @@ calcolati, quei giorni tornano stimati dai movimenti e le fotografie ripartono d
 
 **Le prove.** `BankBalanceTest.theExpectedAndTheAvailableBalancesIncludeThePendingMovements`,
 `AccountBalanceTest.aBalanceWithThePendingMovementsShowsThemAndTheBookedOneApart` (il caso di Revolut, poi i
-pagamenti contabilizzati che contano una volta sola),
+pagamenti contabilizzati che contano una volta sola), `AccountBalanceTest.aWrittenBalanceOfALinkedAccountIncludesItsPendingMovementsLikeTheBankApp`,
 `BalanceHistoryServiceTest.todayHasThePendingMovementsLikeTheAccountsPageThePhotoIsBooked`, `BalanceCheckTest.aBalanceWithThePendingMovementsIsComparedWithoutThem`,
 `accounts-page.spec.ts` (la riga nella pagina Conti).
 

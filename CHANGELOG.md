@@ -11,7 +11,7 @@ changes something important for those who use it.
   for the pending payments included in the balance, and does not count them a second time once they are booked: no
   more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending
   payments, as in the bank's app and as the expenses do; on the Accounts page, when there are any, a line also shows
-  the booked balance.
+  the booked balance. The same applies to a balance you write for a linked account.
 
 ## 1.3.0
 

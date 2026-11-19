@@ -126,10 +126,16 @@ public class AccountService {
         }
         LocalDate last = transactionRepository.lastBookingDate(account.getId());
         LocalDate start = last != null ? last : LocalDate.ofInstant(now, ZoneId.systemDefault());
-        // Il controllo dei saldi (docs/saldi.md, parte N): il saldo scritto ora contro quello scritto prima più i
-        // movimenti caricati in mezzo.
-        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, null, start, now);
-        account.changeBalance(balance, start, BalanceSource.MANUAL, now);
+        // Il saldo scritto si copia dall'app della banca, che di solito comprende i movimenti in attesa: per un conto
+        // collegato che ne ha, si salva quanto è in attesa adesso, come per un saldo previsto della banca (parte O), e
+        // non si contano una seconda volta. Un conto caricato da file non ne ha (i file danno solo contabilizzati).
+        BigDecimal pending = balance == null ? null : transactionRepository.sumPending(account.getId());
+        if (pending != null && pending.signum() == 0) {
+            pending = null;
+        }
+        // Il controllo dei saldi (parte N): il saldo scritto ora contro quello scritto prima più i movimenti in mezzo.
+        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, pending, start, now);
+        account.changeBalance(balance, start, BalanceSource.MANUAL, now, pending);
         return dtoOf(account);
     }
 
