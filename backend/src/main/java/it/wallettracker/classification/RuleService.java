@@ -93,7 +93,7 @@ public class RuleService {
     @Transactional
     public RuleDto create(RuleRequest request) {
         checkPattern(request);
-        ClassificationRule rule = new ClassificationRule(request.name().trim(), request.priority(),
+        ClassificationRule rule = new ClassificationRule(request.name().trim(), request.priority(), request.field(),
                 request.matchMode(), request.pattern().trim(), request.amountSign(), request.resultType(),
                 categoryService.require(request.categoryId())); // la categoria deve essere nell'elenco
         rule.setEnabled(request.enabled());
@@ -105,7 +105,7 @@ public class RuleService {
     public RuleDto update(Long id, RuleRequest request) {
         checkPattern(request);
         ClassificationRule rule = find(id);
-        rule.update(request.name().trim(), request.priority(), request.enabled(), request.matchMode(),
+        rule.update(request.name().trim(), request.priority(), request.enabled(), request.field(), request.matchMode(),
                 request.pattern().trim(), request.amountSign(), request.resultType(),
                 categoryService.require(request.categoryId()));
         return reclassifyAndDescribe(rule);
@@ -142,10 +142,11 @@ public class RuleService {
     @Transactional(readOnly = true)
     public RulePreview preview(RuleRequest request, Long editingId) {
         checkPattern(request);
-        ClassificationRule rule = new ClassificationRule(request.name(), request.priority(), request.matchMode(),
-                request.pattern().trim(), request.amountSign(), request.resultType(), null); // la categoria non conta
+        ClassificationRule rule = new ClassificationRule(request.name(), request.priority(), request.field(),
+                request.matchMode(), request.pattern().trim(), request.amountSign(), request.resultType(),
+                null); // la categoria non conta
         List<BankTransaction> matching = transactionRepository.findAll().stream()
-                .filter(t -> rule.matches(ClassificationService.textOf(t), t.getAmount()))
+                .filter(rule::matches)
                 .sorted((a, b) -> b.getBookingDate().compareTo(a.getBookingDate()))
                 .toList();
         Map<Long, ClassificationRule> rules = ruleRepository.findAll().stream()

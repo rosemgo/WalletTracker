@@ -635,13 +635,13 @@ differenza falsa di 18,66 €.
 **La regola generale: sapere se il dato è noto** (`Account.isPendingKnown`). Si sa quanto un saldo comprende di
 movimenti in attesa se:
 
-- è un saldo della banca letto dalla V45: ha il suo tipo (`V45`, colonna `balance_type`: il codice della banca);
+- è un saldo della banca letto dalla V46: ha il suo tipo (`V46`, colonna `balance_type`: il codice della banca);
 - è un saldo previsto letto con la V44: ha salvato quanto era in attesa (`balance_pending`);
-- è un saldo scritto dall'utente dalla V45: tipo `WRITTEN`;
+- è un saldo scritto dall'utente dalla V46: tipo `WRITTEN`;
 - è un conto caricato da file: non ha mai movimenti in attesa.
 
 Ogni altro saldo, salvato prima, **non lo dice**: dopo un aggiornamento, un salto di versioni, un backup vecchio
-ripristinato, e anche un saldo scritto a mano prima della V45 su un conto collegato. Per lui:
+ripristinato, e anche un saldo scritto a mano prima della V46 su un conto collegato. Per lui:
 
 | Dove | Che cosa fa l'app | Perché |
 |---|---|---|
@@ -656,12 +656,12 @@ movimenti (circa 4 al giorno per conto in background, docs/08), con il rischio d
 entro poche ore, o subito con "Aggiorna ora". Un saldo scritto a mano non si rilegge: resta com'è finché l'utente non ne
 scrive uno nuovo.
 
-**La migrazione V45** aggiunge la colonna e cancella di nuovo i controlli e le fotografie nati tra la V44 e la V45
-(poche ore): possono avere dentro l'errore. Chi aggiorna dalla 1.3.0 riceve V44 e V45 insieme, e non vede mai l'errore.
+**La migrazione V46** aggiunge la colonna e cancella di nuovo i controlli e le fotografie nati tra la V44 e la V46
+(poche ore): possono avere dentro l'errore. Chi aggiorna dalla 1.3.0 riceve dalla V44 alla V47 insieme, e non vede mai l'errore.
 
-**Le prove.** `AccountBalanceTest.aBankBalanceSavedBeforeV45IsShownAsItIsUntilTheBankGivesItAgain`,
-`BalanceCheckTest.aBalanceSavedBeforeV45IsNotCompared`, `BalanceHistoryServiceTest.aBankBalanceSavedBeforeV45HasNoPhoto`,
-`SyncServiceTest.aBalanceSavedBeforeV45IsReadAgainAtTheFirstRoundOnceThenItHasItsType`.
+**Le prove.** `AccountBalanceTest.aBankBalanceSavedBeforeV46IsShownAsItIsUntilTheBankGivesItAgain`,
+`BalanceCheckTest.aBalanceSavedBeforeV46IsNotCompared`, `BalanceHistoryServiceTest.aBankBalanceSavedBeforeV46HasNoPhoto`,
+`SyncServiceTest.aBalanceSavedBeforeV46IsReadAgainAtTheFirstRoundOnceThenItHasItsType`.
 
 ## Parte Q: i movimenti arrivati in ritardo che la banca aveva già contato
 
@@ -678,7 +678,7 @@ non è nel saldo. Di solito è così, perché il saldo si legge subito dopo i mo
 
 E alla lettura del giorno dopo il controllo dei saldi (parte N) trovava 30 € di differenza che non c'era.
 
-**1. L'ultimo movimento compreso, quando la banca lo dice** (`V46`, colonna `balance_last_entry`). Insieme al saldo
+**1. L'ultimo movimento compreso, quando la banca lo dice** (`V47`, colonna `balance_last_entry`). Insieme al saldo
 Enable Banking può dare `last_committed_transaction`, il riferimento (`entry_reference`) dell'ultimo movimento compreso;
 l'importazione salva i movimenti contabilizzati con l'impronta `ref:<riferimento>`. Quel movimento è dentro il saldo
 anche se arriva dopo la lettura (`Account.insideKey`): nel saldo mostrato (`sumAfter`) e nel controllo (`sumBetween`,

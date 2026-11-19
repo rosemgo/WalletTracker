@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 import it.wallettracker.category.Category;
+import it.wallettracker.transaction.BankCode;
+import it.wallettracker.transaction.BankTransaction;
 import it.wallettracker.transaction.TransactionType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,6 +25,7 @@ import jakarta.persistence.Table;
 
 /**
  * Una regola di classificazione: "se il testo del movimento contiene (o inizia con) X, allora il tipo è Y".
+ * Invece del testo, una regola può guardare il codice dell'operazione mandato dalla banca ({@link MatchField}).
  *
  * <p>Le regole sono <b>dati</b>, non codice: stanno nella tabella {@code classification_rule}, così ogni
  * utente può modificarle (dalla dashboard, nella Fase 2) senza toccare il programma.
@@ -45,6 +48,16 @@ public class ClassificationRule {
     /** A quali importi si applica la regola. */
     public enum AmountSign { ANY, NEGATIVE, POSITIVE }
 
+    /**
+     * Dove cercare (V45, docs/codice-della-banca.md):
+     * <ul>
+     *   <li>TEXT: nel testo del movimento, causale + controparte (ClassificationService.textOf);</li>
+     *   <li>BANK_CODE: nel codice dell'operazione mandato dalla banca ({@link BankCode}), es. "Accredito
+     *       Stipendio/Pensione". Un movimento senza codice non corrisponde mai.</li>
+     * </ul>
+     */
+    public enum MatchField { TEXT, BANK_CODE }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -57,6 +70,10 @@ public class ClassificationRule {
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "match_field", nullable = false)
+    private MatchField matchField;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "match_mode", nullable = false)
@@ -84,11 +101,18 @@ public class ClassificationRule {
     protected ClassificationRule() {
     }
 
+    /** Una regola sul testo del movimento. */
     public ClassificationRule(String name, int priority, MatchMode matchMode, String pattern, AmountSign amountSign,
             TransactionType resultType, Category category) {
+        this(name, priority, MatchField.TEXT, matchMode, pattern, amountSign, resultType, category);
+    }
+
+    public ClassificationRule(String name, int priority, MatchField matchField, MatchMode matchMode, String pattern,
+            AmountSign amountSign, TransactionType resultType, Category category) {
         this.name = name;
         this.priority = priority;
         this.enabled = true;
+        this.matchField = matchField;
         this.matchMode = matchMode;
         this.pattern = pattern;
         this.amountSign = amountSign;
@@ -97,9 +121,25 @@ public class ClassificationRule {
         this.builtin = false;
     }
 
+    /** True se la regola si applica a questo movimento: guarda il testo o il codice della banca, secondo {@link #matchField}. */
+    public boolean matches(BankTransaction transaction) {
+        return matches(ClassificationService.textOf(transaction), transaction.getBankCode(), transaction.getAmount());
+    }
+
+    /**
+     * True se la regola si applica a un movimento con questo testo, questo codice della banca (null se non c'è) e questo
+     * importo. Una regola sul testo guarda solo il testo, una sul codice solo il codice.
+     */
+    public boolean matches(String text, String bankCode, BigDecimal amount) {
+        if (matchField == MatchField.BANK_CODE) {
+            return bankCode != null && matches(bankCode, amount);
+        }
+        return matches(text, amount);
+    }
+
     /**
      * Questo metodo serve per capire se una regola applicata a un movimento è giusta: in pratica cataloghizza il movimento (causale del movimento)
-     * True se la regola si applica a un movimento con questo testo e questo importo.
+     * True se il testo da confrontare (la causale, o il codice della banca) corrisponde, con questo importo.
      * Maiuscole e minuscole non contano, e nemmeno il numero di spazi (vedi {@link #normalizeSpaces}).
      */
     public boolean matches(String text, BigDecimal amount) {
@@ -155,11 +195,12 @@ public class ClassificationRule {
     }
 
     /** Modifica la regola (dalla dashboard). Anche le regole di partenza si possono modificare o disattivare. */
-    public void update(String name, int priority, boolean enabled, MatchMode matchMode, String pattern,
-            AmountSign amountSign, TransactionType resultType, Category category) {
+    public void update(String name, int priority, boolean enabled, MatchField matchField, MatchMode matchMode,
+            String pattern, AmountSign amountSign, TransactionType resultType, Category category) {
         this.name = name;
         this.priority = priority;
         this.enabled = enabled;
+        this.matchField = matchField;
         this.matchMode = matchMode;
         this.pattern = pattern;
         this.amountSign = amountSign;
@@ -186,6 +227,10 @@ public class ClassificationRule {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public MatchField getMatchField() {
+        return matchField;
     }
 
     public MatchMode getMatchMode() {

@@ -221,7 +221,7 @@ class SyncServiceTest {
     }
 
     @Test
-    void aBalanceSavedBeforeV45IsReadAgainAtTheFirstRoundOnceThenItHasItsType() {
+    void aBalanceSavedBeforeV46IsReadAgainAtTheFirstRoundOnceThenItHasItsType() {
         // docs/saldi.md, parte P: letto un'ora fa, ma senza tipo. Non si aspettano le 20 ore.
         Account account = account(validConnection(), "uid-a");
         accountRepository.recordBalance(account.getId(), new BigDecimal("44.80"), LocalDate.of(2026, 11, 18),

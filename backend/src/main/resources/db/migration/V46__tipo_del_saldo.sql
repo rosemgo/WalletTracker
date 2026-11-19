@@ -1,4 +1,4 @@
--- V45: il tipo del saldo (docs/saldi.md, parte P).
+-- V46: il tipo del saldo (docs/saldi.md, parte P).
 --
 -- Con la V44 l'app tiene conto dei movimenti in attesa compresi in un saldo (Revolut). Ma per un saldo salvato prima non
 -- sa se li comprendeva: la V44 l'ha lasciato come se fosse contabile, e un pagamento in attesa si è contato due volte

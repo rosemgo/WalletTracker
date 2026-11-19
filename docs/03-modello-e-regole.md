@@ -93,7 +93,8 @@ perché stanno in una colonna separata (`manual_type`).
 
 Ogni regola dice: *"se il testo del movimento (causale + controparte) contiene / inizia con X, ed
 eventualmente l'importo è positivo/negativo, allora il tipo è Y e la categoria è Z"*. Le regole si
-provano in ordine di **priorità** crescente.
+provano in ordine di **priorità** crescente. Dalla `V45` una regola può guardare, invece del testo, il codice
+dell'operazione che alcune banche mandano (`docs/codice-della-banca.md`).
 
 La migrazione `V4__classificazione.sql` crea delle **regole di partenza** (`builtin = true`), scritte
 a partire dalle causali reali viste nella Fase 0. Valgono su **qualsiasi conto**:
@@ -108,6 +109,8 @@ a partire dalle causali reali viste nella Fase 0. Valgono su **qualsiasi conto**
 | Saldo della carta di credito | contiene `Estratto conto carta di credito` | `CARD_SETTLEMENT` |
 | Trasferimento a un proprio conto | contiene `Trasferimento a mio conto` | `INTERNAL_TRANSFER` |
 | Costi del conto | `Canone Mensile`, `Imposta di bollo` | `EXPENSE` (categoria "Costi bancari") |
+| Interessi passivi | contiene `Interessi Passivi` (uscite) | `EXPENSE` (categoria "Costi bancari", dalla V45) |
+| Stipendio, prelievo, bonus | il **codice della banca**: `Accredito Stipendio`, `Prelievo Carta`, `Bonus Promozione`, `REWARD` | `INCOME` / `EXPENSE` con la categoria (dalla V45, `docs/codice-della-banca.md`) |
 
 Chiunque usi altre banche può aggiungere le proprie regole (dalla dashboard, nella Fase 2). Chi vuole
 contribuire al progetto può proporre nuove regole di partenza.

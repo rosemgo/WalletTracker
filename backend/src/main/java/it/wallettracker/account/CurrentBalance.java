@@ -47,7 +47,7 @@ public record CurrentBalance(BigDecimal amount, LocalDate date, BalanceSource so
      */
     static CurrentBalance of(Account account, BigDecimal after, LocalDate lastMovement, BigDecimal pending) {
         CurrentBalance booked = booked(account, after, lastMovement);
-        // Un saldo salvato prima della V45 non dice se comprendeva i movimenti in attesa (parte P): aggiungerli potrebbe
+        // Un saldo salvato prima della V46 non dice se comprendeva i movimenti in attesa (parte P): aggiungerli potrebbe
         // contarli due volte. Si mostra com'è, finché la banca non lo ridà.
         if (booked == null || pending == null || pending.signum() == 0 || !account.isPendingKnown()) {
             return booked;

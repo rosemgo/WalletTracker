@@ -63,7 +63,7 @@ public class BalanceCheckService {
             return;
         }
         if (!account.isPendingKnown()) {
-            // Il saldo di prima è stato salvato prima della V45: non si sa se comprendeva i movimenti in attesa, e il
+            // Il saldo di prima è stato salvato prima della V46: non si sa se comprendeva i movimenti in attesa, e il
             // confronto potrebbe segnalare una differenza che non c'è (parte P). Si controlla dal prossimo.
             return;
         }

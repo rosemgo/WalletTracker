@@ -55,7 +55,7 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      * Salva un saldo (V34), come {@link #recordSync}: solo queste colonne, in una transazione sua. Con {@code balance}
      * null il saldo si toglie (la banca non ne dà più uno).
      *
-     * <p>Questa forma è un saldo senza tipo (parte P): come uno salvato prima della V45. Il codice dell'app passa sempre il tipo; questa
+     * <p>Questa forma è un saldo senza tipo (parte P): come uno salvato prima della V46. Il codice dell'app passa sempre il tipo; questa
      * forma serve a togliere il saldo ({@code balance} null) e ai test che non guardano i movimenti in attesa.
      */
     default void recordBalance(Long id, BigDecimal balance, LocalDate date, BalanceSource source, Instant at) {
@@ -76,8 +76,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     /**
      * Salva il saldo dato dalla banca: l'importo, i movimenti in attesa che comprende (V44, docs/saldi.md parte O; null se
-     * è contabile), il suo tipo (V45, parte P: il codice della banca) e il riferimento dell'ultimo movimento compreso
-     * (V46, parte Q; null se la banca non lo dà).
+     * è contabile), il suo tipo (V46, parte P: il codice della banca) e il riferimento dell'ultimo movimento compreso
+     * (V47, parte Q; null se la banca non lo dà).
      */
     @Modifying
     @Transactional

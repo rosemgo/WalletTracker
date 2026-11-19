@@ -15,6 +15,14 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
 - **Meno avvisi falsi dal controllo dei saldi**: quando una banca scala il saldo prima di mostrare il movimento, l'app
   ora lo riconosce, e non segnala una differenza che non c'è. Se la banca indica l'ultimo movimento compreso nel
   saldo, anche il saldo mostrato non lo conta due volte.
+- **Regole sul codice della banca**: alcune banche mandano con il movimento un codice che dice che operazione è (per
+  esempio ING "Accredito Stipendio/Pensione"). Ora una regola può guardare quel codice invece del testo: nel modulo
+  delle Regole scegli "Cerca nel codice dell'operazione della banca". Il codice si vede nella scheda del movimento, in
+  Dettagli, con "crea una regola". Nuove regole di partenza: lo stipendio va in *Stipendio e pensione*, il prelievo
+  con la carta in *Contanti e prelievi*, i bonus della banca e i premi Revolut in *Rimborsi fiscali e bonus*, anche
+  quando la causale non lo dice.
+- **Interessi passivi**: gli interessi che paghi alla banca (uno scoperto, una linea di credito) vanno in *Costi
+  bancari*. Prima restavano spese senza categoria.
 
 ## 1.3.0
 

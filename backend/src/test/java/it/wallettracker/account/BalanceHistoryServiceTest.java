@@ -200,12 +200,12 @@ class BalanceHistoryServiceTest {
     }
 
     @Test
-    void aBankBalanceSavedBeforeV45HasNoPhoto() {
+    void aBankBalanceSavedBeforeV46HasNoPhoto() {
         BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-7",
                 Instant.now().plus(90, ChronoUnit.DAYS)));
         Account revolut = accountRepository.save(new Account(connection, "k-7", "u-7", null, "Revolut", "EUR"));
         accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), TODAY, BalanceSource.BANK,
-                Instant.now()); // senza tipo: come uno salvato prima della V45 (docs/saldi.md, parte P)
+                Instant.now()); // senza tipo: come uno salvato prima della V46 (docs/saldi.md, parte P)
 
         assertThat(historyService.recordToday(TODAY)).isZero();
         assertThat(snapshotRepository.count()).isZero();

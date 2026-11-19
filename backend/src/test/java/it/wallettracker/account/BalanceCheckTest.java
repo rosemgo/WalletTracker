@@ -135,7 +135,7 @@ class BalanceCheckTest {
     }
 
     @Test
-    void aBalanceSavedBeforeV45IsNotCompared() {
+    void aBalanceSavedBeforeV46IsNotCompared() {
         // Non si sa se comprendeva movimenti in attesa (docs/saldi.md, parte P): il confronto potrebbe segnalare una
         // differenza che non c'è. Si controlla dalla lettura dopo.
         BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-4",

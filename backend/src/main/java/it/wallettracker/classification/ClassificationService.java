@@ -40,7 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       segno opposto, a pochi giorni di distanza, ed entrambi hanno l'aspetto di un trasferimento
  *       (vedi {@link #looksLikeOwnTransfer}) → trasferimento;</li>
  *   <li><b>IBAN di un tuo conto</b> nel movimento (es. "IBAN beneficiario IT...") → trasferimento;</li>
- *   <li><b>regole</b> della tabella classification_rule, in ordine di priorità → tipo e categoria della regola;</li>
+ *   <li><b>regole</b> della tabella classification_rule, in ordine di priorità → tipo e categoria della regola. Una
+ *       regola guarda il testo del movimento o il codice dell'operazione mandato dalla banca (V45);</li>
  *   <li><b>nessun testo</b> (né causale né controparte, es. Trade Republic) e nessun abbinamento: non
  *       sappiamo cos'è, quindi → TO_REVIEW, da classificare a mano;</li>
  *   <li><b>ultima risorsa</b>: uscita → EXPENSE, entrata → INCOME.</li>
@@ -133,10 +134,11 @@ public class ClassificationService {
         if (mentioned != null) {
             return new Result(transferType(transaction, mentioned), null, null, null);
         }
-        // 6. Regole.
+        // 6. Regole: sul testo, o sul codice dell'operazione mandato dalla banca.
         String text = textOf(transaction);
+        String bankCode = transaction.getBankCode();
         for (ClassificationRule rule : rules) {
-            if (rule.matches(text, amount)) {
+            if (rule.matches(text, bankCode, amount)) {
                 return new Result(rule.getResultType(), rule.getCategory(), rule.getId(), null);
             }
         }

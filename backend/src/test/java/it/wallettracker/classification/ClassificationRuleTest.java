@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 
 import it.wallettracker.classification.ClassificationRule.AmountSign;
+import it.wallettracker.classification.ClassificationRule.MatchField;
 import it.wallettracker.classification.ClassificationRule.MatchMode;
 import it.wallettracker.transaction.TransactionType;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,30 @@ class ClassificationRuleTest {
     void allWordsWithoutAnyWordFindsNothing() {
         // "Tutte le parole di un elenco vuoto" sarebbe vero per qualsiasi testo: non deve succedere.
         assertThat(rule(MatchMode.ALL_WORDS, "***").matches(CARD_PAYMENT, EXPENSE)).isFalse();
+    }
+
+    @Test
+    void aRuleOnTheBankCodeLooksOnlyAtTheCode() {
+        ClassificationRule salary = new ClassificationRule("Stipendio", 50, MatchField.BANK_CODE, MatchMode.CONTAINS,
+                "Accredito Stipendio", AmountSign.POSITIVE, TransactionType.INCOME, null);
+        BigDecimal income = new BigDecimal("1800.00");
+        String text = "Bonifico N. 123 Note: STIPENDIO MESE DI AGOSTO";
+
+        assertThat(salary.matches(text, "Accredito Stipendio/Pensione", income)).isTrue();
+        // Il testo da solo non basta, e un movimento senza codice non corrisponde mai.
+        assertThat(salary.matches("Accredito Stipendio", null, income)).isFalse();
+        assertThat(salary.matches(text, "Accredito Bonifico", income)).isFalse();
+        // Il segno dell'importo conta anche qui.
+        assertThat(salary.matches(text, "Accredito Stipendio/Pensione", income.negate())).isFalse();
+    }
+
+    @Test
+    void aRuleOnTheTextIgnoresTheBankCode() {
+        ClassificationRule rule = rule(MatchMode.CONTAINS, "Prelievo Carta");
+
+        assertThat(rule.getMatchField()).isEqualTo(MatchField.TEXT);
+        assertThat(rule.matches("ATM VIA ROMA", "Prelievo Carta", EXPENSE)).isFalse();
+        assertThat(rule.matches("Prelievo Carta del 21/08", null, EXPENSE)).isTrue();
     }
 
     private static ClassificationRule rule(MatchMode mode, String pattern) {

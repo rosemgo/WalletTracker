@@ -227,7 +227,7 @@ class AccountBalanceTest {
     }
 
     @Test
-    void aBankBalanceSavedBeforeV45IsShownAsItIsUntilTheBankGivesItAgain() {
+    void aBankBalanceSavedBeforeV46IsShownAsItIsUntilTheBankGivesItAgain() {
         // Il caso dopo l'aggiornamento (docs/saldi.md, parte P): il saldo di Revolut salvato prima non dice se aveva
         // dentro i pagamenti in attesa. Aggiungerli di nuovo dava −0,99 € invece di 17,67 €.
         BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-7",
@@ -237,7 +237,7 @@ class AccountBalanceTest {
         transactionRepository.save(new BankTransaction(reloaded, "p-7", TransactionStatus.PENDING,
                 LocalDate.of(2026, 11, 18), null, new BigDecimal("-18.66"), "EUR", null, "Conad", "{}"));
         accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), LocalDate.of(2026, 11, 18),
-                BalanceSource.BANK, Instant.now()); // senza tipo: come uno salvato prima della V45
+                BalanceSource.BANK, Instant.now()); // senza tipo: come uno salvato prima della V46
 
         assertThat(accountRepository.findById(revolut.getId()).orElseThrow().isPendingKnown()).isFalse();
         assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {

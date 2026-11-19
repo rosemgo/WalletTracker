@@ -122,8 +122,8 @@ public class Account {
     private BigDecimal balancePending;
 
     /**
-     * Il tipo del saldo (V45, docs/saldi.md parte P): il codice della banca ({@code CLBD}, {@code XPCD}...), o
-     * {@link #WRITTEN} per uno scritto dall'utente. Null per un saldo salvato prima della V45.
+     * Il tipo del saldo (V46, docs/saldi.md parte P): il codice della banca ({@code CLBD}, {@code XPCD}...), o
+     * {@link #WRITTEN} per uno scritto dall'utente. Null per un saldo salvato prima della V46.
      */
     @Column(name = "balance_type")
     private String balanceType;
@@ -132,7 +132,7 @@ public class Account {
     public static final String WRITTEN = "WRITTEN";
 
     /**
-     * Il riferimento dell'ultimo movimento compreso nel saldo della banca (V46, docs/saldi.md parte Q), se la banca lo
+     * Il riferimento dell'ultimo movimento compreso nel saldo della banca (V47, docs/saldi.md parte Q), se la banca lo
      * dà: quel movimento è dentro il saldo anche se arriva dopo la lettura. Null altrimenti.
      */
     @Column(name = "balance_last_entry")
@@ -315,7 +315,7 @@ public class Account {
     }
 
     /**
-     * true se si sa quanto il saldo comprende di movimenti in attesa (parte P): ha un tipo (salvato dalla V45), o ha
+     * true se si sa quanto il saldo comprende di movimenti in attesa (parte P): ha un tipo (salvato dalla V46), o ha
      * salvato quanto era in attesa (un saldo previsto letto con la V44). Un saldo salvato prima non lo dice: per lui
      * l'app non aggiunge i movimenti in attesa, non lo controlla né lo fotografa, e la sincronizzazione lo rilegge alla
      * prima occasione. Senza saldo: true (non c'è niente da sapere).

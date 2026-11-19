@@ -57,7 +57,7 @@ public class BalanceCheck {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    /** L'ultimo movimento compreso nel primo saldo, se la banca l'ha indicato (V46, parte Q). */
+    /** L'ultimo movimento compreso nel primo saldo, se la banca l'ha indicato (V47, parte Q). */
     @Column(name = "from_last_entry")
     private String fromLastEntry;
 

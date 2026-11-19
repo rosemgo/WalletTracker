@@ -256,7 +256,7 @@ public class SyncService {
             return;
         }
         Instant last = account.getBalanceSource() == BalanceSource.BANK ? account.getBalanceUpdatedAt() : null;
-        // Un saldo della banca salvato prima della V45 non dice se comprendeva i movimenti in attesa (docs/saldi.md,
+        // Un saldo della banca salvato prima della V46 non dice se comprendeva i movimenti in attesa (docs/saldi.md,
         // parte P): si rilegge al primo giro, subito dopo i movimenti, senza aspettare le 20 ore. Una volta sola: dopo ha
         // il suo tipo. Non si forza un giro in più, che consumerebbe letture dei movimenti.
         if (psu == null && last != null && last.isAfter(now.minus(BACKGROUND_BALANCE_INTERVAL))

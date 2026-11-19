@@ -11,6 +11,7 @@ const DIVIDEND: Rule = {
   name: 'Dividendo',
   priority: 10,
   enabled: true,
+  matchField: 'TEXT',
   matchMode: 'STARTS_WITH',
   pattern: 'Div.su',
   amountSign: 'POSITIVE',
@@ -152,6 +153,7 @@ describe('RulesPage', () => {
       {
         name: 'Supermercato',
         pattern: 'ESSELUNGA',
+        matchField: 'TEXT',
         matchMode: 'CONTAINS',
         amountSign: 'ANY',
         resultType: 'EXPENSE',
@@ -286,6 +288,7 @@ describe('RulesPage', () => {
       {
         name: 'Movimenti con "NETFLIX.COM"',
         pattern: 'NETFLIX.COM',
+        matchField: 'TEXT',
         matchMode: 'CONTAINS',
         amountSign: 'NEGATIVE',
         resultType: 'EXPENSE',
@@ -313,14 +316,52 @@ describe('RulesPage', () => {
     expect(page.textContent).not.toContain('dalla tua correzione');
   });
 
+  it('a rule can look at the bank code instead of the text', async () => {
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const modeLabel = () =>
+      (page.querySelector('[formControlName="matchMode"]') as HTMLElement).closest('label')!
+        .textContent;
+
+    expect(modeLabel()).toContain('Se il testo');
+    type(page, 'name', 'Stipendio');
+    type(page, 'pattern', 'Accredito Stipendio');
+    choose(page, 'matchField', "nel codice dell'operazione della banca");
+    await fixture.whenStable();
+
+    expect(modeLabel()).toContain('Se il codice');
+    expect(page.textContent).toContain('non tutte le banche lo mandano');
+    (page.querySelector('button[type="submit"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(created[0].matchField).toBe('BANK_CODE');
+    expect(created[0].pattern).toBe('Accredito Stipendio');
+  });
+
+  it('fills the form from the bank code of a movement', async () => {
+    queryParams = { pattern: 'Accredito Stipendio/Pensione', matchField: 'BANK_CODE' };
+    const fixture = TestBed.createComponent(RulesPage);
+    await fixture.whenStable();
+
+    expect(previewed[0].matchField).toBe('BANK_CODE');
+    expect(previewed[0].pattern).toBe('Accredito Stipendio/Pensione');
+  });
+
   it('ignores unknown values in the address', async () => {
-    queryParams = { pattern: 'BAR', resultType: 'BOH', amountSign: '<script>', categoryId: '-1' };
+    queryParams = {
+      pattern: 'BAR',
+      resultType: 'BOH',
+      amountSign: '<script>',
+      categoryId: '-1',
+      matchField: 'RAW_JSON',
+    };
     const fixture = TestBed.createComponent(RulesPage);
     await fixture.whenStable();
 
     expect(previewed[0].resultType).toBe('EXPENSE'); // il valore predefinito
     expect(previewed[0].amountSign).toBe('ANY');
     expect(previewed[0].categoryId).toBeNull();
+    expect(previewed[0].matchField).toBe('TEXT');
   });
 
   it('shows your rules first and keeps the built-in ones in a section to open', async () => {

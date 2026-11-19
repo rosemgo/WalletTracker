@@ -1,4 +1,4 @@
--- V46: l'ultimo movimento compreso nel saldo (docs/saldi.md, parte Q).
+-- V47: l'ultimo movimento compreso nel saldo (docs/saldi.md, parte Q).
 --
 -- Alcune banche aggiornano il saldo prima di mostrare il movimento nell'elenco che Enable Banking scarica: il movimento
 -- arriva dopo la lettura del saldo, con lo stesso giorno, e l'app lo credeva fuori dal saldo (contato due volte, e un

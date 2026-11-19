@@ -15,6 +15,13 @@ changes something important for those who use it.
 - **Fewer false notices from the balance check**: when a bank takes a payment off the balance before showing the
   transaction, the app now recognises it and does not report a difference that is not there. If the bank says which
   transaction is the last one in the balance, the balance shown does not count it twice either.
+- **Rules on the bank's code**: some banks send with the transaction a code that says what operation it is (for example
+  ING "Accredito Stipendio/Pensione"). Now a rule can look at that code instead of the text: in the Rules form choose
+  "Search in the bank's transaction code". The code is shown in the transaction sheet, under Details, with "create a
+  rule". New starter rules: the salary goes to *Salary and pension*, the card withdrawal to *Cash and withdrawals*,
+  the bank's bonuses and the Revolut rewards to *Tax refunds and bonuses*, even when the description does not say so.
+- **Interest paid**: the interest you pay to the bank (an overdraft, a credit line) goes to *Bank charges*. Before, it
+  stayed an expense without a category.
 
 ## 1.3.0
 
