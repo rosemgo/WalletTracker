@@ -114,9 +114,19 @@ public final class EnableBankingApi {
     public record BalanceList(List<Balance> balances) {
     }
 
-    /** Un saldo. Il tipo segue lo standard ISO 20022, es. CLBD = saldo contabile, ITAV = disponibile. */
+    /**
+     * Un saldo. Il tipo segue lo standard ISO 20022, es. CLBD = saldo contabile, ITAV = disponibile.
+     * {@code lastCommittedTransaction}: il riferimento ({@code entry_reference}) dell'ultimo movimento compreso nel saldo,
+     * se la banca lo dà (docs/saldi.md, parte Q).
+     */
     @JsonNaming(SnakeCaseStrategy.class)
-    public record Balance(String name, Amount balanceAmount, String balanceType, LocalDate referenceDate) {
+    public record Balance(String name, Amount balanceAmount, String balanceType, LocalDate referenceDate,
+            String lastCommittedTransaction) {
+
+        /** Un saldo senza l'ultimo movimento compreso. */
+        public Balance(String name, Amount balanceAmount, String balanceType, LocalDate referenceDate) {
+            this(name, balanceAmount, balanceType, referenceDate, null);
+        }
     }
 
     /**

@@ -134,7 +134,7 @@ public class AccountService {
             pending = null;
         }
         // Il controllo dei saldi (parte N): il saldo scritto ora contro quello scritto prima più i movimenti in mezzo.
-        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, pending, start, now);
+        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, pending, null, start, now);
         account.changeBalance(balance, start, BalanceSource.MANUAL, now, pending);
         return dtoOf(account);
     }
@@ -150,7 +150,7 @@ public class AccountService {
         // Della banca o scritto a mano, lo stesso: il saldo più i movimenti arrivati dopo (docs/saldi.md, parti C e M).
         return CurrentBalance.of(account,
                 transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
-                        account.getBalanceUpdatedAt()),
+                        account.getBalanceUpdatedAt(), account.insideKey()),
                 transactionRepository.lastBookingDate(account.getId()),
                 transactionRepository.sumPending(account.getId()));
     }

@@ -624,3 +624,81 @@ pagamenti contabilizzati che contano una volta sola), `AccountBalanceTest.aWritt
 `BalanceHistoryServiceTest.todayHasThePendingMovementsLikeTheAccountsPageThePhotoIsBooked`, `BalanceCheckTest.aBalanceWithThePendingMovementsIsComparedWithoutThem`,
 `accounts-page.spec.ts` (la riga nella pagina Conti).
 
+## Parte P: i saldi salvati prima, di cui non si sa il tipo
+
+**Il caso, subito dopo l'aggiornamento alla V44.** Revolut mostrava −0,99 € con "Contabile: 17,67 €". Il saldo salvato
+prima della V44 era stato letto con i due pagamenti in attesa dentro (−18,66 €), ma la V44 non poteva saperlo: l'ha
+lasciato come contabile, e l'app gli ha aggiunto di nuovo i pagamenti in attesa. Con "Aggiorna" la banca ha ridato il
+saldo e tutto è tornato giusto (17,67 €). Alla stessa lettura il controllo dei saldi (parte N) poteva segnalare una
+differenza falsa di 18,66 €.
+
+**La regola generale: sapere se il dato è noto** (`Account.isPendingKnown`). Si sa quanto un saldo comprende di
+movimenti in attesa se:
+
+- è un saldo della banca letto dalla V46: ha il suo tipo (`V46`, colonna `balance_type`: il codice della banca);
+- è un saldo previsto letto con la V44: ha salvato quanto era in attesa (`balance_pending`);
+- è un saldo scritto dall'utente dalla V46: tipo `WRITTEN`;
+- è un conto caricato da file: non ha mai movimenti in attesa.
+
+Ogni altro saldo, salvato prima, **non lo dice**: dopo un aggiornamento, un salto di versioni, un backup vecchio
+ripristinato, e anche un saldo scritto a mano prima della V46 su un conto collegato. Per lui:
+
+| Dove | Che cosa fa l'app | Perché |
+|---|---|---|
+| saldo mostrato (`CurrentBalance`) | non aggiunge i movimenti in attesa | aggiungerli potrebbe contarli due volte; è il comportamento di prima della V44 |
+| controllo dei saldi (`compare`) | non confronta | il confronto potrebbe segnalare una differenza che non c'è |
+| fotografie (`recordToday`) | non fotografa | la fotografia resterebbe nello storico con un valore sbagliato |
+| sincronizzazione (`refreshBalance`) | rilegge il saldo della banca al primo giro, senza aspettare le 20 ore | dopo ha il suo tipo, una volta sola |
+
+La rilettura avviene **dentro un giro normale, subito dopo i movimenti**: i movimenti in attesa salvati devono essere
+quelli di quel momento, perché il saldo previsto li comprende. Non si forza un giro in più: consumerebbe letture dei
+movimenti (circa 4 al giorno per conto in background, docs/08), con il rischio di un 429. Il saldo si rilegge quindi
+entro poche ore, o subito con "Aggiorna ora". Un saldo scritto a mano non si rilegge: resta com'è finché l'utente non ne
+scrive uno nuovo.
+
+**La migrazione V46** aggiunge la colonna e cancella di nuovo i controlli e le fotografie nati tra la V44 e la V46
+(poche ore): possono avere dentro l'errore. Chi aggiorna dalla 1.3.0 riceve dalla V44 alla V47 insieme, e non vede mai l'errore.
+
+**Le prove.** `AccountBalanceTest.aBankBalanceSavedBeforeV46IsShownAsItIsUntilTheBankGivesItAgain`,
+`BalanceCheckTest.aBalanceSavedBeforeV46IsNotCompared`, `BalanceHistoryServiceTest.aBankBalanceSavedBeforeV46HasNoPhoto`,
+`SyncServiceTest.aBalanceSavedBeforeV46IsReadAgainAtTheFirstRoundOnceThenItHasItsType`.
+
+## Parte Q: i movimenti arrivati in ritardo che la banca aveva già contato
+
+**Il caso.** La regola della parte M dice che un movimento dello stesso giorno del saldo, importato dopo la sua lettura,
+non è nel saldo. Di solito è così, perché il saldo si legge subito dopo i movimenti. Ma alcune banche aggiornano il saldo
+**prima** di mostrare il movimento nell'elenco che Enable Banking scarica:
+
+| Ora | Che cosa succede | Saldo nell'app |
+|---|---|---|
+| 10:00 | un pagamento di 30 €; la banca scala subito il saldo: 970 € | 1.000 € |
+| 11:00 | l'app scarica i movimenti (il pagamento non c'è ancora) e legge il saldo: 970 € | 970 € |
+| 17:00 | arriva il pagamento del 19: importato dopo la lettura, l'app lo crede fuori dal saldo | 940 € (contato due volte) |
+| il giorno dopo | la banca ridà il saldo: 970 € | 970 € |
+
+E alla lettura del giorno dopo il controllo dei saldi (parte N) trovava 30 € di differenza che non c'era.
+
+**1. L'ultimo movimento compreso, quando la banca lo dice** (`V47`, colonna `balance_last_entry`). Insieme al saldo
+Enable Banking può dare `last_committed_transaction`, il riferimento (`entry_reference`) dell'ultimo movimento compreso;
+l'importazione salva i movimenti contabilizzati con l'impronta `ref:<riferimento>`. Quel movimento è dentro il saldo
+anche se arriva dopo la lettura (`Account.insideKey`): nel saldo mostrato (`sumAfter`) e nel controllo (`sumBetween`,
+per tutti e due i saldi del confronto: `from_last_entry`, `to_last_entry`). Corregge subito anche il saldo mostrato. Vale
+solo per le banche che lo danno, e solo per quel movimento: se ne arrivano due in ritardo, l'altro resta fuori.
+
+**2. La deduzione nel controllo** (`BalanceCheckService.explains`). Se la differenza tra due saldi è uguale ai movimenti
+arrivati in ritardo, o a una parte di essi, la banca li aveva già contati: non manca niente, e l'avviso non compare. I
+candidati sono i movimenti del giorno del primo saldo importati dopo la sua lettura (contati in mezzo: se la banca li
+aveva già, la differenza è il loro importo con il segno cambiato) e quelli del giorno del secondo saldo importati dopo la
+sua lettura (non contati: se la banca li aveva già, la differenza è il loro importo). Si provano tutte le combinazioni
+fino a 12 movimenti, oltre solo tutti insieme. La deduzione serve al controllo, non al saldo mostrato: per correggere
+quello servirebbe un saldo nuovo da confrontare, e con il saldo nuovo si riparte da quello.
+
+**Che cosa resta.** Una differenza vera che per caso è uguale a un movimento arrivato in ritardo non dà l'avviso: è
+raro, e la differenza si ripresenterebbe al controllo dopo. Senza l'ultimo movimento compreso, il saldo mostrato conta due
+volte un movimento così fino alla lettura successiva del saldo (al massimo 20 ore, o subito con "Aggiorna ora").
+
+**Le prove.** `BankBalanceTest.theChosenBalanceKeepsTheLastMovementInIt`, `SyncServiceTest.theLastMovementInTheBalanceIsSavedWithIt`,
+`AccountBalanceTest.theLastMovementInTheBankBalanceIsNotAddedAgainWhenItArrivesLate`,
+`BalanceCheckTest.aMovementOfTheFirstDayThatArrivedLateButWasAlreadyInTheBalanceRaisesNoNotice`,
+`BalanceCheckTest.theLastMovementInTheBalanceSaidByTheBankIsInsideItWhenItArrives`, `BalanceCheckExplainsTest`.
+

@@ -221,6 +221,43 @@ class SyncServiceTest {
     }
 
     @Test
+    void aBalanceSavedBeforeV46IsReadAgainAtTheFirstRoundOnceThenItHasItsType() {
+        // docs/saldi.md, parte P: letto un'ora fa, ma senza tipo. Non si aspettano le 20 ore.
+        Account account = account(validConnection(), "uid-a");
+        accountRepository.recordBalance(account.getId(), new BigDecimal("44.80"), LocalDate.of(2026, 11, 18),
+                BalanceSource.BANK, Instant.now().minus(1, ChronoUnit.HOURS));
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Previsto", new Amount(new BigDecimal("17.67"), "EUR"), "XPCD", LocalDate.of(2026, 11, 19))));
+
+        syncService.syncAllInBackground();
+        verify(client, times(1)).getBalances(eq("uid-a"), any());
+        Account reloaded = reload(account);
+        assertThat(reloaded.getBalance()).isEqualByComparingTo("17.67");
+        assertThat(reloaded.getBalanceType()).isEqualTo("XPCD");
+        assertThat(reloaded.getBalancePending()).isEqualByComparingTo("0"); // nessun movimento in attesa adesso
+        assertThat(reloaded.isPendingKnown()).isTrue();
+
+        assertThat(reloaded.getBalanceLastEntry()).isNull(); // questa banca non lo dà
+
+        // Il giro dopo: ora ha il tipo, e vale di nuovo la regola delle 20 ore.
+        accountRepository.recordSync(account.getId(), Instant.now().minus(properties.interval()).minusSeconds(60),
+                null);
+        syncService.syncAllInBackground();
+        verify(client, times(1)).getBalances(eq("uid-a"), any());
+    }
+
+    @Test
+    void theLastMovementInTheBalanceIsSavedWithIt() {
+        Account account = account(validConnection(), "uid-a");
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Contabile", new Amount(new BigDecimal("970.00"), "EUR"), "CLBD",
+                        LocalDate.of(2026, 11, 19), "E-42")));
+
+        syncService.syncAllInBackground();
+        assertThat(reload(account).getBalanceLastEntry()).isEqualTo("E-42");
+    }
+
+    @Test
     void aBalanceThatDoesNotArriveNeverFailsTheSync() {
         Account account = account(validConnection(), "uid-a");
         accountRepository.recordBalance(account.getId(), new BigDecimal("99.00"), LocalDate.of(2026, 10, 1),

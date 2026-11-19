@@ -12,6 +12,9 @@ changes something important for those who use it.
   more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending
   payments, as in the bank's app and as the expenses do; on the Accounts page, when there are any, a line also shows
   the booked balance. The same applies to a balance you write for a linked account.
+- **Fewer false notices from the balance check**: when a bank takes a payment off the balance before showing the
+  transaction, the app now recognises it and does not report a difference that is not there. If the bank says which
+  transaction is the last one in the balance, the balance shown does not count it twice either.
 - **Rules on the bank's code**: some banks send with the transaction a code that says what operation it is (for example
   ING "Accredito Stipendio/Pensione"). Now a rule can look at that code instead of the text: in the Rules form choose
   "Search in the bank's transaction code". The code is shown in the transaction sheet, under Details, with "create a

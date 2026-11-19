@@ -64,19 +64,19 @@ class BalanceHistoryServiceTest {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-1",
                 Instant.now().plus(90, ChronoUnit.DAYS)));
         Account main = accountRepository.save(new Account(connection, "k-1", "u-1", null, "Conto", "EUR"));
-        accountRepository.recordBalance(main.getId(), new BigDecimal("1000.00"), TODAY, BalanceSource.BANK,
-                Instant.now());
+        accountRepository.recordBalance(main.getId(), new BigDecimal("1000.00"), null, TODAY, BalanceSource.BANK,
+                Instant.now(), "CLBD");
         movement(main, "2026-11-14", "-200");
         movement(main, "2026-11-15", "1500");
         // Una carta di credito con un "saldo" e un conto in dollari: non sono nella liquidità in euro.
         Account card = accountRepository.save(new Account(connection, "k-2", "u-2", null, "Carta", "EUR"));
         card.changeRole(AccountRole.CREDIT_CARD);
         accountRepository.save(card);
-        accountRepository.recordBalance(card.getId(), new BigDecimal("-300"), TODAY, BalanceSource.BANK,
-                Instant.now());
+        accountRepository.recordBalance(card.getId(), new BigDecimal("-300"), null, TODAY, BalanceSource.BANK,
+                Instant.now(), "CLBD");
         Account dollars = accountRepository.save(new Account(connection, "k-3", "u-3", null, "USD", "USD"));
-        accountRepository.recordBalance(dollars.getId(), new BigDecimal("50"), TODAY, BalanceSource.BANK,
-                Instant.now());
+        accountRepository.recordBalance(dollars.getId(), new BigDecimal("50"), null, TODAY, BalanceSource.BANK,
+                Instant.now(), "CLBD");
 
         // La fotografia di oggi: i conti che contano e hanno un saldo (non la carta).
         assertThat(historyService.recordToday(TODAY)).isEqualTo(2);
@@ -94,8 +94,8 @@ class BalanceHistoryServiceTest {
 
         // Un saldo della banca di ieri: la fotografia va sotto ieri, e oggi si stima con i movimenti arrivati dopo.
         snapshotRepository.deleteAll();
-        accountRepository.recordBalance(main.getId(), new BigDecimal("1000.00"), TODAY.minusDays(1),
-                BalanceSource.BANK, Instant.now());
+        accountRepository.recordBalance(main.getId(), new BigDecimal("1000.00"), null, TODAY.minusDays(1),
+                BalanceSource.BANK, Instant.now(), "CLBD");
         movement(main, "2026-11-16", "-30");
         historyService.recordToday(TODAY);
         assertThat(snapshotRepository.findAll()).filteredOn(shot -> shot.getAccountId().equals(main.getId()))
@@ -149,8 +149,8 @@ class BalanceHistoryServiceTest {
                 Instant.now().plus(90, ChronoUnit.DAYS)));
         Account fineco = accountRepository.save(new Account(connection, "k-5", "u-5", null, "Dossier", "EUR"));
         movement(fineco, "2026-11-10", "100");
-        accountRepository.recordBalance(fineco.getId(), new BigDecimal("2595.30"), TODAY, BalanceSource.BANK,
-                Instant.now().minusSeconds(5));
+        accountRepository.recordBalance(fineco.getId(), new BigDecimal("2595.30"), null, TODAY, BalanceSource.BANK,
+                Instant.now().minusSeconds(5), "CLBD");
         movement(fineco, "2026-11-16", "1458.50"); // la cedola netta di oggi, scaricata dopo il saldo
 
         historyService.recordToday(TODAY);
@@ -197,6 +197,25 @@ class BalanceHistoryServiceTest {
         });
         assertThat(history.points()).filteredOn(p -> p.date().equals(TODAY.minusDays(1))).singleElement()
                 .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("63.46"));
+    }
+
+    @Test
+    void aBankBalanceSavedBeforeV46HasNoPhoto() {
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-7",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-7", "u-7", null, "Revolut", "EUR"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), TODAY, BalanceSource.BANK,
+                Instant.now()); // senza tipo: come uno salvato prima della V46 (docs/saldi.md, parte P)
+
+        assertThat(historyService.recordToday(TODAY)).isZero();
+        assertThat(snapshotRepository.count()).isZero();
+
+        // Con un pagamento in attesa: il saldo mostrato non lo aggiunge (non si sa se c'era già), e il punto di oggi
+        // neppure, così combacia con la pagina Conti.
+        transactionRepository.save(new BankTransaction(revolut, "hl-1", TransactionStatus.PENDING, TODAY, null,
+                new BigDecimal("-18.66"), "EUR", null, "Conad", "{}"));
+        assertThat(historyService.history("EUR", TODAY).points()).last()
+                .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("17.67"));
     }
 
     @Test

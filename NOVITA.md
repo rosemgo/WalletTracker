@@ -12,6 +12,9 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   niente più avviso "i movimenti non tornano" ogni giorno, né pagamenti contati due volte. Il saldo comprende i
   pagamenti in attesa, come nell'app della banca e come le spese; nella pagina Conti, se ce ne sono, una riga mostra
   anche il saldo contabile. Lo stesso per un saldo scritto da te su un conto collegato.
+- **Meno avvisi falsi dal controllo dei saldi**: quando una banca scala il saldo prima di mostrare il movimento, l'app
+  ora lo riconosce, e non segnala una differenza che non c'è. Se la banca indica l'ultimo movimento compreso nel
+  saldo, anche il saldo mostrato non lo conta due volte.
 - **Regole sul codice della banca**: alcune banche mandano con il movimento un codice che dice che operazione è (per
   esempio ING "Accredito Stipendio/Pensione"). Ora una regola può guardare quel codice invece del testo: nel modulo
   delle Regole scegli "Cerca nel codice dell'operazione della banca". Il codice si vede nella scheda del movimento, in

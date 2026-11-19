@@ -227,6 +227,69 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aBankBalanceSavedBeforeV46IsShownAsItIsUntilTheBankGivesItAgain() {
+        // Il caso dopo l'aggiornamento (docs/saldi.md, parte P): il saldo di Revolut salvato prima non dice se aveva
+        // dentro i pagamenti in attesa. Aggiungerli di nuovo dava −0,99 € invece di 17,67 €.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-7",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-7", "u-7", null, "Revolut", "EUR"));
+        Account reloaded = accountRepository.findById(revolut.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "p-7", TransactionStatus.PENDING,
+                LocalDate.of(2026, 11, 18), null, new BigDecimal("-18.66"), "EUR", null, "Conad", "{}"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), LocalDate.of(2026, 11, 18),
+                BalanceSource.BANK, Instant.now()); // senza tipo: come uno salvato prima della V46
+
+        assertThat(accountRepository.findById(revolut.getId()).orElseThrow().isPendingKnown()).isFalse();
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(17.67);
+            json.assertThat().extractingPath("$[0].balance.booked").isNull();
+        });
+
+        // La banca lo ridà, con il tipo: da lì i movimenti in attesa si contano come sempre.
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), new BigDecimal("-18.66"),
+                LocalDate.of(2026, 11, 19), BalanceSource.BANK, Instant.now(), "XPCD");
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(17.67);
+            json.assertThat().extractingPath("$[0].balance.booked").isEqualTo(36.33);
+        });
+    }
+
+    @Test
+    void aMovementInAnotherCurrencyDoesNotChangeTheBalance() {
+        // Un file con più valute (un estratto Revolut con la tasca in dollari): 20 USD non sono 20 € in meno.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-8",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-8", "u-8", null, "Revolut", "EUR"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("100.00"), null, LocalDate.of(2026, 11, 18),
+                BalanceSource.BANK, Instant.now().minusSeconds(5), "CLBD");
+        Account reloaded = accountRepository.findById(revolut.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "usd-1", TransactionStatus.BOOKED,
+                LocalDate.of(2026, 11, 19), null, new BigDecimal("-20.00"), "USD", null, "Shop New York", "{}"));
+        movement(reloaded, "2026-11-19", "-5.00"); // in euro: conta
+
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].balance.amount").isEqualTo(95.0);
+    }
+
+    @Test
+    void theLastMovementInTheBankBalanceIsNotAddedAgainWhenItArrivesLate() throws InterruptedException {
+        // docs/saldi.md, parte Q: la banca ha scalato i 30 € e dice che sono l'ultimo movimento compreso nel saldo.
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-9",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account alfa = accountRepository.save(new Account(connection, "k-9", "u-9", null, "Conto", "EUR"));
+        accountRepository.recordBalance(alfa.getId(), new BigDecimal("970.00"), null, LocalDate.of(2026, 11, 19),
+                BalanceSource.BANK, Instant.now(), "CLBD", "E-42");
+        Thread.sleep(5);
+        Account reloaded = accountRepository.findById(alfa.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "ref:E-42", TransactionStatus.BOOKED,
+                LocalDate.of(2026, 11, 19), null, new BigDecimal("-30.00"), "EUR", null, "Bancomat", "{}"));
+        movement(reloaded, "2026-11-19", "-5.00"); // un altro, davvero arrivato dopo: conta
+
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].balance.amount").isEqualTo(965.0);
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));

@@ -71,7 +71,9 @@ public class BalanceHistoryService {
             CurrentBalance balance = accountService.currentBalance(account);
             // Solo i saldi della banca. Uno scritto a mano più i movimenti si ricalcola ogni volta (vedi reconstruct):
             // fotografato, resterebbe senza i movimenti di un file caricato dopo.
-            if (balance != null && balance.source() == BalanceSource.BANK) {
+            // Non un saldo salvato prima della V46 (parte P): se comprendeva movimenti in attesa, la fotografia avrebbe
+            // un valore sbagliato. Si fotografa dalla prossima lettura.
+            if (balance != null && balance.source() == BalanceSource.BANK && account.isPendingKnown()) {
                 Anchor anchor = anchorOf(account, balance, today);
                 snapshotRepository.upsert(account.getId(), anchor.date(), anchor.amount());
                 saved++;
@@ -118,6 +120,10 @@ public class BalanceHistoryService {
     public BalanceHistory history(String currency, Long accountId, LocalDate today) {
         String chosen = currency.toUpperCase(Locale.ROOT);
         Map<Long, Anchor> current = new LinkedHashMap<>();
+        // I movimenti in attesa che il saldo mostrato aggiunge, conto per conto (parte O): il punto di oggi aggiunge
+        // esattamente questi, così combacia con la pagina Conti (anche per un saldo di cui non si sa il tipo, parte P,
+        // a cui non se ne aggiungono).
+        BigDecimal pendingShown = BigDecimal.ZERO;
         for (Account account : accountRepository.findAll()) {
             if (accountId != null && !accountId.equals(account.getId())) {
                 continue;
@@ -128,6 +134,7 @@ public class BalanceHistoryService {
                     // Un saldo scritto a mano è vero dal suo giorno di partenza in poi: da lì è il saldo scritto più i
                     // movimenti, come nella pagina Conti (anchorOf).
                     current.put(account.getId(), anchorOf(account, balance, today));
+                    pendingShown = pendingShown.add(balance.amount().subtract(balance.bookedAmount()));
                 }
             }
         }
@@ -171,9 +178,7 @@ public class BalanceHistoryService {
         List<Point> points = reconstruct(start, today, current, photos, movements);
         // Oggi, come nella pagina Conti: con i movimenti in attesa di adesso (parte O). I giorni prima restano contabili:
         // i pagamenti in attesa di allora intanto sono stati contabilizzati, e sono già nei movimenti.
-        BigDecimal pending = current.keySet().stream()
-                .map(transactionRepository::sumPending)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal pending = pendingShown;
         if (pending.signum() != 0 && !points.isEmpty()) {
             List<Point> withToday = new ArrayList<>(points);
             Point last = withToday.getLast();

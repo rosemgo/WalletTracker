@@ -62,17 +62,17 @@ class BalanceCheckTest {
         BankConnection connection = connectionRepository.save(new BankConnection("FinecoBank", "IT", "s-1",
                 Instant.now().plus(90, ChronoUnit.DAYS)));
         Account fineco = accountRepository.save(new Account(connection, "k-1", "u-1", null, "Dossier", "EUR"));
-        accountRepository.recordBalance(fineco.getId(), new BigDecimal("1000.00"), LocalDate.of(2026, 11, 10),
-                BalanceSource.BANK, Instant.now().minusSeconds(60));
+        accountRepository.recordBalance(fineco.getId(), new BigDecimal("1000.00"), null, LocalDate.of(2026, 11, 10),
+                BalanceSource.BANK, Instant.now().minusSeconds(60), "CLBD");
         movement(fineco, "2026-11-12", "-200");
 
         // 1.000 − 200 = 800: torna, niente da salvare né da segnalare.
-        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("800.00"), null,
+        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("800.00"), null, null,
                 LocalDate.of(2026, 11, 13), Instant.now().plusSeconds(5));
         assertThat(checkRepository.count()).isZero();
 
         // 900: 100 € che i movimenti nell'app non spiegano.
-        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("900.00"), null,
+        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("900.00"), null, null,
                 LocalDate.of(2026, 11, 13), Instant.now().plusSeconds(5));
         assertThat(checkService.mismatches()).singleElement().satisfies(m -> {
             assertThat(m.from()).isEqualTo(LocalDate.of(2026, 11, 10));
@@ -103,12 +103,12 @@ class BalanceCheckTest {
         // In ordine di tempo, con qualche millesimo di secondo in mezzo: un movimento, la lettura del saldo, la cedola.
         movement(fineco, "2026-11-16", "50"); // già nel primo saldo: importato prima della lettura
         Thread.sleep(5);
-        accountRepository.recordBalance(fineco.getId(), new BigDecimal("2595.30"), LocalDate.of(2026, 11, 16),
-                BalanceSource.BANK, Instant.now());
+        accountRepository.recordBalance(fineco.getId(), new BigDecimal("2595.30"), null, LocalDate.of(2026, 11, 16),
+                BalanceSource.BANK, Instant.now(), "CLBD");
         Thread.sleep(5);
         movement(fineco, "2026-11-16", "1458.50"); // la cedola dello stesso giorno, arrivata dopo (parte M)
 
-        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("4053.80"), null,
+        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("4053.80"), null, null,
                 LocalDate.of(2026, 11, 17), Instant.now().plusSeconds(60));
         // La cedola conta (arrivata dopo il primo saldo); i 50 € no (erano già dentro).
         assertThat(checkService.mismatches()).isEmpty();
@@ -129,9 +129,64 @@ class BalanceCheckTest {
 
         // Il saldo nuovo, 42,52 €, ha dentro i due pagamenti in attesa (−18,66 €): senza, 61,18 = 63,46 − 2,28.
         checkService.compare(reload(revolut), BalanceSource.BANK, new BigDecimal("42.52"), new BigDecimal("-18.66"),
-                LocalDate.of(2026, 11, 19), Instant.now().plusSeconds(5));
+                null, LocalDate.of(2026, 11, 19), Instant.now().plusSeconds(5));
         assertThat(checkRepository.count()).isZero();
         assertThat(checkService.mismatches()).isEmpty();
+    }
+
+    @Test
+    void aBalanceSavedBeforeV46IsNotCompared() {
+        // Non si sa se comprendeva movimenti in attesa (docs/saldi.md, parte P): il confronto potrebbe segnalare una
+        // differenza che non c'è. Si controlla dalla lettura dopo.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-4",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-4", "u-4", null, "Revolut", "EUR"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), LocalDate.of(2026, 11, 18),
+                BalanceSource.BANK, Instant.now().minusSeconds(60)); // senza tipo
+        movement(revolut, "2026-11-19", "-18.66");
+
+        checkService.compare(reload(revolut), BalanceSource.BANK, new BigDecimal("17.67"), null, null,
+                LocalDate.of(2026, 11, 19), Instant.now().plusSeconds(5));
+        assertThat(checkRepository.count()).isZero();
+    }
+
+    @Test
+    void aMovementOfTheFirstDayThatArrivedLateButWasAlreadyInTheBalanceRaisesNoNotice() throws InterruptedException {
+        // docs/saldi.md, parte Q: la banca ha scalato i 30 € prima di mostrare il movimento; arriva dopo la lettura.
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-5",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account alfa = accountRepository.save(new Account(connection, "k-5", "u-5", null, "Conto", "EUR"));
+        accountRepository.recordBalance(alfa.getId(), new BigDecimal("970.00"), null, LocalDate.of(2026, 11, 19),
+                BalanceSource.BANK, Instant.now(), "CLBD");
+        Thread.sleep(5);
+        movement(alfa, "2026-11-19", "-30.00"); // arrivato dopo: già nel saldo da 970 €
+
+        // Il giorno dopo la banca ridà 970 €: per l'app 970 − 30 avrebbe dovuto fare 940; ma i 30 € spiegano tutto.
+        checkService.compare(reload(alfa), BalanceSource.BANK, new BigDecimal("970.00"), null, null,
+                LocalDate.of(2026, 11, 20), Instant.now().plusSeconds(5));
+        assertThat(checkRepository.count()).isZero();
+
+        // Una differenza che i movimenti in ritardo non spiegano resta un avviso.
+        checkService.compare(reload(alfa), BalanceSource.BANK, new BigDecimal("950.00"), null, null,
+                LocalDate.of(2026, 11, 20), Instant.now().plusSeconds(5));
+        assertThat(checkService.mismatches()).singleElement()
+                .satisfies(m -> assertThat(m.difference()).isEqualByComparingTo("10.00"));
+    }
+
+    @Test
+    void theLastMovementInTheBalanceSaidByTheBankIsInsideItWhenItArrives() throws InterruptedException {
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-6",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account alfa = accountRepository.save(new Account(connection, "k-6", "u-6", null, "Conto", "EUR"));
+        accountRepository.recordBalance(alfa.getId(), new BigDecimal("970.00"), null, LocalDate.of(2026, 11, 19),
+                BalanceSource.BANK, Instant.now(), "CLBD", "E-42");
+        Thread.sleep(5);
+        transactionRepository.save(new BankTransaction(reload(alfa), "ref:E-42", TransactionStatus.BOOKED,
+                LocalDate.of(2026, 11, 19), null, new BigDecimal("-30.00"), "EUR", null, "Bancomat", "{}"));
+
+        checkService.compare(reload(alfa), BalanceSource.BANK, new BigDecimal("970.00"), null, null,
+                LocalDate.of(2026, 11, 20), Instant.now().plusSeconds(5));
+        assertThat(checkRepository.count()).isZero();
     }
 
     @Test

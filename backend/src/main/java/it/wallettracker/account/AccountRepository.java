@@ -52,27 +52,45 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     void recordSync(@Param("id") Long id, @Param("at") Instant at, @Param("error") Message error);
 
     /**
-     * Salva il saldo dato dalla banca (V34), come {@link #recordSync}: solo queste colonne, in una transazione sua.
-     * Con {@code balance} null il saldo si toglie (la banca non ne dà più uno).
+     * Salva un saldo (V34), come {@link #recordSync}: solo queste colonne, in una transazione sua. Con {@code balance}
+     * null il saldo si toglie (la banca non ne dà più uno).
+     *
+     * <p>Questa forma è un saldo senza tipo (parte P): come uno salvato prima della V46. Il codice dell'app passa sempre il tipo; questa
+     * forma serve a togliere il saldo ({@code balance} null) e ai test che non guardano i movimenti in attesa.
      */
     default void recordBalance(Long id, BigDecimal balance, LocalDate date, BalanceSource source, Instant at) {
-        recordBalance(id, balance, null, date, source, at);
+        recordBalance(id, balance, null, date, source, at, null);
+    }
+
+    /** Un saldo con i movimenti in attesa che comprende ({@code pending}), senza tipo: come quelli letti con la V44. */
+    default void recordBalance(Long id, BigDecimal balance, BigDecimal pending, LocalDate date, BalanceSource source,
+            Instant at) {
+        recordBalance(id, balance, pending, date, source, at, null);
+    }
+
+    /** Un saldo con il suo tipo, senza l'ultimo movimento compreso. */
+    default void recordBalance(Long id, BigDecimal balance, BigDecimal pending, LocalDate date, BalanceSource source,
+            Instant at, String type) {
+        recordBalance(id, balance, pending, date, source, at, type, null);
     }
 
     /**
-     * Come {@link #recordBalance(Long, BigDecimal, LocalDate, BalanceSource, Instant)}, per un saldo della banca che
-     * comprende i movimenti in attesa (V44, docs/saldi.md parte O): {@code pending} è quanto era in attesa alla lettura.
+     * Salva il saldo dato dalla banca: l'importo, i movimenti in attesa che comprende (V44, docs/saldi.md parte O; null se
+     * è contabile), il suo tipo (V46, parte P: il codice della banca) e il riferimento dell'ultimo movimento compreso
+     * (V47, parte Q; null se la banca non lo dà).
      */
     @Modifying
     @Transactional
     @Query("""
             UPDATE Account a SET a.balance = :balance, a.balancePending = :pending, a.balanceDate = :date,
-                a.balanceSource = :source, a.balanceUpdatedAt = :at
+                a.balanceSource = :source, a.balanceUpdatedAt = :at, a.balanceType = :type,
+                a.balanceLastEntry = :lastEntry
             WHERE a.id = :id
             """)
     void recordBalance(@Param("id") Long id, @Param("balance") BigDecimal balance,
             @Param("pending") BigDecimal pending, @Param("date") LocalDate date,
-            @Param("source") BalanceSource source, @Param("at") Instant at);
+            @Param("source") BalanceSource source, @Param("at") Instant at, @Param("type") String type,
+            @Param("lastEntry") String lastEntry);
 
     /** Salva il plafond disponibile di una carta (V35), come {@link #recordBalance}; null lo toglie. */
     @Modifying
