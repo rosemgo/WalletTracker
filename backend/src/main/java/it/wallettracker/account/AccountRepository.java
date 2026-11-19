@@ -68,20 +68,29 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
         recordBalance(id, balance, pending, date, source, at, null);
     }
 
+    /** Un saldo con il suo tipo, senza l'ultimo movimento compreso. */
+    default void recordBalance(Long id, BigDecimal balance, BigDecimal pending, LocalDate date, BalanceSource source,
+            Instant at, String type) {
+        recordBalance(id, balance, pending, date, source, at, type, null);
+    }
+
     /**
      * Salva il saldo dato dalla banca: l'importo, i movimenti in attesa che comprende (V44, docs/saldi.md parte O; null se
-     * è contabile) e il suo tipo (V45, parte P: il codice della banca).
+     * è contabile), il suo tipo (V45, parte P: il codice della banca) e il riferimento dell'ultimo movimento compreso
+     * (V46, parte Q; null se la banca non lo dà).
      */
     @Modifying
     @Transactional
     @Query("""
             UPDATE Account a SET a.balance = :balance, a.balancePending = :pending, a.balanceDate = :date,
-                a.balanceSource = :source, a.balanceUpdatedAt = :at, a.balanceType = :type
+                a.balanceSource = :source, a.balanceUpdatedAt = :at, a.balanceType = :type,
+                a.balanceLastEntry = :lastEntry
             WHERE a.id = :id
             """)
     void recordBalance(@Param("id") Long id, @Param("balance") BigDecimal balance,
             @Param("pending") BigDecimal pending, @Param("date") LocalDate date,
-            @Param("source") BalanceSource source, @Param("at") Instant at, @Param("type") String type);
+            @Param("source") BalanceSource source, @Param("at") Instant at, @Param("type") String type,
+            @Param("lastEntry") String lastEntry);
 
     /** Salva il plafond disponibile di una carta (V35), come {@link #recordBalance}; null lo toglie. */
     @Modifying

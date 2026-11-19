@@ -85,4 +85,11 @@ class BankBalanceTest {
         assertThat(BankBalance.includesPending("CLBD")).isFalse();
         assertThat(BankBalance.includesPending("OTHR")).isFalse();
     }
+
+    @Test
+    void theChosenBalanceKeepsTheLastMovementInIt() {
+        var chosen = BankBalance.choose(List.of(new Balance("Contabile", new Amount(new BigDecimal("970.00"), "EUR"),
+                "CLBD", LocalDate.of(2026, 11, 19), "E-42")), "EUR", LocalDate.of(2026, 11, 19));
+        assertThat(chosen).hasValueSatisfying(c -> assertThat(c.lastEntry()).isEqualTo("E-42"));
+    }
 }

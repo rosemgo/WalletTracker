@@ -272,6 +272,24 @@ class AccountBalanceTest {
     }
 
     @Test
+    void theLastMovementInTheBankBalanceIsNotAddedAgainWhenItArrivesLate() throws InterruptedException {
+        // docs/saldi.md, parte Q: la banca ha scalato i 30 € e dice che sono l'ultimo movimento compreso nel saldo.
+        BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-9",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account alfa = accountRepository.save(new Account(connection, "k-9", "u-9", null, "Conto", "EUR"));
+        accountRepository.recordBalance(alfa.getId(), new BigDecimal("970.00"), null, LocalDate.of(2026, 11, 19),
+                BalanceSource.BANK, Instant.now(), "CLBD", "E-42");
+        Thread.sleep(5);
+        Account reloaded = accountRepository.findById(alfa.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "ref:E-42", TransactionStatus.BOOKED,
+                LocalDate.of(2026, 11, 19), null, new BigDecimal("-30.00"), "EUR", null, "Bancomat", "{}"));
+        movement(reloaded, "2026-11-19", "-5.00"); // un altro, davvero arrivato dopo: conta
+
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].balance.amount").isEqualTo(965.0);
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));

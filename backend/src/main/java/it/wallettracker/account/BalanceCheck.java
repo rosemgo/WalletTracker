@@ -57,12 +57,23 @@ public class BalanceCheck {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /** L'ultimo movimento compreso nel primo saldo, se la banca l'ha indicato (V46, parte Q). */
+    @Column(name = "from_last_entry")
+    private String fromLastEntry;
+
+    /** L'ultimo movimento compreso nel secondo saldo, se la banca l'ha indicato. */
+    @Column(name = "to_last_entry")
+    private String toLastEntry;
+
     protected BalanceCheck() {
         // per JPA
     }
 
     BalanceCheck(Account account, BalanceSource source, LocalDate fromDate, Instant fromAt, BigDecimal fromAmount,
-            LocalDate toDate, Instant toAt, BigDecimal toAmount, Instant createdAt) {
+            String fromLastEntry, LocalDate toDate, Instant toAt, BigDecimal toAmount, String toLastEntry,
+            Instant createdAt) {
+        this.fromLastEntry = fromLastEntry;
+        this.toLastEntry = toLastEntry;
         this.account = account;
         this.source = source;
         this.fromDate = fromDate;
@@ -108,5 +119,13 @@ public class BalanceCheck {
 
     public BigDecimal getToAmount() {
         return toAmount;
+    }
+
+    public String getFromLastEntry() {
+        return fromLastEntry;
+    }
+
+    public String getToLastEntry() {
+        return toLastEntry;
     }
 }

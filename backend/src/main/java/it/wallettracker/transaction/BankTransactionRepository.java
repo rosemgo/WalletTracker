@@ -281,8 +281,15 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
               AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
               AND (t.account.currency IS NULL OR t.currency = t.account.currency)
               AND (t.bookingDate > :date OR (t.bookingDate = :date AND t.importedAt > :at))
+              AND t.dedupKey <> :insideKey
             """)
-    BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
+    BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at,
+            @Param("insideKey") String insideKey);
+
+    /** {@link #sumAfter(Long, LocalDate, Instant, String)} senza un movimento noto dentro il saldo (parte Q). */
+    default BigDecimal sumAfter(Long accountId, LocalDate date, Instant at) {
+        return sumAfter(accountId, date, at, "");
+    }
 
     /**
      * La somma dei movimenti contabilizzati di un conto con una data successiva a {@code date}: per portare il saldo di
@@ -299,8 +306,9 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     /**
      * I movimenti contabilizzati arrivati tra due saldi di un conto (il controllo dei saldi, docs/saldi.md parte N):
-     * dopo il primo (una data successiva, o lo stesso giorno importati dopo la sua lettura) e dentro il secondo (una
-     * data precedente, o lo stesso giorno importati prima della sua lettura). È la stessa regola di {@link #sumAfter}.
+     * fuori dal primo e dentro il secondo. Un movimento è dentro un saldo se ha una data precedente, o lo stesso giorno
+     * ed è stato importato prima della lettura, o è l'ultimo movimento compreso indicato dalla banca ({@code fromKey},
+     * {@code toKey}: la sua impronta, vuota se la banca non lo dà; parte Q). È la stessa regola di {@link #sumAfter}.
      */
     @Query("""
             SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
@@ -308,10 +316,27 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
               AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
               AND (t.account.currency IS NULL OR t.currency = t.account.currency)
               AND (t.bookingDate > :fromDate OR (t.bookingDate = :fromDate AND t.importedAt > :fromAt))
-              AND (t.bookingDate < :toDate OR (t.bookingDate = :toDate AND t.importedAt <= :toAt))
+              AND t.dedupKey <> :fromKey
+              AND (t.bookingDate < :toDate OR (t.bookingDate = :toDate AND t.importedAt <= :toAt)
+                   OR t.dedupKey = :toKey)
             """)
     BigDecimal sumBetween(@Param("accountId") Long accountId, @Param("fromDate") LocalDate fromDate,
-            @Param("fromAt") Instant fromAt, @Param("toDate") LocalDate toDate, @Param("toAt") Instant toAt);
+            @Param("fromAt") Instant fromAt, @Param("fromKey") String fromKey, @Param("toDate") LocalDate toDate,
+            @Param("toAt") Instant toAt, @Param("toKey") String toKey);
+
+    /**
+     * Gli importi dei movimenti contabilizzati di un giorno importati dopo un certo istante (la lettura di un saldo), escluso
+     * quello noto dentro il saldo: il controllo dei saldi li usa per capire se la banca li aveva già contati (parte Q).
+     */
+    @Query("""
+            SELECT t.amount FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.account.currency IS NULL OR t.currency = t.account.currency)
+              AND t.bookingDate = :date AND t.importedAt > :at AND t.dedupKey <> :insideKey
+            """)
+    List<BigDecimal> lateOnDay(@Param("accountId") Long accountId, @Param("date") LocalDate date,
+            @Param("at") Instant at, @Param("insideKey") String insideKey);
 
     /**
      * La somma dei movimenti in attesa di un conto: alla lettura di un saldo che li comprende (docs/saldi.md, parte O), e

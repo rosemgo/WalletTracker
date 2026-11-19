@@ -37,7 +37,12 @@ public final class BankBalance {
     }
 
     /** Il saldo scelto: importo e giorno. */
-    public record Chosen(BigDecimal amount, LocalDate date, String type) {
+    public record Chosen(BigDecimal amount, LocalDate date, String type, String lastEntry) {
+
+        /** Un saldo senza l'ultimo movimento compreso. */
+        public Chosen(BigDecimal amount, LocalDate date, String type) {
+            this(amount, date, type, null);
+        }
     }
 
     /**
@@ -65,7 +70,9 @@ public final class BankBalance {
                 .filter(b -> b.balanceAmount().currency() == null
                         || b.balanceAmount().currency().equalsIgnoreCase(currency))
                 .map(b -> new Chosen(b.balanceAmount().amount(), b.referenceDate() != null ? b.referenceDate() : today,
-                        b.balanceType() == null ? "" : b.balanceType().toUpperCase(Locale.ROOT)))
+                        b.balanceType() == null ? "" : b.balanceType().toUpperCase(Locale.ROOT),
+                        b.lastCommittedTransaction() == null || b.lastCommittedTransaction().isBlank()
+                                ? null : b.lastCommittedTransaction()))
                 .toList();
         for (List<String> group : PREFERENCE) {
             Optional<Chosen> best = usable.stream()

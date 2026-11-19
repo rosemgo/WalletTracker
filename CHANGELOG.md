@@ -12,6 +12,9 @@ changes something important for those who use it.
   more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending
   payments, as in the bank's app and as the expenses do; on the Accounts page, when there are any, a line also shows
   the booked balance. The same applies to a balance you write for a linked account.
+- **Fewer false notices from the balance check**: when a bank takes a payment off the balance before showing the
+  transaction, the app now recognises it and does not report a difference that is not there. If the bank says which
+  transaction is the last one in the balance, the balance shown does not count it twice either.
 
 ## 1.3.0
 

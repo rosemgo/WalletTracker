@@ -237,11 +237,24 @@ class SyncServiceTest {
         assertThat(reloaded.getBalancePending()).isEqualByComparingTo("0"); // nessun movimento in attesa adesso
         assertThat(reloaded.isPendingKnown()).isTrue();
 
+        assertThat(reloaded.getBalanceLastEntry()).isNull(); // questa banca non lo dà
+
         // Il giro dopo: ora ha il tipo, e vale di nuovo la regola delle 20 ore.
         accountRepository.recordSync(account.getId(), Instant.now().minus(properties.interval()).minusSeconds(60),
                 null);
         syncService.syncAllInBackground();
         verify(client, times(1)).getBalances(eq("uid-a"), any());
+    }
+
+    @Test
+    void theLastMovementInTheBalanceIsSavedWithIt() {
+        Account account = account(validConnection(), "uid-a");
+        when(client.getBalances(eq("uid-a"), any())).thenReturn(List.of(
+                new Balance("Contabile", new Amount(new BigDecimal("970.00"), "EUR"), "CLBD",
+                        LocalDate.of(2026, 11, 19), "E-42")));
+
+        syncService.syncAllInBackground();
+        assertThat(reload(account).getBalanceLastEntry()).isEqualTo("E-42");
     }
 
     @Test

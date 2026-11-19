@@ -280,9 +280,9 @@ public class SyncService {
                 // Il controllo dei saldi (parte N): il saldo nuovo contro quello di prima più i movimenti appena
                 // importati. Prima di salvarlo, perché il confronto è con quello di prima.
                 balanceCheckService.compare(account, BalanceSource.BANK, chosen.get().amount(), pending,
-                        chosen.get().date(), now);
+                        chosen.get().lastEntry(), chosen.get().date(), now);
                 accountRepository.recordBalance(account.getId(), chosen.get().amount(), pending, chosen.get().date(),
-                        BalanceSource.BANK, now, chosen.get().type());
+                        BalanceSource.BANK, now, chosen.get().type(), chosen.get().lastEntry());
                 log.info("{}: saldo {} ({}) al {}", account.getName(), chosen.get().amount(), chosen.get().type(),
                         chosen.get().date());
             } else if (account.getBalanceSource() == BalanceSource.BANK) {

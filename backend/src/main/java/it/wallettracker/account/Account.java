@@ -131,6 +131,13 @@ public class Account {
     /** Il tipo di un saldo scritto dall'utente. */
     public static final String WRITTEN = "WRITTEN";
 
+    /**
+     * Il riferimento dell'ultimo movimento compreso nel saldo della banca (V46, docs/saldi.md parte Q), se la banca lo
+     * dà: quel movimento è dentro il saldo anche se arriva dopo la lettura. Null altrimenti.
+     */
+    @Column(name = "balance_last_entry")
+    private String balanceLastEntry;
+
     /** Per una carta di credito (V35): il plafond che resta, dato dalla banca; null se non si sa. */
     @Column(name = "available_credit")
     private BigDecimal availableCredit;
@@ -282,6 +289,25 @@ public class Account {
         this.balanceUpdatedAt = balance == null ? null : at;
         this.balancePending = balance == null ? null : pending;
         this.balanceType = balance == null ? null : WRITTEN;
+        this.balanceLastEntry = null;
+    }
+
+    public String getBalanceLastEntry() {
+        return balanceLastEntry;
+    }
+
+    /**
+     * L'impronta del movimento che è dentro il saldo anche se è arrivato dopo la lettura (parte Q): {@code ref:} più il
+     * riferimento dato dalla banca, come la scrive l'importazione. Vuota (nessun movimento ha un'impronta vuota) se la
+     * banca non lo dà: così si passa sempre alle query, senza un null.
+     */
+    public String insideKey() {
+        return insideKey(balanceLastEntry);
+    }
+
+    /** {@link #insideKey()} per un riferimento qualsiasi (null = nessuno). */
+    public static String insideKey(String lastEntry) {
+        return lastEntry == null ? "" : "ref:" + lastEntry;
     }
 
     public String getBalanceType() {
