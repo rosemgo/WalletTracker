@@ -12,6 +12,13 @@ changes something important for those who use it.
   more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending
   payments, as in the bank's app and as the expenses do; on the Accounts page, when there are any, a line also shows
   the booked balance. The same applies to a balance you write for a linked account.
+- **Rules on the bank's code**: some banks send with the transaction a code that says what operation it is (for example
+  ING "Accredito Stipendio/Pensione"). Now a rule can look at that code instead of the text: in the Rules form choose
+  "Search in the bank's transaction code". The code is shown in the transaction sheet, under Details, with "create a
+  rule". New starter rules: the salary goes to *Salary and pension*, the card withdrawal to *Cash and withdrawals*,
+  the bank's bonuses and the Revolut rewards to *Tax refunds and bonuses*, even when the description does not say so.
+- **Interest paid**: the interest you pay to the bank (an overdraft, a credit line) goes to *Bank charges*. Before, it
+  stayed an expense without a category.
 
 ## 1.3.0
 

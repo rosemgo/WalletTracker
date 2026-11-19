@@ -209,6 +209,20 @@
           <dt i18n>Causale</dt>
           <dd>{{ t.description }}</dd>
         }
+        @if (d.bankCode) {
+          <!-- Il codice dell'operazione mandato dalla banca: una regola può guardare qui invece che nel testo. -->
+          <dt i18n>Codice della banca</dt>
+          <dd>
+            {{ d.bankCode }} ·
+            <a
+              i18n
+              routerLink="/regole"
+              [queryParams]="bankCodeRuleParams(t, d.bankCode)"
+              data-testid="create-bank-code-rule"
+              >crea una regola</a
+            >
+          </dd>
+        }
         <dt i18n>Data contabile</dt>
         <dd>{{ t.bookingDate | localDate: 'full' | upperFirst }}</dd>
         @if (t.valueDate && t.valueDate !== t.bookingDate) {

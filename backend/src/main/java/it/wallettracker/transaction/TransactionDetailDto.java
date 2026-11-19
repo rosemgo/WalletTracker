@@ -9,6 +9,7 @@ import java.util.List;
  *
  * @param transaction    il movimento, come nell'elenco
  * @param rawJson        i dati originali, come sono arrivati (dalla banca, o le celle del file)
+ * @param bankCode       il codice dell'operazione mandato dalla banca, per le regole che lo guardano; null se non c'è
  * @param importedAt     quando è arrivato nell'app
  * @param origin         da dove è arrivato
  * @param categoryOrigin perché ha quella categoria
@@ -16,8 +17,8 @@ import java.util.List;
  * @param merchant       l'esercente e i suoi movimenti; null se il movimento non ha un testo da cui riconoscerlo
  * @param suggestion     la categoria suggerita, se il movimento non ne ha una e c'è un suggerimento
  */
-public record TransactionDetailDto(TransactionDto transaction, String rawJson, Instant importedAt, Origin origin,
-        CategoryOrigin categoryOrigin, String ruleName, Merchant merchant, Suggestion suggestion) {
+public record TransactionDetailDto(TransactionDto transaction, String rawJson, String bankCode, Instant importedAt,
+        Origin origin, CategoryOrigin categoryOrigin, String ruleName, Merchant merchant, Suggestion suggestion) {
 
     /** Da dove è arrivato un movimento. */
     public enum Origin {

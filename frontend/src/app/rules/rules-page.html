@@ -11,6 +11,12 @@
   vecchi.
 </p>
 
+<p i18n class="hint">
+  Invece del testo, una regola può guardare il <strong>codice dell'operazione</strong> che alcune
+  banche mandano con il movimento (per esempio «Accredito Stipendio/Pensione»): lo trovi nella
+  scheda del movimento, in Dettagli.
+</p>
+
 <!-- Che cosa viene prima delle regole (ClassificationService): aperto solo da chi se lo chiede. -->
 <details class="hint why-rules" data-testid="why-rules">
   <summary i18n>Perché a volte una regola non vale?</summary>
@@ -66,8 +72,21 @@
     </label>
 
     <label
-      ><ng-container i18n> Se il testo </ng-container
-      ><select formControlName="matchMode">
+      ><ng-container i18n> Cerca </ng-container
+      ><select formControlName="matchField">
+        @for (field of matchFields; track field) {
+          <option [value]="field">{{ matchFieldLabels[field] }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      @if (form.controls.matchField.value === 'BANK_CODE') {
+        <ng-container i18n> Se il codice </ng-container>
+      } @else {
+        <ng-container i18n> Se il testo </ng-container>
+      }
+      <select formControlName="matchMode">
         @for (mode of matchModes; track mode) {
           <option [value]="mode">{{ matchModeLabels[mode] }}</option>
         }
@@ -93,6 +112,11 @@
         @case ('STARTS_WITH') {
           <span i18n class="secondary">all'inizio del testo</span>
         }
+      }
+      @if (form.controls.matchField.value === 'BANK_CODE') {
+        <span i18n class="secondary"
+          >il codice è nella scheda del movimento, in Dettagli; non tutte le banche lo mandano</span
+        >
       }
     </label>
 
@@ -211,6 +235,9 @@
             </td>
             <td data-label="Condizione" i18n-data-label>
               {{ matchModeLabels[rule.matchMode] }} «{{ rule.pattern }}»
+              @if (rule.matchField === 'BANK_CODE') {
+                <div i18n class="secondary">nel codice della banca</div>
+              }
               <div class="secondary">{{ amountSignLabels[rule.amountSign] }}</div>
             </td>
             <td data-label="Risultato" i18n-data-label>

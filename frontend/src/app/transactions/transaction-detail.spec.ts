@@ -49,6 +49,7 @@ function detail(changes: Partial<Detail> = {}, transaction: Partial<Transaction>
   return {
     transaction: movement(transaction),
     rawJson: '{"remittance_information":["PAGAMENTO POS AMAZON.IT"],"status":"BOOK"}',
+    bankCode: null,
     importedAt: '2026-10-25T07:02:00Z',
     origin: 'BANK',
     categoryOrigin: 'MANUAL',
@@ -285,6 +286,25 @@ describe('TransactionDetail', () => {
     button('Accetta').click();
     await fixture.whenStable();
     expect(calls).toEqual(['accept PIZZERIA DA GINO 1']);
+  });
+
+  it('shows the bank code, with a link to a rule that looks at it', async () => {
+    const { page } = await render();
+    expect(page.querySelector('[data-testid="create-bank-code-rule"]')).toBeNull(); // questa banca non lo manda
+
+    current = detail(
+      { bankCode: 'Accredito Stipendio/Pensione' },
+      { amount: 1850, type: 'INCOME' },
+    );
+    const second = await render();
+    expect(second.page.textContent).toContain('Codice della banca');
+    expect(second.page.textContent).toContain('Accredito Stipendio/Pensione');
+    const link = second.page.querySelector(
+      '[data-testid="create-bank-code-rule"]',
+    ) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toContain('matchField=BANK_CODE');
+    expect(link.getAttribute('href')).toContain('pattern=Accredito%20Stipendio');
+    expect(link.getAttribute('href')).toContain('resultType=INCOME');
   });
 
   it('a purchase of securities says that it needs no category, but one can still be added', async () => {

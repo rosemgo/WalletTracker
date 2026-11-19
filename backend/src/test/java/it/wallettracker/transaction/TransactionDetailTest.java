@@ -98,6 +98,7 @@ class TransactionDetailTest {
                     json.assertThat().extractingPath("$.categoryOrigin").isEqualTo("MANUAL");
                     json.assertThat().extractingPath("$.origin").isEqualTo("BANK");
                     json.assertThat().extractingPath("$.rawJson").asString().contains("AMAZON");
+                    json.assertThat().extractingPath("$.bankCode").isNull(); // questa banca non manda il codice
                     // L'esercente: quattro movimenti nell'ultimo anno (questo compreso), in due categorie.
                     json.assertThat().extractingPath("$.merchant.key").isEqualTo("PAGAMENTO POS AMAZON IT");
                     json.assertThat().extractingPath("$.merchant.movements").isEqualTo(4);
@@ -232,6 +233,17 @@ class TransactionDetailTest {
                 "tx-" + (++counter));
         transaction.setManualCategory(category(category));
         return transactionRepository.save(transaction);
+    }
+
+    @Test
+    void theDetailShowsTheBankCodeForWritingARuleOnIt() {
+        BankTransaction salary = transactionRepository.save(new BankTransaction(account, "tx-salary",
+                TransactionStatus.BOOKED, today, null, new BigDecimal("1850.00"), "EUR", null, "Bonifico N. 0306",
+                "{\"bank_transaction_code\": {\"code\": null, \"description\": \"Accredito Stipendio/Pensione\"}}"));
+
+        assertThat(mvc.get().uri("/api/transactions/{id}", salary.getId()))
+                .hasStatusOk()
+                .bodyJson().extractingPath("$.bankCode").isEqualTo("Accredito Stipendio/Pensione");
     }
 
     private BankTransaction save(Account owner, int daysAgo, String amount, String description, String dedupKey) {

@@ -8,6 +8,8 @@ import { categoryGroups, kindOf } from '../api/category-groups';
 import {
   AMOUNT_SIGNS,
   AMOUNT_SIGN_LABELS,
+  MATCH_FIELDS,
+  MATCH_FIELD_LABELS,
   MATCH_MODES,
   MATCH_MODE_LABELS,
   TYPES,
@@ -16,6 +18,7 @@ import {
 import {
   AmountSign,
   Category,
+  MatchField,
   Rule,
   RulePreview,
   RuleRequest,
@@ -31,6 +34,7 @@ const NEW_RULE: RuleRequest = {
   name: '',
   priority: 100,
   enabled: true,
+  matchField: 'TEXT',
   matchMode: 'CONTAINS',
   pattern: '',
   amountSign: 'ANY',
@@ -63,6 +67,8 @@ export class RulesPage implements OnInit {
 
   protected readonly types = TYPES;
   protected readonly typeLabels = TYPE_LABELS;
+  protected readonly matchFields = MATCH_FIELDS;
+  protected readonly matchFieldLabels = MATCH_FIELD_LABELS;
   protected readonly matchModes = MATCH_MODES;
   protected readonly matchModeLabels = MATCH_MODE_LABELS;
   protected readonly amountSigns = AMOUNT_SIGNS;
@@ -100,6 +106,7 @@ export class RulesPage implements OnInit {
       NEW_RULE.pattern,
       [Validators.required, Validators.minLength(2), Validators.maxLength(200)],
     ],
+    matchField: [NEW_RULE.matchField],
     matchMode: [NEW_RULE.matchMode],
     amountSign: [NEW_RULE.amountSign],
     resultType: [NEW_RULE.resultType],
@@ -129,7 +136,8 @@ export class RulesPage implements OnInit {
 
   /**
    * "Crea una regola da questa correzione" (pagina Movimenti) arriva qui con i dati nell'indirizzo:
-   * /regole?pattern=NETFLIX&resultType=EXPENSE&amountSign=NEGATIVE&categoryId=8.
+   * /regole?pattern=NETFLIX&resultType=EXPENSE&amountSign=NEGATIVE&categoryId=8. Dal codice della banca di un movimento
+   * c'è anche matchField=BANK_CODE.
    * Compiliamo il modulo e facciamo subito la prova, così l'utente vede a quali movimenti si
    * applicherebbe prima di salvare. I valori che non conosciamo vengono ignorati: l'indirizzo lo può
    * scrivere chiunque, quindi non ci fidiamo (e comunque l'ultima parola resta al backend).
@@ -142,6 +150,7 @@ export class RulesPage implements OnInit {
     }
     const resultType = params.get('resultType') as TransactionType;
     const amountSign = params.get('amountSign') as AmountSign;
+    const matchField = params.get('matchField') as MatchField;
     // L'id deve essere un numero intero positivo; se non c'è nell'elenco, il backend risponde 400.
     const categoryId = Number(params.get('categoryId'));
     this.form.patchValue({
@@ -149,6 +158,7 @@ export class RulesPage implements OnInit {
       pattern: pattern.slice(0, 200),
       ...(this.types.includes(resultType) ? { resultType } : {}),
       ...(this.amountSigns.includes(amountSign) ? { amountSign } : {}),
+      ...(this.matchFields.includes(matchField) ? { matchField } : {}),
       ...(Number.isInteger(categoryId) && categoryId > 0 ? { categoryId } : {}),
     });
     // Dalla scheda di un movimento: dopo una correzione (con la categoria scelta) o da "crea una regola" in un
@@ -171,6 +181,7 @@ export class RulesPage implements OnInit {
     this.form.setValue({
       name: rule.name,
       pattern: rule.pattern,
+      matchField: rule.matchField,
       matchMode: rule.matchMode,
       amountSign: rule.amountSign,
       resultType: rule.resultType,

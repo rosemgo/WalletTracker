@@ -281,6 +281,11 @@ public class BankTransaction {
         return rawJson;
     }
 
+    /** Il codice dell'operazione mandato dalla banca, letto dal JSON originale; null se non c'è (vedi {@link BankCode}). */
+    public String getBankCode() {
+        return BankCode.of(rawJson);
+    }
+
     public Instant getImportedAt() {
         return importedAt;
     }

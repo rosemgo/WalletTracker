@@ -439,6 +439,11 @@ export class TransactionDetail implements OnInit {
     };
   }
 
+  /** Come ruleParams, ma la regola guarda il codice dell'operazione mandato dalla banca invece del testo. */
+  protected bankCodeRuleParams(t: Transaction, bankCode: string): Record<string, string> {
+    return { ...this.ruleParams(t), pattern: bankCode.slice(0, 200), matchField: 'BANK_CODE' };
+  }
+
   /** Il nome di un tipo; per un'entrata, "Spesa" vuol dire rimborso di una spesa. */
   protected typeLabel(t: Transaction, type: TransactionType): string {
     return type === 'EXPENSE' && t.amount > 0
