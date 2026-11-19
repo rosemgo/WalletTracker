@@ -60,6 +60,11 @@ public class BalanceCheckService {
                 || account.getBalanceSource() != newSource || newDate.isBefore(account.getBalanceDate())) {
             return;
         }
+        if (!account.isPendingKnown()) {
+            // Il saldo di prima è stato salvato prima della V45: non si sa se comprendeva i movimenti in attesa, e il
+            // confronto potrebbe segnalare una differenza che non c'è (parte P). Si controlla dal prossimo.
+            return;
+        }
         BigDecimal newBooked = newPending == null ? newAmount : newAmount.subtract(newPending);
         BalanceCheck check = new BalanceCheck(account, newSource, account.getBalanceDate(),
                 account.getBalanceUpdatedAt(), account.getBookedBalance(), newDate, newAt, newBooked, newAt);

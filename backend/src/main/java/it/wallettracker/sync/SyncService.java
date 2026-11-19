@@ -256,7 +256,11 @@ public class SyncService {
             return;
         }
         Instant last = account.getBalanceSource() == BalanceSource.BANK ? account.getBalanceUpdatedAt() : null;
-        if (psu == null && last != null && last.isAfter(now.minus(BACKGROUND_BALANCE_INTERVAL))) {
+        // Un saldo della banca salvato prima della V45 non dice se comprendeva i movimenti in attesa (docs/saldi.md,
+        // parte P): si rilegge al primo giro, subito dopo i movimenti, senza aspettare le 20 ore. Una volta sola: dopo ha
+        // il suo tipo. Non si forza un giro in più, che consumerebbe letture dei movimenti.
+        if (psu == null && last != null && last.isAfter(now.minus(BACKGROUND_BALANCE_INTERVAL))
+                && account.isPendingKnown()) {
             return;
         }
         if (psu == null && account.getBalanceSource() == BalanceSource.MANUAL) {
@@ -278,7 +282,7 @@ public class SyncService {
                 balanceCheckService.compare(account, BalanceSource.BANK, chosen.get().amount(), pending,
                         chosen.get().date(), now);
                 accountRepository.recordBalance(account.getId(), chosen.get().amount(), pending, chosen.get().date(),
-                        BalanceSource.BANK, now);
+                        BalanceSource.BANK, now, chosen.get().type());
                 log.info("{}: saldo {} ({}) al {}", account.getName(), chosen.get().amount(), chosen.get().type(),
                         chosen.get().date());
             } else if (account.getBalanceSource() == BalanceSource.BANK) {

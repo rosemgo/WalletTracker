@@ -121,6 +121,16 @@ public class Account {
     @Column(name = "balance_pending")
     private BigDecimal balancePending;
 
+    /**
+     * Il tipo del saldo (V45, docs/saldi.md parte P): il codice della banca ({@code CLBD}, {@code XPCD}...), o
+     * {@link #WRITTEN} per uno scritto dall'utente. Null per un saldo salvato prima della V45.
+     */
+    @Column(name = "balance_type")
+    private String balanceType;
+
+    /** Il tipo di un saldo scritto dall'utente. */
+    public static final String WRITTEN = "WRITTEN";
+
     /** Per una carta di credito (V35): il plafond che resta, dato dalla banca; null se non si sa. */
     @Column(name = "available_credit")
     private BigDecimal availableCredit;
@@ -271,6 +281,22 @@ public class Account {
         this.balanceSource = balance == null ? null : source;
         this.balanceUpdatedAt = balance == null ? null : at;
         this.balancePending = balance == null ? null : pending;
+        this.balanceType = balance == null ? null : WRITTEN;
+    }
+
+    public String getBalanceType() {
+        return balanceType;
+    }
+
+    /**
+     * true se si sa quanto il saldo comprende di movimenti in attesa (parte P): ha un tipo (salvato dalla V45), o ha
+     * salvato quanto era in attesa (un saldo previsto letto con la V44). Un saldo salvato prima non lo dice: per lui
+     * l'app non aggiunge i movimenti in attesa, non lo controlla né lo fotografa, e la sincronizzazione lo rilegge alla
+     * prima occasione. Senza saldo: true (non c'è niente da sapere).
+     */
+    public boolean isPendingKnown() {
+        // Un conto caricato da file non ha mai movimenti in attesa: i file danno solo movimenti contabilizzati.
+        return balance == null || balanceType != null || balancePending != null || isManual();
     }
 
     public BigDecimal getBalancePending() {

@@ -624,3 +624,42 @@ pagamenti contabilizzati che contano una volta sola), `AccountBalanceTest.aWritt
 `BalanceHistoryServiceTest.todayHasThePendingMovementsLikeTheAccountsPageThePhotoIsBooked`, `BalanceCheckTest.aBalanceWithThePendingMovementsIsComparedWithoutThem`,
 `accounts-page.spec.ts` (la riga nella pagina Conti).
 
+## Parte P: i saldi salvati prima, di cui non si sa il tipo
+
+**Il caso, subito dopo l'aggiornamento alla V44.** Revolut mostrava −0,99 € con "Contabile: 17,67 €". Il saldo salvato
+prima della V44 era stato letto con i due pagamenti in attesa dentro (−18,66 €), ma la V44 non poteva saperlo: l'ha
+lasciato come contabile, e l'app gli ha aggiunto di nuovo i pagamenti in attesa. Con "Aggiorna" la banca ha ridato il
+saldo e tutto è tornato giusto (17,67 €). Alla stessa lettura il controllo dei saldi (parte N) poteva segnalare una
+differenza falsa di 18,66 €.
+
+**La regola generale: sapere se il dato è noto** (`Account.isPendingKnown`). Si sa quanto un saldo comprende di
+movimenti in attesa se:
+
+- è un saldo della banca letto dalla V45: ha il suo tipo (`V45`, colonna `balance_type`: il codice della banca);
+- è un saldo previsto letto con la V44: ha salvato quanto era in attesa (`balance_pending`);
+- è un saldo scritto dall'utente dalla V45: tipo `WRITTEN`;
+- è un conto caricato da file: non ha mai movimenti in attesa.
+
+Ogni altro saldo, salvato prima, **non lo dice**: dopo un aggiornamento, un salto di versioni, un backup vecchio
+ripristinato, e anche un saldo scritto a mano prima della V45 su un conto collegato. Per lui:
+
+| Dove | Che cosa fa l'app | Perché |
+|---|---|---|
+| saldo mostrato (`CurrentBalance`) | non aggiunge i movimenti in attesa | aggiungerli potrebbe contarli due volte; è il comportamento di prima della V44 |
+| controllo dei saldi (`compare`) | non confronta | il confronto potrebbe segnalare una differenza che non c'è |
+| fotografie (`recordToday`) | non fotografa | la fotografia resterebbe nello storico con un valore sbagliato |
+| sincronizzazione (`refreshBalance`) | rilegge il saldo della banca al primo giro, senza aspettare le 20 ore | dopo ha il suo tipo, una volta sola |
+
+La rilettura avviene **dentro un giro normale, subito dopo i movimenti**: i movimenti in attesa salvati devono essere
+quelli di quel momento, perché il saldo previsto li comprende. Non si forza un giro in più: consumerebbe letture dei
+movimenti (circa 4 al giorno per conto in background, docs/08), con il rischio di un 429. Il saldo si rilegge quindi
+entro poche ore, o subito con "Aggiorna ora". Un saldo scritto a mano non si rilegge: resta com'è finché l'utente non ne
+scrive uno nuovo.
+
+**La migrazione V45** aggiunge la colonna e cancella di nuovo i controlli e le fotografie nati tra la V44 e la V45
+(poche ore): possono avere dentro l'errore. Chi aggiorna dalla 1.3.0 riceve V44 e V45 insieme, e non vede mai l'errore.
+
+**Le prove.** `AccountBalanceTest.aBankBalanceSavedBeforeV45IsShownAsItIsUntilTheBankGivesItAgain`,
+`BalanceCheckTest.aBalanceSavedBeforeV45IsNotCompared`, `BalanceHistoryServiceTest.aBankBalanceSavedBeforeV45HasNoPhoto`,
+`SyncServiceTest.aBalanceSavedBeforeV45IsReadAgainAtTheFirstRoundOnceThenItHasItsType`.
+

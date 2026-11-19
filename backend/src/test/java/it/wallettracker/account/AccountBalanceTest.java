@@ -227,6 +227,34 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aBankBalanceSavedBeforeV45IsShownAsItIsUntilTheBankGivesItAgain() {
+        // Il caso dopo l'aggiornamento (docs/saldi.md, parte P): il saldo di Revolut salvato prima non dice se aveva
+        // dentro i pagamenti in attesa. Aggiungerli di nuovo dava −0,99 € invece di 17,67 €.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-7",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-7", "u-7", null, "Revolut", "EUR"));
+        Account reloaded = accountRepository.findById(revolut.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "p-7", TransactionStatus.PENDING,
+                LocalDate.of(2026, 11, 18), null, new BigDecimal("-18.66"), "EUR", null, "Conad", "{}"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), LocalDate.of(2026, 11, 18),
+                BalanceSource.BANK, Instant.now()); // senza tipo: come uno salvato prima della V45
+
+        assertThat(accountRepository.findById(revolut.getId()).orElseThrow().isPendingKnown()).isFalse();
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(17.67);
+            json.assertThat().extractingPath("$[0].balance.booked").isNull();
+        });
+
+        // La banca lo ridà, con il tipo: da lì i movimenti in attesa si contano come sempre.
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("17.67"), new BigDecimal("-18.66"),
+                LocalDate.of(2026, 11, 19), BalanceSource.BANK, Instant.now(), "XPCD");
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(17.67);
+            json.assertThat().extractingPath("$[0].balance.booked").isEqualTo(36.33);
+        });
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));

@@ -71,7 +71,9 @@ public class BalanceHistoryService {
             CurrentBalance balance = accountService.currentBalance(account);
             // Solo i saldi della banca. Uno scritto a mano più i movimenti si ricalcola ogni volta (vedi reconstruct):
             // fotografato, resterebbe senza i movimenti di un file caricato dopo.
-            if (balance != null && balance.source() == BalanceSource.BANK) {
+            // Non un saldo salvato prima della V45 (parte P): se comprendeva movimenti in attesa, la fotografia avrebbe
+            // un valore sbagliato. Si fotografa dalla prossima lettura.
+            if (balance != null && balance.source() == BalanceSource.BANK && account.isPendingKnown()) {
                 Anchor anchor = anchorOf(account, balance, today);
                 snapshotRepository.upsert(account.getId(), anchor.date(), anchor.amount());
                 saved++;
