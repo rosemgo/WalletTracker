@@ -271,12 +271,15 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     /**
      * Per il saldo di un conto manuale (V34, docs/saldi.md): la somma dei movimenti contabilizzati arrivati dopo il
      * saldo scritto dall'utente. "Dopo" vuol dire con una data successiva al giorno del saldo, oppure con lo stesso
-     * giorno ma importati dopo che l'utente l'ha scritto (quelli di prima li aveva già davanti).
+     * giorno ma importati dopo che l'utente l'ha scritto (quelli di prima li aveva già davanti). Vale anche per il saldo
+     * della banca (parte M). Come tutte le somme del saldo, conta solo i movimenti nella valuta del conto: uno in
+     * un'altra valuta non tocca questo saldo.
      */
     @Query("""
             SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
             WHERE t.account.id = :accountId
               AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.account.currency IS NULL OR t.currency = t.account.currency)
               AND (t.bookingDate > :date OR (t.bookingDate = :date AND t.importedAt > :at))
             """)
     BigDecimal sumAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date, @Param("at") Instant at);
@@ -289,6 +292,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
             WHERE t.account.id = :accountId
               AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.account.currency IS NULL OR t.currency = t.account.currency)
               AND t.bookingDate > :date
             """)
     BigDecimal sumBookedAfter(@Param("accountId") Long accountId, @Param("date") LocalDate date);
@@ -302,6 +306,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
             WHERE t.account.id = :accountId
               AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.account.currency IS NULL OR t.currency = t.account.currency)
               AND (t.bookingDate > :fromDate OR (t.bookingDate = :fromDate AND t.importedAt > :fromAt))
               AND (t.bookingDate < :toDate OR (t.bookingDate = :toDate AND t.importedAt <= :toAt))
             """)
@@ -316,6 +321,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
             SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
             WHERE t.account.id = :accountId
               AND t.status = it.wallettracker.transaction.TransactionStatus.PENDING
+              AND (t.account.currency IS NULL OR t.currency = t.account.currency)
             """)
     BigDecimal sumPending(@Param("accountId") Long accountId);
 
@@ -334,6 +340,7 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     @Query("""
             SELECT t.account.id AS accountId, t.bookingDate AS day, SUM(t.amount) AS total FROM BankTransaction t
             WHERE t.account.id IN :ids AND t.status = it.wallettracker.transaction.TransactionStatus.BOOKED
+              AND (t.account.currency IS NULL OR t.currency = t.account.currency)
               AND t.bookingDate > :from AND t.bookingDate <= :to
             GROUP BY t.account.id, t.bookingDate
             """)

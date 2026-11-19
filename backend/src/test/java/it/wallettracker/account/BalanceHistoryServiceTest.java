@@ -209,6 +209,13 @@ class BalanceHistoryServiceTest {
 
         assertThat(historyService.recordToday(TODAY)).isZero();
         assertThat(snapshotRepository.count()).isZero();
+
+        // Con un pagamento in attesa: il saldo mostrato non lo aggiunge (non si sa se c'era già), e il punto di oggi
+        // neppure, così combacia con la pagina Conti.
+        transactionRepository.save(new BankTransaction(revolut, "hl-1", TransactionStatus.PENDING, TODAY, null,
+                new BigDecimal("-18.66"), "EUR", null, "Conad", "{}"));
+        assertThat(historyService.history("EUR", TODAY).points()).last()
+                .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("17.67"));
     }
 
     @Test

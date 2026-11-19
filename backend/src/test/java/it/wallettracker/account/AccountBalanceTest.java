@@ -255,6 +255,23 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aMovementInAnotherCurrencyDoesNotChangeTheBalance() {
+        // Un file con più valute (un estratto Revolut con la tasca in dollari): 20 USD non sono 20 € in meno.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-8",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-8", "u-8", null, "Revolut", "EUR"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("100.00"), null, LocalDate.of(2026, 11, 18),
+                BalanceSource.BANK, Instant.now().minusSeconds(5), "CLBD");
+        Account reloaded = accountRepository.findById(revolut.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "usd-1", TransactionStatus.BOOKED,
+                LocalDate.of(2026, 11, 19), null, new BigDecimal("-20.00"), "USD", null, "Shop New York", "{}"));
+        movement(reloaded, "2026-11-19", "-5.00"); // in euro: conta
+
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson()
+                .extractingPath("$[0].balance.amount").isEqualTo(95.0);
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));
