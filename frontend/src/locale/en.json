@@ -1037,6 +1037,14 @@
       "it": "Da verificare",
       "en": "To review"
     },
+    "5858626578618261581": {
+      "it": "nel testo (causale e controparte)",
+      "en": "in the text (description and counterparty)"
+    },
+    "7174766848098058595": {
+      "it": "nel codice dell'operazione della banca",
+      "en": "in the bank's transaction code"
+    },
     "1287905368086812768": {
       "it": "contiene",
       "en": "contains"
@@ -3241,6 +3249,10 @@
       "it": " Una regola insegna all'app a riconoscere un movimento: {$START_EMPHASISED_TEXT}\"se il testo contiene (o inizia con) queste parole, allora è una spesa, un'entrata… di questa categoria\"{$CLOSE_EMPHASISED_TEXT}. Maiuscole, minuscole e spazi in più non contano. Le regole si provano in ordine di {$START_TAG_STRONG}priorità{$CLOSE_TAG_STRONG}, dal numero più basso: vale la prima che corrisponde. Quando salvi, modifichi o cancelli una regola, l'app la applica subito a tutti i movimenti, anche a quelli vecchi.\n",
       "en": "A rule teaches the app to recognise a transaction: {$START_EMPHASISED_TEXT}\"if the text contains (or starts with) these words, then it is an expense, an income… of this category\"{$CLOSE_EMPHASISED_TEXT}. Upper case, lower case and extra spaces do not matter. The rules are tried in order of {$START_TAG_STRONG}priority{$CLOSE_TAG_STRONG}, from the lowest number: the first one that matches applies. When you save, edit or delete a rule, the app applies it straight away to all the transactions, the old ones too."
     },
+    "7225134499878113141": {
+      "it": " Invece del testo, una regola può guardare il {$START_TAG_STRONG}codice dell'operazione{$CLOSE_TAG_STRONG} che alcune banche mandano con il movimento (per esempio «Accredito Stipendio/Pensione»): lo trovi nella scheda del movimento, in Dettagli.\n",
+      "en": "Instead of the text, a rule can look at the {$START_TAG_STRONG}transaction code{$CLOSE_TAG_STRONG} that some banks send with the transaction (for example «Accredito Stipendio/Pensione»): you find it in the transaction sheet, under Details."
+    },
     "8755274764065989258": {
       "it": "Perché a volte una regola non vale?",
       "en": "Why does a rule sometimes not apply?"
@@ -3273,6 +3285,10 @@
       "it": "Scrivi un nome (massimo 100 caratteri).",
       "en": "Write a name (100 characters at most)."
     },
+    "7518270365844179558": {
+      "it": " Se il codice ",
+      "en": "If the code"
+    },
     "8794392638024482099": {
       "it": " Se il testo ",
       "en": "If the text"
@@ -3300,6 +3316,10 @@
     "8574602330022627653": {
       "it": "all'inizio del testo",
       "en": "at the start of the text"
+    },
+    "8997762213553578558": {
+      "it": "il codice è nella scheda del movimento, in Dettagli; non tutte le banche lo mandano",
+      "en": "the code is in the transaction sheet, under Details; not every bank sends it"
     },
     "3038620465052024122": {
       "it": " per ",
@@ -3368,6 +3388,10 @@
     "6308049077007007491": {
       "it": "Regola di partenza",
       "en": "Starter rule"
+    },
+    "2782178736376198537": {
+      "it": "nel codice della banca",
+      "en": "in the bank's code"
     },
     "4763782613860393763": {
       "it": "Attiva {$INTERPOLATION}",
@@ -4064,6 +4088,14 @@
     "3839563521914293922": {
       "it": "Causale",
       "en": "Description"
+    },
+    "8469971538980761727": {
+      "it": "Codice della banca",
+      "en": "Bank code"
+    },
+    "8132209875185907994": {
+      "it": "crea una regola",
+      "en": "create a rule"
     },
     "5526197415787086175": {
       "it": "Data contabile",

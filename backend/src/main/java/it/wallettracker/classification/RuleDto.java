@@ -1,6 +1,7 @@
 package it.wallettracker.classification;
 
 import it.wallettracker.classification.ClassificationRule.AmountSign;
+import it.wallettracker.classification.ClassificationRule.MatchField;
 import it.wallettracker.classification.ClassificationRule.MatchMode;
 import it.wallettracker.transaction.TransactionType;
 
@@ -11,12 +12,14 @@ import it.wallettracker.transaction.TransactionType;
  *                ma non cancellare
  * @param uses    quanti movimenti ha classificato questa regola nell'ultima classificazione
  * @param category il nome della categoria (categoryId è il suo id), null se la regola non ne assegna una
+ * @param matchField dove cerca: nel testo del movimento o nel codice dell'operazione della banca
  */
 public record RuleDto(
         Long id,
         String name,
         int priority,
         boolean enabled,
+        MatchField matchField,
         MatchMode matchMode,
         String pattern,
         AmountSign amountSign,
@@ -27,7 +30,8 @@ public record RuleDto(
         long uses) {
 
     static RuleDto from(ClassificationRule rule, long uses) {
-        return new RuleDto(rule.getId(), rule.getName(), rule.getPriority(), rule.isEnabled(), rule.getMatchMode(),
+        return new RuleDto(rule.getId(), rule.getName(), rule.getPriority(), rule.isEnabled(), rule.getMatchField(),
+                rule.getMatchMode(),
                 rule.getPattern(), rule.getAmountSign(), rule.getResultType(),
                 rule.getCategory() != null ? rule.getCategory().getId() : null,
                 rule.getCategory() != null ? rule.getCategory().getName() : null,

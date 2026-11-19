@@ -233,6 +233,9 @@ export interface AccountOutcome {
   error: string | null; // la frase dell'errore, o null se la lettura è riuscita
 }
 
+/** Dove cerca una regola: nel testo del movimento o nel codice dell'operazione della banca (enum MatchField). */
+export type MatchField = 'TEXT' | 'BANK_CODE';
+
 /** Come una regola confronta il testo (enum MatchMode nel backend). */
 export type MatchMode = 'CONTAINS' | 'STARTS_WITH' | 'ALL_WORDS';
 
@@ -244,6 +247,7 @@ export interface RuleRequest {
   name: string;
   priority: number;
   enabled: boolean;
+  matchField: MatchField;
   matchMode: MatchMode;
   pattern: string;
   amountSign: AmountSign;
@@ -638,6 +642,7 @@ export type CategoryOrigin = 'MANUAL' | 'RULE' | 'NONE';
 export interface TransactionDetail {
   transaction: Transaction;
   rawJson: string; // i dati originali, come sono arrivati
+  bankCode: string | null; // il codice dell'operazione mandato dalla banca, se c'è
   importedAt: string;
   origin: TransactionOrigin;
   categoryOrigin: CategoryOrigin;

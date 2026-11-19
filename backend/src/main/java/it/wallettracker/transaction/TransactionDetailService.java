@@ -94,7 +94,7 @@ public class TransactionDetailService {
         }
 
         return new TransactionDetailDto(TransactionDto.from(transaction), transaction.getRawJson(),
-                transaction.getImportedAt(), origin(transaction), categoryOrigin, ruleName,
+                transaction.getBankCode(), transaction.getImportedAt(), origin(transaction), categoryOrigin, ruleName,
                 key == null ? null : merchant(transaction, key, today.minusMonths(MERCHANT_MONTHS)), suggestion);
     }
 

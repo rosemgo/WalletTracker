@@ -158,6 +158,41 @@ class ClassificationServiceTest {
     }
 
     @Test
+    void theStarterRulesOnTheBankCodeGiveTheCategoryTheTextDoesNotSay() {
+        // V45: lo stipendio di ING arriva come un bonifico qualsiasi; lo dice solo il codice della banca.
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        BankTransaction salary = withBankCode(main, "1850.00", "Bonifico N. 0306 Note: STIPENDIO MESE DI AGOSTO 2026",
+                "Accredito Stipendio/Pensione");
+        BankTransaction cash = withBankCode(main, "-200.00", "Prelievo carta del 21/08/2026 presso ATM",
+                "Prelievo Carta");
+        BankTransaction bonus = withBankCode(main, "50.00", "Bonus per iniziativa", "Bonus Promozione");
+        BankTransaction transfer = withBankCode(main, "300.00", "Bonifico N. 0307 Note: Rimborso",
+                "Accredito Bonifico");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(salary)).isEqualTo(TransactionType.INCOME);
+        assertThat(reload(salary).getCategory().getId()).isEqualTo(category("Stipendio e pensione").getId());
+        assertThat(typeOf(cash)).isEqualTo(TransactionType.EXPENSE);
+        assertThat(reload(cash).getCategory().getId()).isEqualTo(category("Contanti e prelievi").getId());
+        assertThat(reload(bonus).getCategory().getId()).isEqualTo(category("Rimborsi fiscali e bonus").getId());
+        // Un bonifico ricevuto resta un'entrata senza categoria: il codice non dice per che cosa.
+        assertThat(typeOf(transfer)).isEqualTo(TransactionType.INCOME);
+        assertThat(reload(transfer).getCategory()).isNull();
+    }
+
+    @Test
+    void theInterestPaidToTheBankIsABankCharge() {
+        Account main = account("IT00MAIN", AccountRole.MAIN);
+        BankTransaction interest = transaction(main, DAY, "-3.42", null, "Interessi Passivi");
+
+        classificationService.classifyAll();
+
+        assertThat(typeOf(interest)).isEqualTo(TransactionType.EXPENSE);
+        assertThat(reload(interest).getCategory().getId()).isEqualTo(category("Costi bancari").getId());
+    }
+
+    @Test
     void theCreditCardSettlementIsRecognisedByTheStarterRule() {
         // La regola di partenza riconosce la causale di ING anche senza il ruolo CREDIT_CARD.
         Account main = account("IT00MAIN", AccountRole.MAIN);
@@ -395,6 +430,14 @@ class ClassificationServiceTest {
             String description) {
         return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
                 date, null, new BigDecimal(amount), "EUR", counterparty, description, "{}"));
+    }
+
+    /** Un movimento con il codice dell'operazione mandato dalla banca, come Enable Banking lo mette nel JSON. */
+    private BankTransaction withBankCode(Account account, String amount, String description, String bankCode) {
+        String rawJson = "{\"bank_transaction_code\": {\"code\": null, \"sub_code\": null, \"description\": \""
+                + bankCode + "\"}}";
+        return transactionRepository.save(new BankTransaction(account, "tx-" + (++counter), TransactionStatus.BOOKED,
+                DAY, null, new BigDecimal(amount), "EUR", null, description, rawJson));
     }
 
     private BankTransaction reload(BankTransaction transaction) {

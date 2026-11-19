@@ -8,6 +8,7 @@ import {
   AmountSign,
   InvestmentGroup,
   InvestmentGroupKind,
+  MatchField,
   MatchMode,
   TransactionType,
 } from './models';
@@ -41,6 +42,12 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
 export const ROLES = Object.keys(ROLE_LABELS) as AccountRole[];
 export const TYPES = Object.keys(TYPE_LABELS) as TransactionType[];
 
+/** Dove cerca una regola: il testo, o il codice dell'operazione che alcune banche mandano (docs/codice-della-banca.md). */
+export const MATCH_FIELD_LABELS: Record<MatchField, string> = {
+  TEXT: $localize`nel testo (causale e controparte)`,
+  BANK_CODE: $localize`nel codice dell'operazione della banca`,
+};
+
 export const MATCH_MODE_LABELS: Record<MatchMode, string> = {
   CONTAINS: $localize`contiene`,
   ALL_WORDS: $localize`contiene tutte le parole`,
@@ -53,6 +60,7 @@ export const AMOUNT_SIGN_LABELS: Record<AmountSign, string> = {
   POSITIVE: $localize`solo entrate`,
 };
 
+export const MATCH_FIELDS = Object.keys(MATCH_FIELD_LABELS) as MatchField[];
 export const MATCH_MODES = Object.keys(MATCH_MODE_LABELS) as MatchMode[];
 export const AMOUNT_SIGNS = Object.keys(AMOUNT_SIGN_LABELS) as AmountSign[];
 

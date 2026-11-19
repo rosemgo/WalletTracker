@@ -154,6 +154,51 @@ class RuleControllerTest {
     }
 
     @Test
+    void aRuleCanLookAtTheBankCodeInsteadOfTheText() {
+        // Revolut manda "CARD_PAYMENT" nel codice dell'operazione: la causale è il nome dell'esercente.
+        Account account = accountRepository.findAll().getFirst();
+        BankTransaction card = transactionRepository.save(new BankTransaction(account, "t-card",
+                TransactionStatus.BOOKED, LocalDate.of(2026, 10, 2), null, new BigDecimal("-15.00"), "EUR", null,
+                "Amazon.it", "{\"bank_transaction_code\": {\"code\": \"CARD_PAYMENT\"}}"));
+        String onTheCode = """
+                {"name": "Pagamenti con carta", "priority": 100, "enabled": true, "matchField": "BANK_CODE",
+                 "matchMode": "CONTAINS", "pattern": "card_payment", "amountSign": "NEGATIVE",
+                 "resultType": "EXPENSE", "categoryId": %d}
+                """.formatted(category("Shopping").getId());
+
+        // La prova trova il movimento con il codice, e nessuno di quelli che hanno solo il testo.
+        assertThat(post("/api/rules/preview", onTheCode))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.matches").isEqualTo(1);
+                    json.assertThat().extractingPath("$.examples[0].description").isEqualTo("Amazon.it");
+                });
+        assertThat(post("/api/rules", onTheCode))
+                .hasStatus(201)
+                .bodyJson()
+                .satisfies(json -> {
+                    json.assertThat().extractingPath("$.matchField").isEqualTo("BANK_CODE");
+                    json.assertThat().extractingPath("$.uses").isEqualTo(1);
+                });
+        assertThat(transactionRepository.findById(card.getId()).orElseThrow().getCategory().getId())
+                .isEqualTo(category("Shopping").getId());
+    }
+
+    @Test
+    void withoutMatchFieldARuleLooksAtTheText() {
+        // Le richieste di prima della V45 non hanno matchField: la regola guarda il testo, come allora.
+        assertThat(post("/api/rules", groceries()))
+                .hasStatus(201)
+                .bodyJson().extractingPath("$.matchField").isEqualTo("TEXT");
+        assertThat(mvc.get().uri("/api/rules"))
+                .hasStatusOk()
+                .bodyJson()
+                .extractingPath("$[?(@.name == 'Stipendio e pensione (codice della banca)')].matchField")
+                .asArray().containsExactly("BANK_CODE");
+    }
+
+    @Test
     void thePreviewSaysWhoWinsWhenTheRuleWouldNotApply() throws Exception {
         // Bonifici verso il conto di un PAC (inventati): il testo finisce con "Note: Trasferimento a mio conto", e la
         // regola di partenza "Trasferimento a un proprio conto" (priorità 40) li prende prima di una regola a 100.

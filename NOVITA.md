@@ -12,6 +12,14 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   niente più avviso "i movimenti non tornano" ogni giorno, né pagamenti contati due volte. Il saldo comprende i
   pagamenti in attesa, come nell'app della banca e come le spese; nella pagina Conti, se ce ne sono, una riga mostra
   anche il saldo contabile. Lo stesso per un saldo scritto da te su un conto collegato.
+- **Regole sul codice della banca**: alcune banche mandano con il movimento un codice che dice che operazione è (per
+  esempio ING "Accredito Stipendio/Pensione"). Ora una regola può guardare quel codice invece del testo: nel modulo
+  delle Regole scegli "Cerca nel codice dell'operazione della banca". Il codice si vede nella scheda del movimento, in
+  Dettagli, con "crea una regola". Nuove regole di partenza: lo stipendio va in *Stipendio e pensione*, il prelievo
+  con la carta in *Contanti e prelievi*, i bonus della banca e i premi Revolut in *Rimborsi fiscali e bonus*, anche
+  quando la causale non lo dice.
+- **Interessi passivi**: gli interessi che paghi alla banca (uno scoperto, una linea di credito) vanno in *Costi
+  bancari*. Prima restavano spese senza categoria.
 
 ## 1.3.0
 
