@@ -5,6 +5,14 @@ files have the same sections, and when a version is published (docs/50) its text
 release on GitHub. The numbers follow the MAJOR.MINOR.PATCH rule: `1.0.1` fixes, `1.1.0` adds something, `2.0.0`
 changes something important for those who use it.
 
+## 1.3.1
+
+- **Revolut and pending payments**: for banks that do not give the booked balance (like Revolut) the app now accounts
+  for the pending payments included in the balance, and does not count them a second time once they are booked: no
+  more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending
+  payments, as in the bank's app and as the expenses do; on the Accounts page, when there are any, a line also shows
+  the booked balance. The same applies to a balance you write for a linked account.
+
 ## 1.3.0
 
 - **WalletTracker in English too**: in Settings → Language the app switches between Italian and English, at any time and

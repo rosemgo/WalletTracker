@@ -571,3 +571,56 @@ mancante che lo fa sparire; la cedola dello stesso giorno arrivata dopo la lettu
 (no); due saldi scritti a mano; il primo saldo, senza niente da confrontare. `alerts-panel.spec.ts`: il testo
 dell'avviso e il collegamento ai movimenti.
 
+## Parte O: i saldi che comprendono i movimenti in attesa
+
+**Il caso, trovato con il controllo dei saldi.** Ogni giorno il Riepilogo aveva un avviso "i movimenti di Revolut
+··1995 non tornano con il saldo della banca". La differenza era sempre la somma dei pagamenti con carta **in attesa**
+(il 19 novembre 2026: 15,02 + 3,64 = 18,66 €). Revolut non dà il saldo contabile (parte B), solo il previsto (`XPCD`) o
+il disponibile, che comprendono i movimenti in attesa; il controllo invece li confrontava con i soli movimenti
+contabilizzati. L'avviso non spariva mai: Revolut contabilizza il giorno dopo, fuori dal periodo controllato. E il saldo
+di adesso contava due volte un pagamento in attesa: una dentro il saldo di Revolut, una quando arrivava contabilizzato
+dopo la lettura (parte M).
+
+**La regola: si lavora sempre con il saldo contabile.** Quando la banca dà un saldo previsto o disponibile
+(`BankBalance.includesPending`), la sincronizzazione salva anche la somma dei movimenti in attesa di quel momento, appena
+importati (`V44`, colonna `balance_pending`). Il saldo contabile è il saldo letto meno quella somma
+(`Account.getBookedBalance`), e da lì parte tutto: il saldo di adesso (più i movimenti contabilizzati arrivati dopo,
+parte M), lo storico e le fotografie (parte L), il controllo (parte N, `compare` riceve i movimenti in attesa del saldo
+nuovo). Un pagamento in attesa si conta così una volta sola, quando viene contabilizzato.
+
+**Quale saldo si mostra.** Il saldo del conto (pagina Conti, scheda Liquidità, il punto di oggi del grafico) è il
+contabile **più i movimenti in attesa di adesso**: i pagamenti in attesa contano già come spese (Riepilogo, Analisi,
+budget), e un saldo che non li togliesse sarebbe incoerente con loro; è anche il numero delle app delle banche. Se il
+conto ha movimenti in attesa, sotto c'è una riga "Contabile: 63,46 €". Vale per ogni conto, anche per una banca che dà
+il saldo contabile. All'inizio la scelta era stata l'inverso (il contabile come saldo, "con i movimenti in attesa" nella
+riga), per coerenza con Fineco e ING; l'utente ha fatto notare che il saldo di Revolut era quello giusto, e la coerenza
+con le spese ha deciso. Lo storico, le fotografie e il controllo dei saldi restano sul contabile
+(`CurrentBalance.bookedAmount`): i movimenti in attesa cambiano a ogni sincronizzazione (si cancellano e si
+reimportano), il contabile no. Nel grafico solo il punto di oggi aggiunge i movimenti in attesa di adesso: quelli dei
+giorni prima intanto sono stati contabilizzati, e sono già nei movimenti.
+
+**Anche il saldo scritto a mano.** Un conto collegato di cui la banca non dà il saldo (parte G) ha un saldo scritto
+dall'utente, copiato dall'app della banca, che di solito comprende i pagamenti in attesa; e il collegamento porta
+comunque i movimenti in attesa. `AccountService.changeBalance` salva quanto è in attesa in quel momento, come per un
+saldo previsto della banca: senza, un pagamento in attesa si sarebbe contato due volte (tre, una volta contabilizzato).
+Un conto caricato da file non ne ha: i file danno solo movimenti contabilizzati.
+
+**Quanto ci si può fidare del tipo di saldo.** Enable Banking passa i codici ISO 20022 (`CLBD`, `ITBD`, `XPCD`, `ITAV`,
+`CLAV`, `FWAV`, `OPBD`, `PRCD`, `VALU`, `INFO`, `OTHR`) e un nome libero della banca, ma la sua documentazione non dice
+se il tipo è controllato o normalizzato, né c'è un campo che dica se i movimenti in attesa sono compresi; nel suo stesso
+esempio un saldo di nome "Booked balance" ha il tipo `CLAV`. Una banca che dichiarasse il tipo sbagliato non si può
+riconoscere prima: la rete di sicurezza è il controllo dei saldi (parte N), che segnala una differenza uguale alla somma
+dei movimenti in attesa, come è successo con Revolut.
+
+**La migrazione V44** cancella anche i controlli fatti con la regola vecchia (per Revolut segnalavano una differenza che
+non c'era) e le fotografie dei saldi dei giorni scorsi (per Revolut avevano dentro i movimenti in attesa): sono valori
+calcolati, quei giorni tornano stimati dai movimenti e le fotografie ripartono dalla prossima ora.
+
+**Che cosa resta.** Un saldo "disponibile" può comprendere un fido: l'app non lo può togliere. Per Revolut non è così.
+
+**Le prove.** `BankBalanceTest.theExpectedAndTheAvailableBalancesIncludeThePendingMovements`,
+`AccountBalanceTest.aBalanceWithThePendingMovementsShowsThemAndTheBookedOneApart` (il caso di Revolut, poi i
+pagamenti contabilizzati che contano una volta sola), `AccountBalanceTest.aWrittenBalanceOfALinkedAccountIncludesItsPendingMovementsLikeTheBankApp`,
+`BalanceHistoryServiceTest.todayHasThePendingMovementsLikeTheAccountsPageThePhotoIsBooked`, `BalanceCheckTest.aBalanceWithThePendingMovementsIsComparedWithoutThem`,
+`accounts-page.spec.ts` (la riga nella pagina Conti).
+

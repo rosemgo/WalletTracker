@@ -40,6 +40,14 @@ public final class BankBalance {
     public record Chosen(BigDecimal amount, LocalDate date, String type) {
     }
 
+    /**
+     * true se un saldo di questo tipo comprende i movimenti in attesa: il previsto ({@code XPCD}) e i disponibili. Per
+     * questi l'app salva anche quanto era in attesa alla lettura, e lavora con il saldo contabile (docs/saldi.md, parte O).
+     */
+    public static boolean includesPending(String type) {
+        return PREFERENCE.get(1).contains(type) || PREFERENCE.get(2).contains(type);
+    }
+
     /** I saldi "disponibili": per una carta di credito sono il plafond che resta (docs/saldi.md, parte J). */
     static final List<String> AVAILABLE = PREFERENCE.get(2);
 

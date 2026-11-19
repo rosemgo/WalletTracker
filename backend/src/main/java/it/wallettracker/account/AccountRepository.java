@@ -55,14 +55,23 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
      * Salva il saldo dato dalla banca (V34), come {@link #recordSync}: solo queste colonne, in una transazione sua.
      * Con {@code balance} null il saldo si toglie (la banca non ne dà più uno).
      */
+    default void recordBalance(Long id, BigDecimal balance, LocalDate date, BalanceSource source, Instant at) {
+        recordBalance(id, balance, null, date, source, at);
+    }
+
+    /**
+     * Come {@link #recordBalance(Long, BigDecimal, LocalDate, BalanceSource, Instant)}, per un saldo della banca che
+     * comprende i movimenti in attesa (V44, docs/saldi.md parte O): {@code pending} è quanto era in attesa alla lettura.
+     */
     @Modifying
     @Transactional
     @Query("""
-            UPDATE Account a SET a.balance = :balance, a.balanceDate = :date, a.balanceSource = :source,
-                a.balanceUpdatedAt = :at
+            UPDATE Account a SET a.balance = :balance, a.balancePending = :pending, a.balanceDate = :date,
+                a.balanceSource = :source, a.balanceUpdatedAt = :at
             WHERE a.id = :id
             """)
-    void recordBalance(@Param("id") Long id, @Param("balance") BigDecimal balance, @Param("date") LocalDate date,
+    void recordBalance(@Param("id") Long id, @Param("balance") BigDecimal balance,
+            @Param("pending") BigDecimal pending, @Param("date") LocalDate date,
             @Param("source") BalanceSource source, @Param("at") Instant at);
 
     /** Salva il plafond disponibile di una carta (V35), come {@link #recordBalance}; null lo toglie. */

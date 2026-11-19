@@ -105,6 +105,10 @@
       "it": " al {$INTERPOLATION} · {$START_BLOCK_IF} dalla banca {$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE_IF} scritto da te {$CLOSE_BLOCK_ELSE_IF}{$START_BLOCK_ELSE} dal tuo saldo del {$INTERPOLATION_1}, più i movimenti dopo {$CLOSE_BLOCK_ELSE}",
       "en": "on {$INTERPOLATION} · {$START_BLOCK_IF} from the bank {$CLOSE_BLOCK_IF}{$START_BLOCK_ELSE_IF} written by you {$CLOSE_BLOCK_ELSE_IF}{$START_BLOCK_ELSE} from your balance of {$INTERPOLATION_1}, plus the transactions after it {$CLOSE_BLOCK_ELSE}"
     },
+    "2601700300488385095": {
+      "it": " Contabile: {$INTERPOLATION} ",
+      "en": " Booked balance: {$INTERPOLATION} "
+    },
     "8271812834391165609": {
       "it": "Non ancora scritto",
       "en": "Not written yet"

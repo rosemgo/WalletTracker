@@ -97,7 +97,8 @@ public class BalanceHistoryService {
      */
     private Anchor anchorOf(Account account, CurrentBalance balance, LocalDate today) {
         LocalDate date = trueOn(balance.source(), account.getBalanceDate(), today);
-        BigDecimal amount = balance.amount().subtract(transactionRepository.sumBookedAfter(account.getId(), date));
+        BigDecimal amount = balance.bookedAmount()
+                .subtract(transactionRepository.sumBookedAfter(account.getId(), date));
         LocalDate trustedFrom = balance.source() == BalanceSource.MANUAL ? balance.startDate() : null;
         return new Anchor(date, amount, trustedFrom);
     }
@@ -167,7 +168,19 @@ public class BalanceHistoryService {
         for (AccountDayTotal row : transactionRepository.sumByAccountAndDay(current.keySet(), start, today)) {
             movements.computeIfAbsent(row.getAccountId(), id -> new HashMap<>()).put(row.getDay(), row.getTotal());
         }
-        return new BalanceHistory(chosen, current.size(), reconstruct(start, today, current, photos, movements));
+        List<Point> points = reconstruct(start, today, current, photos, movements);
+        // Oggi, come nella pagina Conti: con i movimenti in attesa di adesso (parte O). I giorni prima restano contabili:
+        // i pagamenti in attesa di allora intanto sono stati contabilizzati, e sono già nei movimenti.
+        BigDecimal pending = current.keySet().stream()
+                .map(transactionRepository::sumPending)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (pending.signum() != 0 && !points.isEmpty()) {
+            List<Point> withToday = new ArrayList<>(points);
+            Point last = withToday.getLast();
+            withToday.set(withToday.size() - 1, new Point(last.date(), last.amount().add(pending), last.estimated()));
+            points = Collections.unmodifiableList(withToday);
+        }
+        return new BalanceHistory(chosen, current.size(), points);
     }
 
     /**

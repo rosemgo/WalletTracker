@@ -75,4 +75,14 @@ class BankBalanceTest {
         assertThat(BankBalance.available(List.of(b("CLBD", "-312.40", "EUR", null)), "EUR", TODAY)).isEmpty();
         assertThat(BankBalance.available(null, "EUR", TODAY)).isEmpty();
     }
+
+    @Test
+    void theExpectedAndTheAvailableBalancesIncludeThePendingMovements() {
+        assertThat(BankBalance.includesPending("XPCD")).isTrue();
+        assertThat(BankBalance.includesPending("ITAV")).isTrue();
+        assertThat(BankBalance.includesPending("CLAV")).isTrue();
+        assertThat(BankBalance.includesPending("ITBD")).isFalse();
+        assertThat(BankBalance.includesPending("CLBD")).isFalse();
+        assertThat(BankBalance.includesPending("OTHR")).isFalse();
+    }
 }

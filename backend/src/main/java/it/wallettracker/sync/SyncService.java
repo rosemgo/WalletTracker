@@ -1,5 +1,6 @@
 package it.wallettracker.sync;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ import it.wallettracker.connection.BankConnection;
 import it.wallettracker.connection.ConnectionService;
 import it.wallettracker.logo.LogoService;
 import it.wallettracker.message.Message;
+import it.wallettracker.transaction.BankTransactionRepository;
 import it.wallettracker.transaction.TransactionImportService;
 import it.wallettracker.transaction.TransactionImportService.ImportResult;
 import org.slf4j.Logger;
@@ -69,12 +71,14 @@ public class SyncService {
     private final LogoService logoService;
     private final SyncProperties properties;
     private final BalanceCheckService balanceCheckService;
+    private final BankTransactionRepository transactionRepository;
 
     public SyncService(ConnectionService connectionService, AccountRepository accountRepository,
             TransactionImportService importService, ClassificationService classificationService,
             EnableBankingClient client, LogoService logoService, SyncProperties properties,
-            BalanceCheckService balanceCheckService) {
+            BalanceCheckService balanceCheckService, BankTransactionRepository transactionRepository) {
         this.balanceCheckService = balanceCheckService;
+        this.transactionRepository = transactionRepository;
         this.connectionService = connectionService;
         this.accountRepository = accountRepository;
         this.importService = importService;
@@ -264,11 +268,16 @@ public class SyncService {
             Optional<BankBalance.Chosen> chosen = BankBalance.choose(client.getBalances(account.getProviderUid(), psu),
                     account.getCurrency(), today);
             if (chosen.isPresent()) {
-                // Il controllo dei saldi (docs/saldi.md, parte N): il saldo nuovo contro quello di prima più i movimenti
-                // appena importati. Prima di salvarlo, perché il confronto è con quello di prima.
-                balanceCheckService.compare(account, BalanceSource.BANK, chosen.get().amount(), chosen.get().date(),
-                        now);
-                accountRepository.recordBalance(account.getId(), chosen.get().amount(), chosen.get().date(),
+                // Un saldo previsto o disponibile comprende i movimenti in attesa (Revolut): si salva quanto era in attesa
+                // adesso, appena importati, per lavorare con il saldo contabile (docs/saldi.md, parte O).
+                BigDecimal pending = BankBalance.includesPending(chosen.get().type())
+                        ? transactionRepository.sumPending(account.getId())
+                        : null;
+                // Il controllo dei saldi (parte N): il saldo nuovo contro quello di prima più i movimenti appena
+                // importati. Prima di salvarlo, perché il confronto è con quello di prima.
+                balanceCheckService.compare(account, BalanceSource.BANK, chosen.get().amount(), pending,
+                        chosen.get().date(), now);
+                accountRepository.recordBalance(account.getId(), chosen.get().amount(), pending, chosen.get().date(),
                         BalanceSource.BANK, now);
                 log.info("{}: saldo {} ({}) al {}", account.getName(), chosen.get().amount(), chosen.get().type(),
                         chosen.get().date());

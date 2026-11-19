@@ -167,6 +167,13 @@
                       dopo
                     }
                   </div>
+                  @if (b.booked !== null && b.booked !== undefined) {
+                    <!-- Il saldo comprende i movimenti in attesa, che sono già spese (come nel Riepilogo e nell'app
+                         della banca); il contabile è senza (docs/saldi.md, parte O). -->
+                    <div i18n class="secondary booked" data-testid="booked">
+                      Contabile: {{ b.booked | money: account.currency }}
+                    </div>
+                  }
                 } @else if (account.source === 'MANUAL') {
                   <span i18n class="secondary">Non ancora scritto</span>
                 } @else if (account.lastSyncAt) {
