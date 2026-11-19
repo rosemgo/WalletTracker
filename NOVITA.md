@@ -5,6 +5,13 @@ descrizione della release su GitHub. La stessa cosa in inglese è in [CHANGELOG.
 stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la regola MAGGIORE.MINORE.CORREZIONE: `1.0.1` corregge,
 `1.1.0` aggiunge qualcosa, `2.0.0` cambia qualcosa di importante per chi lo usa.
 
+## 1.3.1
+
+- **Revolut e i pagamenti in attesa**: per le banche che non danno il saldo contabile (come Revolut) l'app ora toglie i
+  pagamenti in attesa dal saldo, e li conta quando vengono contabilizzati: niente più avviso "i movimenti non tornano"
+  ogni giorno, né pagamenti contati due volte. Nella pagina Conti, se ci sono movimenti in attesa, una riga mostra
+  anche il saldo con loro, quello che vedi nell'app della banca.
+
 ## 1.3.0
 
 - **WalletTracker anche in inglese**: in Impostazioni → Lingua l'app passa dall'italiano all'inglese e ritorno, quando
@@ -78,11 +85,6 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   file della banca in Importa. Quando arriva, l'avviso sparisce da solo.
 
 Usi già WalletTracker? Non cambia niente: l'app e gli script restano in italiano finché non scegli tu.
-
-- **Revolut e i pagamenti in attesa**: per le banche che non danno il saldo contabile (come Revolut) l'app ora toglie i
-  pagamenti in attesa dal saldo, e li conta quando vengono contabilizzati: niente più avviso "i movimenti non tornano"
-  ogni giorno, né pagamenti contati due volte. Nella pagina Conti, se ci sono movimenti in attesa, una riga mostra
-  anche il saldo con loro, quello che vedi nell'app della banca.
 
 ## 1.2.7
 
