@@ -325,6 +325,35 @@ describe('AccountsPage', () => {
     );
   });
 
+  it('with pending movements the balance stays the booked one, and a line shows it with them', async () => {
+    registerLocaleData(localeIt);
+    TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
+    accounts = [
+      {
+        ...CARD,
+        balance: {
+          amount: 63.46,
+          date: '2026-11-19',
+          source: 'BANK',
+          startDate: null,
+          withPending: 44.8,
+        },
+      },
+      { ...BROKER, balance: { amount: 10, date: '2026-11-19', source: 'BANK', startDate: null } },
+    ];
+    const fixture = TestBed.createComponent(AccountsPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const cells = Array.from(page.querySelectorAll('td.balance-cell')) as HTMLElement[];
+
+    expect(cells[0].querySelector('strong.balance')?.textContent).toMatch(/63,46\s€/);
+    expect(cells[0].querySelector('[data-testid="with-pending"]')?.textContent?.trim()).toMatch(
+      /^Con i movimenti in attesa: 44,80\s€$/,
+    );
+    // Senza movimenti in attesa, niente riga.
+    expect(cells[1].querySelector('[data-testid="with-pending"]')).toBeNull();
+  });
+
   it('a credit card shows only the available credit: it has no balance to write', async () => {
     registerLocaleData(localeIt);
     TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });

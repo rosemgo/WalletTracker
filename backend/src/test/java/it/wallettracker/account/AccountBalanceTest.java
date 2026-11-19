@@ -164,6 +164,40 @@ class AccountBalanceTest {
     }
 
     @Test
+    void aBalanceWithThePendingMovementsShowsTheBookedOneAndTheOneWithThem() throws InterruptedException {
+        // Revolut (docs/saldi.md, parte O): dà solo il saldo previsto, con i due pagamenti in attesa dentro.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-5",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-5", "u-5", null, "Revolut", "EUR"));
+        Account reloaded = accountRepository.findById(revolut.getId()).orElseThrow();
+        transactionRepository.save(new BankTransaction(reloaded, "p-1", TransactionStatus.PENDING,
+                LocalDate.of(2026, 11, 18), null, new BigDecimal("-15.02"), "EUR", null, "Conad", "{}"));
+        transactionRepository.save(new BankTransaction(reloaded, "p-2", TransactionStatus.PENDING,
+                LocalDate.of(2026, 11, 18), null, new BigDecimal("-3.64"), "EUR", null, "Conad", "{}"));
+        Thread.sleep(5);
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("44.80"), new BigDecimal("-18.66"),
+                LocalDate.of(2026, 11, 19), BalanceSource.BANK, Instant.now());
+
+        // Il saldo contabile, e quello con i movimenti in attesa (come nell'app di Revolut).
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(63.46);
+            json.assertThat().extractingPath("$[0].balance.withPending").isEqualTo(44.8);
+        });
+
+        // Revolut li contabilizza il giorno dopo: i pagamenti in attesa spariscono, arrivano quelli contabilizzati.
+        // Contano una volta sola: il saldo torna quello di Revolut, e la riga non c'è più.
+        Thread.sleep(5);
+        transactionRepository.deleteAll(transactionRepository.findAll().stream()
+                .filter(t -> t.getStatus() == TransactionStatus.PENDING).toList());
+        movement(reloaded, "2026-11-20", "-15.02");
+        movement(reloaded, "2026-11-20", "-3.64");
+        assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(44.8);
+            json.assertThat().extractingPath("$[0].balance.withPending").isNull();
+        });
+    }
+
+    @Test
     void aCreditCardShowsTheAvailableCredit() {
         BankConnection connection = connectionRepository.save(new BankConnection("Banca Alfa", "IT", "s-3",
                 Instant.now().plus(90, ChronoUnit.DAYS)));

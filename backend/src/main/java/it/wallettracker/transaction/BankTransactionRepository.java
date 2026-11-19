@@ -308,6 +308,17 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     BigDecimal sumBetween(@Param("accountId") Long accountId, @Param("fromDate") LocalDate fromDate,
             @Param("fromAt") Instant fromAt, @Param("toDate") LocalDate toDate, @Param("toAt") Instant toAt);
 
+    /**
+     * La somma dei movimenti in attesa di un conto: alla lettura di un saldo che li comprende (docs/saldi.md, parte O), e
+     * per la riga "con i movimenti in attesa" della pagina Conti.
+     */
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM BankTransaction t
+            WHERE t.account.id = :accountId
+              AND t.status = it.wallettracker.transaction.TransactionStatus.PENDING
+            """)
+    BigDecimal sumPending(@Param("accountId") Long accountId);
+
     /** Il giorno dell'ultimo movimento contabilizzato di un conto, o null se non ne ha. */
     @Query("""
             SELECT MAX(t.bookingDate) FROM BankTransaction t

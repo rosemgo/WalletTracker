@@ -114,6 +114,13 @@ public class Account {
     @Column(name = "balance_updated_at")
     private Instant balanceUpdatedAt;
 
+    /**
+     * Per un saldo della banca che comprende i movimenti in attesa (V44, docs/saldi.md parte O): quanto era in attesa
+     * alla lettura. Il saldo contabile è {@code balance} meno questo. Null per un saldo contabile o scritto a mano.
+     */
+    @Column(name = "balance_pending")
+    private BigDecimal balancePending;
+
     /** Per una carta di credito (V35): il plafond che resta, dato dalla banca; null se non si sa. */
     @Column(name = "available_credit")
     private BigDecimal availableCredit;
@@ -253,6 +260,19 @@ public class Account {
         this.balanceDate = balance == null ? null : date;
         this.balanceSource = balance == null ? null : source;
         this.balanceUpdatedAt = balance == null ? null : at;
+        this.balancePending = null; // scritto a mano: è già senza i movimenti in attesa
+    }
+
+    public BigDecimal getBalancePending() {
+        return balancePending;
+    }
+
+    /**
+     * Il saldo contabile: il saldo meno i movimenti in attesa che comprendeva alla lettura (parte O). Null se il conto
+     * non ha un saldo.
+     */
+    public BigDecimal getBookedBalance() {
+        return balance == null || balancePending == null ? balance : balance.subtract(balancePending);
     }
 
     public BigDecimal getAvailableCredit() {

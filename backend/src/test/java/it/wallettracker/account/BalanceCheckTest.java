@@ -67,12 +67,12 @@ class BalanceCheckTest {
         movement(fineco, "2026-11-12", "-200");
 
         // 1.000 − 200 = 800: torna, niente da salvare né da segnalare.
-        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("800.00"),
+        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("800.00"), null,
                 LocalDate.of(2026, 11, 13), Instant.now().plusSeconds(5));
         assertThat(checkRepository.count()).isZero();
 
         // 900: 100 € che i movimenti nell'app non spiegano.
-        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("900.00"),
+        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("900.00"), null,
                 LocalDate.of(2026, 11, 13), Instant.now().plusSeconds(5));
         assertThat(checkService.mismatches()).singleElement().satisfies(m -> {
             assertThat(m.from()).isEqualTo(LocalDate.of(2026, 11, 10));
@@ -108,9 +108,29 @@ class BalanceCheckTest {
         Thread.sleep(5);
         movement(fineco, "2026-11-16", "1458.50"); // la cedola dello stesso giorno, arrivata dopo (parte M)
 
-        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("4053.80"),
+        checkService.compare(reload(fineco), BalanceSource.BANK, new BigDecimal("4053.80"), null,
                 LocalDate.of(2026, 11, 17), Instant.now().plusSeconds(60));
         // La cedola conta (arrivata dopo il primo saldo); i 50 € no (erano già dentro).
+        assertThat(checkService.mismatches()).isEmpty();
+    }
+
+    @Test
+    void aBalanceWithThePendingMovementsIsComparedWithoutThem() {
+        // Revolut (docs/saldi.md, parte O): il saldo comprende i pagamenti in attesa; i movimenti in mezzo sono solo
+        // quelli contabilizzati.
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-3",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-3", "u-3", null, "Revolut", "EUR"));
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("63.46"), BigDecimal.ZERO,
+                LocalDate.of(2026, 11, 17), BalanceSource.BANK, Instant.now().minusSeconds(60));
+        movement(revolut, "2026-11-18", "-2.28"); // contabilizzato
+        pending(revolut, "2026-11-18", "-15.02");
+        pending(revolut, "2026-11-18", "-3.64");
+
+        // Il saldo nuovo, 42,52 €, ha dentro i due pagamenti in attesa (−18,66 €): senza, 61,18 = 63,46 − 2,28.
+        checkService.compare(reload(revolut), BalanceSource.BANK, new BigDecimal("42.52"), new BigDecimal("-18.66"),
+                LocalDate.of(2026, 11, 19), Instant.now().plusSeconds(5));
+        assertThat(checkRepository.count()).isZero();
         assertThat(checkService.mismatches()).isEmpty();
     }
 
@@ -145,6 +165,11 @@ class BalanceCheckTest {
 
     private Account reload(Account account) {
         return accountRepository.findById(account.getId()).orElseThrow();
+    }
+
+    private void pending(Account account, String date, String amount) {
+        transactionRepository.save(new BankTransaction(account, "p-" + (++counter), TransactionStatus.PENDING,
+                LocalDate.parse(date), null, new BigDecimal(amount), "EUR", null, "In attesa " + counter, "{}"));
     }
 
     private void movement(Account account, String date, String amount) {

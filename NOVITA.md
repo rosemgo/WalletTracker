@@ -79,6 +79,11 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
 
 Usi già WalletTracker? Non cambia niente: l'app e gli script restano in italiano finché non scegli tu.
 
+- **Revolut e i pagamenti in attesa**: per le banche che non danno il saldo contabile (come Revolut) l'app ora toglie i
+  pagamenti in attesa dal saldo, e li conta quando vengono contabilizzati: niente più avviso "i movimenti non tornano"
+  ogni giorno, né pagamenti contati due volte. Nella pagina Conti, se ci sono movimenti in attesa, una riga mostra
+  anche il saldo con loro, quello che vedi nell'app della banca.
+
 ## 1.2.7
 
 - **Cedole e dividendi davvero netti, titolo per titolo**: le ritenute di Fineco ("Rit.ced.su", "Rit.div.su") non si

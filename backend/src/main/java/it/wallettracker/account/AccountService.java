@@ -128,7 +128,7 @@ public class AccountService {
         LocalDate start = last != null ? last : LocalDate.ofInstant(now, ZoneId.systemDefault());
         // Il controllo dei saldi (docs/saldi.md, parte N): il saldo scritto ora contro quello scritto prima più i
         // movimenti caricati in mezzo.
-        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, start, now);
+        balanceCheckService.compare(account, BalanceSource.MANUAL, balance, null, start, now);
         account.changeBalance(balance, start, BalanceSource.MANUAL, now);
         return dtoOf(account);
     }
@@ -145,7 +145,8 @@ public class AccountService {
         return CurrentBalance.of(account,
                 transactionRepository.sumAfter(account.getId(), account.getBalanceDate(),
                         account.getBalanceUpdatedAt()),
-                transactionRepository.lastBookingDate(account.getId()));
+                transactionRepository.lastBookingDate(account.getId()),
+                transactionRepository.sumPending(account.getId()));
     }
 
     /** Il conto per la dashboard, con il saldo di oggi. Dentro una transazione. */

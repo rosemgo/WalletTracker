@@ -48,18 +48,21 @@ public class BalanceCheckService {
      * Confronta il saldo nuovo di un conto con quello che ha adesso, prima che il nuovo lo sostituisca. Da chiamare
      * dopo aver importato i movimenti e prima di salvare il saldo nuovo.
      *
-     * @param newSource da dove viene il saldo nuovo: si confronta solo con uno dello stesso tipo
-     * @param newAt     quando è stato letto (o scritto) il saldo nuovo
+     * @param newSource  da dove viene il saldo nuovo: si confronta solo con uno dello stesso tipo
+     * @param newPending i movimenti in attesa compresi nel saldo nuovo (parte O), null se è contabile: si confrontano i
+     *                   saldi contabili, perché i movimenti in mezzo sono quelli contabilizzati
+     * @param newAt      quando è stato letto (o scritto) il saldo nuovo
      */
     @Transactional
-    public void compare(Account account, BalanceSource newSource, BigDecimal newAmount, LocalDate newDate,
-            Instant newAt) {
+    public void compare(Account account, BalanceSource newSource, BigDecimal newAmount, BigDecimal newPending,
+            LocalDate newDate, Instant newAt) {
         if (account.getBalance() == null || account.getBalanceDate() == null || newAmount == null || newDate == null
                 || account.getBalanceSource() != newSource || newDate.isBefore(account.getBalanceDate())) {
             return;
         }
+        BigDecimal newBooked = newPending == null ? newAmount : newAmount.subtract(newPending);
         BalanceCheck check = new BalanceCheck(account, newSource, account.getBalanceDate(),
-                account.getBalanceUpdatedAt(), account.getBalance(), newDate, newAt, newAmount, newAt);
+                account.getBalanceUpdatedAt(), account.getBookedBalance(), newDate, newAt, newBooked, newAt);
         if (difference(check).signum() != 0) {
             checkRepository.save(check);
         }

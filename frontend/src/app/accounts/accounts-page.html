@@ -167,6 +167,13 @@
                       dopo
                     }
                   </div>
+                  @if (b.withPending !== null && b.withPending !== undefined) {
+                    <!-- Il saldo resta quello contabile; con i movimenti in attesa è quello che di solito mostra
+                         l'app della banca (docs/saldi.md, parte O). -->
+                    <div i18n class="secondary with-pending" data-testid="with-pending">
+                      Con i movimenti in attesa: {{ b.withPending | money: account.currency }}
+                    </div>
+                  }
                 } @else if (account.source === 'MANUAL') {
                   <span i18n class="secondary">Non ancora scritto</span>
                 } @else if (account.lastSyncAt) {
