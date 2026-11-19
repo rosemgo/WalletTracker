@@ -7,10 +7,11 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
 
 ## 1.3.1
 
-- **Revolut e i pagamenti in attesa**: per le banche che non danno il saldo contabile (come Revolut) l'app ora toglie i
-  pagamenti in attesa dal saldo, e li conta quando vengono contabilizzati: niente più avviso "i movimenti non tornano"
-  ogni giorno, né pagamenti contati due volte. Nella pagina Conti, se ci sono movimenti in attesa, una riga mostra
-  anche il saldo con loro, quello che vedi nell'app della banca.
+- **Revolut e i pagamenti in attesa**: per le banche che non danno il saldo contabile (come Revolut) l'app ora tiene
+  conto dei pagamenti in attesa compresi nel saldo, e non li conta una seconda volta quando vengono contabilizzati:
+  niente più avviso "i movimenti non tornano" ogni giorno, né pagamenti contati due volte. Il saldo comprende i
+  pagamenti in attesa, come nell'app della banca e come le spese; nella pagina Conti, se ce ne sono, una riga mostra
+  anche il saldo contabile.
 
 ## 1.3.0
 

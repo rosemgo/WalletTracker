@@ -6,15 +6,21 @@ import java.time.LocalDate;
 /**
  * Il saldo di un conto come lo mostra la dashboard (docs/saldi.md).
  *
- * @param amount      il saldo contabile: senza i movimenti in attesa (parte O)
- * @param date        il giorno a cui si riferisce: per la banca, il suo; per un conto manuale, l'ultimo movimento contato
- * @param source      dalla banca o scritto dall'utente
- * @param startDate   solo per un conto manuale: il giorno del saldo scritto dall'utente, da cui si parte
- * @param withPending il saldo con i movimenti in attesa di adesso, se ce ne sono (null se non ce ne sono): quello che di
- *                    solito mostra l'app della banca
+ * @param amount    il saldo con i movimenti in attesa di adesso (parte O): i pagamenti in attesa sono già spese, come nel
+ *                  Riepilogo e nei budget, ed è il numero che mostra l'app della banca
+ * @param date      il giorno a cui si riferisce: per la banca, il suo; per un conto manuale, l'ultimo movimento contato
+ * @param source    dalla banca o scritto dall'utente
+ * @param startDate solo per un conto manuale: il giorno del saldo scritto dall'utente, da cui si parte
+ * @param booked    il saldo contabile, senza i movimenti in attesa, se ce ne sono (null se non ce ne sono: allora è
+ *                  {@code amount})
  */
 public record CurrentBalance(BigDecimal amount, LocalDate date, BalanceSource source, LocalDate startDate,
-        BigDecimal withPending) {
+        BigDecimal booked) {
+
+    /** Il saldo contabile: lo storico, le fotografie e il controllo dei saldi lavorano con questo (parte O). */
+    public BigDecimal bookedAmount() {
+        return booked != null ? booked : amount;
+    }
 
     /** Un saldo senza movimenti in attesa. */
     public CurrentBalance(BigDecimal amount, LocalDate date, BalanceSource source, LocalDate startDate) {
@@ -37,15 +43,15 @@ public record CurrentBalance(BigDecimal amount, LocalDate date, BalanceSource so
 
     /**
      * Come {@link #of(Account, BigDecimal, LocalDate)}, con la somma dei movimenti in attesa di adesso ({@code pending}):
-     * se non è zero, {@code withPending} è il saldo con loro.
+     * se non è zero, il saldo è quello contabile più loro, e il contabile resta in {@code booked}.
      */
     static CurrentBalance of(Account account, BigDecimal after, LocalDate lastMovement, BigDecimal pending) {
         CurrentBalance booked = booked(account, after, lastMovement);
         if (booked == null || pending == null || pending.signum() == 0) {
             return booked;
         }
-        return new CurrentBalance(booked.amount(), booked.date(), booked.source(), booked.startDate(),
-                booked.amount().add(pending));
+        return new CurrentBalance(booked.amount().add(pending), booked.date(), booked.source(), booked.startDate(),
+                booked.amount());
     }
 
     private static CurrentBalance booked(Account account, BigDecimal after, LocalDate lastMovement) {

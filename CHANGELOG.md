@@ -7,10 +7,11 @@ changes something important for those who use it.
 
 ## 1.3.1
 
-- **Revolut and pending payments**: for banks that do not give the booked balance (like Revolut) the app now takes the
-  pending payments out of the balance and counts them once they are booked: no more daily "the transactions do not
-  match" notice, and no payments counted twice. On the Accounts page, when there are pending transactions, a line also
-  shows the balance including them, the one you see in the bank's app.
+- **Revolut and pending payments**: for banks that do not give the booked balance (like Revolut) the app now accounts
+  for the pending payments included in the balance, and does not count them a second time once they are booked: no
+  more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending
+  payments, as in the bank's app and as the expenses do; on the Accounts page, when there are any, a line also shows
+  the booked balance.
 
 ## 1.3.0
 

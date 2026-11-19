@@ -62,7 +62,7 @@ export interface CurrentBalance {
   date: string; // il giorno a cui si riferisce: "2026-10-31"
   source: BalanceSource;
   startDate: string | null; // solo per un conto manuale: il giorno del saldo che hai scritto, da cui si parte
-  withPending?: number | null; // il saldo con i movimenti in attesa di adesso, se ce ne sono (docs/saldi.md, parte O)
+  booked?: number | null; // il saldo contabile, se ci sono movimenti in attesa: amount li comprende (docs/saldi.md, parte O)
 }
 
 /** Il corpo di POST /api/accounts: un conto manuale, i cui movimenti si caricano da file CSV. */

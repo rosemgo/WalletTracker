@@ -174,6 +174,32 @@ class BalanceHistoryServiceTest {
     }
 
     @Test
+    void todayHasThePendingMovementsLikeTheAccountsPageThePhotoIsBooked() throws InterruptedException {
+        // Revolut (docs/saldi.md, parte O): il saldo previsto, 44,80 €, ha dentro due pagamenti in attesa (−18,66 €).
+        BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-6",
+                Instant.now().plus(90, ChronoUnit.DAYS)));
+        Account revolut = accountRepository.save(new Account(connection, "k-6", "u-6", null, "Revolut", "EUR"));
+        movement(revolut, "2026-11-12", "-5");
+        transactionRepository.save(new BankTransaction(revolut, "hp-1", TransactionStatus.PENDING,
+                LocalDate.of(2026, 11, 15), null, new BigDecimal("-18.66"), "EUR", null, "Conad", "{}"));
+        Thread.sleep(5);
+        accountRepository.recordBalance(revolut.getId(), new BigDecimal("44.80"), new BigDecimal("-18.66"), TODAY,
+                BalanceSource.BANK, Instant.now());
+
+        historyService.recordToday(TODAY);
+        assertThat(snapshotRepository.findAll()).singleElement()
+                .satisfies(shot -> assertThat(shot.getAmount()).isEqualByComparingTo("63.46")); // contabile
+
+        BalanceHistory history = historyService.history("EUR", TODAY);
+        assertThat(history.points()).last().satisfies(p -> {
+            assertThat(p.date()).isEqualTo(TODAY);
+            assertThat(p.amount()).isEqualByComparingTo("44.80"); // come la pagina Conti
+        });
+        assertThat(history.points()).filteredOn(p -> p.date().equals(TODAY.minusDays(1))).singleElement()
+                .satisfies(p -> assertThat(p.amount()).isEqualByComparingTo("63.46"));
+    }
+
+    @Test
     void deletingAManualAccountDeletesItsPhotos() {
         Account wallet = accountRepository.save(Account.manual("Tinaba", "Wallet", null, "EUR", AccountRole.MAIN));
         snapshotRepository.upsert(wallet.getId(), TODAY, new BigDecimal("10"));

@@ -325,18 +325,18 @@ describe('AccountsPage', () => {
     );
   });
 
-  it('with pending movements the balance stays the booked one, and a line shows it with them', async () => {
+  it('with pending movements the balance includes them, and a line shows the booked one', async () => {
     registerLocaleData(localeIt);
     TestBed.overrideProvider(LOCALE_ID, { useValue: 'it-IT' });
     accounts = [
       {
         ...CARD,
         balance: {
-          amount: 63.46,
+          amount: 44.8,
           date: '2026-11-19',
           source: 'BANK',
           startDate: null,
-          withPending: 44.8,
+          booked: 63.46,
         },
       },
       { ...BROKER, balance: { amount: 10, date: '2026-11-19', source: 'BANK', startDate: null } },
@@ -346,12 +346,13 @@ describe('AccountsPage', () => {
     const page = fixture.nativeElement as HTMLElement;
     const cells = Array.from(page.querySelectorAll('td.balance-cell')) as HTMLElement[];
 
-    expect(cells[0].querySelector('strong.balance')?.textContent).toMatch(/63,46\s€/);
-    expect(cells[0].querySelector('[data-testid="with-pending"]')?.textContent?.trim()).toMatch(
-      /^Con i movimenti in attesa: 44,80\s€$/,
+    // Come nell'app della banca; sotto, il contabile.
+    expect(cells[0].querySelector('strong.balance')?.textContent).toMatch(/44,80\s€/);
+    expect(cells[0].querySelector('[data-testid="booked"]')?.textContent?.trim()).toMatch(
+      /^Contabile: 63,46\s€$/,
     );
     // Senza movimenti in attesa, niente riga.
-    expect(cells[1].querySelector('[data-testid="with-pending"]')).toBeNull();
+    expect(cells[1].querySelector('[data-testid="booked"]')).toBeNull();
   });
 
   it('a credit card shows only the available credit: it has no balance to write', async () => {

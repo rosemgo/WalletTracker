@@ -164,7 +164,7 @@ class AccountBalanceTest {
     }
 
     @Test
-    void aBalanceWithThePendingMovementsShowsTheBookedOneAndTheOneWithThem() throws InterruptedException {
+    void aBalanceWithThePendingMovementsShowsThemAndTheBookedOneApart() throws InterruptedException {
         // Revolut (docs/saldi.md, parte O): dà solo il saldo previsto, con i due pagamenti in attesa dentro.
         BankConnection connection = connectionRepository.save(new BankConnection("Revolut", "LT", "s-5",
                 Instant.now().plus(90, ChronoUnit.DAYS)));
@@ -178,14 +178,15 @@ class AccountBalanceTest {
         accountRepository.recordBalance(revolut.getId(), new BigDecimal("44.80"), new BigDecimal("-18.66"),
                 LocalDate.of(2026, 11, 19), BalanceSource.BANK, Instant.now());
 
-        // Il saldo contabile, e quello con i movimenti in attesa (come nell'app di Revolut).
+        // Il saldo con i movimenti in attesa (come nell'app di Revolut, e come le spese, che li contano già), e a parte
+        // il contabile.
         assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
-            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(63.46);
-            json.assertThat().extractingPath("$[0].balance.withPending").isEqualTo(44.8);
+            json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(44.8);
+            json.assertThat().extractingPath("$[0].balance.booked").isEqualTo(63.46);
         });
 
         // Revolut li contabilizza il giorno dopo: i pagamenti in attesa spariscono, arrivano quelli contabilizzati.
-        // Contano una volta sola: il saldo torna quello di Revolut, e la riga non c'è più.
+        // Contano una volta sola: il saldo resta quello di Revolut, e il contabile non serve più a parte.
         Thread.sleep(5);
         transactionRepository.deleteAll(transactionRepository.findAll().stream()
                 .filter(t -> t.getStatus() == TransactionStatus.PENDING).toList());
@@ -193,7 +194,7 @@ class AccountBalanceTest {
         movement(reloaded, "2026-11-20", "-3.64");
         assertThat(mvc.get().uri("/api/accounts")).hasStatusOk().bodyJson().satisfies(json -> {
             json.assertThat().extractingPath("$[0].balance.amount").isEqualTo(44.8);
-            json.assertThat().extractingPath("$[0].balance.withPending").isNull();
+            json.assertThat().extractingPath("$[0].balance.booked").isNull();
         });
     }
 

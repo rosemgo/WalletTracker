@@ -167,11 +167,11 @@
                       dopo
                     }
                   </div>
-                  @if (b.withPending !== null && b.withPending !== undefined) {
-                    <!-- Il saldo resta quello contabile; con i movimenti in attesa è quello che di solito mostra
-                         l'app della banca (docs/saldi.md, parte O). -->
-                    <div i18n class="secondary with-pending" data-testid="with-pending">
-                      Con i movimenti in attesa: {{ b.withPending | money: account.currency }}
+                  @if (b.booked !== null && b.booked !== undefined) {
+                    <!-- Il saldo comprende i movimenti in attesa, che sono già spese (come nel Riepilogo e nell'app
+                         della banca); il contabile è senza (docs/saldi.md, parte O). -->
+                    <div i18n class="secondary booked" data-testid="booked">
+                      Contabile: {{ b.booked | money: account.currency }}
                     </div>
                   }
                 } @else if (account.source === 'MANUAL') {
