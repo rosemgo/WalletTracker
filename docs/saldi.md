@@ -523,7 +523,11 @@ vuoto mentre lo storico arriva all'apertura del Riepilogo e la frase "Storico no
 grafico c'è sempre, su due righe che non vanno mai a capo (un testo troppo lungo finisce con "…"): sopra il conto scelto,
 o "Tutti i conti"; sotto, tutta larga, il saldo del conto nel giorno su cui si scorre ("2.595 € · 11 novembre 2026 ·
 stima") o, senza scorrere, quanto è cambiato nel periodo mostrato ("+1.250 € dal 22 ago"). Prima il saldo del giorno
-stava accanto al nome: lungo, andava a capo, corto no, e scorrendo il grafico di un conto saliva e scendeva.
+stava accanto al nome: lungo, andava a capo, corto no, e scorrendo il grafico di un conto saliva e scendeva. Mentre lo
+storico del conto nuovo arriva, la seconda riga resta vuota ma con uno spazio (`&nbsp;`): una riga senza testo era alta
+3 pixel in meno, e per un attimo tutto quello che c'era sotto saliva e riscendeva. Sotto il posto vuoto del grafico c'è
+una riga della legenda vuota, identica a quella vera: con un margine calcolato a mano i margini verticali si fondevano
+in modo diverso (8 pixel di differenza).
 
 L'etichetta del giorno scorrendo (`.scrub-tip`, anche nel grafico del mese) si sposta su se stessa quanto il punto nel
 grafico (`--tip`, da 0 a 100): sul primo giorno comincia dal bordo sinistro, sull'ultimo finisce sul destro. Prima era

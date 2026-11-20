@@ -3770,7 +3770,6 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
 }
 
 .liquidity-account > span > .secondary {
-  min-height: 1.25em; /* la seconda riga c'è anche vuota */
   font-variant-numeric: tabular-nums;
 }
 
@@ -3835,7 +3834,7 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 30px -4px 50px; /* sotto, il posto della riga della legenda: 4 + 2 + 44 */
+  margin: 30px -4px 4px; /* come il grafico (.month-chart-wrap); sotto, una riga della legenda vuota */
   aspect-ratio: 340 / 156;
 }
 
