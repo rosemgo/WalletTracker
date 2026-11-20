@@ -505,6 +505,29 @@ usa l'app, e la legenda basta. Con meno di due giorni il grafico non
 c'è. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto Conti): a Conti porta
 "Vedi i conti" in alto.
 
+**Il periodo, il punto di oggi e i cambi senza salti** (richiesta dell'utente, dopo i primi giorni d'uso). Lo storico arriva
+tutto (fino a un anno), ma il grafico di partenza mostra solo gli ultimi **3 mesi**: in un anno intero, largo circa 300
+pixel, un giorno era meno di un pixel, e i primi giorni con le fotografie (la funzione è nuova) finivano sotto il punto
+di oggi, che con raggio 5 copriva circa 5 giorni. Sulla riga della legenda, a destra, i pulsanti **1M, 3M, 1A** (le
+sigle delle app di finanza: le parole intere non stavano sul telefono accanto alla legenda; il nome intero è
+nell'`aria-label`). Si offrono solo i periodi che cambiano qualcosa: un conto con 2 mesi di storia ha 1M e 3M, uno con
+meno di un mese nessuna scelta. La scelta si ricorda nel browser (`wallettracker.liquidity-range`, con try/catch come il
+tema). Il punto di oggi di `TrendChart` ha raggio 3,5 (4,5 mentre si scorre).
+
+Cambiando conto o valuta il grafico **non sparisce** mentre arriva lo storico nuovo: resta quello di prima, un poco più
+chiaro (classe `loading`, solo se l'attesa supera 0,3 secondi), e il nuovo appare con una dissolvenza breve (classe
+`redraw` di `TrendChart`: solo il primo disegno fa crescere la linea). Prima la scheda si accorciava di tutta l'altezza del
+grafico e poi si riallungava: la pagina saltava due volte, e sul telefono, vicino al fondo, tornava anche più in alto.
+Per lo stesso motivo hanno l'altezza del grafico (e della riga della legenda, alta sempre 44 pixel) anche il posto
+vuoto mentre lo storico arriva all'apertura del Riepilogo e la frase "Storico non ancora disponibile", e la riga sopra il
+grafico c'è sempre: il nome del conto scelto, o "Tutti i conti".
+
+L'etichetta del giorno scorrendo (`.scrub-tip`, anche nel grafico del mese) si sposta su se stessa quanto il punto nel
+grafico (`--tip`, da 0 a 100): sul primo giorno comincia dal bordo sinistro, sull'ultimo finisce sul destro. Prima era
+centrata sul punto con un limite fisso (15–85%), e un'etichetta lunga ("20 novembre 2026 · stima") usciva dallo schermo
+di qualche pixel: la pagina diventava più larga del telefono, Chrome allungava in proporzione lo schermo "virtuale", e la
+barra in basso, fissata al suo fondo, scendeva e risaliva a ogni giorno.
+
 **Un conto alla volta.** Toccando un conto nell'elenco della scheda, il grafico mostra solo quel conto
 (`GET /api/accounts/balance-history?currency=EUR&accountId=7`); sopra il grafico il suo nome, il saldo del giorno scelto
 scorrendo, e "Tutti i conti" per tornare al totale (anche toccando di nuovo il conto, o una valuta). Il totale in cima

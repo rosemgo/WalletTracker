@@ -3045,6 +3045,30 @@
       "it": "banca, intelligenza artificiale, tema",
       "en": "bank, artificial intelligence, theme"
     },
+    "3111155181836946106": {
+      "it": "1M",
+      "en": "1M"
+    },
+    "4492787977448882801": {
+      "it": "1 mese",
+      "en": "1 month"
+    },
+    "3459983933389778432": {
+      "it": "3M",
+      "en": "3M"
+    },
+    "5041050145139198851": {
+      "it": "3 mesi",
+      "en": "3 months"
+    },
+    "8103446504275322490": {
+      "it": "1A",
+      "en": "1Y"
+    },
+    "7729233778925672565": {
+      "it": "1 anno",
+      "en": "1 year"
+    },
     "6257742107375262262": {
       "it": "Liquidità",
       "en": "Cash"
@@ -3063,6 +3087,10 @@
     },
     "4967050096275237981": {
       "it": " Tutti i conti ",
+      "en": "All accounts"
+    },
+    "4359952133479129417": {
+      "it": "Tutti i conti",
       "en": "All accounts"
     },
     "876522556398186445": {
@@ -4316,10 +4344,6 @@
     "6596015092903059519": {
       "it": " Senza categoria ",
       "en": "No category"
-    },
-    "4359952133479129417": {
-      "it": "Tutti i conti",
-      "en": "All accounts"
     },
     "2759773909798147145": {
       "it": "Tipo",

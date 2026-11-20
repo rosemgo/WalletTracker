@@ -2,13 +2,15 @@ import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 
 import { AccountsStore } from '../accounts/accounts-store';
 import { Account, AccountRole, BalanceHistory } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
-import { LiquidityCard } from './liquidity-card';
+import { TrendChart } from '../investments/trend-chart';
+import { LiquidityCard, RANGE_KEY } from './liquidity-card';
 
 registerLocaleData(localeIt);
 
@@ -385,5 +387,147 @@ describe('LiquidityCard', () => {
     fixture.detectChanges();
     expect(page.querySelector('[data-testid="chart-account"]')).toBeNull();
     expect(asked).toEqual(['EUR', 'EUR|2', 'EUR', 'EUR|1', 'EUR']);
+  });
+
+  /** Un giorno per volta all'indietro da oggi (il 20 novembre 2026), dal più vecchio: n giorni, stimati. */
+  function days(n: number, amount = 100): BalanceHistory['points'] {
+    return Array.from({ length: n }, (_, i) => {
+      const date = new Date(Date.UTC(2026, 10, 20 - (n - 1 - i)));
+      return { date: date.toISOString().slice(0, 10), amount: amount + i, estimated: true };
+    });
+  }
+
+  /** I valori disegnati dal grafico. */
+  function drawn(): number[] {
+    return fixture.debugElement.query(By.directive(TrendChart)).componentInstance.values();
+  }
+
+  it('shows the last 3 months, and remembers the period chosen with 1M, 3M, 1A', async () => {
+    localStorage.removeItem(RANGE_KEY);
+    accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
+    history = { currency: 'EUR', accounts: 1, points: days(366) };
+    const page = await render();
+    const buttons = () =>
+      Array.from(page.querySelectorAll<HTMLButtonElement>('[data-testid="chart-range"] button'));
+
+    expect(buttons().map((b) => b.textContent?.trim())).toEqual(['1M', '3M', '1A']);
+    expect(buttons().map((b) => b.getAttribute('aria-label'))).toEqual([
+      '1 mese',
+      '3 mesi',
+      '1 anno',
+    ]);
+    expect(buttons()[1].getAttribute('aria-pressed')).toBe('true');
+    expect(drawn()).toHaveLength(90);
+
+    buttons()[0].click();
+    fixture.detectChanges();
+    expect(drawn()).toHaveLength(30);
+    expect(drawn().at(-1)).toBe(465); // gli ultimi giorni: oggi è l'ultimo
+    expect(localStorage.getItem(RANGE_KEY)).toBe('30');
+
+    buttons()[2].click(); // un anno: tutta la storia
+    fixture.detectChanges();
+    expect(drawn()).toHaveLength(366);
+    localStorage.removeItem(RANGE_KEY);
+  });
+
+  it('offers only the periods that change something', async () => {
+    accounts = [account(1, 'Banca Alfa', 'MAIN', 1000)];
+    history = { currency: 'EUR', accounts: 1, points: days(60) };
+    let page = await render();
+    const labels = () =>
+      Array.from(page.querySelectorAll('[data-testid="chart-range"] button')).map((b) =>
+        b.textContent?.trim(),
+      );
+    expect(labels()).toEqual(['1M', '3M']); // "1A" mostrerebbe gli stessi 60 giorni di "3M"
+    expect(drawn()).toHaveLength(60);
+
+    TestBed.resetTestingModule();
+    history = { currency: 'EUR', accounts: 1, points: days(20) };
+    page = await render();
+    expect(labels()).toEqual([]); // meno di un mese: nessuna scelta
+  });
+
+  it('keeps the previous chart, lighter, until the new one arrives: the card does not change height', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 1000),
+      account(2, 'Broker Beta', 'INVESTMENT', 400),
+    ];
+    history = { currency: 'EUR', accounts: 2, points: days(10, 1000) };
+    const arriving = new Subject<BalanceHistory>();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: WalletApi,
+          useValue: {
+            accounts: () => of([...accounts]),
+            balanceHistory: (_: string, accountId: number | null = null) =>
+              accountId === null ? of(history) : arriving,
+          },
+        },
+        { provide: LOCALE_ID, useValue: 'it-IT' },
+      ],
+    });
+    fixture = TestBed.createComponent(LiquidityCard);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('.liquidity-account')?.textContent).toContain('Tutti i conti');
+
+    page.querySelectorAll<HTMLButtonElement>('button.liquidity-row')[1].click();
+    fixture.detectChanges();
+    const chart = page.querySelector('app-trend-chart');
+    expect(chart).not.toBeNull(); // quello di prima, ancora lì
+    expect(chart?.classList.contains('loading')).toBe(true);
+    expect(drawn()[0]).toBe(1000);
+    expect(page.querySelector('[data-testid="chart-account"]')?.textContent).toContain(
+      'Broker Beta',
+    );
+
+    arriving.next({ currency: 'EUR', accounts: 1, points: days(10, 400) });
+    fixture.detectChanges();
+    expect(page.querySelector('app-trend-chart')?.classList.contains('loading')).toBe(false);
+    expect(drawn()[0]).toBe(400);
+  });
+
+  it('keeps the place of the chart while the history arrives, and for an account without history', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 1000),
+      account(2, 'Broker Beta', 'INVESTMENT', 400),
+    ];
+    const arriving = new Subject<BalanceHistory>();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: WalletApi,
+          useValue: {
+            accounts: () => of([...accounts]),
+            balanceHistory: (_: string, accountId: number | null = null) =>
+              accountId === null ? arriving : of({ currency: 'EUR', accounts: 1, points: [] }),
+          },
+        },
+        { provide: LOCALE_ID, useValue: 'it-IT' },
+      ],
+    });
+    fixture = TestBed.createComponent(LiquidityCard);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('.liquidity-chart-empty')).not.toBeNull(); // il posto, vuoto
+    expect(page.querySelector('.history-note')).toBeNull();
+
+    arriving.next({ currency: 'EUR', accounts: 2, points: days(10, 1000) });
+    fixture.detectChanges();
+    expect(page.querySelector('.liquidity-chart-empty')).toBeNull();
+
+    page.querySelectorAll<HTMLButtonElement>('button.liquidity-row')[1].click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.querySelector('app-trend-chart')).toBeNull();
+    expect(page.querySelector('.liquidity-chart-empty .history-note')?.textContent).toContain(
+      'Storico non ancora disponibile per Broker Beta.',
+    );
   });
 });

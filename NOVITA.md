@@ -23,6 +23,13 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   quando la causale non lo dice.
 - **Interessi passivi**: gli interessi che paghi alla banca (uno scoperto, una linea di credito) vanno in *Costi
   bancari*. Prima restavano spese senza categoria.
+- **Il grafico della liquidità, più leggibile e senza salti**: di partenza mostra gli ultimi 3 mesi, con i pulsanti 1M,
+  3M e 1A (la scelta si ricorda); in un anno intero un giorno era largo meno di un pixel, e i primi giorni salvati non
+  si vedevano. Il punto di oggi è più piccolo e non copre più la fine della linea. Toccando un conto, il grafico di prima
+  resta finché non arriva il nuovo, che appare con una breve dissolvenza: la scheda non cambia altezza e la pagina non
+  salta più (prima il grafico spariva per un momento e tutto quello che c'era sotto saliva e scendeva).
+- **La barra in basso non trema più scorrendo i grafici sul telefono**: l'etichetta del giorno, vicino al bordo, usciva
+  dallo schermo di qualche pixel, e la barra si spostava a ogni giorno. Ora l'etichetta resta sempre dentro il grafico.
 
 ## 1.3.0
 
