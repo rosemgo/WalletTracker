@@ -3,7 +3,7 @@ import localeIt from '@angular/common/locales/it';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import { Account, Budget, BudgetRequest, Category } from '../api/models';
 import { WalletApi } from '../api/wallet-api';
@@ -181,6 +181,20 @@ describe('BudgetPage', () => {
     // Un mese passato si giudica intero: quanti budget rispettati, e la media dei tre mesi prima.
     expect(page.querySelector('.budget-total')?.textContent).toContain('Rispettati 1 su 2.');
     expect(page.querySelector('.pace')?.textContent).toMatch(/Nei tre mesi prima, in media 150\s€/);
+  });
+
+  it('shows the form only when the list has arrived, under it', async () => {
+    const pending = new Subject<Budget[]>();
+    (TestBed.inject(WalletApi) as Partial<WalletApi>).budgets = () => pending;
+    const fixture = TestBed.createComponent(BudgetPage);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    // Prima, in cima alla pagina vuota, all'arrivo dei budget veniva spinto giù di tutta la loro altezza.
+    expect(page.querySelector('#budget-form')).toBeNull();
+
+    pending.next([GROCERIES, TRAVEL]);
+    fixture.detectChanges();
+    expect(page.querySelector('#budget-form')).not.toBeNull();
   });
 
   it('creates a budget, accepting the Italian decimal comma', async () => {

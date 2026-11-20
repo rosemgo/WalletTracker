@@ -131,65 +131,68 @@
   }
 </div>
 
-<form id="budget-form" class="card" [formGroup]="form" (ngSubmit)="save()">
-  <h2>
-    <ng-container i18n>{!!editing(), select,
-      true {Modifica il budget}
-      other {Nuovo budget}
-    }</ng-container>
-  </h2>
-  <p i18n class="hint">
-    Un budget è quanto vuoi spendere al massimo in una categoria ogni mese. Contano solo le spese
-    vere: un rimborso ("Rimborso di una spesa") le riduce, i trasferimenti tra i tuoi conti non
-    contano mai.
-  </p>
-  <div class="form-grid">
-    <label
-      ><ng-container i18n>
-        Categoria
-        <!-- Solo le categorie di spesa: un budget conta le spese. --> </ng-container
-      ><select formControlName="categoryId">
-        <option i18n [ngValue]="null">— scegli —</option>
-        @for (category of expenseCategories(); track category.id) {
-          <option [ngValue]="category.id">{{ category.name }}</option>
-        }
-      </select>
-      @if (showError('categoryId')) {
-        <span i18n class="error">Scegli la categoria.</span>
-      }
-    </label>
-    <label
-      ><ng-container i18n> Al mese, al massimo </ng-container
-      ><input
-        formControlName="monthlyAmount"
-        inputmode="decimal"
-        placeholder="es. 400"
-        i18n-placeholder
-      />
-      @if (showError('monthlyAmount')) {
-        <span i18n class="error">Un importo maggiore di zero, al massimo con due decimali.</span>
-      }
-    </label>
-    @if (currencies().length > 1) {
+<!-- Il modulo arriva con l'elenco, sotto di lui: comparendo prima, l'elenco lo spingeva giù (loaded). -->
+@if (loaded()) {
+  <form id="budget-form" class="card" [formGroup]="form" (ngSubmit)="save()">
+    <h2>
+      <ng-container i18n>{!!editing(), select,
+        true {Modifica il budget}
+        other {Nuovo budget}
+      }</ng-container>
+    </h2>
+    <p i18n class="hint">
+      Un budget è quanto vuoi spendere al massimo in una categoria ogni mese. Contano solo le spese
+      vere: un rimborso ("Rimborso di una spesa") le riduce, i trasferimenti tra i tuoi conti non
+      contano mai.
+    </p>
+    <div class="form-grid">
       <label
-        ><ng-container i18n> Valuta </ng-container
-        ><select formControlName="currency">
-          @for (c of currencies(); track c) {
-            <option [value]="c">{{ c }}</option>
+        ><ng-container i18n>
+          Categoria
+          <!-- Solo le categorie di spesa: un budget conta le spese. --> </ng-container
+        ><select formControlName="categoryId">
+          <option i18n [ngValue]="null">— scegli —</option>
+          @for (category of expenseCategories(); track category.id) {
+            <option [ngValue]="category.id">{{ category.name }}</option>
           }
         </select>
+        @if (showError('categoryId')) {
+          <span i18n class="error">Scegli la categoria.</span>
+        }
       </label>
-    }
-  </div>
-  <div class="buttons">
-    <button type="submit">
-      <ng-container i18n>{!!editing(), select,
-        true {Salva le modifiche}
-        other {Crea il budget}
-      }</ng-container>
-    </button>
-    @if (editing()) {
-      <button i18n type="button" (click)="cancel()">Annulla</button>
-    }
-  </div>
-</form>
+      <label
+        ><ng-container i18n> Al mese, al massimo </ng-container
+        ><input
+          formControlName="monthlyAmount"
+          inputmode="decimal"
+          placeholder="es. 400"
+          i18n-placeholder
+        />
+        @if (showError('monthlyAmount')) {
+          <span i18n class="error">Un importo maggiore di zero, al massimo con due decimali.</span>
+        }
+      </label>
+      @if (currencies().length > 1) {
+        <label
+          ><ng-container i18n> Valuta </ng-container
+          ><select formControlName="currency">
+            @for (c of currencies(); track c) {
+              <option [value]="c">{{ c }}</option>
+            }
+          </select>
+        </label>
+      }
+    </div>
+    <div class="buttons">
+      <button type="submit">
+        <ng-container i18n>{!!editing(), select,
+          true {Salva le modifiche}
+          other {Crea il budget}
+        }</ng-container>
+      </button>
+      @if (editing()) {
+        <button i18n type="button" (click)="cancel()">Annulla</button>
+      }
+    </div>
+  </form>
+}

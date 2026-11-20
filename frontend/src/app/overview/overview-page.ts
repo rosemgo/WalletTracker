@@ -87,6 +87,14 @@ export class OverviewPage implements OnInit {
    */
   private readonly shownMonth = computed(() => this.overview()?.month ?? this.month());
 
+  /**
+   * I dati mostrati sono del mese in corso. La frase sotto la cifra e la sua etichetta seguono i dati, non il titolo:
+   * seguendo il titolo, al clic cambiavano subito con i numeri del mese lasciato ("70 € in meno del solito." invece di
+   * "... a questo punto del mese"), la frase passava da due righe a una e tutta la pagina saliva, per poi riscendere
+   * all'arrivo dei dati.
+   */
+  private readonly shownIsCurrent = computed(() => this.shownMonth() === this.currentMonth);
+
   /** "ott", per le date sotto il grafico. */
   protected readonly monthShort = computed(() =>
     formatLocalDate(`${this.shownMonth()}-01`, 'monthShort', this.locale).replace('.', ''),
@@ -118,7 +126,7 @@ export class OverviewPage implements OnInit {
       };
     }
     return {
-      label: this.isCurrent() ? $localize`Speso finora` : $localize`Speso nel mese`,
+      label: this.shownIsCurrent() ? $localize`Speso finora` : $localize`Speso nel mese`,
       value: o.spent,
     };
   });
@@ -134,7 +142,7 @@ export class OverviewPage implements OnInit {
     const o = this.overview();
     return o === null
       ? ''
-      : comparisonSentence(o, this.isCurrent(), (v) => this.euros(v, o.currency));
+      : comparisonSentence(o, this.shownIsCurrent(), (v) => this.euros(v, o.currency));
   });
 
   /** I filtri di Movimenti per le spese senza categoria del mese guardato (fino a oggi, per il mese in corso). */
@@ -156,7 +164,7 @@ export class OverviewPage implements OnInit {
 
   /** L'etichetta del totale dell'anno: "Da inizio 2026", "Gen–mar 2025"... */
   protected readonly yearLabel = computed(() =>
-    yearLabel(this.shownMonth(), this.shownMonth() === this.currentMonth, this.monthShort()),
+    yearLabel(this.shownMonth(), this.shownIsCurrent(), this.monthShort()),
   );
 
   /** La descrizione del grafico per chi usa un lettore di schermo. */

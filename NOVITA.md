@@ -32,6 +32,11 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   ("+1.250 € dal 22 ago").
 - **La barra in basso non trema più scorrendo i grafici sul telefono**: l'etichetta del giorno, vicino al bordo, usciva
   dallo schermo di qualche pixel, e la barra si spostava a ogni giorno. Ora l'etichetta resta sempre dentro il grafico.
+- **Meno salti in tutta l'app**: cambiando mese nel Riepilogo, la frase sotto la cifra non cambia più forma prima che
+  arrivino i numeri del mese (passava da due righe a una e la pagina saliva, poi riscendeva). In Budget il modulo
+  "Nuovo budget" compare insieme all'elenco, sotto di lui: prima compariva in cima e all'arrivo dei budget veniva spinto
+  giù di colpo. Gli avvisi in cima alla pagina (una versione nuova, i backup…) si aprono con una breve animazione invece
+  di spingere giù tutto di scatto.
 
 ## 1.3.0
 

@@ -31,6 +31,11 @@ changes something important for those who use it.
   ("+€1,250 since 22 Aug").
 - **The bottom bar no longer shakes while sliding along the charts on the phone**: near the edge, the label of the day
   went a few pixels off the screen, and the bar moved at every day. Now the label always stays inside the chart.
+- **Fewer jumps across the app**: changing month in the Overview, the sentence under the figure no longer changes shape
+  before the numbers of the month arrive (it went from two lines to one and the page went up, then down again). In
+  Budget the "New budget" form appears together with the list, under it: before, it appeared at the top and was pushed
+  down at once when the budgets arrived. The notices at the top of the page (a new version, the backups…) open with a
+  short animation instead of pushing everything down in one go.
 
 ## 1.3.0
 
