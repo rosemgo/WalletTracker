@@ -153,6 +153,9 @@ interface Group {
                     >{{ d.sign }}{{ d.amount | money: d.currency : 'symbol' : '1.0-0' }} dal
                     {{ d.from }}</ng-container
                   >
+                } @else {
+                  <!-- Vuota (lo storico sta arrivando), ma con una riga di testo: alta come le altre. -->
+                  &nbsp;
                 }
               </span>
             </span>
@@ -208,16 +211,21 @@ interface Group {
             }
           </div>
         } @else if (slot() === 'empty') {
-          <!-- Al posto del grafico, grande quanto lui: passando a un conto senza storico la pagina non salta. -->
+          <!--
+            Al posto del grafico, grande quanto lui, e sotto una riga della legenda vuota, alta come quella vera: passando
+            a un conto senza storico la pagina non salta.
+          -->
           <div class="liquidity-chart-empty">
             <p i18n class="secondary history-note">
               Storico non ancora disponibile per
               {{ chartAccount()?.account?.label ?? chartCurrency() }}.
             </p>
           </div>
+          <div class="chart-keys" aria-hidden="true"></div>
         } @else if (slot() === 'waiting') {
           <!-- Lo storico sta arrivando: il suo posto è già tenuto, e quello che c'è sotto non scende quando arriva. -->
           <div class="liquidity-chart-empty" aria-hidden="true"></div>
+          <div class="chart-keys" aria-hidden="true"></div>
         }
         @for (g of groups(); track g.currency) {
           @if (groups().length > 1) {

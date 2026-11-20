@@ -276,6 +276,31 @@ button.eye[aria-checked='true'] {
   border-radius: 14px;
 }
 
+/*
+ * Un avviso arriva quando il backend risponde (una versione nuova, i backup, la configurazione), di solito un secondo
+ * dopo la pagina: comparendo di colpo spingeva giù tutto di 100 pixel. Si apre invece in un quarto di secondo, così la
+ * pagina scende piano e si vede da dove arriva. Solo per chi non ha chiesto di ridurre le animazioni.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .banner {
+    overflow: clip;
+    animation: banner-open 0.28s var(--ease, ease-out);
+  }
+}
+
+@keyframes banner-open {
+  from {
+    max-height: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 320px;
+  }
+}
+
 /* Senza rete: un giallo tenue, si nota ma non allarma (docs/42). */
 .banner.offline {
   background: light-dark(#fff4d1, #3a3012);
@@ -3770,7 +3795,6 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
 }
 
 .liquidity-account > span > .secondary {
-  min-height: 1.25em; /* la seconda riga c'è anche vuota */
   font-variant-numeric: tabular-nums;
 }
 
@@ -3835,7 +3859,7 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 30px -4px 50px; /* sotto, il posto della riga della legenda: 4 + 2 + 44 */
+  margin: 30px -4px 4px; /* come il grafico (.month-chart-wrap); sotto, una riga della legenda vuota */
   aspect-ratio: 340 / 156;
 }
 

@@ -240,14 +240,22 @@ describe('OverviewPage', () => {
     const before = drawn();
     respond = () => pending;
 
+    const sentence = () => page.querySelector('.comparison')?.textContent?.trim();
+    const sentenceBefore = sentence();
+    expect(sentenceBefore).toContain('a questo punto del mese');
+
     (page.querySelector('button.icon') as HTMLButtonElement).click(); // il mese prima
     fixture.detectChanges();
     // I numeri non sono ancora arrivati: il grafico è lo stesso, non riparte con i dati vecchi.
     expect(drawn()).toBe(before);
+    // E la frase resta quella dei numeri mostrati: cambiando forma subito (una riga invece di due), la pagina saliva
+    // per poi riscendere all'arrivo dei dati.
+    expect(sentence()).toBe(sentenceBefore);
 
     pending.next(overview({ month: previousMonth, day: `${previousMonth}-28`, daysInMonth: 28 }));
     fixture.detectChanges();
     expect(drawn()).not.toBe(before); // arrivati: si ridisegna, una volta
+    expect(sentence()).not.toContain('a questo punto del mese'); // un mese passato: tutto il mese
   });
 
   it('lets choose the currency when there is more than one', async () => {

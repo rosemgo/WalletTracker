@@ -53,6 +53,12 @@ export class BudgetPage implements OnInit {
   protected readonly currencies = signal<string[]>(['EUR']); // le valute dei conti
   protected readonly editing = signal<Budget | null>(null);
   protected readonly loading = signal(true);
+  /**
+   * L'elenco è arrivato almeno una volta (anche con un errore). Fino ad allora il modulo non si mostra: in cima alla
+   * pagina vuota, all'arrivo dei budget veniva spinto giù di tutta la loro altezza, anche sotto il dito di chi lo stava
+   * toccando.
+   */
+  protected readonly loaded = signal(false);
   protected readonly message = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
@@ -232,10 +238,12 @@ export class BudgetPage implements OnInit {
       next: (budgets) => {
         this.budgets.set(budgets);
         this.loading.set(false);
+        this.loaded.set(true);
       },
       error: () => {
         this.error.set($localize`Impossibile caricare i budget: il backend è avviato?`);
         this.loading.set(false);
+        this.loaded.set(true);
       },
     });
   }
