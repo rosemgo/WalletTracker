@@ -101,7 +101,12 @@ describe('MonthChart', () => {
 
     await press('End'); // l'ultimo giorno: la spesa non c'è ancora (e qui nemmeno il mese tipico)
     expect(slider.getAttribute('aria-valuetext')).toBe('31 ott');
+    // L'etichetta finisce sul bordo destro, non esce dal grafico (uscendo dallo schermo faceva tremare la barra in basso).
+    const tip = () =>
+      (chart.querySelector('.scrub-tip') as HTMLElement).style.getPropertyValue('--tip');
+    expect(tip()).toBe('100');
     await press('Home');
+    expect(tip()).toBe('0'); // e sul primo giorno comincia dal bordo sinistro
     await press('Escape');
     expect(days).toEqual([3, 31, 1, null]);
     expect(chart.querySelector('.scrub-tip')).toBeNull();

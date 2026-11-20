@@ -2115,11 +2115,17 @@ button.icon svg {
   }
 }
 
-/* L'etichetta del giorno scelto: una pillola scura appena sopra il grafico. */
+/* L'etichetta del giorno scelto: una pillola scura appena sopra il grafico.
+   --tip è dove sta il punto, da 0 (a sinistra) a 100 (a destra). L'etichetta parte da lì e si sposta indietro della
+   stessa parte della sua larghezza: sul primo giorno comincia dal bordo sinistro, sull'ultimo finisce sul bordo destro,
+   in mezzo è centrata. Così non esce mai dal grafico. Se usciva dallo schermo, anche di pochi pixel, la pagina diventava
+   più larga del telefono e il browser allungava lo schermo "virtuale": la barra in basso, fissata al suo fondo,
+   scendeva e risaliva a ogni giorno scorso, a seconda della lunghezza dell'etichetta. */
 .scrub-tip {
   position: absolute;
   top: -4px;
-  transform: translate(-50%, -100%);
+  left: calc(var(--tip, 50) * 1%);
+  transform: translate(calc(var(--tip, 50) * -1%), -100%);
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--ink);

@@ -82,7 +82,7 @@ const STEPS = [
         </svg>
       }
       @if (tip(); as t) {
-        <div class="scrub-tip" [style.left.%]="t.left" aria-hidden="true">{{ t.label }}</div>
+        <div class="scrub-tip" [style.--tip]="t.left" aria-hidden="true">{{ t.label }}</div>
       }
     </div>
   `,
@@ -227,7 +227,9 @@ export class TrendChart {
     return {
       x,
       y: this.y(value),
-      left: Math.min(85, Math.max(15, (x / WIDTH) * 100)),
+      // Dove sta il punto, da 0 (a sinistra) a 100 (a destra): l'etichetta si sposta di altrettanto su se stessa
+      // (la classe scrub-tip), così resta sempre dentro il grafico, qualunque sia la sua lunghezza.
+      left: (x / WIDTH) * 100,
       label: this.names()[i] ?? '',
       text: `${this.names()[i] ?? ''}: ${amount}`,
     };
