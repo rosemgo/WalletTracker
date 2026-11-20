@@ -3729,20 +3729,53 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
   }
 }
 
-/* Sopra il grafico di un conto solo: il nome, il saldo del giorno scelto, e il ritorno a tutti i conti. */
+/*
+ * Sopra il grafico: il conto scelto (o "Tutti i conti") e sotto il saldo del giorno scelto o il cambio del periodo; a
+ * destra il ritorno a tutti i conti. Due righe che non vanno mai a capo (un testo troppo lungo finisce con "…"): la
+ * scheda resta alta uguale mentre si scorre, e il grafico non si sposta.
+ */
 .liquidity-account {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 12px;
+  gap: 2px 12px;
   margin-top: 14px;
 }
 
+/* Il nome e il pulsante sulla prima riga; la seconda riga è tutta larga, anche sotto il pulsante. */
 .liquidity-account > span {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
+  display: contents;
+}
+
+.liquidity-account > span > strong {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.liquidity-account > button {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.liquidity-account > span > .secondary {
+  grid-row: 2;
+  grid-column: 1 / -1;
+}
+
+.liquidity-account > span > *,
+.liquidity-when {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.liquidity-account > span > .secondary {
+  min-height: 1.25em; /* la seconda riga c'è anche vuota */
+  font-variant-numeric: tabular-nums;
+}
+
+.liquidity-when {
+  display: block;
 }
 
 /*

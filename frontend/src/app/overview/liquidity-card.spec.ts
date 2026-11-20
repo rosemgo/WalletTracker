@@ -530,4 +530,29 @@ describe('LiquidityCard', () => {
       'Storico non ancora disponibile per Broker Beta.',
     );
   });
+
+  it('above the chart says how much the period changed, and while scrolling an account its balance of that day', async () => {
+    accounts = [
+      account(1, 'Banca Alfa', 'MAIN', 1000),
+      account(2, 'Broker Beta', 'INVESTMENT', 400),
+    ];
+    history = { currency: 'EUR', accounts: 2, points: days(10, 1000) };
+    accountHistory = {
+      currency: 'EUR',
+      accounts: 1,
+      points: days(10).map((p, i) => ({ ...p, amount: 418 - i })), // in discesa
+    };
+    const page = await render();
+    const above = () => page.querySelector('.liquidity-account')?.textContent?.replace(/\s+/g, ' ');
+    expect(above()).toMatch(/Tutti i conti ?\+9\s€ dal 11 nov/);
+
+    page.querySelectorAll<HTMLButtonElement>('button.liquidity-row')[1].click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(above()).toMatch(/Broker Beta ?−9\s€ dal 11 nov/);
+    const wrap = page.querySelector('app-trend-chart .month-chart-wrap') as HTMLElement;
+    wrap.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+    fixture.detectChanges();
+    expect(above()).toMatch(/Broker Beta ?418\s€ · 11 novembre 2026 · stima/);
+  });
 });

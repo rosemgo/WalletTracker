@@ -520,7 +520,10 @@ chiaro (classe `loading`, solo se l'attesa supera 0,3 secondi), e il nuovo appar
 grafico e poi si riallungava: la pagina saltava due volte, e sul telefono, vicino al fondo, tornava anche più in alto.
 Per lo stesso motivo hanno l'altezza del grafico (e della riga della legenda, alta sempre 44 pixel) anche il posto
 vuoto mentre lo storico arriva all'apertura del Riepilogo e la frase "Storico non ancora disponibile", e la riga sopra il
-grafico c'è sempre: il nome del conto scelto, o "Tutti i conti".
+grafico c'è sempre, su due righe che non vanno mai a capo (un testo troppo lungo finisce con "…"): sopra il conto scelto,
+o "Tutti i conti"; sotto, tutta larga, il saldo del conto nel giorno su cui si scorre ("2.595 € · 11 novembre 2026 ·
+stima") o, senza scorrere, quanto è cambiato nel periodo mostrato ("+1.250 € dal 22 ago"). Prima il saldo del giorno
+stava accanto al nome: lungo, andava a capo, corto no, e scorrendo il grafico di un conto saliva e scendeva.
 
 L'etichetta del giorno scorrendo (`.scrub-tip`, anche nel grafico del mese) si sposta su se stessa quanto il punto nel
 grafico (`--tip`, da 0 a 100): sul primo giorno comincia dal bordo sinistro, sull'ultimo finisce sul destro. Prima era

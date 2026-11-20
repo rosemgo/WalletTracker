@@ -26,7 +26,9 @@ changes something important for those who use it.
   (the choice is remembered); over a whole year a day was less than a pixel wide, and the first saved days could not be
   seen. Today's dot is smaller and no longer covers the end of the line. Tapping an account, the previous chart stays
   until the new one arrives, which appears with a short fade: the card does not change height and the page no longer
-  jumps (before, the chart disappeared for a moment and everything below it went up and down).
+  jumps (before, the chart disappeared for a moment and everything below it went up and down). Sliding along the chart
+  of one account, the chart stays still too; above it, the balance of the chosen day or how much the period changed
+  ("+€1,250 since 22 Aug").
 - **The bottom bar no longer shakes while sliding along the charts on the phone**: near the edge, the label of the day
   went a few pixels off the screen, and the bar moved at every day. Now the label always stays inside the chart.
 
