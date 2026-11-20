@@ -98,7 +98,7 @@ interface Group {
           }
         </div>
         <!-- Scorrendo il grafico di tutti i conti, il giorno scelto; altrimenti quanti conti ci sono nel totale. -->
-        <span class="secondary">
+        <span class="secondary liquidity-when">
           @if (!chartAccount() && scrubbed(); as s) {
             {{ s.label }}
           } @else {
@@ -128,26 +128,39 @@ interface Group {
             }
           </div>
         }
-        @if (chartAccount(); as a) {
-          <!-- Un conto solo: il suo nome, il saldo del giorno scelto scorrendo, e il ritorno al totale. -->
-          <div class="liquidity-account" data-testid="chart-account">
+        @if (chartAccount() || slot() !== null) {
+          <!--
+            Sopra il grafico, due righe sempre: il conto scelto (o "Tutti i conti") e sotto, su una riga sola, il saldo del
+            giorno scelto scorrendo, o quanto è cambiato nel periodo mostrato. Alta sempre uguale: scorrendo o cambiando
+            conto il grafico non si sposta (prima il saldo stava accanto al nome e, se era lungo, andava a capo).
+          -->
+          <div
+            class="liquidity-account"
+            [attr.data-testid]="chartAccount() ? 'chart-account' : null"
+          >
             <span>
-              <strong>{{ a.account.label }}</strong>
-              @if (scrubbed(); as s) {
-                <span class="secondary">
-                  {{ s.amount | money: a.account.currency : 'symbol' : '1.0-0' }} ·
-                  {{ s.day }}</span
-                >
+              @if (chartAccount(); as a) {
+                <strong>{{ a.account.label }}</strong>
+              } @else {
+                <strong i18n>Tutti i conti</strong>
               }
+              <span class="secondary">
+                @if (chartAccount() && scrubbed(); as s) {
+                  {{ s.amount | money: chartAccount()!.account.currency : 'symbol' : '1.0-0' }} ·
+                  {{ s.day }}
+                } @else if (change(); as d) {
+                  <ng-container i18n
+                    >{{ d.sign }}{{ d.amount | money: d.currency : 'symbol' : '1.0-0' }} dal
+                    {{ d.from }}</ng-container
+                  >
+                }
+              </span>
             </span>
-            <button i18n type="button" class="link" (click)="chosenAccount.set(null)">
-              Tutti i conti
-            </button>
-          </div>
-        } @else if (slot() !== null) {
-          <!-- Lo stesso posto, con tutti i conti: scegliendo un conto la scheda non cambia altezza e la pagina non salta. -->
-          <div class="liquidity-account">
-            <span><strong i18n>Tutti i conti</strong></span>
+            @if (chartAccount()) {
+              <button i18n type="button" class="link" (click)="chosenAccount.set(null)">
+                Tutti i conti
+              </button>
+            }
           </div>
         }
         @if (chart(); as c) {
@@ -450,6 +463,25 @@ export class LiquidityCard implements OnInit {
         h.currency,
         formatLocalDate(points[0].date, 'long', this.locale),
       ),
+    };
+  });
+
+  /**
+   * Quanto è cambiata la liquidità (o il conto scelto) nel periodo mostrato: "+1.250 € dal 22 agosto". Null senza
+   * grafico, o mentre arriva lo storico di un'altra scelta.
+   */
+  protected readonly change = computed(() => {
+    const points = this.visiblePoints();
+    const h = this.history();
+    if (h === null || points.length < 2 || !this.historyReady()) {
+      return null;
+    }
+    const delta = points[points.length - 1].amount - points[0].amount;
+    return {
+      sign: delta > 0 ? '+' : delta < 0 ? '−' : '',
+      amount: Math.abs(delta),
+      currency: h.currency,
+      from: formatLocalDate(points[0].date, 'dayMonth', this.locale).replace('.', ''),
     };
   });
 

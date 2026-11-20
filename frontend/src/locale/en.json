@@ -3085,12 +3085,16 @@
       "it": "Valuta del grafico",
       "en": "Currency of the chart"
     },
-    "4967050096275237981": {
-      "it": " Tutti i conti ",
-      "en": "All accounts"
-    },
     "4359952133479129417": {
       "it": "Tutti i conti",
+      "en": "All accounts"
+    },
+    "7350909785874251549": {
+      "it": "{$INTERPOLATION}{$INTERPOLATION_1} dal {$INTERPOLATION_2}",
+      "en": "{$INTERPOLATION}{$INTERPOLATION_1} since {$INTERPOLATION_2}"
+    },
+    "4967050096275237981": {
+      "it": " Tutti i conti ",
       "en": "All accounts"
     },
     "876522556398186445": {

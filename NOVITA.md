@@ -27,7 +27,9 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   3M e 1A (la scelta si ricorda); in un anno intero un giorno era largo meno di un pixel, e i primi giorni salvati non
   si vedevano. Il punto di oggi è più piccolo e non copre più la fine della linea. Toccando un conto, il grafico di prima
   resta finché non arriva il nuovo, che appare con una breve dissolvenza: la scheda non cambia altezza e la pagina non
-  salta più (prima il grafico spariva per un momento e tutto quello che c'era sotto saliva e scendeva).
+  salta più (prima il grafico spariva per un momento e tutto quello che c'era sotto saliva e scendeva). Anche scorrendo
+  il grafico di un conto il grafico resta fermo; sopra, il saldo del giorno scelto o quanto è cambiato nel periodo
+  ("+1.250 € dal 22 ago").
 - **La barra in basso non trema più scorrendo i grafici sul telefono**: l'etichetta del giorno, vicino al bordo, usciva
   dallo schermo di qualche pixel, e la barra si spostava a ogni giorno. Ora l'etichetta resta sempre dentro il grafico.
 
