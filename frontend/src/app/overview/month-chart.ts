@@ -119,7 +119,7 @@ interface Point {
       }
       @if (tip(); as t) {
         <!-- L'etichetta del giorno: HTML sopra il disegno, così il testo resta nitido e della sua misura. -->
-        <div class="scrub-tip" [style.left.%]="t.left" aria-hidden="true">{{ t.label }}</div>
+        <div class="scrub-tip" [style.--tip]="t.left" aria-hidden="true">{{ t.label }}</div>
       }
     </div>
   `,
@@ -238,7 +238,9 @@ export class MonthChart {
     const x = this.x(day);
     return {
       x,
-      left: Math.min(85, Math.max(15, (x / WIDTH) * 100)), // l'etichetta non esce dalla scheda
+      // Dove sta il punto, da 0 (a sinistra) a 100 (a destra): l'etichetta si sposta di altrettanto su se stessa
+      // (la classe scrub-tip), così resta sempre dentro il grafico, qualunque sia la sua lunghezza.
+      left: (x / WIDTH) * 100,
       spentY: spent !== undefined ? this.y(spent) : null,
       usualY: usual !== undefined ? this.y(usual) : null,
       label: [date, usualText].filter(Boolean).join(' · '),

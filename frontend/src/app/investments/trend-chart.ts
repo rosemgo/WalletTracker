@@ -1,5 +1,14 @@
 import { formatCurrency } from '@angular/common';
-import { Component, LOCALE_ID, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  LOCALE_ID,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 import { smoothPath } from '../overview/month-chart';
 import { PrivacyStore } from '../privacy/privacy-store';
@@ -27,6 +36,7 @@ const STEPS = [
     <div
       class="month-chart-wrap"
       [class.scrubbing]="index() !== null"
+      [class.redraw]="redraw()"
       tabindex="0"
       role="slider"
       aria-label="{{ description() }}. Con le frecce si scorrono i mesi."
@@ -75,14 +85,15 @@ const STEPS = [
           }
           @if (tip(); as t) {
             <line class="guide" [attr.x1]="t.x" [attr.x2]="t.x" [attr.y1]="top" [attr.y2]="base" />
-            <circle class="today" [attr.cx]="t.x" [attr.cy]="t.y" r="5" />
+            <circle class="today" [attr.cx]="t.x" [attr.cy]="t.y" r="4.5" />
           } @else {
-            <circle class="today" [attr.cx]="last().x" [attr.cy]="last().y" r="5" />
+            <!-- Piccolo: con molti giorni, un punto grande copriva la fine della linea (gli ultimi giorni). -->
+            <circle class="today" [attr.cx]="last().x" [attr.cy]="last().y" r="3.5" />
           }
         </svg>
       }
       @if (tip(); as t) {
-        <div class="scrub-tip" [style.left.%]="t.left" aria-hidden="true">{{ t.label }}</div>
+        <div class="scrub-tip" [style.--tip]="t.left" aria-hidden="true">{{ t.label }}</div>
       }
     </div>
   `,
@@ -121,6 +132,27 @@ export class TrendChart {
   protected readonly index = signal<number | null>(null);
 
   protected readonly animationKey = computed(() => this.values().join(','));
+
+  /** I valori del primo disegno: solo lui si disegna con la linea che cresce. */
+  private readonly firstKey = signal<string | null>(null);
+
+  /**
+   * I valori sono cambiati dopo il primo disegno (un altro conto, un altro periodo): il grafico nuovo appare con una
+   * breve dissolvenza (la classe redraw), invece di ridisegnare la linea da capo per più di un secondo.
+   */
+  protected readonly redraw = computed(() => {
+    const first = this.firstKey();
+    return first !== null && first !== this.animationKey();
+  });
+
+  constructor() {
+    effect(() => {
+      const key = this.animationKey();
+      if (this.firstKey() === null) {
+        this.firstKey.set(key);
+      }
+    });
+  }
 
   /** La scala: da zero (o dal valore più basso, se è negativo) al più alto, con un po' di spazio sopra. */
   private readonly scale = computed(() => {
@@ -227,7 +259,9 @@ export class TrendChart {
     return {
       x,
       y: this.y(value),
-      left: Math.min(85, Math.max(15, (x / WIDTH) * 100)),
+      // Dove sta il punto, da 0 (a sinistra) a 100 (a destra): l'etichetta si sposta di altrettanto su se stessa
+      // (la classe scrub-tip), così resta sempre dentro il grafico, qualunque sia la sua lunghezza.
+      left: (x / WIDTH) * 100,
       label: this.names()[i] ?? '',
       text: `${this.names()[i] ?? ''}: ${amount}`,
     };

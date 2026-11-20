@@ -17,6 +17,29 @@ import { TrendChart } from '../investments/trend-chart';
 import { MoneyPipe } from '../privacy/money.pipe';
 import { LocalDatePipe, formatLocalDate } from '../text/dates';
 
+/** Dove il browser ricorda il periodo scelto per il grafico. */
+export const RANGE_KEY = 'wallettracker.liquidity-range';
+
+/**
+ * I periodi del grafico, in giorni: 1 mese, 3 mesi, 1 anno (lo storico non va più indietro di un anno). Sui pulsanti la
+ * sigla delle app di finanza (1M, 3M, 1A): con le parole intere non stavano sul telefono accanto alla legenda.
+ */
+const RANGES = [
+  { days: 30, label: $localize`:sigla di "1 mese":1M`, name: $localize`1 mese` },
+  { days: 90, label: $localize`:sigla di "3 mesi":3M`, name: $localize`3 mesi` },
+  { days: 365, label: $localize`:sigla di "1 anno":1A`, name: $localize`1 anno` },
+];
+
+/** Il periodo ricordato nel browser, se è uno dei RANGES; altrimenti 3 mesi. */
+function rememberedRange(): number {
+  try {
+    const days = Number(localStorage.getItem(RANGE_KEY));
+    return RANGES.some((r) => r.days === days) ? days : 90;
+  } catch {
+    return 90;
+  }
+}
+
 /** Un conto della scheda, con il suo saldo. */
 interface Row {
   account: Account;
@@ -48,7 +71,9 @@ interface Group {
  * valute, dei pulsanti scelgono quale tracciare (una alla volta, ognuna con la sua scala, senza conversioni). Toccando un
  * conto dell'elenco il grafico mostra solo lui, per confrontarlo con il suo estratto:
  * pieno dove ci sono i saldi salvati dall'app, tratteggiato dove è stimato dai movimenti. Scorrendolo, il totale
- * mostra quel giorno. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto
+ * mostra quel giorno. Di partenza gli ultimi 3 mesi (in un anno intero un giorno è largo meno di un pixel), con i
+ * pulsanti 1 mese, 3 mesi, 1 anno; la scelta si ricorda nel browser. Cambiando conto o valuta il grafico di prima resta
+ * (un poco più chiaro) finché non arriva il nuovo: la scheda non cambia altezza e la pagina non salta. Per il grafico la scheda non è più tutta un collegamento (un tocco per scorrere avrebbe aperto
  * Conti): ci porta "Vedi i conti" in alto.
  */
 @Component({
@@ -119,9 +144,15 @@ interface Group {
               Tutti i conti
             </button>
           </div>
+        } @else if (slot() !== null) {
+          <!-- Lo stesso posto, con tutti i conti: scegliendo un conto la scheda non cambia altezza e la pagina non salta. -->
+          <div class="liquidity-account">
+            <span><strong i18n>Tutti i conti</strong></span>
+          </div>
         }
         @if (chart(); as c) {
           <app-trend-chart
+            [class.loading]="!historyReady()"
             [values]="c.values"
             [labels]="c.labels"
             [names]="c.names"
@@ -132,18 +163,48 @@ interface Group {
             (scrubbed)="scrub.set($event)"
           />
           <div class="chart-keys">
-            @if (c.someSaved) {
-              <span i18n><span class="key"></span>Saldi salvati</span>
-            }
-            @if (c.someEstimated) {
-              <span i18n><span class="key estimate"></span>Stima dai movimenti</span>
+            <div class="liquidity-legend">
+              @if (c.someSaved) {
+                <span i18n><span class="key"></span>Saldi salvati</span>
+              }
+              @if (c.someEstimated) {
+                <span i18n><span class="key estimate"></span>Stima dai movimenti</span>
+              }
+            </div>
+            @if (ranges().length > 1) {
+              <!-- Quanti giorni mostrare: di partenza 3 mesi, dove un giorno è largo abbastanza da vedersi. -->
+              <span
+                class="segmented compact liquidity-range"
+                role="group"
+                aria-label="Periodo del grafico"
+                i18n-aria-label
+                data-testid="chart-range"
+              >
+                @for (r of ranges(); track r.days) {
+                  <button
+                    type="button"
+                    [attr.aria-pressed]="r.days === shownRange()"
+                    [attr.aria-label]="r.name"
+                    [title]="r.name"
+                    (click)="chooseRange(r.days)"
+                  >
+                    {{ r.label }}
+                  </button>
+                }
+              </span>
             }
           </div>
-        } @else if (historyReady() && (groups().length > 1 || chartAccount())) {
-          <p i18n class="secondary history-note">
-            Storico non ancora disponibile per
-            {{ chartAccount()?.account?.label ?? chartCurrency() }}.
-          </p>
+        } @else if (slot() === 'empty') {
+          <!-- Al posto del grafico, grande quanto lui: passando a un conto senza storico la pagina non salta. -->
+          <div class="liquidity-chart-empty">
+            <p i18n class="secondary history-note">
+              Storico non ancora disponibile per
+              {{ chartAccount()?.account?.label ?? chartCurrency() }}.
+            </p>
+          </div>
+        } @else if (slot() === 'waiting') {
+          <!-- Lo storico sta arrivando: il suo posto è già tenuto, e quello che c'è sotto non scende quando arriva. -->
+          <div class="liquidity-chart-empty" aria-hidden="true"></div>
         }
         @for (g of groups(); track g.currency) {
           @if (groups().length > 1) {
@@ -189,8 +250,10 @@ export class LiquidityCard implements OnInit {
 
   /** Lo storico da disegnare (null finché non arriva, o se la richiesta non riesce: niente grafico). */
   protected readonly history = signal<BalanceHistory | null>(null);
-  /** Il giorno su cui si scorre nel grafico (indice), o null. */
+  /** Il giorno su cui si scorre nel grafico (indice tra i giorni mostrati), o null. */
   protected readonly scrub = signal<number | null>(null);
+  /** Quanti giorni mostrare (uno dei RANGES): l'ultima scelta, ricordata nel browser, o 3 mesi. */
+  protected readonly range = signal<number>(rememberedRange());
 
   constructor() {
     // Lo storico si chiede quando si sa che cosa disegnare: la valuta e, se scelto, il conto. Dipende solo da questa
@@ -245,6 +308,27 @@ export class LiquidityCard implements OnInit {
   /** La chiave dello storico arrivato: il grafico si mostra solo se è quella di adesso. */
   private readonly loadedKey = signal<string | null>(null);
 
+  /** La richiesta dello storico non è riuscita: niente grafico, e niente posto tenuto per lui. */
+  private readonly historyFailed = signal(false);
+
+  /**
+   * Che cosa c'è al posto del grafico: il grafico ("chart"), la frase "Storico non ancora disponibile" ("empty", con più
+   * valute o un conto scelto), il posto vuoto mentre lo storico arriva ("waiting"), o niente (null). Le ultime due sono
+   * grandi quanto il grafico: aprendo il Riepilogo o cambiando conto la pagina non salta.
+   */
+  protected readonly slot = computed<'chart' | 'empty' | 'waiting' | null>(() => {
+    if (this.chart() !== null) {
+      return 'chart';
+    }
+    if (this.historyFailed() || this.historyKey() === null) {
+      return null;
+    }
+    if (!this.historyReady()) {
+      return 'waiting';
+    }
+    return this.groups().length > 1 || this.chartAccount() !== null ? 'empty' : null;
+  });
+
   /** Lo storico arrivato è quello da disegnare (non quello di una scelta di prima, ancora in viaggio). */
   protected readonly historyReady = computed(
     () => this.history() !== null && this.loadedKey() === this.historyKey(),
@@ -255,6 +339,43 @@ export class LiquidityCard implements OnInit {
     this.chosenAccount.set(null);
     this.chosenCurrency.set(currency);
   }
+
+  /** Un periodo (1 mese, 3 mesi, 1 anno): il grafico mostra gli ultimi giorni, e la scelta si ricorda. */
+  protected chooseRange(days: number): void {
+    this.scrub.set(null);
+    this.range.set(days);
+    try {
+      localStorage.setItem(RANGE_KEY, String(days));
+    } catch {
+      // navigazione privata o memoria del browser piena: la scelta vale solo fino alla prossima apertura
+    }
+  }
+
+  /**
+   * I periodi da offrire per lo storico arrivato: quelli più corti della storia, più il primo che la contiene tutta (un
+   * conto con 2 mesi di storia: 1 mese e 3 mesi, perché "1 anno" mostrerebbe lo stesso). Con uno solo, nessuna scelta.
+   */
+  protected readonly ranges = computed(() => {
+    const n = this.history()?.points.length ?? 0;
+    const offered = RANGES.filter((r, i) => r.days < n || i === 0 || RANGES[i - 1].days < n);
+    return offered.length > 1 ? offered : [];
+  });
+
+  /** Il periodo mostrato: quello scelto, o il più lungo offerto se la storia è più corta. */
+  protected readonly shownRange = computed(() => {
+    const offered = this.ranges();
+    const chosen = this.range();
+    return offered.some((r) => r.days === chosen) ? chosen : (offered.at(-1)?.days ?? chosen);
+  });
+
+  /** I giorni da disegnare: gli ultimi del periodo scelto; con il periodo più lungo offerto, tutta la storia. */
+  private readonly visiblePoints = computed(() => {
+    const points = this.history()?.points ?? [];
+    const days = this.shownRange();
+    return days === this.ranges().at(-1)?.days || points.length <= days
+      ? points
+      : points.slice(-days);
+  });
 
   /** Un conto: il grafico mostra solo lui; toccandolo di nuovo, si torna a tutti. */
   protected chooseAccount(id: number): void {
@@ -304,12 +425,13 @@ export class LiquidityCard implements OnInit {
    */
   protected readonly chart = computed(() => {
     const h = this.history();
-    // Cambiando valuta o conto, finché lo storico nuovo non arriva quello di prima non si mostra sotto la scelta nuova.
-    if (h === null || !this.historyReady() || h.points.length < 2) {
+    // Cambiando valuta o conto, finché lo storico nuovo non arriva resta quello di prima (più chiaro, la classe loading):
+    // togliendolo, la scheda si accorciava e tutta la pagina saltava, due volte.
+    const points = this.visiblePoints();
+    if (h === null || points.length < 2) {
       return null;
     }
-    const points = h.points;
-    const long = points.length > 62;
+    const long = points.length > 120;
     const estimated = points.map((p) => p.estimated);
     const trueDays = estimated.filter((e) => !e).length;
     const values = points.map((p) => p.amount);
@@ -337,7 +459,7 @@ export class LiquidityCard implements OnInit {
    */
   protected readonly scrubbed = computed(() => {
     const i = this.scrub();
-    const point = i === null || !this.historyReady() ? undefined : this.history()?.points[i];
+    const point = i === null || !this.historyReady() ? undefined : this.visiblePoints()[i];
     if (point === undefined) {
       return null;
     }
@@ -354,6 +476,7 @@ export class LiquidityCard implements OnInit {
 
   private loadHistory(key: string | null): void {
     this.scrub.set(null);
+    this.historyFailed.set(false);
     if (key === null) {
       this.history.set(null);
       return;
@@ -364,7 +487,11 @@ export class LiquidityCard implements OnInit {
         this.history.set(history);
         this.loadedKey.set(key);
       },
-      error: () => this.history.set(null), // senza storico la scheda resta com'era
+      error: () => {
+        // senza storico la scheda resta com'era, senza grafico
+        this.history.set(null);
+        this.historyFailed.set(true);
+      },
     });
   }
 

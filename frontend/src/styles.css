@@ -2087,6 +2087,27 @@ button.icon svg {
     animation: none;
     stroke-dasharray: none;
   }
+
+  /*
+   * Dati nuovi dopo il primo disegno (un altro conto, un altro periodo: la classe redraw di TrendChart): il grafico nuovo
+   * prende il posto del vecchio con una breve dissolvenza, tutto insieme, senza ridisegnare la linea da capo.
+   */
+  .redraw .month-chart,
+  .redraw .month-chart.area-layer {
+    animation: fade-from-dim 0.35s ease both;
+  }
+
+  .redraw .month-chart .month,
+  .redraw .line-layer .today {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+@keyframes fade-from-dim {
+  from {
+    opacity: 0.35;
+  }
 }
 
 @keyframes draw-line {
@@ -2115,11 +2136,17 @@ button.icon svg {
   }
 }
 
-/* L'etichetta del giorno scelto: una pillola scura appena sopra il grafico. */
+/* L'etichetta del giorno scelto: una pillola scura appena sopra il grafico.
+   --tip è dove sta il punto, da 0 (a sinistra) a 100 (a destra). L'etichetta parte da lì e si sposta indietro della
+   stessa parte della sua larghezza: sul primo giorno comincia dal bordo sinistro, sull'ultimo finisce sul bordo destro,
+   in mezzo è centrata. Così non esce mai dal grafico. Se usciva dallo schermo, anche di pochi pixel, la pagina diventava
+   più larga del telefono e il browser allungava lo schermo "virtuale": la barra in basso, fissata al suo fondo,
+   scendeva e risaliva a ogni giorno scorso, a seconda della lunghezza dell'etichetta. */
 .scrub-tip {
   position: absolute;
   top: -4px;
-  transform: translate(-50%, -100%);
+  left: calc(var(--tip, 50) * 1%);
+  transform: translate(calc(var(--tip, 50) * -1%), -100%);
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--ink);
@@ -3718,6 +3745,49 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
   gap: 4px 10px;
 }
 
+/*
+ * Cambiando conto o valuta, il grafico di prima resta finché non arriva il nuovo, un poco più chiaro (solo se l'attesa
+ * dura: la transizione di .loading parte dopo 0,3 secondi).
+ */
+.liquidity-card app-trend-chart {
+  display: block;
+}
+
+.liquidity-card app-trend-chart.loading {
+  opacity: 0.55;
+}
+
+/*
+ * Sotto il grafico, una riga sola alta sempre uguale: a sinistra la legenda (una o due voci, una sotto l'altra sul
+ * telefono), a destra il periodo (1 mese, 3 mesi, 1 anno). Al posto del grafico, lo spazio vuoto tiene anche lei: così
+ * cambiando conto la scheda non cambia altezza.
+ */
+.liquidity-card .chart-keys {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.liquidity-legend {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.segmented.liquidity-range {
+  display: flex;
+  flex: none;
+  margin: 0;
+}
+
+.segmented.liquidity-range button {
+  flex: none;
+  min-width: 40px;
+  padding: 0 8px;
+}
+
 /* Con più valute, quale tracciare: sopra il grafico. */
 .segmented.liquidity-currencies {
   margin: 14px 0 0;
@@ -3727,9 +3797,19 @@ ul.rows li > button.liquidity-row[aria-pressed='true'] {
   margin-top: 2px;
 }
 
+/* Al posto del grafico (storico in arrivo, o non ancora disponibile): grande quanto lui, con la stessa distanza sopra. */
+.liquidity-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 30px -4px 50px; /* sotto, il posto della riga della legenda: 4 + 2 + 44 */
+  aspect-ratio: 340 / 156;
+}
+
 .liquidity-card .history-note {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 0.8rem;
+  text-align: center;
 }
 
 /* Un totale per ogni valuta, uno accanto all'altro (vanno a capo se non ci stanno). */

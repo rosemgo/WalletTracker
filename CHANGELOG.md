@@ -22,6 +22,13 @@ changes something important for those who use it.
   the bank's bonuses and the Revolut rewards to *Tax refunds and bonuses*, even when the description does not say so.
 - **Interest paid**: the interest you pay to the bank (an overdraft, a credit line) goes to *Bank charges*. Before, it
   stayed an expense without a category.
+- **The cash chart, easier to read and without jumps**: it starts with the last 3 months, with the 1M, 3M and 1Y buttons
+  (the choice is remembered); over a whole year a day was less than a pixel wide, and the first saved days could not be
+  seen. Today's dot is smaller and no longer covers the end of the line. Tapping an account, the previous chart stays
+  until the new one arrives, which appears with a short fade: the card does not change height and the page no longer
+  jumps (before, the chart disappeared for a moment and everything below it went up and down).
+- **The bottom bar no longer shakes while sliding along the charts on the phone**: near the edge, the label of the day
+  went a few pixels off the screen, and the bar moved at every day. Now the label always stays inside the chart.
 
 ## 1.3.0
 
