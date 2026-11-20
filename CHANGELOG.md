@@ -36,6 +36,9 @@ changes something important for those who use it.
   Budget the "New budget" form appears together with the list, under it: before, it appeared at the top and was pushed
   down at once when the budgets arrived. The notices at the top of the page (a new version, the backups…) open with a
   short animation instead of pushing everything down in one go.
+- **Overview: the things to fix higher up.** The "transactions to review" and "suggested categories" boxes come right
+  after the expenses by category: on the phone before the cash, on the computer above the investments. Before, they
+  were at the bottom of the page.
 
 ## 1.3.0
 

@@ -156,29 +156,10 @@
       </section>
     }
 
-    @if (o.upcoming.length > 0) {
-      <section class="card">
-        <div class="card-head">
-          <h2 i18n>In arrivo nei prossimi 7 giorni</h2>
-          <a i18n routerLink="/abbonamenti">Abbonamenti ›</a>
-        </div>
-        <ul class="rows">
-          @for (u of o.upcoming; track u.subscriptionId) {
-            <li>
-              <span>
-                {{ u.name }}
-                <span class="secondary">{{ u.date | localDate: 'weekday' | upperFirst }}</span>
-              </span>
-              <strong>{{ u.amount | money: o.currency }}</strong>
-            </li>
-          }
-        </ul>
-      </section>
-    }
-
-    <!-- Gli investimenti dell'anno: una scheda che porta alla pagina (docs/investimenti.md). -->
-    <app-investments-card />
-
+    <!--
+      Le cose da sistemare, subito dopo le spese per categoria: sul PC in cima alla colonna di destra, sopra gli
+      investimenti; sul telefono prima della liquidità (l'ordine è nel CSS, .overview > .todo).
+    -->
     @if (o.toReview > 0 || o.suggestions > 0) {
       <!-- aria-label: il nome del link per i lettori di schermo, "7 movimenti da verificare" in una frase sola. -->
       <div class="todo">
@@ -206,6 +187,28 @@
         }
       </div>
     }
+    @if (o.upcoming.length > 0) {
+      <section class="card">
+        <div class="card-head">
+          <h2 i18n>In arrivo nei prossimi 7 giorni</h2>
+          <a i18n routerLink="/abbonamenti">Abbonamenti ›</a>
+        </div>
+        <ul class="rows">
+          @for (u of o.upcoming; track u.subscriptionId) {
+            <li>
+              <span>
+                {{ u.name }}
+                <span class="secondary">{{ u.date | localDate: 'weekday' | upperFirst }}</span>
+              </span>
+              <strong>{{ u.amount | money: o.currency }}</strong>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <!-- Gli investimenti dell'anno: una scheda che porta alla pagina (docs/investimenti.md). -->
+    <app-investments-card />
   </div>
 } @else if (loading()) {
   <p i18n>Caricamento...</p>
