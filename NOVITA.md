@@ -37,6 +37,9 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
   "Nuovo budget" compare insieme all'elenco, sotto di lui: prima compariva in cima e all'arrivo dei budget veniva spinto
   giù di colpo. Gli avvisi in cima alla pagina (una versione nuova, i backup…) si aprono con una breve animazione invece
   di spingere giù tutto di scatto.
+- **Riepilogo: le cose da sistemare più in alto.** I riquadri "movimenti da verificare" e "categorie suggerite" vengono
+  subito dopo le spese per categoria: sul telefono prima della liquidità, sul computer sopra gli investimenti. Prima
+  erano in fondo alla pagina.
 
 ## 1.3.0
 

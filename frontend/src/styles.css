@@ -2303,11 +2303,13 @@ ul.rows li > span {
   gap: 2px;
 }
 
-/* Le cose da sistemare: due riquadri toccabili, il numero grande e la parola sotto. */
+/* Le cose da sistemare: due riquadri toccabili, il numero grande e la parola sotto. Sotto, lo stesso spazio delle
+   schede (.card): non è più l'ultima cosa della pagina, sta tra le spese per categoria e la liquidità o gli investimenti. */
 .todo {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 8px;
+  margin-bottom: 1rem;
 }
 
 .todo a {
@@ -2341,7 +2343,8 @@ ul.rows li > span {
 }
 
 /* Sul telefono (e su uno schermo stretto) il Riepilogo è una colonna sola, in quest'ordine: la cifra con il grafico,
-   le spese per categoria (che spiegano il grafico), la liquidità, poi il resto. Nel modello la liquidità sta nel
+   le spese per categoria (che spiegano il grafico), le cose da sistemare (movimenti da verificare, categorie
+   suggerite), la liquidità, poi il resto. Nel modello la liquidità sta nel
    contenitore della colonna di sinistra del PC (overview-main): qui il contenitore si "scioglie" (display: contents)
    e le sue schede si mettono in fila con le altre, nell'ordine di "order". */
 @media (max-width: 1099px) {
@@ -2356,7 +2359,7 @@ ul.rows li > span {
 
   .overview > *,
   .overview-main > * {
-    order: 4;
+    order: 5;
   }
 
   .overview > .currency-choice {
@@ -2372,8 +2375,12 @@ ul.rows li > span {
     order: 2;
   }
 
-  .overview-main > app-liquidity-card {
+  .overview > .todo {
     order: 3;
+  }
+
+  .overview-main > app-liquidity-card {
+    order: 4;
   }
 }
 
