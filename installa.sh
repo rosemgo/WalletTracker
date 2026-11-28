@@ -465,16 +465,40 @@ fi
 #   - aggiunge l'indirizzo di ritorno di Enable Banking per quel nome (docs/47, parte I).
 # Si può rilanciare: se è già tutto pronto, non cambia niente.
 
-# Aggiunge un valore a una variabile del .env fatta di valori separati da virgole, se non c'è già.
-aggiungi_a_elenco() {
-  local nome="$1" nuovo="$2" predefinito="$3" attuale
+# Mette il nome Tailscale di QUESTO PC in una variabile del .env fatta di valori separati da virgole, e toglie gli
+# altri nomi *.ts.net. Quelli vecchi (un PC sostituito, un dispositivo rinominato) non rispondono più, ma restando
+# prima nell'elenco verrebbero scelti come indirizzo di ritorno di Enable Banking, e il collegamento finirebbe in una
+# pagina di errore. Gli altri valori (localhost, https://localhost:8443/callback...) restano com'erano.
+# Dopo: TS_AGGIUNTA=true se il nome è stato aggiunto; TS_TOLTE i valori tolti, uno per riga.
+metti_ts_in_elenco() {
+  local nome="$1" nuovo="$2" predefinito="$3" attuale voce restano="" c_e=false
+  TS_AGGIUNTA=false
+  TS_TOLTE=""
   attuale=$(valore_env "$nome")
   [ -z "$attuale" ] && attuale="$predefinito"
-  case ",$attuale," in
-    *",$nuovo,"*) return 1 ;; # c'è già
-  esac
-  # Con l'elenco vuoto (e niente valore di serie), il nuovo da solo: senza una virgola davanti.
-  scrivi_env "$nome" "${attuale:+$attuale,}$nuovo"
+  local vecchio_ifs="$IFS"
+  IFS=','
+  for voce in $attuale; do
+    voce=$(printf '%s' "$voce" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    [ -z "$voce" ] && continue
+    if [ "$voce" = "$nuovo" ]; then
+      c_e=true
+    elif printf '%s' "$voce" | grep -Eq '\.ts\.net(:[0-9]+)?(/|$)'; then
+      # Un nome Tailscale, da solo (nomi consentiti) o dentro un indirizzo (https://nome.ts.net/callback).
+      TS_TOLTE="${TS_TOLTE:+$TS_TOLTE
+}$voce"
+      continue
+    fi
+    restano="${restano:+$restano,}$voce"
+  done
+  IFS="$vecchio_ifs"
+  if [ "$c_e" = false ]; then
+    TS_AGGIUNTA=true
+    restano="${restano:+$restano,}$nuovo"
+  fi
+  if [ "$TS_AGGIUNTA" = true ] || [ -n "$TS_TOLTE" ]; then
+    scrivi_env "$nome" "$restano"
+  fi
 }
 
 if [ "$CON_TAILSCALE" = true ]; then
@@ -527,18 +551,30 @@ if [ "$CON_TAILSCALE" = true ]; then
     errore "tailscale serve non è riuscito (messaggio qui sopra). Su Linux può servire il permesso:  sudo tailscale set --operator=\$USER   e poi rilancia (docs/47, parte P)." \
       "tailscale serve failed (message above). On Linux the permission may be needed:  sudo tailscale set --operator=\$USER   and then run this again (docs/47, part P)."
 
-  if aggiungi_a_elenco WALLETTRACKER_ALLOWED_HOSTS "$nome_ts" "localhost,127.0.0.1"; then
+  metti_ts_in_elenco WALLETTRACKER_ALLOWED_HOSTS "$nome_ts" "localhost,127.0.0.1"
+  if [ "$TS_AGGIUNTA" = true ]; then
     dici "Aggiunto $nome_ts ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)." \
       "Added $nome_ts to the names allowed by the backend (WALLETTRACKER_ALLOWED_HOSTS in the .env)."
   fi
+  printf '%s\n' "$TS_TOLTE" | while IFS= read -r vecchio; do
+    [ -z "$vecchio" ] || dici "Tolto $vecchio dai nomi consentiti: è un nome Tailscale che non è questo PC." \
+      "Removed $vecchio from the allowed names: it is a Tailscale name that is not this PC."
+  done
   # Il valore di serie, se nel .env non ce n'è ancora uno: dal codice (sviluppo) quello di ng serve, che serve a
   # npm start; da una versione scaricata nessuno, perché lì l'unico https che risponde è Tailscale (docs/47, parte Q).
   ritorno_di_serie=""
   [ "$DAL_CODICE" = true ] && ritorno_di_serie="https://localhost:8443/callback"
-  if aggiungi_a_elenco ENABLE_BANKING_REDIRECT_URL "https://$nome_ts/callback" "$ritorno_di_serie"; then
+  metti_ts_in_elenco ENABLE_BANKING_REDIRECT_URL "https://$nome_ts/callback" "$ritorno_di_serie"
+  if [ "$TS_AGGIUNTA" = true ]; then
     dici "Aggiunto https://$nome_ts/callback agli indirizzi di ritorno di Enable Banking (nel .env)." \
       "Added https://$nome_ts/callback to the Enable Banking redirect URLs (in the .env)."
+    dici "Registralo anche nella tua applicazione su Enable Banking: lo trovi in Impostazioni." \
+      "Register it in your Enable Banking application too: you find it in Settings."
   fi
+  printf '%s\n' "$TS_TOLTE" | while IFS= read -r vecchio; do
+    [ -z "$vecchio" ] || dici "Tolto $vecchio dagli indirizzi di ritorno: puoi toglierlo anche da Enable Banking." \
+      "Removed $vecchio from the redirect URLs: you can remove it from Enable Banking too."
+  done
 fi
 
 # --- 4d. La password dei backup (con --backup, se manca) --------------------------------------------------

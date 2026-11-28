@@ -7,6 +7,10 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
 
 ## 1.3.1
 
+- **Tailscale su un PC nuovo**: `installa -Tailscale` (o `--tailscale`) ora toglie dal `.env` i nomi Tailscale che
+  non sono questo PC, per esempio quello di un computer sostituito. Prima restavano nell'elenco prima del nome nuovo, e
+  dopo il consenso la banca rimandava a un indirizzo che non risponde più. Lo script dice quali ha tolto, da togliere
+  anche su Enable Banking.
 - **Revolut e i pagamenti in attesa**: per le banche che non danno il saldo contabile (come Revolut) l'app ora tiene
   conto dei pagamenti in attesa compresi nel saldo, e non li conta una seconda volta quando vengono contabilizzati:
   niente più avviso "i movimenti non tornano" ogni giorno, né pagamenti contati due volte. Il saldo comprende i

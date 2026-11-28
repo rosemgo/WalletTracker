@@ -7,6 +7,10 @@ changes something important for those who use it.
 
 ## 1.3.1
 
+- **Tailscale on a new PC**: `installa -Tailscale` (or `--tailscale`) now removes from the `.env` the Tailscale names
+  that are not this PC, for example the one of a replaced computer. Before, they stayed in the list ahead of the new
+  name, and after the consent the bank sent you back to an address that no longer answers. The script says which ones
+  it removed, to remove from Enable Banking too.
 - **Revolut and pending payments**: for banks that do not give the booked balance (like Revolut) the app now accounts
   for the pending payments included in the balance, and does not count them a second time once they are booked: no
   more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending

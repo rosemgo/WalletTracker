@@ -376,14 +376,22 @@ if ($ReimpostaPin) {
 # Le stesse tre cose di installa.sh (vedi i commenti lì): tailscale serve verso la porta "remota" di nginx, il nome
 # del PC tra i nomi consentiti, l'indirizzo di ritorno di Enable Banking per quel nome (docs/47).
 
-# Aggiunge un valore a una variabile del .env fatta di valori separati da virgole, se non c'è già. $true se l'ha aggiunto.
-function Aggiungi-A-Elenco([string]$nome, [string]$nuovo, [string]$predefinito) {
+# Mette il nome Tailscale di QUESTO PC in una variabile del .env fatta di valori separati da virgole, e toglie gli
+# altri nomi *.ts.net. Quelli vecchi (un PC sostituito, un dispositivo rinominato) non rispondono più, ma restando
+# prima nell'elenco verrebbero scelti come indirizzo di ritorno di Enable Banking, e il collegamento finirebbe in una
+# pagina di errore. Gli altri valori (localhost, https://localhost:8443/callback...) restano com'erano.
+# Restituisce Aggiunta ($true se il nome è stato aggiunto) e Tolte (i valori tolti).
+function Metti-Ts-In-Elenco([string]$nome, [string]$nuovo, [string]$predefinito) {
     $attuale = Valore-Env $nome
     if ($attuale -eq '') { $attuale = $predefinito }
-    if (($attuale -split ',') -contains $nuovo) { return $false }
-    # Con l'elenco vuoto (e niente valore di serie), il nuovo da solo: senza una virgola davanti.
-    if ($attuale -eq '') { Scrivi-Env $nome $nuovo } else { Scrivi-Env $nome "$attuale,$nuovo" }
-    return $true
+    $voci = @($attuale -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+    # Un nome Tailscale, da solo (nomi consentiti) o dentro un indirizzo (https://nome.ts.net/callback).
+    $tolte = @($voci | Where-Object { $_ -ne $nuovo -and $_ -match '\.ts\.net(:\d+)?(/|$)' })
+    $restano = @($voci | Where-Object { $tolte -notcontains $_ })
+    $aggiunta = $restano -notcontains $nuovo
+    if ($aggiunta) { $restano += $nuovo }
+    if ($aggiunta -or $tolte.Count -gt 0) { Scrivi-Env $nome ($restano -join ',') }
+    return [pscustomobject]@{ Aggiunta = $aggiunta; Tolte = $tolte }
 }
 
 $NomeTs = ''
@@ -423,14 +431,23 @@ if ($Tailscale) {
     & $TsCmd serve --bg --https=443 "http://127.0.0.1:$portaRemota"
     if ($LASTEXITCODE -ne 0) { Errore 'tailscale serve non è riuscito: leggi il messaggio qui sopra (docs/47, parte P).' 'tailscale serve failed: read the message above (docs/47, part P).' }
 
-    if (Aggiungi-A-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $NomeTs 'localhost,127.0.0.1') {
+    $esito = Metti-Ts-In-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $NomeTs 'localhost,127.0.0.1'
+    if ($esito.Aggiunta) {
         Dici "Aggiunto $NomeTs ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)." "Added $NomeTs to the names allowed by the backend (WALLETTRACKER_ALLOWED_HOSTS in the .env)."
+    }
+    foreach ($vecchio in $esito.Tolte) {
+        Dici "Tolto $vecchio dai nomi consentiti: è un nome Tailscale che non è questo PC." "Removed $vecchio from the allowed names: it is a Tailscale name that is not this PC."
     }
     # Come in installa.sh: dal codice anche quello di ng serve (npm start), da una versione scaricata solo Tailscale.
     $ritornoDiSerie = ''
     if ($DalCodice) { $ritornoDiSerie = 'https://localhost:8443/callback' }
-    if (Aggiungi-A-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" $ritornoDiSerie) {
+    $esito = Metti-Ts-In-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" $ritornoDiSerie
+    if ($esito.Aggiunta) {
         Dici "Aggiunto https://$NomeTs/callback agli indirizzi di ritorno di Enable Banking (nel .env)." "Added https://$NomeTs/callback to the Enable Banking redirect URLs (in the .env)."
+        Dici "Registralo anche nella tua applicazione su Enable Banking: lo trovi in Impostazioni." "Register it in your Enable Banking application too: you find it in Settings."
+    }
+    foreach ($vecchio in $esito.Tolte) {
+        Dici "Tolto $vecchio dagli indirizzi di ritorno: puoi toglierlo anche da Enable Banking." "Removed $vecchio from the redirect URLs: you can remove it from Enable Banking too."
     }
 }
 
