@@ -7,6 +7,15 @@ changes something important for those who use it.
 
 ## 1.3.1
 
+- **Guided Tailscale, without commands**: when you start WalletTracker, the script asks whether to turn on Tailscale
+  (needed for the phone and to link the banks) and guides you step by step: it opens the download page, waits for you
+  to sign in with your account, then prepares everything by itself. You can answer "later" or "I do not need it". To
+  do it later, or on a new PC, there is the new double-click file **Enable Tailscale**. If something is wrong, the
+  script explains what to do and the app starts anyway.
+- **Tailscale on a new PC**: `installa -Tailscale` (or `--tailscale`) now removes from the `.env` the Tailscale names
+  that are not this PC, for example the one of a replaced computer. Before, they stayed in the list ahead of the new
+  name, and after the consent the bank sent you back to an address that no longer answers. The script says which ones
+  it removed, to remove from Enable Banking too.
 - **Revolut and pending payments**: for banks that do not give the booked balance (like Revolut) the app now accounts
   for the pending payments included in the balance, and does not count them a second time once they are booked: no
   more daily "the transactions do not match" notice, and no payments counted twice. The balance includes the pending

@@ -97,7 +97,7 @@ Run it from PowerShell, in the WalletTracker folder:
   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ai                  with Ollama too (the local AI)
   powershell -ExecutionPolicy Bypass -File installa.ps1 -ChangeDbPassword    new password for the database
   powershell -ExecutionPolicy Bypass -File installa.ps1 -ResetPin            PIN forgotten: resets it
-  powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           the app on your devices
+  powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           the app on your devices (a normal start offers it too)
   powershell -ExecutionPolicy Bypass -File installa.ps1 -Backup              a backup now
   powershell -ExecutionPolicy Bypass -File installa.ps1 -Restore FILE        REPLACES the data with the data of the backup
   powershell -ExecutionPolicy Bypass -File installa.ps1 -BackupFolder        chooses (or changes) the backup folder
@@ -118,7 +118,7 @@ Si lancia da PowerShell, nella cartella di WalletTracker:
   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ia                  con anche Ollama (l'IA locale)
   powershell -ExecutionPolicy Bypass -File installa.ps1 -CambiaPasswordDb    password nuova per il database
   powershell -ExecutionPolicy Bypass -File installa.ps1 -ReimpostaPin        PIN dimenticato: lo azzera
-  powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           l'app sui tuoi dispositivi (docs/47)
+  powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale           l'app sui tuoi dispositivi (lo propone anche l'avvio normale)
   powershell -ExecutionPolicy Bypass -File installa.ps1 -Backup              un backup adesso (docs/48)
   powershell -ExecutionPolicy Bypass -File installa.ps1 -Ripristina FILE     SOSTITUISCE i dati con quelli del backup
   powershell -ExecutionPolicy Bypass -File installa.ps1 -CartellaBackup      sceglie (o cambia) la cartella dei backup
@@ -372,67 +372,173 @@ if ($ReimpostaPin) {
     Dici 'PIN azzerato. Apri l''app da qui, dal server (http://localhost:8000): sceglierai di nuovo, con un PIN nuovo o senza.' 'PIN reset. Open the app from here, from the server (http://localhost:8000): you will choose again, with a new PIN or without.'
 }
 
-# --- 4c. Tailscale (solo con -Tailscale) -------------------------------------------------------------------
+# --- 4c. Tailscale (con -Tailscale, o se l'utente dice "sì" alla domanda) ----------------------------------------
 # Le stesse tre cose di installa.sh (vedi i commenti lì): tailscale serve verso la porta "remota" di nginx, il nome
 # del PC tra i nomi consentiti, l'indirizzo di ritorno di Enable Banking per quel nome (docs/47).
 
-# Aggiunge un valore a una variabile del .env fatta di valori separati da virgole, se non c'è già. $true se l'ha aggiunto.
-function Aggiungi-A-Elenco([string]$nome, [string]$nuovo, [string]$predefinito) {
+# Mette il nome Tailscale di QUESTO PC in una variabile del .env fatta di valori separati da virgole, e toglie gli
+# altri nomi *.ts.net. Quelli vecchi (un PC sostituito, un dispositivo rinominato) non rispondono più, ma restando
+# prima nell'elenco verrebbero scelti come indirizzo di ritorno di Enable Banking, e il collegamento finirebbe in una
+# pagina di errore. Gli altri valori (localhost, https://localhost:8443/callback...) restano com'erano.
+# Restituisce Aggiunta ($true se il nome è stato aggiunto) e Tolte (i valori tolti).
+function Metti-Ts-In-Elenco([string]$nome, [string]$nuovo, [string]$predefinito) {
     $attuale = Valore-Env $nome
     if ($attuale -eq '') { $attuale = $predefinito }
-    if (($attuale -split ',') -contains $nuovo) { return $false }
-    # Con l'elenco vuoto (e niente valore di serie), il nuovo da solo: senza una virgola davanti.
-    if ($attuale -eq '') { Scrivi-Env $nome $nuovo } else { Scrivi-Env $nome "$attuale,$nuovo" }
-    return $true
+    $voci = @($attuale -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+    # Un nome Tailscale, da solo (nomi consentiti) o dentro un indirizzo (https://nome.ts.net/callback).
+    $tolte = @($voci | Where-Object { $_ -ne $nuovo -and $_ -match '\.ts\.net(:\d+)?(/|$)' })
+    $restano = @($voci | Where-Object { $tolte -notcontains $_ })
+    $aggiunta = $restano -notcontains $nuovo
+    if ($aggiunta) { $restano += $nuovo }
+    if ($aggiunta -or $tolte.Count -gt 0) { Scrivi-Env $nome ($restano -join ',') }
+    return [pscustomobject]@{ Aggiunta = $aggiunta; Tolte = $tolte }
+}
+
+# Il passo Tailscale. Con -Tailscale un problema ferma lo script, come per le altre opzioni. Quando invece l'utente ha
+# detto "sì" alla domanda qui sotto ($guidato), un problema non deve impedire di avviare l'app: lo spiego, dico come
+# riprovare, e lo script va avanti. Attiva-Tailscale restituisce $true se Tailscale è pronto.
+function Problema-Ts([bool]$guidato, [string]$it, [string]$en) {
+    if (-not $guidato) { Errore $it $en }
+    Write-Host ''
+    Dici 'Non ho potuto attivare Tailscale:' 'I could not turn on Tailscale:' Yellow
+    Dici $it $en Yellow
+    Dici 'L''app parte lo stesso. Quando hai sistemato, fai doppio clic su "Attiva Tailscale".' 'The app starts anyway. When it is fixed, double-click "Enable Tailscale".' Yellow
+    return $false
+}
+
+# Dove sta il comando tailscale: il programma di installazione lo mette nel PATH; se no, dove si installa di solito.
+function Trova-Tailscale {
+    $cmd = (Get-Command tailscale -ErrorAction SilentlyContinue).Source
+    if (-not $cmd) {
+        $predefinito = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
+        if (Test-Path $predefinito) { $cmd = $predefinito }
+    }
+    return $cmd
+}
+
+# Lo stato di Tailscale (tailscale status --json, trasformato in un oggetto da ConvertFrom-Json); $null se non risponde.
+# BackendState vale "Running" quando è collegato; Self.DNSName è il nome di questo PC, con un punto finale.
+function Stato-Tailscale([string]$cmd) {
+    $testo = (& $cmd status --json 2>$null) -join "`n"
+    if ($LASTEXITCODE -ne 0 -or $testo -eq '') { return $null }
+    try { return $testo | ConvertFrom-Json } catch { return $null }
 }
 
 $NomeTs = ''
-if ($Tailscale) {
+function Attiva-Tailscale([bool]$guidato) {
     Passo 'Tailscale' 'Tailscale'
-    # Il programma di installazione di Tailscale lo mette nel PATH; se no, lo cerchiamo dove si installa di solito.
-    $TsCmd = (Get-Command tailscale -ErrorAction SilentlyContinue).Source
-    if (-not $TsCmd) {
-        $predefinito = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
-        if (Test-Path $predefinito) { $TsCmd = $predefinito }
-        else { Errore 'Non trovo Tailscale: installalo e accedi con il tuo account (docs/47, parte C), poi rilancia.' 'I cannot find Tailscale: install it and sign in with your account (the guide, chapter 6), then run this again.' }
+    $TsCmd = Trova-Tailscale
+    if (-not $TsCmd) { return (Problema-Ts $guidato 'Non trovo Tailscale: installalo e accedi con il tuo account (docs/47, parte C).' 'I cannot find Tailscale: install it and sign in with your account (the guide, chapter 6).') }
+    $stato = Stato-Tailscale $TsCmd
+    if ($null -eq $stato) { return (Problema-Ts $guidato 'Tailscale non risponde: aprilo e accedi con il tuo account (docs/47, parte C).' 'Tailscale does not answer: open it and sign in with your account (the guide, chapter 6).') }
+    if ($stato.BackendState -ne 'Running') { return (Problema-Ts $guidato 'Tailscale è installato ma non collegato: aprilo e accedi con il tuo account.' 'Tailscale is installed but not connected: open it and sign in with your account.') }
+    $nome = ([string]$stato.Self.DNSName).TrimEnd('.')
+    if (-not $nome.EndsWith('.ts.net')) {
+        return (Problema-Ts $guidato 'Non trovo il nome di questo PC nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1).' 'I cannot find the name of this PC in the Tailscale network: turn on MagicDNS in the Tailscale console (the guide, chapter 6).')
     }
-
-    # tailscale status --json: lo stato di Tailscale in JSON. ConvertFrom-Json lo trasforma in un oggetto:
-    # BackendState vale "Running" quando è collegato; Self.DNSName è il nome di questo PC, con un punto finale.
-    $testo = (& $TsCmd status --json 2>$null) -join "`n"
-    if ($LASTEXITCODE -ne 0 -or $testo -eq '') { Errore 'Tailscale non risponde: aprilo e accedi con il tuo account (docs/47, parte C).' 'Tailscale does not answer: open it and sign in with your account (the guide, chapter 6).' }
-    $stato = $testo | ConvertFrom-Json
-    if ($stato.BackendState -ne 'Running') { Errore 'Tailscale è installato ma non collegato: aprilo, accedi con il tuo account e rilancia.' 'Tailscale is installed but not connected: open it, sign in with your account and run this again.' }
-    $NomeTs = ([string]$stato.Self.DNSName).TrimEnd('.')
-    if (-not $NomeTs.EndsWith('.ts.net')) {
-        Errore 'Non trovo il nome del server nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia.' 'I cannot find the name of the server in the Tailscale network: turn on MagicDNS in the Tailscale console (docs/47, part E1) and run this again.'
-    }
-    Dici "Il nome di questo server nella rete Tailscale è: $NomeTs" "The name of this server in the Tailscale network is: $NomeTs"
+    Dici "Il nome di questo server nella rete Tailscale è: $nome" "The name of this server in the Tailscale network is: $nome"
 
     # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5).
     $serve = (& $TsCmd serve status --json 2>$null) -join "`n"
     if ($serve -match '"AllowFunnel"\s*:\s*\{[^}]*:\s*true') {
-        Errore "Tailscale Funnel è acceso: renderebbe l'app raggiungibile da Internet. Spegnilo con:  tailscale funnel --https=443 off   e rilancia." 'Tailscale Funnel is on: it would make the app reachable from the Internet. Turn it off with:  tailscale funnel --https=443 off   and run this again.'
+        return (Problema-Ts $guidato "Tailscale Funnel è acceso e renderebbe l'app raggiungibile da Internet. Spegnilo con:  tailscale funnel --https=443 off" 'Tailscale Funnel is on and would make the app reachable from the Internet. Turn it off with:  tailscale funnel --https=443 off')
     }
 
     $portaRemota = Valore-Env 'REMOTE_PORT'
     if ($portaRemota -eq '') { $portaRemota = '8001' }
-    Dici "Chiedo a Tailscale di ricevere i tuoi dispositivi su https://$NomeTs e di passarli a 127.0.0.1:$portaRemota." "I ask Tailscale to receive your devices on https://$NomeTs and to pass them to 127.0.0.1:$portaRemota."
+    Dici "Chiedo a Tailscale di ricevere i tuoi dispositivi su https://$nome e di passarli a 127.0.0.1:$portaRemota." "I ask Tailscale to receive your devices on https://$nome and to pass them to 127.0.0.1:$portaRemota."
     Dici '(Se è la prima volta, Tailscale può chiederti di attivare HTTPS per la tua rete: apri il link che scrive,' '(If it is the first time, Tailscale may ask you to enable HTTPS for your network: open the link it prints,'
     Dici ' conferma, e lo script prosegue da solo.)' ' confirm, and the script goes on by itself.)'
-    & $TsCmd serve --bg --https=443 "http://127.0.0.1:$portaRemota"
-    if ($LASTEXITCODE -ne 0) { Errore 'tailscale serve non è riuscito: leggi il messaggio qui sopra (docs/47, parte P).' 'tailscale serve failed: read the message above (docs/47, part P).' }
+    & $TsCmd serve --bg --https=443 "http://127.0.0.1:$portaRemota" | Out-Host
+    if ($LASTEXITCODE -ne 0) { return (Problema-Ts $guidato 'tailscale serve non è riuscito: leggi il messaggio qui sopra (docs/47, parte P).' 'tailscale serve failed: read the message above (the guide, chapter 6).') }
 
-    if (Aggiungi-A-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $NomeTs 'localhost,127.0.0.1') {
-        Dici "Aggiunto $NomeTs ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)." "Added $NomeTs to the names allowed by the backend (WALLETTRACKER_ALLOWED_HOSTS in the .env)."
+    $esito = Metti-Ts-In-Elenco 'WALLETTRACKER_ALLOWED_HOSTS' $nome 'localhost,127.0.0.1'
+    if ($esito.Aggiunta) {
+        Dici "Aggiunto $nome ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS nel .env)." "Added $nome to the names allowed by the backend (WALLETTRACKER_ALLOWED_HOSTS in the .env)."
+    }
+    foreach ($vecchio in $esito.Tolte) {
+        Dici "Tolto $vecchio dai nomi consentiti: è un nome Tailscale che non è questo PC." "Removed $vecchio from the allowed names: it is a Tailscale name that is not this PC."
     }
     # Come in installa.sh: dal codice anche quello di ng serve (npm start), da una versione scaricata solo Tailscale.
     $ritornoDiSerie = ''
     if ($DalCodice) { $ritornoDiSerie = 'https://localhost:8443/callback' }
-    if (Aggiungi-A-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$NomeTs/callback" $ritornoDiSerie) {
-        Dici "Aggiunto https://$NomeTs/callback agli indirizzi di ritorno di Enable Banking (nel .env)." "Added https://$NomeTs/callback to the Enable Banking redirect URLs (in the .env)."
+    $esito = Metti-Ts-In-Elenco 'ENABLE_BANKING_REDIRECT_URL' "https://$nome/callback" $ritornoDiSerie
+    if ($esito.Aggiunta) {
+        Dici "Aggiunto https://$nome/callback agli indirizzi di ritorno di Enable Banking (nel .env)." "Added https://$nome/callback to the Enable Banking redirect URLs (in the .env)."
+    }
+    foreach ($vecchio in $esito.Tolte) {
+        Dici "Tolto $vecchio dagli indirizzi di ritorno: puoi toglierlo anche da Enable Banking." "Removed $vecchio from the redirect URLs: you can remove it from Enable Banking too."
+    }
+    Scrivi-Env 'WALLETTRACKER_TAILSCALE' 'si'
+    $script:NomeTs = $nome
+    return $true
+}
+
+# La domanda guidata (docs/47): chi avvia l'app con il doppio clic non deve sapere che esiste -Tailscale. Si chiede
+# solo da una finestra vera, solo a un avvio "normale" (senza altre opzioni), e solo finché Tailscale non è pronto
+# (nessun nome *.ts.net nel .env) e l'utente non ha risposto "no, non mi serve" (WALLETTRACKER_TAILSCALE=no).
+function Tailscale-Gia-Pronto { return ((Valore-Env 'WALLETTRACKER_ALLOWED_HOSTS') -match '\.ts\.net') }
+
+function Chiedi-Tailscale {
+    Passo 'Il telefono e le banche (Tailscale)' 'Your phone and your banks (Tailscale)'
+    Dici 'Tailscale è un programma gratuito che collega tra loro i tuoi dispositivi in una rete privata. Serve a due cose:' 'Tailscale is a free program that connects your devices in a private network. It is needed for two things:'
+    Dici '  - aprire WalletTracker dal telefono, o da un altro computer, anche fuori casa;' '  - opening WalletTracker from your phone, or another computer, even away from home;'
+    Dici '  - collegare le banche: dopo il consenso, la banca ti rimanda a un indirizzo https, e quello lo dà Tailscale.' '  - connecting your banks: after the consent, the bank sends you back to an https address, and Tailscale gives it.'
+    Dici 'L''app NON diventa visibile su Internet: la vedono solo i dispositivi in cui entri con il tuo account Tailscale.' 'The app does NOT become visible on the Internet: only the devices where you sign in with your Tailscale account see it.'
+    Write-Host ''
+    Dici '  1) Sì, attivalo adesso (ti guido io, ci vogliono pochi minuti)' '  1) Yes, turn it on now (I guide you, it takes a few minutes)'
+    Dici '  2) Più tardi (te lo richiedo al prossimo avvio)' '  2) Later (I will ask again at the next start)'
+    Dici '  3) No, non mi serve (non te lo chiedo più)' '  3) No, I do not need it (I will not ask again)'
+    while ($true) {
+        $risposta = ([string](Read-Host (T 'Scrivi 1, 2 o 3 e premi Invio [1]' 'Type 1, 2 or 3 and press Enter [1]'))).Trim()
+        if ($risposta -eq '' -or $risposta -eq '1') { break }
+        if ($risposta -eq '2') { Dici 'Va bene: te lo richiedo al prossimo avvio.' 'All right: I will ask again at the next start.'; return $false }
+        if ($risposta -eq '3') {
+            Scrivi-Env 'WALLETTRACKER_TAILSCALE' 'no'
+            Dici 'Va bene, non te lo chiedo più. Se cambi idea, fai doppio clic su "Attiva Tailscale".' 'All right, I will not ask again. If you change your mind, double-click "Enable Tailscale".'
+            return $false
+        }
+    }
+
+    # Passo per passo, finché Tailscale non è installato e collegato: a ogni Invio ricontrollo; "salta" rimanda.
+    $paginaAperta = $false
+    while ($true) {
+        $cmd = Trova-Tailscale
+        $stato = $null
+        if ($cmd) { $stato = Stato-Tailscale $cmd }
+        if ($null -ne $stato -and $stato.BackendState -eq 'Running') {
+            Dici 'Tailscale è installato e collegato.' 'Tailscale is installed and connected.' Green
+            Dici 'Sul telefono: installa l''app Tailscale (App Store o Play Store) ed entra con lo STESSO account.' 'On your phone: install the Tailscale app (App Store or Play Store) and sign in with the SAME account.'
+            return $true
+        }
+        Write-Host ''
+        if (-not $cmd) {
+            Dici 'Passo 1 di 2: installa Tailscale su questo PC.' 'Step 1 of 2: install Tailscale on this PC.' Cyan
+            if (-not $paginaAperta) {
+                Dici 'Ti apro la pagina per scaricarlo: scarica la versione per Windows e installala come un programma qualsiasi.' 'I open the download page for you: download the Windows version and install it like any program.'
+                Start-Process 'https://tailscale.com/download/windows'
+                $paginaAperta = $true
+            }
+            else { Dici 'Non lo trovo ancora. La pagina è https://tailscale.com/download/windows' 'I cannot find it yet. The page is https://tailscale.com/download/windows' }
+        }
+        else {
+            Dici 'Passo 2 di 2: entra in Tailscale con un tuo account.' 'Step 2 of 2: sign in to Tailscale with an account of yours.' Cyan
+            Dici 'Apri Tailscale (l''icona vicino all''orologio, in basso a destra), scegli "Log in" ed entra con Google, Microsoft' 'Open Tailscale (the icon near the clock, bottom right), choose "Log in" and sign in with Google, Microsoft'
+            Dici 'o Apple: lo stesso account che userai sul telefono.' 'or Apple: the same account you will use on your phone.'
+        }
+        $risposta = ([string](Read-Host (T 'Quando hai fatto premi Invio (oppure scrivi salta per farlo un''altra volta)' 'When done press Enter (or type skip to do it another time)'))).Trim().ToLower()
+        if ('salta', 'skip' -contains $risposta) { Dici 'Va bene: te lo richiedo al prossimo avvio.' 'All right: I will ask again at the next start.'; return $false }
     }
 }
+
+$TailscaleGuidato = $false
+$AltreOperazioni = $Backup -or $Ripristina -ne '' -or $CambiaPasswordDb -or $ReimpostaPin -or $Aggiorna -or $CartellaBackup
+if (-not $Tailscale -and -not $AltreOperazioni -and -not [Console]::IsInputRedirected -and
+    (Valore-Env 'WALLETTRACKER_TAILSCALE') -ne 'no' -and -not (Tailscale-Gia-Pronto)) {
+    if (Chiedi-Tailscale) { $Tailscale = $true; $TailscaleGuidato = $true }
+}
+$TailscaleAttivo = $false
+if ($Tailscale) { $TailscaleAttivo = Attiva-Tailscale $TailscaleGuidato }
 
 # --- 4d. La password dei backup (con -Backup, se manca) ---------------------------------------------------
 # Le stesse regole di installa.sh (vedi i commenti lì): almeno 12 caratteri, senza quelli che nel .env danno problemi.
@@ -820,7 +926,7 @@ $porta = Valore-Env 'WEB_PORT'
 if ($porta -eq '') { $porta = '8000' }
 $indirizzo = "http://localhost:$porta"
 Passo "WalletTracker $($env:WALLETTRACKER_VERSION) è avviato: $indirizzo" "WalletTracker $($env:WALLETTRACKER_VERSION) is running: $indirizzo"
-if ($Tailscale) {
+if ($TailscaleAttivo) {
     Dici "Dai dispositivi remoti, con Tailscale:  https://$NomeTs   (lì serve il PIN: crealo prima da qui, dal server)" "From the remote devices, with Tailscale:  https://$NomeTs   (the PIN is needed there: create it first from here, from the server)"
     Dici "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$NomeTs/callback" "To connect a bank from a remote device, register on Enable Banking also:  https://$NomeTs/callback"
 }

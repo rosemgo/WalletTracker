@@ -169,22 +169,22 @@ accepts no others, and that address is provided by Tailscale. So you need Tailsc
 the server.
 
 Before starting you must have created the PIN (chapter 5), because from the Tailscale address the app without a PIN
-does not open. Then, once only:
+does not open.
 
-1. create a free account on **tailscale.com**, install Tailscale on the server and on the phone and sign in on both
-   with the same account;
-2. open the Tailscale panel (**login.tailscale.com/admin**), go to the **DNS** tab and enable **MagicDNS** and
-   **HTTPS Certificates**;
-3. on the server, open the WalletTracker folder in File Explorer, click the address bar at the top, type
-   `powershell` and press Enter. A blue window opens, already in the right folder. There type this and press Enter:
+You do not need to type commands: when you start WalletTracker with **Start WalletTracker**, the script asks whether
+you want to turn on Tailscale. Answer **1** and it guides you step by step:
 
-   ```
-   powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale
-   ```
+1. it opens the page to download Tailscale: install it like any program;
+2. it asks you to sign in to Tailscale with an account of yours (Google, Microsoft or Apple are fine). Then install
+   the Tailscale app on the phone too and sign in with **the same account**;
+3. it prepares the rest by itself. The first time Tailscale may ask you to enable HTTPS for your network: open the
+   link shown in the window, confirm, and the script goes on;
+4. at the end it tells you which address to open on the phone. The same address, with `/callback` at the end, is in
+   **Settings → Enable Banking**: it is the one to register on Enable Banking (chapter 7).
 
-   On a Mac: right-click the folder, Services, **New Terminal at Folder**, and then `./installa.sh --tailscale`;
-4. at the end the script tells you which address to open on the phone. The same address, with `/callback` at the end,
-   is in **Settings → Enable Banking**: it is the one to register on Enable Banking (chapter 7).
+If you answer **2** (later) it asks again at the next start; with **3** it does not ask any more. To turn it on later,
+or if you changed computer, double-click **Enable Tailscale**, in the "English" folder. If something is wrong (for
+example "MagicDNS"), the script tells you what to do and the app starts anyway.
 
 On the server you keep opening the app from **http://localhost:8000** as before. Tailscale comes into play by itself
 when needed. The details, with the Tailscale screens, are in `docs/47` (in Italian).

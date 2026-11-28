@@ -36,12 +36,12 @@ cp installa.sh installa.ps1 .env.example NOVITA.md CHANGELOG.md LEGGIMI.txt LICE
 # I file da doppio clic (docs/50, parte N): .cmd per Windows, .command per il Mac. cp -p tiene il permesso di
 # esecuzione dei .command, e zip lo scrive nello ZIP: senza, il Mac non li aprirebbe con un doppio clic.
 cp -p ./*.cmd ./*.command "$cartella/"
-[ "$(find "$cartella" -maxdepth 1 \( -name '*.cmd' -o -name '*.command' \) | wc -l)" = 6 ] ||
+[ "$(find "$cartella" -maxdepth 1 \( -name '*.cmd' -o -name '*.command' \) | wc -l)" = 8 ] ||
   { echo "Mancano dei file da doppio clic (.cmd e .command)" >&2; exit 1; }
-# La cartella "English": il LEGGIMI in inglese e i tre file da doppio clic con i nomi inglesi, per Windows e per il Mac.
+# La cartella "English": il LEGGIMI in inglese e i quattro file da doppio clic con i nomi inglesi, per Windows e per il Mac.
 mkdir "$cartella/English"
 cp -p English/README.txt English/*.cmd English/*.command "$cartella/English/"
-[ "$(find "$cartella/English" \( -name '*.cmd' -o -name '*.command' \) | wc -l)" = 6 ] ||
+[ "$(find "$cartella/English" \( -name '*.cmd' -o -name '*.command' \) | wc -l)" = 8 ] ||
   { echo "Nella cartella English mancano dei file da doppio clic (.cmd e .command)" >&2; exit 1; }
 echo "$versione" >"$cartella/VERSION"
 # Il nome delle immagini, di serie, diventa quello di questa versione: così anche un "docker compose up -d" scritto a

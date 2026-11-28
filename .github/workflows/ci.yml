@@ -130,7 +130,7 @@ jobs:
       # l'app e aspettare Invio prima di chiudersi.
       - name: I file da doppio clic
         run: |
-          test "$(ls ./*.cmd | wc -l)" = 3 && test "$(ls ./*.command | wc -l)" = 3
+          test "$(ls ./*.cmd | wc -l)" = 4 && test "$(ls ./*.command | wc -l)" = 4
           for f in ./*.cmd; do
             if [ "$(grep -c $'\r$' "$f")" != "$(wc -l < "$f")" ]; then echo "$f: fini riga non di Windows"; exit 1; fi
             if LC_ALL=C grep -q '[^ -~[:cntrl:]]' "$f"; then echo "$f: caratteri non ASCII"; exit 1; fi
@@ -146,7 +146,7 @@ jobs:
           # La cartella "English" (docs/lingue-3-installazione.md): gli stessi tre file con i nomi inglesi, con le
           # stesse regole, e il LEGGIMI in inglese (README.txt). Lanciano lo script della cartella sopra, che parla
           # la lingua dell'installazione: qui ancora l'italiano.
-          test "$(ls English/*.cmd | wc -l)" = 3 && test "$(ls English/*.command | wc -l)" = 3
+          test "$(ls English/*.cmd | wc -l)" = 4 && test "$(ls English/*.command | wc -l)" = 4
           for f in English/*.cmd English/README.txt LEGGIMI.txt; do
             if [ "$(grep -c $'\r$' "$f")" != "$(wc -l < "$f")" ]; then echo "$f: fini riga non di Windows"; exit 1; fi
             if LC_ALL=C grep -q '[^ -~[:cntrl:]]' "$f"; then echo "$f: caratteri non ASCII"; exit 1; fi
