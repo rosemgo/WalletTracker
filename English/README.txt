@@ -17,12 +17,14 @@ WalletTracker - getting started
    only, and the app opens in English.
    At the end the browser opens on http://localhost:8000
 
-The other two files in this folder:
+The other files in this folder:
    "Backup WalletTracker"   makes a backup now (the first time it asks for the backup password:
                             write it down OUTSIDE this computer too, without it they cannot be opened);
-   "Update WalletTracker"   moves to the latest version, with a backup first.
+   "Update WalletTracker"   moves to the latest version, with a backup first;
+   "Enable Tailscale"       the app from your phone and the connection of the banks (at the start the
+                            script offers it by itself: this is to do it later, or on a new PC).
 
-The files with Italian names in the folder above ("Avvia", "Aggiorna", "Backup") do exactly the
+The files with Italian names in the folder above ("Avvia", "Aggiorna", "Backup", "Attiva Tailscale") do exactly the
 same things: use whichever you like.
 
 The complete guide (the PIN, the banks, the phone, the common problems):

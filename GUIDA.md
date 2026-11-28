@@ -163,22 +163,22 @@ una banca, alla fine la banca deve rimandarti a un indirizzo https dell'app, per
 e quell'indirizzo lo fornisce Tailscale. Quindi Tailscale ti serve anche se l'app la usi solo dal server.
 
 Prima di cominciare devi aver creato il PIN (capitolo 5), perché dall'indirizzo di Tailscale l'app senza PIN non si
-apre. Poi, una volta sola:
+apre.
 
-1. crea un account gratuito su **tailscale.com**, installa Tailscale sul server e sul telefono ed entra in tutti e due
-   con lo stesso account;
-2. apri il pannello di Tailscale (**login.tailscale.com/admin**), vai nella scheda **DNS** e attiva **MagicDNS** e
-   **HTTPS Certificates**;
-3. sul server, apri la cartella di WalletTracker in Esplora file, clicca sulla barra dell'indirizzo in alto, scrivi
-   `powershell` e premi Invio. Si apre una finestra blu già nella cartella giusta. Lì scrivi questo e premi Invio:
+Non devi scrivere comandi: quando avvii WalletTracker con **Avvia WalletTracker**, lo script ti chiede se vuoi attivare
+Tailscale. Rispondi **1** e ti guida passo passo:
 
-   ```
-   powershell -ExecutionPolicy Bypass -File installa.ps1 -Tailscale
-   ```
+1. ti apre la pagina per scaricare Tailscale: installalo come un programma qualsiasi;
+2. ti chiede di entrare in Tailscale con un tuo account (Google, Microsoft o Apple vanno bene). Poi installa l'app
+   Tailscale anche sul telefono ed entra con **lo stesso account**;
+3. prepara da solo il resto. La prima volta Tailscale può chiederti di attivare HTTPS per la tua rete: apri il link
+   che compare nella finestra, conferma, e lo script va avanti;
+4. alla fine ti dice quale indirizzo aprire sul telefono. Lo stesso indirizzo, con `/callback` in fondo, lo trovi in
+   **Impostazioni → Enable Banking**: è quello da registrare su Enable Banking (capitolo 7).
 
-   Sul Mac: clic destro sulla cartella, Servizi, **Nuovo Terminale nella cartella**, e poi `./installa.sh --tailscale`;
-4. alla fine lo script ti dice quale indirizzo aprire sul telefono. Lo stesso indirizzo, con `/callback` in fondo, lo
-   trovi in **Impostazioni → Enable Banking**: è quello da registrare su Enable Banking (capitolo 7).
+Se rispondi **2** (più tardi) te lo richiede al prossimo avvio; con **3** non te lo chiede più. Per attivarlo in un
+secondo momento, o se hai cambiato computer, fai doppio clic su **Attiva Tailscale**, nella cartella di WalletTracker.
+Se qualcosa non va (per esempio "MagicDNS"), lo script ti dice cosa fare e l'app parte lo stesso.
 
 Sul server continui ad aprire l'app da **http://localhost:8000** come prima. Tailscale entra in gioco da solo quando
 serve. Se vuoi i dettagli, con le schermate di Tailscale, sono nella `docs/47`.

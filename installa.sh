@@ -66,7 +66,7 @@ Installs and starts WalletTracker on macOS and Linux. On Windows: installa.ps1.
   ./installa.sh --ai                   as above, with Ollama too (the local AI)
   ./installa.sh --change-db-password   generates a new database password and puts it where it is needed
   ./installa.sh --reset-pin            PIN and recovery code lost: deletes them, and you choose again from this computer
-  ./installa.sh --tailscale            opens the app to your devices with Tailscale, over https
+  ./installa.sh --tailscale            opens the app to your devices with Tailscale (a normal start offers it too)
   ./installa.sh --backup               a backup now (the first time it asks for the backup password)
   ./installa.sh --restore FILE         REPLACES the current data with the data of the backup FILE (asks to confirm)
   ./installa.sh --backup-folder        chooses (or changes) the backup folder: an external disk, Google Drive...
@@ -85,7 +85,7 @@ Installa e avvia WalletTracker su macOS e Linux. Su Windows: installa.ps1.
   ./installa.sh --ia                   come sopra, con anche Ollama (l'IA locale)
   ./installa.sh --cambia-password-db   genera una password nuova per il database e la mette dove serve
   ./installa.sh --reimposta-pin        PIN e codice di recupero persi: li cancella, e dal PC si sceglie di nuovo
-  ./installa.sh --tailscale            apre l'app ai tuoi dispositivi con Tailscale, con https (docs/47)
+  ./installa.sh --tailscale            apre l'app ai tuoi dispositivi con Tailscale (lo propone anche l'avvio normale)
   ./installa.sh --backup               un backup adesso (la prima volta chiede la password dei backup: docs/48)
   ./installa.sh --ripristina FILE      SOSTITUISCE i dati di adesso con quelli del backup FILE (chiede conferma)
   ./installa.sh --cartella-backup      sceglie (o cambia) la cartella dei backup: un disco esterno, Google Drive...
@@ -456,9 +456,9 @@ if [ "$REIMPOSTA_PIN" = true ]; then
     "PIN reset. Open the app from here, from the server (http://localhost:8000): you will choose again, with a new PIN or without."
 fi
 
-# --- 4c. Tailscale (solo con --tailscale) ------------------------------------------------------------------
-# Tailscale è installato e collegato a mano, sul PC e sul telefono (docs/47, parti C e D). Qui lo script fa le tre
-# cose che restano, sempre uguali:
+# --- 4c. Tailscale (con --tailscale, o se l'utente dice "sì" alla domanda) -------------------------------------
+# Tailscale si installa e si collega a mano, sul PC e sul telefono (docs/47, parti C e D): a un avvio normale lo
+# script lo propone e guida passo passo (chiedi_tailscale, più sotto). Poi fa le tre cose che restano, sempre uguali:
 #   - chiede a Tailscale di ricevere i tuoi dispositivi in https e di passarli alla porta "remota" di nginx
 #     (tailscale serve, docs/47 parte E): la porta del PC (8000) a Tailscale non la diamo mai;
 #   - aggiunge il nome del PC nella rete Tailscale ai nomi consentiti dal backend (WALLETTRACKER_ALLOWED_HOSTS);
@@ -501,40 +501,71 @@ metti_ts_in_elenco() {
   fi
 }
 
-if [ "$CON_TAILSCALE" = true ]; then
-  passo "Tailscale" "Tailscale"
-  # Dove sta il comando tailscale: di solito è nel PATH; su macOS, con l'app dell'App Store, è dentro l'app.
-  tailscale_cmd=""
-  if command -v tailscale >/dev/null 2>&1; then
-    tailscale_cmd=tailscale
-  elif [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
-    tailscale_cmd=/Applications/Tailscale.app/Contents/MacOS/Tailscale
-  else
-    errore "Non trovo Tailscale: installalo e accedi con il tuo account (docs/47, parte C), poi rilancia." \
-      "I cannot find Tailscale: install it and sign in with your account (the guide, chapter 6), then run this again."
-  fi
+# Il passo Tailscale. Con --tailscale un problema ferma lo script, come per le altre opzioni. Quando invece l'utente ha
+# detto "sì" alla domanda qui sotto (guidato), un problema non deve impedire di avviare l'app: lo spiego, dico come
+# riprovare, e lo script va avanti. attiva_tailscale finisce con 0 se Tailscale è pronto.
+problema_ts() {
+  [ "$1" = true ] || errore "$2" "$3"
+  printf '\n'
+  dici "Non ho potuto attivare Tailscale:" "I could not turn on Tailscale:"
+  dici "$2" "$3"
+  dici "L'app parte lo stesso. Quando hai sistemato, fai doppio clic su \"Attiva Tailscale\" (o:  ./installa.sh --tailscale)." \
+    "The app starts anyway. When it is fixed, double-click \"Enable Tailscale\" (or:  ./installa.sh --tailscale)."
+}
 
-  # tailscale status --json: lo stato di Tailscale su questo PC, in JSON. "BackendState" vale "Running" quando è
-  # collegato; il nome del PC nella rete è "DNSName", dentro "Self" (questo PC), con un punto finale da togliere.
-  stato_ts=$("$tailscale_cmd" status --json 2>/dev/null) ||
-    errore "Tailscale non risponde: aprilo e accedi con il tuo account (docs/47, parte C)." \
+# Dove sta il comando tailscale: di solito è nel PATH; su macOS, con l'app dell'App Store, è dentro l'app.
+trova_tailscale() {
+  if command -v tailscale >/dev/null 2>&1; then
+    echo tailscale
+  elif [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+    echo /Applications/Tailscale.app/Contents/MacOS/Tailscale
+  fi
+}
+
+# Collegato? tailscale status --json: "BackendState" vale "Running" quando è collegato.
+tailscale_collegato() {
+  "$1" status --json 2>/dev/null | grep -q '"BackendState": *"Running"'
+}
+
+nome_ts=""
+attiva_tailscale() {
+  local guidato="$1" tailscale_cmd stato_ts porta_remota ritorno_di_serie
+  passo "Tailscale" "Tailscale"
+  tailscale_cmd=$(trova_tailscale)
+  [ -n "$tailscale_cmd" ] || {
+    problema_ts "$guidato" "Non trovo Tailscale: installalo e accedi con il tuo account (docs/47, parte C)." \
+      "I cannot find Tailscale: install it and sign in with your account (the guide, chapter 6)."
+    return 1
+  }
+
+  # Il nome del PC nella rete è "DNSName", dentro "Self" (questo PC), con un punto finale da togliere.
+  stato_ts=$("$tailscale_cmd" status --json 2>/dev/null) || {
+    problema_ts "$guidato" "Tailscale non risponde: aprilo e accedi con il tuo account (docs/47, parte C)." \
       "Tailscale does not answer: open it and sign in with your account (the guide, chapter 6)."
-  echo "$stato_ts" | grep -q '"BackendState": *"Running"' ||
-    errore "Tailscale è installato ma non collegato: aprilo, accedi con il tuo account e rilancia." \
-      "Tailscale is installed but not connected: open it, sign in with your account and run this again."
+    return 1
+  }
+  echo "$stato_ts" | grep -q '"BackendState": *"Running"' || {
+    problema_ts "$guidato" "Tailscale è installato ma non collegato: aprilo e accedi con il tuo account." \
+      "Tailscale is installed but not connected: open it and sign in with your account."
+    return 1
+  }
   nome_ts=$(echo "$stato_ts" | awk '/"Self":/ { dentro = 1 } dentro && /"DNSName":/ { sub(/.*"DNSName": *"/, ""); sub(/\.?".*/, ""); print; exit }')
   case "$nome_ts" in
     *.ts.net) ;;
-    *) errore "Non trovo il nome del server nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1) e rilancia." \
-      "I cannot find the name of the server in the Tailscale network: turn on MagicDNS in the Tailscale console (docs/47, part E1) and run this again." ;;
+    *)
+      problema_ts "$guidato" "Non trovo il nome di questo PC nella rete Tailscale: accendi MagicDNS nella console di Tailscale (docs/47, parte E1)." \
+        "I cannot find the name of this PC in the Tailscale network: turn on MagicDNS in the Tailscale console (the guide, chapter 6)."
+      return 1
+      ;;
   esac
   dici "Il nome di questo server nella rete Tailscale è: $nome_ts" \
     "The name of this server in the Tailscale network is: $nome_ts"
 
-  # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5). Se è acceso, ci fermiamo.
+  # Funnel pubblica su Internet: per WalletTracker mai (docs/47, parte F5).
   if "$tailscale_cmd" serve status --json 2>/dev/null | tr -d ' \n' | grep -q '"AllowFunnel":{[^}]*:true'; then
-    errore "Tailscale Funnel è acceso: renderebbe l'app raggiungibile da Internet. Spegnilo con:  $tailscale_cmd funnel --https=443 off   e rilancia." \
-      "Tailscale Funnel is on: it would make the app reachable from the Internet. Turn it off with:  $tailscale_cmd funnel --https=443 off   and run this again."
+    problema_ts "$guidato" "Tailscale Funnel è acceso e renderebbe l'app raggiungibile da Internet. Spegnilo con:  $tailscale_cmd funnel --https=443 off" \
+      "Tailscale Funnel is on and would make the app reachable from the Internet. Turn it off with:  $tailscale_cmd funnel --https=443 off"
+    return 1
   fi
 
   # La porta "remota" di nginx sul PC (docker-compose.yml): 8001, se non l'hai cambiata nel .env.
@@ -547,9 +578,11 @@ if [ "$CON_TAILSCALE" = true ]; then
   dici " conferma, e lo script prosegue da solo.)" " confirm, and the script goes on by itself.)"
   # --bg: resta acceso da solo, anche dopo un riavvio del PC. --https=443: la porta normale di https, così
   # l'indirizzo non ha bisogno di ":numero".
-  "$tailscale_cmd" serve --bg --https=443 "http://127.0.0.1:$porta_remota" ||
-    errore "tailscale serve non è riuscito (messaggio qui sopra). Su Linux può servire il permesso:  sudo tailscale set --operator=\$USER   e poi rilancia (docs/47, parte P)." \
-      "tailscale serve failed (message above). On Linux the permission may be needed:  sudo tailscale set --operator=\$USER   and then run this again (docs/47, part P)."
+  "$tailscale_cmd" serve --bg --https=443 "http://127.0.0.1:$porta_remota" || {
+    problema_ts "$guidato" "tailscale serve non è riuscito (messaggio qui sopra). Su Linux può servire il permesso:  sudo tailscale set --operator=\$USER   (docs/47, parte P)." \
+      "tailscale serve failed (message above). On Linux the permission may be needed:  sudo tailscale set --operator=\$USER   (the guide, chapter 6)."
+    return 1
+  }
 
   metti_ts_in_elenco WALLETTRACKER_ALLOWED_HOSTS "$nome_ts" "localhost,127.0.0.1"
   if [ "$TS_AGGIUNTA" = true ]; then
@@ -568,13 +601,119 @@ if [ "$CON_TAILSCALE" = true ]; then
   if [ "$TS_AGGIUNTA" = true ]; then
     dici "Aggiunto https://$nome_ts/callback agli indirizzi di ritorno di Enable Banking (nel .env)." \
       "Added https://$nome_ts/callback to the Enable Banking redirect URLs (in the .env)."
-    dici "Registralo anche nella tua applicazione su Enable Banking: lo trovi in Impostazioni." \
-      "Register it in your Enable Banking application too: you find it in Settings."
   fi
   printf '%s\n' "$TS_TOLTE" | while IFS= read -r vecchio; do
     [ -z "$vecchio" ] || dici "Tolto $vecchio dagli indirizzi di ritorno: puoi toglierlo anche da Enable Banking." \
       "Removed $vecchio from the redirect URLs: you can remove it from Enable Banking too."
   done
+  scrivi_env WALLETTRACKER_TAILSCALE si
+  return 0
+}
+
+# La domanda guidata (docs/47): chi avvia l'app con il doppio clic non deve sapere che esiste --tailscale. Si chiede
+# solo da un terminale vero, solo a un avvio "normale" (senza altre opzioni), e solo finché Tailscale non è pronto
+# (nessun nome *.ts.net nel .env) e l'utente non ha risposto "no, non mi serve" (WALLETTRACKER_TAILSCALE=no).
+apri_pagina() {
+  if [ "$(uname -s)" = Darwin ]; then
+    open "$1" >/dev/null 2>&1 || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$1" >/dev/null 2>&1 || true
+  fi
+}
+
+chiedi_tailscale() {
+  local risposta cmd pagina pagina_aperta=false
+  passo "Il telefono e le banche (Tailscale)" "Your phone and your banks (Tailscale)"
+  dici "Tailscale è un programma gratuito che collega tra loro i tuoi dispositivi in una rete privata. Serve a due cose:" \
+    "Tailscale is a free program that connects your devices in a private network. It is needed for two things:"
+  dici "  - aprire WalletTracker dal telefono, o da un altro computer, anche fuori casa;" \
+    "  - opening WalletTracker from your phone, or another computer, even away from home;"
+  dici "  - collegare le banche: dopo il consenso, la banca ti rimanda a un indirizzo https, e quello lo dà Tailscale." \
+    "  - connecting your banks: after the consent, the bank sends you back to an https address, and Tailscale gives it."
+  dici "L'app NON diventa visibile su Internet: la vedono solo i dispositivi in cui entri con il tuo account Tailscale." \
+    "The app does NOT become visible on the Internet: only the devices where you sign in with your Tailscale account see it."
+  printf '\n'
+  dici "  1) Sì, attivalo adesso (ti guido io, ci vogliono pochi minuti)" "  1) Yes, turn it on now (I guide you, it takes a few minutes)"
+  dici "  2) Più tardi (te lo richiedo al prossimo avvio)" "  2) Later (I will ask again at the next start)"
+  dici "  3) No, non mi serve (non te lo chiedo più)" "  3) No, I do not need it (I will not ask again)"
+  while true; do
+    read -r -p "$(t "Scrivi 1, 2 o 3 e premi Invio [1]: " "Type 1, 2 or 3 and press Enter [1]: ")" risposta || return 1
+    case "$risposta" in
+      "" | 1) break ;;
+      2)
+        dici "Va bene: te lo richiedo al prossimo avvio." "All right: I will ask again at the next start."
+        return 1
+        ;;
+      3)
+        scrivi_env WALLETTRACKER_TAILSCALE no
+        dici "Va bene, non te lo chiedo più. Se cambi idea, fai doppio clic su \"Attiva Tailscale\"." \
+          "All right, I will not ask again. If you change your mind, double-click \"Enable Tailscale\"."
+        return 1
+        ;;
+    esac
+  done
+
+  # Passo per passo, finché Tailscale non è installato e collegato: a ogni Invio ricontrollo; "salta" rimanda.
+  if [ "$(uname -s)" = Darwin ]; then pagina="https://tailscale.com/download/mac"; else pagina="https://tailscale.com/download/linux"; fi
+  while true; do
+    cmd=$(trova_tailscale)
+    if [ -n "$cmd" ] && tailscale_collegato "$cmd"; then
+      dici "Tailscale è installato e collegato." "Tailscale is installed and connected."
+      dici "Sul telefono: installa l'app Tailscale (App Store o Play Store) ed entra con lo STESSO account." \
+        "On your phone: install the Tailscale app (App Store or Play Store) and sign in with the SAME account."
+      return 0
+    fi
+    printf '\n'
+    if [ -z "$cmd" ]; then
+      dici "Passo 1 di 2: installa Tailscale su questo computer." "Step 1 of 2: install Tailscale on this computer."
+      if [ "$pagina_aperta" = false ]; then
+        dici "Ti apro la pagina per scaricarlo ($pagina): segui le istruzioni per il tuo sistema." \
+          "I open the download page for you ($pagina): follow the instructions for your system."
+        apri_pagina "$pagina"
+        pagina_aperta=true
+      else
+        dici "Non lo trovo ancora. La pagina è $pagina" "I cannot find it yet. The page is $pagina"
+      fi
+    elif [ "$(uname -s)" = Darwin ]; then
+      dici "Passo 2 di 2: entra in Tailscale con un tuo account." "Step 2 of 2: sign in to Tailscale with an account of yours."
+      dici "Apri Tailscale (l'icona in alto, nella barra dei menu), scegli \"Log in\" ed entra con Google, Microsoft o Apple:" \
+        "Open Tailscale (the icon at the top, in the menu bar), choose \"Log in\" and sign in with Google, Microsoft or Apple:"
+      dici "lo stesso account che userai sul telefono." "the same account you will use on your phone."
+    else
+      dici "Passo 2 di 2: entra in Tailscale con un tuo account." "Step 2 of 2: sign in to Tailscale with an account of yours."
+      dici "In un altro terminale scrivi  sudo tailscale up  e apri il link che compare: entra con lo stesso account che" \
+        "In another terminal type  sudo tailscale up  and open the link it shows: sign in with the same account you"
+      dici "userai sul telefono." "will use on your phone."
+    fi
+    read -r -p "$(t "Quando hai fatto premi Invio (oppure scrivi salta per farlo un'altra volta): " \
+      "When done press Enter (or type skip to do it another time): ")" risposta || return 1
+    case "$risposta" in
+      salta | skip | SALTA | SKIP)
+        dici "Va bene: te lo richiedo al prossimo avvio." "All right: I will ask again at the next start."
+        return 1
+        ;;
+    esac
+  done
+}
+
+TAILSCALE_GUIDATO=false
+if [ "$CON_TAILSCALE" = false ] && [ "$FARE_BACKUP" = false ] && [ -z "$FILE_RIPRISTINO" ] &&
+  [ "$CAMBIA_PASSWORD" = false ] && [ "$REIMPOSTA_PIN" = false ] && [ "$AGGIORNA" = false ] &&
+  [ "$CARTELLA_BACKUP_DA_SCEGLIERE" = false ] && [ -t 0 ] &&
+  [ "$(valore_env WALLETTRACKER_TAILSCALE)" != no ]; then
+  case "$(valore_env WALLETTRACKER_ALLOWED_HOSTS)" in
+    *.ts.net*) ;; # Tailscale è già pronto
+    *)
+      if chiedi_tailscale; then
+        CON_TAILSCALE=true
+        TAILSCALE_GUIDATO=true
+      fi
+      ;;
+  esac
+fi
+TAILSCALE_ATTIVO=false
+if [ "$CON_TAILSCALE" = true ] && attiva_tailscale "$TAILSCALE_GUIDATO"; then
+  TAILSCALE_ATTIVO=true
 fi
 
 # --- 4d. La password dei backup (con --backup, se manca) --------------------------------------------------
@@ -1014,7 +1153,7 @@ fi
 porta=$(valore_env WEB_PORT)
 indirizzo="http://localhost:${porta:-8000}"
 passo "WalletTracker $WALLETTRACKER_VERSION è avviato: $indirizzo" "WalletTracker $WALLETTRACKER_VERSION is running: $indirizzo"
-if [ "$CON_TAILSCALE" = true ]; then
+if [ "$TAILSCALE_ATTIVO" = true ]; then
   dici "Dai dispositivi remoti, con Tailscale:  https://$nome_ts   (lì serve il PIN: crealo prima da qui, dal server)" \
     "From the remote devices, with Tailscale:  https://$nome_ts   (the PIN is needed there: create it first from here, from the server)"
   dici "Per collegare una banca da un dispositivo remoto, registra su Enable Banking anche:  https://$nome_ts/callback" \

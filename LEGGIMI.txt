@@ -19,10 +19,12 @@ WalletTracker - come cominciare
    e l'app si apre in italiano.
    Alla fine il browser si apre su http://localhost:8000
 
-Gli altri due file:
+Gli altri file:
    "Backup WalletTracker"    fa un backup adesso (la prima volta chiede la password dei backup:
                              scrivila anche FUORI da questo computer, senza non si aprono);
-   "Aggiorna WalletTracker"  passa all'ultima versione, con un backup prima.
+   "Aggiorna WalletTracker"  passa all'ultima versione, con un backup prima;
+   "Attiva Tailscale"        l'app dal telefono e il collegamento delle banche (all'avvio lo script
+                             te lo propone da solo: questo serve per farlo dopo, o su un PC nuovo).
 
 La guida completa, con le schermate (il PIN, le banche, il telefono, i problemi comuni):
    https://github.com/rosemgo/WalletTracker/blob/main/GUIDA.md

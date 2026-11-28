@@ -7,6 +7,11 @@ stesse sezioni, e una novità si scrive in tutte e due. I numeri seguono la rego
 
 ## 1.3.1
 
+- **Tailscale guidato, senza comandi**: avviando WalletTracker, lo script chiede se attivare Tailscale (serve per il
+  telefono e per collegare le banche) e guida passo passo: apre la pagina per scaricarlo, aspetta che tu entri con il
+  tuo account, poi prepara tutto da solo. Puoi rispondere "più tardi" o "non mi serve". Per farlo dopo, o su un PC
+  nuovo, c'è il nuovo file da doppio clic **Attiva Tailscale**. Se qualcosa non va, lo script spiega cosa fare e l'app
+  parte lo stesso.
 - **Tailscale su un PC nuovo**: `installa -Tailscale` (o `--tailscale`) ora toglie dal `.env` i nomi Tailscale che
   non sono questo PC, per esempio quello di un computer sostituito. Prima restavano nell'elenco prima del nome nuovo, e
   dopo il consenso la banca rimandava a un indirizzo che non risponde più. Lo script dice quali ha tolto, da togliere
